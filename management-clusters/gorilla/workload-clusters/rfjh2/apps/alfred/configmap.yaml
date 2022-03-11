@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  values: |
+    reaction:
+      ack: ack
+      done: done
+    slack:
+      reportingChannel: C025H8JPS4T
+kind: ConfigMap
+metadata:
+  name: alfred-app-user-values

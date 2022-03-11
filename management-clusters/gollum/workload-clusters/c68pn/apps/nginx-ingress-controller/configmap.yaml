@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  values: |-
+    configmap:
+      use-forwarded-headers: "false"
+kind: ConfigMap
+metadata:
+  name: nginx-ingress-controller-user-values

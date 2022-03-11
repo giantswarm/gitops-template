@@ -1,0 +1,25 @@
+apiVersion: cluster.x-k8s.io/v1alpha3
+kind: MachineDeployment
+metadata:
+  annotations:
+    giantswarm.io/docs: https://docs.giantswarm.io/ui-api/management-api/crd/machinedeployments.cluster.x-k8s.io/
+  labels:
+    cluster.x-k8s.io/cluster-name: ${cluster_id}
+    giantswarm.io/cluster: ${cluster_id}
+    giantswarm.io/machine-deployment: ${machine_deployment_id}
+    giantswarm.io/organization: ${organization}
+    release.giantswarm.io/version: ${release}
+  name: ${machine_deployment_id}
+  namespace: org-${organization}
+spec:
+  clusterName: ${cluster_id}
+  selector: {}
+  template:
+    spec:
+      bootstrap: {}
+      clusterName: ${cluster_id}
+      infrastructureRef:
+        apiVersion: infrastructure.giantswarm.io/v1alpha3
+        kind: AWSMachineDeployment
+        name: ${machine_deployment_id}
+        namespace: org-${organization}

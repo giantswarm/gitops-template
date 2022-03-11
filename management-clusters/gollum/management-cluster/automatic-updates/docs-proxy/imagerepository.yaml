@@ -1,0 +1,9 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: docs-proxy
+spec:
+  image: quay.io/giantswarm/docs-proxy
+  interval: 30m0s
+  secretRef:
+    name: flux-pull-secret

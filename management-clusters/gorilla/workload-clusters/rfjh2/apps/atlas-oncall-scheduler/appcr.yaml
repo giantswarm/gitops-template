@@ -1,0 +1,16 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: atlas-oncall-scheduler
+spec:
+  catalog: giantswarm-operations-platform
+  name: area-oncall-scheduler
+  namespace: atlas-oncall-scheduler
+  userConfig:
+    configMap:
+      name: atlas-oncall-scheduler-user-values
+      namespace: rfjh2
+    secret:
+      name: atlas-oncall-scheduler-user-secrets
+      namespace: rfjh2
+  version: 0.1.0

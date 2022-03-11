@@ -1,0 +1,27 @@
+apiVersion: v1
+data:
+  values: |
+    isWorkloadCluster: true
+    oidc:
+      expiry:
+        signingKeys: 6h
+        idTokens: 30m
+      customer:
+        enabled: true
+        connectors:
+        - id: customer
+          connectorName: test
+          connectorType: github
+          connectorConfig: |-
+            clientID: 01b0dc9ff0f722ba0e77
+            clientSecret: cc31a2be2845731561d83dfd92b2a7d5c43cdd92
+            loadAllGroups: false
+            teamNameField: slug
+            redirectURI: https://dex.c68pn.k8s.gollum.westeurope.azure.gigantic.io/callback
+            orgs:
+            - name: giantswarm
+              teams:
+              - employees
+kind: ConfigMap
+metadata:
+  name: dex-app-user-values

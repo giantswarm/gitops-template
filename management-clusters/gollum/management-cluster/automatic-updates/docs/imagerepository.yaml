@@ -1,0 +1,7 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: docs
+spec:
+  image: quay.io/giantswarm/docs
+  interval: 1m0s

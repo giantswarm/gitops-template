@@ -1,0 +1,24 @@
+apiVersion: v1
+data:
+  values: |
+    Cronjobs:
+      - EndDateCmd: date -d "$(date +%Y%m15) +1 month" +%Y-%m-%d
+        Schedule: 05 08 15 * *
+        StartDateCmd: date -d "$(date +%Y%m01) +1 month" +%Y-%m-%d
+      - EndDateCmd: date -d "$(date +%Y%m01) +1 month -1 day" +%Y-%m-%d
+        Schedule: 05 08 1 * *
+        StartDateCmd: date -d "$(date +%Y%m16)" +%Y-%m-%d
+    VolumeMounts:
+      - mountPath: /service-account.json
+        name: google-calendar-service-account
+        subPath: service-account.json
+    Volumes:
+      - name: google-calendar-service-account
+        secret:
+          items:
+            - key: service-account.json
+              path: service-account.json
+          secretName: google-calendar-service-account
+kind: ConfigMap
+metadata:
+  name: rocket-oncall-scheduler-out-of-hours-user-values

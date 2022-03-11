@@ -1,0 +1,16 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: honeybadger-oncall-scheduler
+spec:
+  catalog: giantswarm-operations-platform
+  name: area-oncall-scheduler
+  namespace: honeybadger-oncall-scheduler
+  userConfig:
+    configMap:
+      name: honeybadger-oncall-scheduler-user-values
+      namespace: rfjh2
+    secret:
+      name: honeybadger-oncall-scheduler-user-secrets
+      namespace: rfjh2
+  version: 0.1.0

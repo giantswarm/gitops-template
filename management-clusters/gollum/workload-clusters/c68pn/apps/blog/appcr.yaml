@@ -1,0 +1,9 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: blog-app
+spec:
+  catalog: giantswarm-operations-platform
+  name: blog-app
+  namespace: giantswarmio
+  version: v1.2.2 # {"$imagepolicy": "flux-system:blog:tag"}

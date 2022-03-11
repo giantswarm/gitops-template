@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  values: |
+    hostnames:
+    - fe-docs.c68pn.k8s.gollum.westeurope.azure.gigantic.io
+    - fe-docs.giantswarm.io
+kind: ConfigMap
+metadata:
+  name: fe-docs-user-values

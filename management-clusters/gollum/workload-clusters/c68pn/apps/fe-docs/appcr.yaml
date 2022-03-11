@@ -1,0 +1,13 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: fe-docs
+spec:
+  catalog: giantswarm-operations-platform
+  name: fe-docs
+  namespace: fe-docs
+  userConfig:
+    configMap:
+      name: fe-docs-user-values
+      namespace: c68pn
+  version: 1.36.2 # {"$imagepolicy": "flux-system:fe-docs:tag"}

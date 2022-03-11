@@ -1,0 +1,31 @@
+apiVersion: v1
+data:
+  values: |
+    image:
+      name: giantswarm/area-oncall-scheduler
+      tag: latest
+    Installation:
+      V1:
+        Registry:
+          Domain: quay.io
+    Cronjobs:
+      - Schedule: 45 08 15 * *
+        StartDateCmd: date -d "$(date +%Y%m01) +1 month" +%Y-%m-%d
+        EndDateCmd: date -d "$(date +%Y%m15) +1 month" +%Y-%m-%d
+      - Schedule: 45 08 1 * *
+        StartDateCmd: date -d "$(date +%Y%m16)" +%Y-%m-%d
+        EndDateCmd: date -d "$(date +%Y%m01) +1 month -1 day" +%Y-%m-%d
+    Volumes:
+      - name: google-calendar-service-account
+        secret:
+          secretName: google-calendar-service-account
+          items:
+            - key: service-account.json
+              path: service-account.json
+    VolumeMounts:
+      - name: google-calendar-service-account
+        mountPath: /service-account.json
+        subPath: service-account.json
+kind: ConfigMap
+metadata:
+  name: honeybadger-oncall-scheduler-user-values

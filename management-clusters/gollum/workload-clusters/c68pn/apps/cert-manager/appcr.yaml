@@ -1,0 +1,9 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: cert-manager-app
+spec:
+  catalog: giantswarm
+  name: cert-manager-app
+  namespace: kube-system
+  version: 2.12.0

@@ -1,0 +1,7 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: blog
+spec:
+  image: quay.io/giantswarm/blog
+  interval: 30m0s

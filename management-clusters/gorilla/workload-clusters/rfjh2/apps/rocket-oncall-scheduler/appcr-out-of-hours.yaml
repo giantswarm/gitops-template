@@ -1,0 +1,16 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: rocket-oncall-scheduler-out-of-hours
+spec:
+  catalog: giantswarm-operations-platform
+  name: area-oncall-scheduler
+  namespace: rocket-oncall-scheduler
+  userConfig:
+    configMap:
+      name: rocket-oncall-scheduler-out-of-hours-user-values
+      namespace: rfjh2
+    secret:
+      name: rocket-oncall-scheduler-out-of-hours-user-secrets
+      namespace: rfjh2
+  version: 0.1.0

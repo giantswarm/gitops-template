@@ -1,0 +1,18 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    giantswarm.io/managed-by: flux
+  name: ignored
+spec:
+  config:
+    configMap:
+      name: ${cluster_id}-cluster-values
+      namespace: ${cluster_id}
+  kubeConfig:
+    context:
+      name: giantswarm-${cluster_id}-context
+    inCluster: false
+    secret:
+      name: ${cluster_id}-kubeconfig
+      namespace: ${cluster_id}

@@ -1,0 +1,20 @@
+apiVersion: infrastructure.giantswarm.io/v1alpha3
+kind: G8sControlPlane
+metadata:
+  annotations:
+    giantswarm.io/docs: https://docs.giantswarm.io/ui-api/management-api/crd/g8scontrolplanes.infrastructure.giantswarm.io/
+  labels:
+    cluster.x-k8s.io/cluster-name: ${cluster_id}
+    giantswarm.io/cluster: ${cluster_id}
+    giantswarm.io/control-plane: ${control_plane_id}
+    giantswarm.io/organization: ${organization}
+    release.giantswarm.io/version: ${release}
+  name: ${control_plane_id}
+  namespace: org-${organization}
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.giantswarm.io/v1alpha3
+    kind: AWSControlPlane
+    name: ${control_plane_id}
+    namespace: org-${organization}
+  replicas: 1

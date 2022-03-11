@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+patches:
+  - path: policy.yaml
+    target:
+      kind: ImagePolicy
+resources:
+  - imageupdate.yaml
+  - api-spec/imagepolicy.yaml
+  - api-spec/imagerepository.yaml
+  - blog/imagepolicy.yaml
+  - blog/imagerepository.yaml
+  - docs/imagepolicy.yaml
+  - docs/imagerepository.yaml
+  - docs-indexer/imagepolicy.yaml
+  - docs-indexer/imagerepository.yaml
+  - docs-proxy/imagepolicy.yaml
+  - docs-proxy/imagerepository.yaml
+  - fe-docs/imagepolicy.yaml
+  - fe-docs/imagerepository.yaml
+  - giantswarmio-nginx/imagepolicy.yaml
+  - giantswarmio-nginx/imagerepository.yaml
+  - web-assets/imagepolicy.yaml
+  - web-assets/imagerepository.yaml

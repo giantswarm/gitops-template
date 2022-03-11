@@ -1,0 +1,9 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: prow-log-aggregator
+spec:
+  catalog: control-plane-catalog
+  name: prow-log-aggregator
+  namespace: test-infra
+  version: 0.0.2

@@ -1,0 +1,9 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: api-spec-app
+spec:
+  catalog: giantswarm-operations-platform
+  name: api-spec-app
+  namespace: docs
+  version: v0.1.20 # {"$imagepolicy": "flux-system:api-spec:tag"}

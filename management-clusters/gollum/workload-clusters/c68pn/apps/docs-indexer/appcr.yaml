@@ -1,0 +1,9 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: docs-indexer-app
+spec:
+  catalog: giantswarm-operations-platform
+  name: docs-indexer-app
+  namespace: docs
+  version: v2.7.0 # {"$imagepolicy": "flux-system:docs-indexer:tag"}

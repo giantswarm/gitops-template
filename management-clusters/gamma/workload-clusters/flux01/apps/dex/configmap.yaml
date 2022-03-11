@@ -1,0 +1,30 @@
+apiVersion: v1
+data:
+  values: |-
+    isWorkloadCluster: true
+    isManagementCluster: false
+    managementCluster:
+      name: ""
+    oidc:
+      expiry:
+        signingKeys: 6h
+        idTokens: 30m
+      customer:
+        enabled: true
+        connectors:
+        - id: customer
+          connectorName: test
+          connectorType: github
+          connectorConfig: >-
+            clientID: e1fab0241c0f69a3ee63
+            clientSecret: 4a9b6e2faae60b2e3f6cee36f95a8cb164eb8c52
+            loadAllGroups: false
+            teamNameField: slug
+            orgs:
+            - name: gs-idp-shared
+              teams:
+              - thg-test
+            redirectURI: https://dex.flux01.test.gigantic.io/callback
+kind: ConfigMap
+metadata:
+  name: flux01-dex-user-values
