@@ -1,0 +1,14 @@
+name: Basic CI
+
+on: push
+
+jobs:
+  basic_checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: YAMLLint
+        uses: docker://quay.io/giantswarm/yamllint:1.9
+        with:
+          args: .
