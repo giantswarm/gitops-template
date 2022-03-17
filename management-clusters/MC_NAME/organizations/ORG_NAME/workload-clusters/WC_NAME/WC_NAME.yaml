@@ -1,0 +1,22 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: wc-name
+  namespace: default
+spec:
+  interval: 1m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME"
+  postBuild:
+    substitute:
+      cluster_id: "wcnme"
+      control_plane_id: "km2k8"
+      machine_deployment_id: "bg2i8"
+      organization: "org-name"
+      release: "16.3.1"
+  prune: true
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: gitops-template
+  timeout: 2m
+
