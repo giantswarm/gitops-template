@@ -8,7 +8,7 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME"
   postBuild:
     substitute:
-      cluster_id: "wcnme"
+      cluster_id: "wcnme" # Can be changed to match $WCNAME
       control_plane_id: "km2k8"
       machine_deployment_id: "bg2i8"
       organization: "$ORGNAME"
