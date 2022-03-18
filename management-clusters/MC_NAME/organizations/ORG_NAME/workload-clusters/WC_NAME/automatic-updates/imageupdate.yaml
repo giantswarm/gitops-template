@@ -1,7 +1,7 @@
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageUpdateAutomation
 metadata:
-  name: mc-name-updates
+  name: $MCNAME-updates
   namespace: default
 spec:
   git:

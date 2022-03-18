@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: mc-name-gitops
+  name: $MCNAME-gitops
   namespace: default
 spec:
   force: false
