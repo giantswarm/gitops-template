@@ -1,6 +1,0 @@
-apiVersion: security.giantswarm.io/v1alpha1
-kind: Organization
-metadata:
-  name: gitops-demo
-spec: {}
-status: {}

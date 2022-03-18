@@ -1,7 +1,0 @@
-apiVersion: image.toolkit.fluxcd.io/v1beta1
-kind: ImageRepository
-metadata:
-  name: web-assets
-spec:
-  image: quay.io/giantswarm/web-assets
-  interval: 30m0s

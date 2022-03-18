@@ -1,7 +1,0 @@
-apiVersion: image.toolkit.fluxcd.io/v1beta1
-kind: ImagePolicy
-metadata:
-  name: docs-proxy
-spec:
-  imageRepositoryRef:
-    name: docs-proxy

@@ -1,9 +1,0 @@
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: web-assets-app
-spec:
-  catalog: giantswarm-operations-platform
-  name: web-assets-app
-  namespace: giantswarmio
-  version: v0.7.13 # {"$imagepolicy": "flux-system:web-assets:tag"}

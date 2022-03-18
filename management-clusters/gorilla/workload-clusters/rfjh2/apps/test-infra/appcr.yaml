@@ -1,9 +1,0 @@
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: test-infra
-spec:
-  catalog: control-plane-test-catalog
-  name: test-infra
-  namespace: test-infra
-  version: 0.0.0-a3dd60b4ec1402e96ed3400cdb18c9d056f856c6

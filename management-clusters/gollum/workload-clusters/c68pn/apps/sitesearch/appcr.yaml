@@ -1,9 +1,0 @@
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: sitesearch-app
-spec:
-  catalog: giantswarm-operations-platform
-  name: sitesearch-app
-  namespace: docs
-  version: 1.2.0
