@@ -10,6 +10,7 @@ spec:
   postBuild:
     substitute:  # fill in substitution values
       control_plane_id: ""
+      gitops_repo: ""
       machine_deployment_id: ""
       management_cluster_name: ""
       organization: ""

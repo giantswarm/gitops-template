@@ -17,6 +17,6 @@ spec:
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: gitops-template
+    name: ${gitops_repo}
   timeout: 2m
 

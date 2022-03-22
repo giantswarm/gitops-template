@@ -18,7 +18,7 @@ spec:
   interval: 1m0s
   sourceRef:
     kind: GitRepository
-    name: gitops-template
+    name: ${gitops_repo}
   update:
     path: ./management-clusters/MC_NAME
     strategy: Setters
