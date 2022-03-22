@@ -2,15 +2,15 @@ apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
   labels:
-    giantswarm.io/cluster: $WCNAME
+    giantswarm.io/cluster: ${workload_cluster_name}
     giantswarm.io/managed-by: flux
-  name: $WCNAME-nginx-ingress-controller
+  name: ${workload_cluster_name}-nginx-ingress-controller
 spec:
   catalog: giantswarm
   name: nginx-ingress-controller-app
   namespace: kube-system
   userConfig:
     configMap:
-      name: $WCNAME-nginx-ingress-controller-user-values
+      name: ${workload_cluster_name}-nginx-ingress-controller-user-values
       namespace: org-multi-project
   version: 2.8.0

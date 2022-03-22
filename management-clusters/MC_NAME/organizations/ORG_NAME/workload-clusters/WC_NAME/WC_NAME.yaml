@@ -1,17 +1,17 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: $WCNAME
+  name: ${workload_cluster_name}
   namespace: default
 spec:
   interval: 1m
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME"
   postBuild:
     substitute:
-      cluster_id: "wcnme" # Can be changed to match $WCNAME
-      control_plane_id: "km2k8"
-      machine_deployment_id: "bg2i8"
-      organization: "$ORGNAME"
+      cluster_id: "${workload_cluster_id}"
+      control_plane_id: "${control_plane_id}"
+      machine_deployment_id: "${machine_deployment_id}"
+      organization: "${organization}"
       release: "16.3.1"
   prune: true
   serviceAccountName: automation

@@ -10,4 +10,4 @@ data:
       use-forwarded-headers: "false"
 kind: ConfigMap
 metadata:
-  name: $WCNAME-nginx-ingress-controller-user-values
+  name: ${workload_cluster_name}-nginx-ingress-controller-user-values
