@@ -1,9 +1,0 @@
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: giantswarmio-nginx-app
-spec:
-  catalog: giantswarm-operations-platform
-  name: giantswarmio-nginx-app
-  namespace: giantswarmio
-  version: v0.5.2 # {"$imagepolicy": "flux-system:giantswarmio-nginx:tag"}

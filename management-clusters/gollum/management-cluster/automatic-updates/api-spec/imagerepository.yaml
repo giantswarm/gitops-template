@@ -1,7 +1,0 @@
-apiVersion: image.toolkit.fluxcd.io/v1beta1
-kind: ImageRepository
-metadata:
-  name: api-spec
-spec:
-  image: quay.io/giantswarm/api-spec
-  interval: 30m0s

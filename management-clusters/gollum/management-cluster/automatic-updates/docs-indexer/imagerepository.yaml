@@ -1,7 +1,0 @@
-apiVersion: image.toolkit.fluxcd.io/v1beta1
-kind: ImageRepository
-metadata:
-  name: docs-indexer
-spec:
-  image: quay.io/giantswarm/docs-indexer
-  interval: 30m0s
