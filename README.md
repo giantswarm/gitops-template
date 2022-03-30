@@ -9,6 +9,10 @@ loose after we ported some ideas from other repositories.
 
 ## Using this repository
 
+A good starting point is the
+[docs/repo_structure.md](repository structure) doc, which explains how this repository
+works.
+
 To start creating and managing your infrastructure using this template, please
 fork a repo from it, then follow the docs below to learn how it works:
 
@@ -16,7 +20,7 @@ fork a repo from it, then follow the docs below to learn how it works:
 1. [add a new Organization](./docs/add_org.md)
 1. [add a new Workload Cluster](./docs/add_wc.md)
 1. [add Workload Cluster definition (Legacy CRs)](./docs/add_cluster_crs.md)
-1. [add a new App to the Workload Cluster](./docs/add_appcr.md)
+1. [add a new App to a Workload Cluster](./docs/add_appcr.md)
 1. [update an existing App](./docs/update_appcr.md)
 1. [enable automatic updates of an existing App](./docs/automatic_updates_appcr.md)
 
