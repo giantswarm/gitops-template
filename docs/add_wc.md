@@ -1,7 +1,7 @@
 # Add a new workload cluster
 
-Follow the below instructions to add a new workload cluster to this repository. The instructions respect the
-[repository structure](./repo_structure.md).
+  Follow the below instructions to add a new workload cluster to this repository. The instructions respect the
+  [repository structure](./repo_structure.md).
 
 ## Export environment variables
 
