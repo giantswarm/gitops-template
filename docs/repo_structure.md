@@ -1,5 +1,8 @@
 # Repository Structure
 
+## Table of Content
+
+- [Table of Content](#table-of-content)
 - [General Remarks](#general-remarks)
 - [Rules for Naming Resources](#rules-for-naming-resources)
 - [Rules for Optional Components](#rules-for-optional-components)
@@ -8,6 +11,7 @@
   - [`[organizations]`](#organizations)
   - [`[workload-clusters]`](#workload-clusters)
 - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
+  - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
 ## General Remarks
 
@@ -47,7 +51,7 @@ of any doubt, it is RECOMMENDED to follow the [Rules for Naming Resources](#rule
 
 Nodes of the structure carrying an extension, e.g. `*.yaml` denote files, while the rest are considered directories,
 e.g. `organizations`. A special case to this rule is the `OTHER_RESOURCES` placeholder that denotes both files and
-directories, in order to emphasize that structure it MAY be extended by a user at different levels, with resources they
+directories, in order to emphasize that the structure MAY be extended by a user at different levels, with resources they
 need. When doing so however, the user SHOULD try to stay compliant with the hierarchy and find the best match for the
 resources to be introduced.
 
@@ -65,10 +69,9 @@ Naming recommendations are in the table below.
 
 | Placeholder | Rule |
 | :--: | :--: |
-| `MC_NAME` | User is REQUIRED to use the Management Cluster codename for clarity |
-| `ORG_NAME` | Organization name, it is RECOMMENDED to not use capital letters and omit the `org-` prefix |
-| `WC_NAME` | User MAY may give it an arbitrary name, however it is RECOMMENDED to use the Workload Cluster id
-for clarity |
+| `MC_NAME`   | User is REQUIRED to use the Management Cluster codename for clarity |
+| `ORG_NAME`  | Organization name, it is RECOMMENDED to not use capital letters and omit the `org-` prefix |
+| `WC_NAME`   | User MAY may give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster id |
 
 ## Rules for Optional Components
 
@@ -264,6 +267,8 @@ resources:
 
 The `WC_NAME.yaml` Kustomization CR, when created, points to the respective `WC_NAME/` directory and reconciles
 everything there, including itself, and hence takes over the reconciliation from where the `MC_NAME.yaml` leaves it.
+
+### Two Kustomization CRs motivation
 
 But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious as without it there is no
 reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the

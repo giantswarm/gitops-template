@@ -14,11 +14,11 @@ export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
 ```
 
-## (optional) Flux GPG regular key pair
+## Create Flux GPG regular key pair (optional step)
 
-If you intend to keep a secret data in this repository you need to encrypt them with Mozilla SOPS. In order to do so,
-you need to first generate a regular GPG keypair and deliver it to the cluster. Follow the below instructions in order
-to do it.
+If you intend to keep a secret data for your new cluster in this repository you need to encrypt them with Mozilla SOPS.
+In order to do so, you need to first generate a regular (dedicated for this single cluster) GPG keypair and deliver it
+to the cluster. Follow the below instructions in order to do it.
 
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
@@ -120,8 +120,8 @@ to do it.
 
 1. Go to the newly created directory and create 2 sub-directories there:
 
-- `apps` - Workload Cluster managed apps,
-- `cluster` - Workload Cluster definition.
+    - `apps` - Workload Cluster managed apps,
+    - `cluster` - Workload Cluster definition.
 
 ```sh
 cd ${WC_NAME}

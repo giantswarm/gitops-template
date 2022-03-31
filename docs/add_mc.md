@@ -1,6 +1,6 @@
 # Add a new management cluster
 
-Follow the below instructions to add a new management cluster to this repository. You have to be poiting the right
+Follow the instructions below to add a new management cluster to this repository. You have to be using the right
 Management Cluster API before to start. The instructions respect the [repository structure](./repo_structure.md).
 
 ## Export Management Cluster codename
@@ -57,14 +57,16 @@ en- and decrypt real user-related data.
     --from-file=sops.asc=/dev/stdin
     ```
 
-1. Add the private key to LastPass as a secure note:
+1. Add the private to a safe encrypted storage of your choice. For example, to export the key to `LastPass`
+   as a secure note, you can run:
 
     ```sh
     gpg --export-secret-keys --armor "${KEY_FP}" |
     lpass add --notes --non-interactive "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)"
     ```
 
-1. Delete the private key from the keychain:
+1. Delete the private key from the keychain (make sure you don't leave any unencrypted or local copies of the private
+   master key! This is *essential* for your GitOps deployment security!):
 
     ```sh
     gpg --delete-secret-keys "${KEY_FP}"
@@ -146,9 +148,9 @@ en- and decrypt real user-related data.
 Once all the above steps are completed, the MC's Flux can be initially configured to work against this repository.
 
 Bear in mind Flux needs GitHub credentials since the repository is private. This instruction assumes such credentials are
-available in the `github-giantswarm-https-credentials` Kubernetes Secret, created according to the
+available in the `github-https-credentials` Kubernetes Secret, created according to the
 [FluxCD installation intranet page](https://intranet.giantswarm.io/docs/support-and-ops/installation-setup-guide/fluxcd-installation/#create-a-secret-for-private-repository-access)
-in a `default` namespace.
+in the `default` namespace.
 
 1. Create a GitRepository CR:
 
@@ -157,13 +159,13 @@ in a `default` namespace.
     apiVersion: source.toolkit.fluxcd.io/v1beta1
     kind: GitRepository
     metadata:
-      name: workload-clusters-fleet
+      name: GITOPS_REPO
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/giantswarm/workload-clusters-fleet
+      url: https://github.com/GITOPS_REPO
       secretRef:
-        name: github-giantswarm-https-credentials
+        name: github-https-credentials
       ref:
         branch: main
       ignore: |
@@ -182,6 +184,6 @@ in a `default` namespace.
 After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
 e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
 
-Recommended next steps:
+## Recommended next steps
 
 - [add a new Organization](./add_org.md)

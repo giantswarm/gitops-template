@@ -33,7 +33,8 @@ export ORG_NAME=ORGANIZATION
     mkdir workload-clusters
     ```
 
-1. Create mandatory `kustomization.yaml` under `workload-clusters` directory and populate it with empty resources for now:
+1. Create the mandatory `kustomization.yaml` under `workload-clusters` directory and populate it with empty resources
+   for now:
 
     ```sh
     cat <<EOF > workload-clusters/kustomization.yaml
@@ -67,6 +68,6 @@ export ORG_NAME=ORGANIZATION
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should automatically
 reconcile your new organization.
 
-Recommended next steps:
+## Recommended next steps
 
 - [add a new Workload Cluster](./add_wc.md)
