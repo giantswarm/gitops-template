@@ -1,10 +1,12 @@
 # Add a new management cluster
 
-Follow the below instructions to add a new management cluster to this repository. You have to be poiting the right Management Cluster API before to start. The instructions respect the [repository structure](./repo_structure.md).
+Follow the below instructions to add a new management cluster to this repository. You have to be poiting the right
+Management Cluster API before to start. The instructions respect the [repository structure](./repo_structure.md).
 
 ## Export Management Cluster codename
 
-**Note**, cluster codename is needed in multiple places across these instructions, the least error prone way of providing it is by exporting it as an environment variable:
+**Note**, cluster codename is needed in multiple places across these instructions, the least error prone way of providing
+it is by exporting it as an environment variable:
 
 ```sh
 export MC_NAME=CODENAME
@@ -14,165 +16,172 @@ export MC_NAME=CODENAME
 
 **Note**, temporarily there is no automation behind creating master keys. This however may be subject to change.
 
-A master GPG keypair is used for en- and decryption of other GPG keys kept in this repository, that are in turn used to en- and decrypt real user-related data.
+A master GPG keypair is used for en- and decryption of other GPG keys kept in this repository, that are in turn used to
+en- and decrypt real user-related data.
 
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
-```sh
-export KEY_NAME="${MC_NAME}"
-export KEY_COMMENT="${MC_NAME} Flux Master"
+    ```sh
+    export KEY_NAME="${MC_NAME}"
+    export KEY_COMMENT="${MC_NAME} Flux Master"
 
-gpg --batch --full-generate-key <<EOF
-%no-protection
-Key-Type: 1
-Key-Length: 4096
-Subkey-Type: 1
-Subkey-Length: 4096
-Expire-Date: 0
-Name-Comment: ${KEY_COMMENT}
-Name-Real: ${KEY_NAME}
-EOF
-```
+    gpg --batch --full-generate-key <<EOF
+    %no-protection
+    Key-Type: 1
+    Key-Length: 4096
+    Subkey-Type: 1
+    Subkey-Length: 4096
+    Expire-Date: 0
+    Name-Comment: ${KEY_COMMENT}
+    Name-Real: ${KEY_NAME}
+    EOF
+    ```
 
-2. Retrieve the key fingerprint and store it in an environment variable:
+1. Retrieve the key fingerprint and store it in an environment variable:
 
-```sh
-gpg --list-secret-keys "${KEY_NAME}"
+    ```sh
+    gpg --list-secret-keys "${KEY_NAME}"
 
-sec   rsa4096 2021-11-25 [SC]
-      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    sec   rsa4096 2021-11-25 [SC]
+          XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-```
+    export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    ```
 
-3. Create Kubernetes Secret with the private key:
+1. Create Kubernetes Secret with the private key:
 
-```sh
-gpg --export-secret-keys --armor "${KEY_FP}" |
-kubectl create secret generic sops-gpg-master \
---namespace=default \
---from-file=sops.asc=/dev/stdin
-```
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}" |
+    kubectl create secret generic sops-gpg-master \
+    --namespace=default \
+    --from-file=sops.asc=/dev/stdin
+    ```
 
-4. Add the private key to LastPass as a secure note:
+1. Add the private key to LastPass as a secure note:
 
-```sh
-gpg --export-secret-keys --armor "${KEY_FP}" |
-lpass add --notes --non-interactive "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)"
-```
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}" |
+    lpass add --notes --non-interactive "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)"
+    ```
 
-5. Delete the private key from the keychain:
+1. Delete the private key from the keychain:
 
-```sh
-gpg --delete-secret-keys "${KEY_FP}"
-```
+    ```sh
+    gpg --delete-secret-keys "${KEY_FP}"
+    ```
 
-6. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
 
-```sh
-cat <<EOF >> .sops.yaml
-  - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
-    encrypted_regex: ^(data|stringData)$
-    pgp: ${KEY_FP}
-EOF
-```
+    ```sh
+    cat <<EOF >> .sops.yaml
+      - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
+        encrypted_regex: ^(data|stringData)$
+        pgp: ${KEY_FP}
+    EOF
+    ```
 
 ## Directory tree
 
 1. Go to the `management-clusters` directory
-2. Create new directory with a name corresponding to the MC codename:
+1. Create new directory with a name corresponding to the MC codename:
 
-```sh
-mkdir ${MC_NAME}
-```
+    ```sh
+    mkdir ${MC_NAME}
+    ```
 
-3. Go to the newly created directory and create 2 sub-directories there:
-* `.sops.keys` - storage for all GPG public keys,
-* `organizations` - storage for MC organizations,
-* `secrets` - storage for encrypted secrets, including regular GPG private keys.
+1. Go to the newly created directory and create 2 sub-directories there:
 
-```sh
-cd ${MC_NAME}
-mkdir \
-.sops.keys \
-organizations  \
-secrets
-```
+    - `.sops.keys` - storage for all GPG public keys,
+    - `organizations` - storage for MC organizations,
+    - `secrets` - storage for encrypted secrets, including regular GPG private keys.
 
-4. Share the master GPG public key from the [previous section](#flux-gpg-master-key-pair):
+    ```sh
+    cd ${MC_NAME}
+    mkdir \
+    .sops.keys \
+    organizations  \
+    secrets
+    ```
 
-```sh
-gpg --export --armor "${KEY_FP}" \
-> .sops.keys/.sops.master.asc
-```
+1. Share the master GPG public key from the [previous section](#flux-gpg-master-key-pair):
 
-5. Create the `kustomization.yaml` file under `secrets` directory and populate it with the below content:
+    ```sh
+    gpg --export --armor "${KEY_FP}" \
+    > .sops.keys/.sops.master.asc
+    ```
 
-```sh
-cat <<EOF > secrets/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources: []
-EOF
-```
+1. Create the `kustomization.yaml` file under `secrets` directory and populate it with the below content:
 
-6. Create the main Kustomization CR for the cluster:
+    ```sh
+    cat <<EOF > secrets/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources: []
+    EOF
+    ```
 
-```sh
-cat <<EOF > ${MC_NAME}.yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-kind: Kustomization
-metadata:
-  name: ${MC_NAME}-gitops
-  namespace: default
-spec:
-  serviceAccountName: automation
-  prune: true
-  interval: 1m
-  path: "./management-clusters/${MC_NAME}"
-  sourceRef:
-    kind: GitRepository
-    name: workload-clusters-fleet
-  timeout: 2m
-EOF
-```
+1. Create the main Kustomization CR for the cluster:
+
+    ```sh
+    cat <<EOF > ${MC_NAME}.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+    kind: Kustomization
+    metadata:
+      name: ${MC_NAME}-gitops
+      namespace: default
+    spec:
+      serviceAccountName: automation
+      prune: true
+      interval: 1m
+      path: "./management-clusters/${MC_NAME}"
+      sourceRef:
+        kind: GitRepository
+        name: workload-clusters-fleet
+      timeout: 2m
+    EOF
+    ```
 
 ## Initial cluster configuration
 
 Once all the above steps are completed, the MC's Flux can be initially configured to work against this repository.
 
-Bear in mind Flux needs GitHub credentials since the repository is private. This instruction assumes such credentials are available in the `github-giantswarm-https-credentials` Kubernetes Secret, created according to the [FluxCD installation intranet page](https://intranet.giantswarm.io/docs/support-and-ops/installation-setup-guide/fluxcd-installation/#create-a-secret-for-private-repository-access) in a `default` namespace.
+Bear in mind Flux needs GitHub credentials since the repository is private. This instruction assumes such credentials are
+available in the `github-giantswarm-https-credentials` Kubernetes Secret, created according to the
+[FluxCD installation intranet page](https://intranet.giantswarm.io/docs/support-and-ops/installation-setup-guide/fluxcd-installation/#create-a-secret-for-private-repository-access)
+in a `default` namespace.
 
 1. Create a GitRepository CR:
 
-```sh
-cat <<EOF | kubectl apply -f -
-apiVersion: source.toolkit.fluxcd.io/v1beta1
-kind: GitRepository
-metadata:
-  name: workload-clusters-fleet
-  namespace: default
-spec:
-  interval: 1m
-  url: https://github.com/giantswarm/workload-clusters-fleet
-  secretRef:
-    name: github-giantswarm-https-credentials
-  ref:
-    branch: main
-  ignore: |
-    **
-    !management-clusters/${MC_NAME}/**
-    **.md
-EOF
-```
+    ```sh
+    cat <<EOF | kubectl apply -f -
+    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    kind: GitRepository
+    metadata:
+      name: workload-clusters-fleet
+      namespace: default
+    spec:
+      interval: 1m
+      url: https://github.com/giantswarm/workload-clusters-fleet
+      secretRef:
+        name: github-giantswarm-https-credentials
+      ref:
+        branch: main
+      ignore: |
+        **
+        !management-clusters/${MC_NAME}/**
+        **.md
+    EOF
+    ```
 
-2. Apply the cluster's Kustomization CR:
+1. Apply the cluster's Kustomization CR:
 
-```
-kubectl apply -f ${MC_NAME}.yaml
-```
+    ```sh
+    kubectl apply -f ${MC_NAME}.yaml
+    ```
 
-After completing these steps, you are no longer required to interact with Flux directly. Further configuration, e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
+After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
+e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
 
 Recommended next steps:
+
 - [add a new Organization](./add_org.md)

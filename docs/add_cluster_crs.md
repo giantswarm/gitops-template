@@ -4,7 +4,8 @@ Follow the below instructions to store cluster CRs in the repository. The instru
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
+this instruction, the least error prone way of providing them is by exporting as environment variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -14,9 +15,12 @@ export WC_NAME=CLUSTER_NAME
 
 ## Choose bases
 
-In order to avoid code duplication, it is advised to utilize the [bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays) of Kustomize in order to configure clusters and node pools.
+In order to avoid code duplication, it is advised to utilize the
+[bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays)
+of Kustomize in order to configure clusters and node pools.
 
-This repository comes with some built in bases you can choose from, go to the [bases](../bases) directory and search for some that meet your needs, then export their paths with:
+This repository comes with some built in bases you can choose from, go to the [bases](../bases) directory and search for
+some that meet your needs, then export their paths with:
 
 ```sh
 export CLUSTER_PATH=CLUSTER_BASE_PATH
@@ -27,95 +31,105 @@ If desired base is not there, you can add it. Reference the next section to get 
 
 ## (optional) Create template base
 
-**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to abstract configuration common across the API versions, and is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid code duplication across bases. If a template base for your provider is already there, you may skip this part.
+**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to abstract
+configuration common across the API versions, and is then used as a base to other bases, which provide an overlay with a
+specific configuration. This is to avoid code duplication across bases. If a template base for your provider is already
+here, you may skip this part.
 
-**Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic steps needed to move forward. Hence, instructions here will not always be precise in telling you what to change, as this can strongly depend on resources involved, how much out of them you would like to include into a base, etc.
+**Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic steps
+needed to move forward. Hence, instructions here will not always be precise in telling you what to change, as this can
+strongly depend on resources involved, how much out of them you would like to include into a base, etc.
 
-1. Export provider' name and API version of cluster and node pools resources you are about to create, for example `aws` and `v1alpha3`. Template base is not tied to any specific version, though we need to specify it for the `kubectl gs`:
+1. Export provider' name and API version of cluster and node pools resources you are about to create, for example `aws`
+and `v1alpha3`. Template base is not tied to any specific version, though we need to specify it for the `kubectl gs`:
 
-```sh
-export PROVIDER=aws
-export API_VERSION=v1alpha3
-```
+    ```sh
+    export PROVIDER=aws
+    export API_VERSION=v1alpha3
+    ```
 
 1. Create a directory structure:
 
-```sh
-mkdir -p bases/clusters/${PROVIDER}/template
-mkdir -p bases/nodepools/${PROVIDER}/template
-```
+    ```sh
+    mkdir -p bases/clusters/${PROVIDER}/template
+    mkdir -p bases/nodepools/${PROVIDER}/template
+    ```
 
-1. Use the [kubectl gs template cluster](https://docs.giantswarm.io/ui-api/kubectl-gs/template-cluster/) to template cluster resources, see example for the `aws` provider below. Use arbitrary values for the mandatory fields:
+1. Use the [kubectl gs template cluster](https://docs.giantswarm.io/ui-api/kubectl-gs/template-cluster/) to template
+cluster resources, see example for the `aws` provider below. Use arbitrary values for the mandatory fields:
 
-```sh
-kubectl gs template cluster --provider ${PROVIDER} \
---name mywcl \
---organization myorg \
---release 17.0.3 \
---output bases/clusters/${PROVIDER}/${API_VERSION}/cluster.yaml
-```
+    ```sh
+    kubectl gs template cluster --provider ${PROVIDER} \
+    --name mywcl \
+    --organization myorg \
+    --release 17.0.3 \
+    --output bases/clusters/${PROVIDER}/${API_VERSION}/cluster.yaml
+    ```
 
 1. Replace values provided in the previous step by a shell-like variables:
 
-```sh
-# BSD sed
-sed -i "" 's/myorg/${organization}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
-sed -i "" 's/mywcl/${cluster_id}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
-sed -i "" 's/17.0.3/${release}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
-```
+    ```sh
+    # BSD sed
+    sed -i "" 's/myorg/${organization}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
+    sed -i "" 's/mywcl/${cluster_id}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
+    sed -i "" 's/17.0.3/${release}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
+    ```
 
 1. Replace API versions with a `replaceme` token:
 
-```sh
-sed -i "" 's/\/v[0-9][a-z]*[0-9]$/\/replaceme/g' bases/clusters/${PROVIDER}/template/cluster.yaml
-```
+    ```sh
+    sed -i "" 's/\/v[0-9][a-z]*[0-9]$/\/replaceme/g' bases/clusters/${PROVIDER}/template/cluster.yaml
+    ```
 
 1. Open the `cluster.yaml` file in your favourite editor and take two action:
 
-* replace often repeating values with variables in the same manner as above. Fields to replace could be virtually anything, see example below, also please check the [repository structure](./repo_structure.md#flux-kustomization-crs-involved) and other [bases](../bases) for more,
-* remove version-specific fields, making sure template carries only a common code.
+    - replace often repeating values with variables in the same manner as above. Fields to replace could be virtually anything,
+    see example below, also please check the [repository structure](./repo_structure.md#flux-kustomization-crs-involved)
+    and other [bases](../bases) for more,
+    - remove version-specific fields, making sure template carries only a common code.
 
-```yaml
-apiVersion: infrastructure.giantswarm.io/replaceme
-kind: AWSControlPlane
-metadata:
-  labels:
-    giantswarm.io/control-plane: ${control_plane_id}
-  name: ${control_plane_id}
-spec:
-  instanceType: ${cp_instance_type}
-```
+    ```yaml
+    apiVersion: infrastructure.giantswarm.io/replaceme
+    kind: AWSControlPlane
+    metadata:
+      labels:
+        giantswarm.io/control-plane: ${control_plane_id}
+      name: ${control_plane_id}
+    spec:
+      instanceType: ${cp_instance_type}
+    ```
 
-The rule of thumb is, don't be afraid of trying different configurations. Parameterizing too much or too little can be resolved over time, and finding the right balance is a process.
+    The rule of thumb is, don't be afraid of trying different configurations. Parameterizing too much or too little can be
+    resolved over time, and finding the right balance is a process.
 
 1. Split up the `cluster.yaml` into multiple files:
 
-```sh
-COUNT=$(grep -e '---' bases/clusters/${PROVIDER}/template/cluster.yaml | wc -l | tr -d ' ')
-csplit bases/clusters/${PROVIDER}/template/cluster.yaml /---/ "{$((COUNT-1))}"
-rm bases/clusters/${PROVIDER}/template/cluster.yaml
-```
+    ```sh
+    COUNT=$(grep -e '---' bases/clusters/${PROVIDER}/template/cluster.yaml | wc -l | tr -d ' ')
+    csplit bases/clusters/${PROVIDER}/template/cluster.yaml /---/ "{$((COUNT-1))}"
+    rm bases/clusters/${PROVIDER}/template/cluster.yaml
+    ```
 
 1. Rename newly created files and move them to the base:
 
-```sh
-for f in $(ls xx*)
-do
-    new_name=$(yq eval '.kind' $f | tr '[:upper:]' '[:lower:]')
-    mv $f bases/clusters/${PROVIDER}/template/$new_name.yaml
-done
-```
+    ```sh
+    for f in $(ls xx*)
+    do
+        new_name=$(yq eval '.kind' $f | tr '[:upper:]' '[:lower:]')
+        mv $f bases/clusters/${PROVIDER}/template/$new_name.yaml
+    done
+    ```
 
 1. Create the `kustomization.yaml` under base directory, with split files as resources:
 
-```sh
-cat <<EOF > bases/clusters/${PROVIDER}/template/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-$(for f in $(ls bases/clusters/${PROVIDER}/template/); do echo "- $f"; done)
-EOF
-```
+    ```sh
+    cat <<EOF > bases/clusters/${PROVIDER}/template/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+    $(for f in $(ls bases/clusters/${PROVIDER}/template/); do echo "- $f"; done)
+    EOF
+    ```
 
 1. Create the `readme.md` with supported variables and expected values.
 
@@ -125,133 +139,140 @@ EOF
 
 **IMPORTANT**, versioned bases use a base and overlay it with a specific API version, and if needed, a configuration.
 
-1. Export provider' name and API version of cluster and node pools resources you are about to create, for example `aws` and `v1alpha3`:
+1. Export provider' name and API version of cluster and node pools resources you are about to create, for example `aws`
+and `v1alpha3`:
 
-```sh
-export PROVIDER=aws
-export API_VERSION=v1alpha3
-```
+    ```sh
+    export PROVIDER=aws
+    export API_VERSION=v1alpha3
+    ```
 
 1. Create a directory structure:
 
-```sh
-mkdir -p bases/clusters/${PROVIDER}/${API_VERSION}
-mkdir -p bases/nodepools/${PROVIDER}/${API_VERSION}
-```
+    ```sh
+    mkdir -p bases/clusters/${PROVIDER}/${API_VERSION}
+    mkdir -p bases/nodepools/${PROVIDER}/${API_VERSION}
+    ```
 
-1. Create the `kustostomization.yaml` under base directory, referencing template and replacing `replaceme` tokens with specific API versions,  see example for the `aws` provider below:
+1. Create the `kustostomization.yaml` under base directory, referencing template and replacing `replaceme` tokens with
+specific API versions,  see example for the `aws` provider below:
 
-```sh
-cat <<EOF > bases/clusters/${PROVIDER}/${API_VERSION}/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-patches:
-- patch: |-
-    - op: replace
-      path: "/apiVersion"
-      value: cluster.x-k8s.io/v1beta1
-    - op: replace
-      path: "/spec/infrastructureRef/apiVersion"
-      value: infrastructure.giantswarm.io/${API_VERSION}
-  target:
-    group: cluster.x-k8s.io
-    kind: Cluster
-    version: replaceme
-- patch: |-
-    - op: replace
-      path: "/apiVersion"
-      value: infrastructure.giantswarm.io/${API_VERSION}
-  target:
-    group: infrastructure.giantswarm.io
-    kind: 'AWSCluster|AWSControlPlane'
-    version: replaceme
-- patch: |-
-    - op: replace
-      path: "/apiVersion"
-      value: infrastructure.giantswarm.io/${API_VERSION}
-    - op: replace
-      path: "/spec/infrastructureRef/apiVersion"
-      value: infrastructure.giantswarm.io/${API_VERSION}
-  target:
-    group: infrastructure.giantswarm.io
-    kind: G8sControlPlane
-    version: replaceme
-resources:
-- ../template
-EOF
-```
+    ```sh
+    cat <<EOF > bases/clusters/${PROVIDER}/${API_VERSION}/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    patches:
+    - patch: |-
+        - op: replace
+          path: "/apiVersion"
+          value: cluster.x-k8s.io/v1beta1
+        - op: replace
+          path: "/spec/infrastructureRef/apiVersion"
+          value: infrastructure.giantswarm.io/${API_VERSION}
+      target:
+        group: cluster.x-k8s.io
+        kind: Cluster
+        version: replaceme
+    - patch: |-
+        - op: replace
+          path: "/apiVersion"
+          value: infrastructure.giantswarm.io/${API_VERSION}
+      target:
+        group: infrastructure.giantswarm.io
+        kind: 'AWSCluster|AWSControlPlane'
+        version: replaceme
+    - patch: |-
+        - op: replace
+          path: "/apiVersion"
+          value: infrastructure.giantswarm.io/${API_VERSION}
+        - op: replace
+          path: "/spec/infrastructureRef/apiVersion"
+          value: infrastructure.giantswarm.io/${API_VERSION}
+      target:
+        group: infrastructure.giantswarm.io
+        kind: G8sControlPlane
+        version: replaceme
+    resources:
+    - ../template
+    EOF
+    ```
 
 1. Copy `readme.md` from the template base:
 
-```sh
-cp bases/clusters/${PROVIDER}/template/readme.md bases/clusters/${PROVIDER}/${API_VERSION}/readme.md
-```
+    ```sh
+    cp bases/clusters/${PROVIDER}/template/readme.md bases/clusters/${PROVIDER}/${API_VERSION}/readme.md
+    ```
 
 1. Export bases paths:
 
-```sh
-export CLUSTER_PATH=CLUSTER_BASE_PATH
-export NODEPOOL_PATH=NODEPOOL_BASE_PATH
-```
+    ```sh
+    export CLUSTER_PATH=CLUSTER_BASE_PATH
+    export NODEPOOL_PATH=NODEPOOL_BASE_PATH
+    ```
 
 ## Directory tree
 
 1. Go to the Workload Cluster definition directory:
 
-```sh
-cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/cluster
-```
+    ```sh
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/cluster
+    ```
 
 1. Create the `kustomization.yaml` referencing the bases:
 
-```sh
-cat <<EOF > kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-- ${CLUSTER_PATH}
-#- ${NODEPOOL_PATH}
-EOF
-```
+    ```sh
+    cat <<EOF > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+    - ${CLUSTER_PATH}
+    #- ${NODEPOOL_PATH}
+    EOF
+    ```
 
-**Note**, the node pool base is commented out at this point, because **admission controllers** involved will complain if we try to create both groups at the same time. Until support for the `managedBy: flux` is implemented, a workaround is to create cluster CRs and node pools CRs **by a two, separate PRs**.
+    **Note**, the node pool base is commented out at this point, because **admission controllers** involved will complain
+    if we try to create both groups at the same time. Until support for the `managedBy: flux` is implemented, a workaround
+    is to create cluster CRs and node pools CRs **by a two, separate PRs**.
 
 1. (optional) create and apply additional patches if needed.
 
 1. Leave the `cluster` directory and go to `workload-clusters`:
 
-```sh
-# cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-cd ../../
-```
+    ```sh
+    # cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
+    cd ../../
+    ```
 
 1. Edit the Kustomization CR for the workload cluster and assign values to the variables from bases, see example below:
 
-```yaml
-# ${WC_NAME}.yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-kind: Kustomization
-...
-spec:
-  ...
-  postBuild:
-    substitute:
-      cluster_id: "demo0"
-      control_plane_id: "km2k8"
-      machine_deployment_id: "bg2i8"
-      organization: "gitops-demo"
-      release: "16.3.1"
-  ...
-```
+    ```yaml
+    # ${WC_NAME}.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+    kind: Kustomization
+    ...
+    spec:
+      ...
+      postBuild:
+        substitute:
+          cluster_id: "demo0"
+          control_plane_id: "km2k8"
+          machine_deployment_id: "bg2i8"
+          organization: "gitops-demo"
+          release: "16.3.1"
+      ...
+    ```
 
-1. Create a Pull Request with the changes you have just done. Once it is merged and Cluster' CRs are created, revisit the `kustomization.yaml` and uncomment node pools base:
+1. Create a Pull Request with the changes you have just done. Once it is merged and Cluster' CRs are created, revisit the
+`kustomization.yaml` and uncomment node pools base:
 
-```sh
-# BSD sed
-sed -i "" "s/^#-/-/" kustomization.yaml
-```
+    ```sh
+    # BSD sed
+    sed -i "" "s/^#-/-/" kustomization.yaml
+    ```
 
-After completing this step, you can open another PR with the changes. Once it is merged, Flux should create accompanying node pool for your cluster.
+After completing this step, you can open another PR with the changes. Once it is merged, Flux should create accompanying
+node pool for your cluster.
 
 Recommended next steps:
+
 - [add a new App CR to the Workload Cluster](./add_appcr.md)
