@@ -10,7 +10,7 @@ loose after we ported some ideas from other repositories.
 ## Using this repository
 
 A good starting point is the
-[docs/repo_structure.md](repository structure) doc, which explains how this repository
+[repository structure](docs/repo_structure.md) doc, which explains how this repository
 works.
 
 To start creating and managing your infrastructure using this template, please
