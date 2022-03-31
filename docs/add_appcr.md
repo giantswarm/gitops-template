@@ -1,6 +1,6 @@
 # Add a new App to the Workload Cluster
 
-Follow the below instructions to add a new App to this repository.
+Follow the instructions below to add a new App to a cluster managed in this repository.
 
 ## Export environment variables
 
@@ -92,7 +92,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
 At this point, if you have followed [the WC configuration guide](./add_wc.md), all the necessary Flux resources should
 already be configured.
 
-Recommended next steps:
+## Recommended next steps
 
 - [enable automatic updates of an existing App](./automatic_updates_appcr.md)
 - [update an existing App](./update_appcr.md)

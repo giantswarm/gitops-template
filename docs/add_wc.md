@@ -1,7 +1,7 @@
 # Add a new workload cluster
 
-  Follow the below instructions to add a new workload cluster to this repository. The instructions respect the
-  [repository structure](./repo_structure.md).
+Follow the below instructions to add a new workload cluster to this repository. The instructions respect the
+[repository structure](./repo_structure.md).
 
 ## Export environment variables
 
@@ -74,7 +74,8 @@ to the cluster. Follow the below instructions in order to do it.
     sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Add the private key to LastPass as a secure note:
+1. As a backup, save the private key to an external encrypted storage. As an example, you can add the private key
+   to LastPass as a secure note:
 
     ```sh
     gpg --export-secret-keys --armor "${KEY_FP}" |
@@ -87,7 +88,7 @@ to the cluster. Follow the below instructions in order to do it.
     gpg --delete-secret-keys "${KEY_FP}"
     ```
 
-1. Share the regular GPG public key in this repository:
+1. Share the new GPG public key in this repository:
 
     ```sh
     gpg --export --armor "${KEY_FP}" \
@@ -123,10 +124,10 @@ to the cluster. Follow the below instructions in order to do it.
     - `apps` - Workload Cluster managed apps,
     - `cluster` - Workload Cluster definition.
 
-```sh
-cd ${WC_NAME}
-mkdir apps cluster
-```
+    ```sh
+    cd ${WC_NAME}
+    mkdir apps cluster
+    ```
 
 1. Go to the `apps` directory:
 
@@ -134,7 +135,10 @@ mkdir apps cluster
     cd apps
     ```
 
-1. Create the `patch_cluster_config.yaml` file to provide common configuration for all the Apps:
+1. Create the `patch_cluster_config.yaml` file to provide common configuration for all the Apps that are going to be
+   installed to the new cluster. We're basically ensuring 2 things here: first, that there's a shared Config Map that we
+   will use for common values (like cluster's domain name), and second that all the apps know how to configure a
+   `kubeConfig` secret that will be used to connect to the new cluster.
 
     ```sh
     cat <<EOF > patch_cluster_config.yaml
@@ -159,10 +163,12 @@ mkdir apps cluster
     EOF
     ```
 
-    **Note**, the `giantswarm.io/managed-by: flux` label is very important here, it tells app-admission-controller to
-    ignore missing ConfigMaps and Secrets set in `spec.userConfig` of the App CRs.
+    **Note**, the `giantswarm.io/managed-by: flux` label is very important here, it tells the `app-admission-controller`
+    of App Platform to ignore any missing ConfigMaps and Secrets set in `spec.userConfig` of the App CRs. This is needed
+    to avoid race conditions, where Flux creates first the App CR and only later a referenced ConfigMap or Secret.
 
-1. Create the `kustomization.yaml` file, with empty resources for now:
+1. Create the `kustomization.yaml` file, with empty resources (for now) but applying our patch created above to any
+   objects we add here in future:
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -193,63 +199,63 @@ mkdir apps cluster
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create Kustomization CR for it,
+1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one fo the templates:
 
-    without encryption:
+    - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
-    ```sh
-    # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    cd ../../
-    cat <<EOF > ${WC_NAME}.yaml
-    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-    kind: Kustomization
-    metadata:
-      name: ${MC_NAME}-clusters-${WC_NAME}
-      namespace: default
-    spec:
-      interval: 1m
-      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
-      postBuild:
-        substitute:
-          cluster_id: "${WC_NAME}"
-      prune: false
-      serviceAccountName: automation
-      sourceRef:
-        kind: GitRepository
-        name: workload-clusters-fleet
-      timeout: 2m
-    EOF
-    ```
+      ```sh
+      # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
+      cd ../../
+      cat <<EOF > ${WC_NAME}.yaml
+      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      kind: Kustomization
+      metadata:
+        name: ${MC_NAME}-clusters-${WC_NAME}
+        namespace: default
+      spec:
+        interval: 1m
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        postBuild:
+          substitute:
+            cluster_id: "${WC_NAME}"
+        prune: false
+        serviceAccountName: automation
+        sourceRef:
+          kind: GitRepository
+          name: workload-clusters-fleet
+        timeout: 2m
+      EOF
+      ```
 
-    or with encryption:
+    - if you have created a dedicated GPG key for the cluster (running with Secrets encryption):
 
-    ```sh
-    # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    cd ../../
-    cat <<EOF > ${WC_NAME}.yaml
-    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-    kind: Kustomization
-    metadata:
-      name: ${MC_NAME}-clusters-${WC_NAME}
-      namespace: default
-    spec:
-      decryption:
-        provider: sops
-        secretRef:
-          name: sops-gpg-${WC_NAME}
-      interval: 1m
-      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
-      postBuild:
-        substitute:
-          cluster_id: "${WC_NAME}"
-      prune: false
-      serviceAccountName: automation
-      sourceRef:
-        kind: GitRepository
-        name: workload-clusters-fleet
-      timeout: 2m
-    EOF
-    ```
+      ```sh
+      # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
+      cd ../../
+      cat <<EOF > ${WC_NAME}.yaml
+      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      kind: Kustomization
+      metadata:
+        name: ${MC_NAME}-clusters-${WC_NAME}
+        namespace: default
+      spec:
+        decryption:
+          provider: sops
+          secretRef:
+            name: sops-gpg-${WC_NAME}
+        interval: 1m
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        postBuild:
+          substitute:
+            cluster_id: "${WC_NAME}"
+        prune: false
+        serviceAccountName: automation
+        sourceRef:
+          kind: GitRepository
+          name: workload-clusters-fleet
+        timeout: 2m
+      EOF
+      ```
 
 ## MC configuration
 
@@ -259,13 +265,13 @@ mkdir apps cluster
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
     ```
 
-1. Edit the mandatory `kustomization.yaml` adding the WC' Kustomization CR as s resource:
+1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource:
 
     ```sh
     yq -i e ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
     ```
 
-    The resultant file should look like this:
+    The resulting file should look like this:
 
     ```yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
@@ -275,9 +281,9 @@ mkdir apps cluster
     ```
 
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should be ready to reconcile
-workload cluster and apps.
+the new workload cluster and apps.
 
-Recommended next steps:
+## Recommended next steps
 
 - [add Workload Cluster definition (Legacy CRs)](./add_cluster_crs.md)
 - [add Workload Cluster definition (Cluster App)](./add_cluster_appcr.md)

@@ -14,7 +14,13 @@ export WC_NAME=CLUSTER_NAME
 export APP_NAME=APP_NAME
 ```
 
-## Update App CR
+## Updating App
+
+  App update and reconfiguration must be done in a correct resource. If you want to reconfigure a property of App CR,
+  like application version, you have to edit the `appcr.yaml` file. If you want to edit the plain text or encrypted
+  configuration, you have to edit the relevant resource type.
+
+### Updating App CR
 
 1. Go to the App directory:
 
@@ -25,7 +31,7 @@ export APP_NAME=APP_NAME
 1. Edit the `appcr.yaml` if you want to update the App CR fields, like version, catalog, etc. For all the supported
 fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/management-api/crd/apps.application.giantswarm.io/)
 
-## Update ConfigMap-based user values
+### Updating ConfigMap-based user values
 
 1. Go to the App directory:
 
@@ -35,7 +41,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
 
 1. Edit the `configmap.yaml` if you want to update a non-secret user configuration
 
-## Update Secret-based user values
+### Updating Secret-based user values
 
 1. Go to the App directory:
 
@@ -43,7 +49,8 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
-1. Import the WC' regular GPG private key into your keychain:
+1. Import the WC's regular GPG private key from your safe storage into your keychain. In our example, we're gonna
+   use `LastPass` for that:
 
     ```sh
     gpg --import \
@@ -88,3 +95,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
     ```
 
 1. Remove the private GPG key from your keychain and submit the PR.
+
+    ```sh
+    gpg --delete-secret-keys "${KEY_FP}"
+    ```
