@@ -1,6 +1,13 @@
-# Add workload cluster definition (Legacy CRs)
+# Add vintage workload cluster definition (Legacy CRs)
 
-Follow the below instructions to store cluster CRs in the repository. The instructions respect the [repository structure](./repo_structure.md).
+Follow the below instructions to store vintage cluster CRs in the repository. The instructions respect the [repository structure](./repo_structure.md).
+
+The instructions below take into account that CAPI like objects are frequently versioned (so you have `v1beta1`, `v1beta2`),
+but often the changes between the versions are rather small and in practice sometimes don't even affect you.
+
+Since CAPI objects are big in general, in this repo we have extracted a common base for some of them. This base is to
+share what is common in CAPI objects across many versions. To make such bases useful, we're introducing another base on
+top of them to set specific CAPI versions and version specific properties on top of the shared base.
 
 ## Export environment variables
 
@@ -29,7 +36,7 @@ export NODEPOOL_PATH=NODEPOOL_BASE_PATH
 
 If desired base is not there, you can add it. Reference the next section to get a general idea of how to do it.
 
-## (optional) Create template base
+## Create shared template base (optional)
 
 **IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to abstract
 configuration common across the API versions, and is then used as a base to other bases, which provide an overlay with a
@@ -135,9 +142,11 @@ cluster resources, see example for the `aws` provider below. Use arbitrary value
 
 1. Repeat the same steps for node pools.
 
-## (optional) Create versioned base
+## Create versioned base (optional)
 
-**IMPORTANT**, versioned bases use a base and overlay it with a specific API version, and if needed, a configuration.
+**IMPORTANT**, versioned bases use a shared template base and overlay it with a specific CAPI API version, and
+if needed, a configuration. They provide a ready definition of a CAPI cluster that can be later used to create cluster
+instances.
 
 1. Export provider' name and API version of cluster and node pools resources you are about to create, for example `aws`
 and `v1alpha3`:
@@ -210,7 +219,7 @@ specific API versions,  see example for the `aws` provider below:
     export NODEPOOL_PATH=NODEPOOL_BASE_PATH
     ```
 
-## Directory tree
+## Creating cluster based on existing bases
 
 1. Go to the Workload Cluster definition directory:
 
@@ -230,9 +239,9 @@ specific API versions,  see example for the `aws` provider below:
     EOF
     ```
 
-    **Note**, the node pool base is commented out at this point, because **admission controllers** involved will complain
-    if we try to create both groups at the same time. Until support for the `managedBy: flux` is implemented, a workaround
-    is to create cluster CRs and node pools CRs **by a two, separate PRs**.
+    **Note**, the node pool base is commented out at this point, because Giant Swarm's **admission controllers** will complain
+    if we try to create both groups at the same time. We're working on a solution. Until this is solved and support for
+    the `managedBy: flux` is implemented, a workaround is to create cluster CRs and node pools CRs **in two, separate PRs**.
 
 1. (optional) create and apply additional patches if needed.
 
@@ -273,6 +282,6 @@ specific API versions,  see example for the `aws` provider below:
 After completing this step, you can open another PR with the changes. Once it is merged, Flux should create accompanying
 node pool for your cluster.
 
-Recommended next steps:
+## Recommended next steps
 
 - [add a new App CR to the Workload Cluster](./add_appcr.md)

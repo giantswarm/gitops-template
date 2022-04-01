@@ -1,6 +1,17 @@
 # Enable automatic updates of an existing App
 
-Follow the below instructions to tell Flux to automatically update an existing App.
+Follow the below instructions to tell Flux to automatically update an existing App. Automatic update means
+that Flux will scan a remote repository for you and automatically update your deployed application version
+while also creating commits in your repository to reflect these changes.
+
+Configuring automated version updates requires a few additional Flux API objects to be defined, namely:
+
+- `ImageUpdateAutomation`, which defines the core update properties, like the git repo where the commits are to be
+  made, commit messages structure and how to update files in the repository,
+- `ImageRepository` to configure where images are stored and new versions can be detected,
+- `ImagePolicy` to configure which of the detected new tags will be considered as possible to update to.
+- additionally, you have to edit your existing App manifest to include a marker showing the manifest's property you
+  want to have auto updated by Flux (usually App version property).
 
 Flux will watch for new Docker image tags for your App and use them to update the `.spec.version` field in the App CR. It
 will do it by pushing commits to this repository.
@@ -49,7 +60,7 @@ export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY
       interval: 1m0s
       sourceRef:
         kind: GitRepository
-        name: workload-clusters-fleet
+        name: YOUR_REPO
       git:
         checkout:
           ref:
@@ -164,9 +175,9 @@ scan for new tags:
      version: 0.1.2 # {"$imagepolicy": "default:hello-world:tag"}
    ```
 
-## (optional) Secrets for scanning private images
+## Secrets for scanning private images (optional)
 
-1. Export path to the Docker config with secrets:
+1. Export path to the Docker registry config with secrets:
 
     ```sh
     export DOCKER_CONFIG_JSON=PATH

@@ -286,5 +286,5 @@ the new workload cluster and apps.
 ## Recommended next steps
 
 - [add Workload Cluster definition (Legacy CRs)](./add_cluster_crs.md)
-- [add Workload Cluster definition (Cluster App)](./add_cluster_appcr.md)
+<!-- - [add Workload Cluster definition (Cluster App)](./add_cluster_appcr.md)-->
 - [add a new App CR to the Workload Cluster](./add_appcr.md)
