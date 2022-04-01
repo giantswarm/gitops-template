@@ -222,7 +222,7 @@ to the cluster. Follow the below instructions in order to do it.
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
-          name: workload-clusters-fleet
+          name: YOUR_REPO
         timeout: 2m
       EOF
       ```
@@ -252,7 +252,7 @@ to the cluster. Follow the below instructions in order to do it.
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
-          name: workload-clusters-fleet
+          name: YOUR_REPO
         timeout: 2m
       EOF
       ```
