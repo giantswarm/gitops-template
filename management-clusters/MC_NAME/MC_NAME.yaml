@@ -1,24 +1,14 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: mc-name-gitops # change mc-name
+  name: MC_NAME-gitops # change mc-name
   namespace: default
 spec:
-  force: false
   interval: 1m0s
   path: ./management-clusters/MC_NAME
-  postBuild:
-    substitute:  # fill in substitution values
-      control_plane_id: ""
-      gitops_repo: ""
-      machine_deployment_id: ""
-      management_cluster_name: ""
-      organization: ""
-      workload_cluster_id: ""
-      workload_cluster_name: ""
-  prune: false
+  prune: true
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: gitops-demo
+    name: YOUR_REPO
   timeout: 2m0s
