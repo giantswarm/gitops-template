@@ -1,7 +1,7 @@
 # GitOps Template
 
-This repository presents structure, ideas and best practises for managing clusters and apps
-using Flux available by default on Managment Clusters.
+This repository presents structure, ideas and best practices for managing clusters and apps
+using Flux available by default on Giant Swarm Management Clusters.
 
 *Warning:* This repository is of a preview quality right now and still a work in progress.
 Please bear in mind that it might have some elements that are not strictly needed or left
@@ -9,14 +9,20 @@ loose after we ported some ideas from other repositories.
 
 ## Using this repository
 
+A good starting point is the
+[repository structure](docs/repo_structure.md) doc, which explains how this repository
+works.
+
 To start creating and managing your infrastructure using this template, please
 fork a repo from it, then follow the docs below to learn how it works:
 
 1. [add a new Management Cluster](./docs/add_mc.md)
-2. [add a new Workload Cluster](./docs/add_wc.md)
-3. [add a new App to the Workload Cluster](./docs/add_appcr.md)
-4. [update an existing App](./docs/update_appcr.md)
-5. [enable automatic updates of an existing App](./docs/automatic_updates_appcr.md)
+1. [add a new Organization](./docs/add_org.md)
+1. [add a new Workload Cluster](./docs/add_wc.md)
+1. [add Workload Cluster definition (Legacy CRs)](./docs/add_cluster_crs.md)
+1. [add a new App to a Workload Cluster](./docs/add_appcr.md)
+1. [update an existing App](./docs/update_appcr.md)
+1. [enable automatic updates of an existing App](./docs/automatic_updates_appcr.md)
 
 ## Contributing
 
