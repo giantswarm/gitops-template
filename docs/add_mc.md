@@ -171,6 +171,7 @@ in the `default` namespace.
       ignore: |
         **
         !management-clusters/${MC_NAME}/**
+        !bases/**
         **.md
     EOF
     ```
