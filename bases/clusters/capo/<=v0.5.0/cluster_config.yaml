@@ -1,0 +1,40 @@
+bastion:
+  flavor: n1.tiny
+  rootVolume:
+    diskSize: 10
+    sourceUUID: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+clusterDescription: Gitops cluster.
+cloudConfig: cloud-config
+cloudName: openstack
+clusterName: ${cluster_name}
+controlPlane:
+  availabilityZones:
+  - demo_az_1
+  - demo_az_2
+  - demo_az_3
+  diskSize: 50
+  machineFlavor: n1.small
+  replicas: 3
+externalNetworkID: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+nodeCIDR: 10.6.0.0/24
+nodeClasses:
+- diskSize: 50
+  machineFlavor: n1.small
+  name: default
+nodePools:
+- class: default
+  name: demo_az_1
+  failureDomain: demo_az_1
+  replicas: 1
+- class: default
+  name: demo_az_2
+  failureDomain: demo_az_2
+  replicas: 1
+- class: default
+  name: demo_az_3
+  failureDomain: demo_az_3
+  replicas: 1
+organization: ${organization}
+rootVolume:
+  enabled: true
+  sourceUUID: cccccccc-cccc-cccc-cccc-cccccccccccc
