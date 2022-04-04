@@ -1,13 +1,3 @@
-creation_rules:
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/gaia/secrets/.*\.enc\.yaml
-    pgp: 59C002A042B410E0D35E5DEEFC1D983C3905DA8A
-  - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/gollum/management-cluster/.*\.enc\.yaml
-    pgp: 243AD983937B65B16E4ECAE635FBCF03F0B30992
-  - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/gorilla/management-cluster/.*\.enc\.yaml
-    pgp: A1D9F33174F408144536A0F910F2F4DAB212A470
-  - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/gorilla/workload-clusters/rfjh2/.*\.enc\.yaml
-    pgp: 4F891DE97D17BD60E960CFC5B73B8D91B2EEFD6D
+    path_regex: management-clusters/MC_NAME/secrets/.*\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6  F4EC 1280 A733 D9EE C660
