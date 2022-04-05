@@ -2,6 +2,10 @@
 
 Follow the below instructions to store CAPx cluster in the repository. The instructions respect the [repository structure](./repo_structure.md).
 
+This doc will show you both how to add a CAPX cluster definition and how to create a cluster based on one of the ready definitions. Adding definition can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base) and [create versioned base](#create-versioned-base).
+
+If all you want is to create a new CAPX cluster using an existing definition, skip to [creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
+
 **IMPORTANT**, CAPx configuration utilizes the [App Platform Configuration Levels](https://docs.giantswarm.io/app-platform/app-configuration/#levels), in the following manner:
 
 - bases provide default configuration via App' `config` field,
@@ -35,8 +39,7 @@ If desired base is not there, you can add it. Reference the next section to get 
 
 ## Create shared template base (optional)
 
-**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to only abstract
-App CRs that are common to all clusters versions, and to provide basic configuration for default apps App. It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid code duplication across bases.
+**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to only abstract App CRs that are common to all clusters versions, and to provide basic configuration for default apps App. It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid code duplication across bases.
 
 If a template base for your provider is already here, you may skip this part.
 
@@ -291,3 +294,94 @@ EOF
     ```sh
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/cluster
     ```
+
+1. If you need to customize cluster configuration, prepare the values overrides and export its path. Find example below:
+
+    ```sh
+    cat /tmp/values
+    clusterDescription: My GitOps Cluster
+    cloudConfig: my-cloud-config
+
+    export USERCONFIG_VALUES=/tmp/values
+    ```
+
+1. Create a `ConfigMap` out of the values overrides:
+
+    ```sh
+    cat <<EOF > cluster_userconfig.yaml
+apiVersion: v1
+data:
+  values: |
+$(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
+kind: ConfigMap
+metadata:
+  name: ${WC_NAME}-userconfig
+  namespace: org-${ORG_NAME}
+EOF
+    ```
+
+1. Create patch for applying user-config values:
+
+    ```sh
+    cat <<EOF > patch_userconfig.yaml
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: \${cluster_name}
+  namespace: org-\${organization}
+spec:
+  userConfig:
+    configMap:
+      name: \${cluster_name}-userconfig
+      namespace: org-\${organization}
+EOF
+    ```
+
+1. Create the `kustomization.yaml` referencing base and newly created files:
+
+    ```sh
+    cat <<EOF > kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+commonLabels:
+  giantswarm.io/managed-by: flux
+kind: Kustomization
+patchesStrategicMerge:
+  - patch_userconfig.yaml
+resources:
+- ../../../../../../../${CLUSTER_PATH}
+- cluster_userconfig.yaml
+EOF
+    ```
+
+1. (optional) Repeat the same steps if you need to customize default apps App.
+
+1. Leave the `cluster` directory and go to `workload-clusters`:
+
+    ```sh
+    # cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
+    cd ../../
+    ```
+
+1. Edit the Kustomization CR for the workload cluster and assign values to the variables from bases, see example below:
+
+    ```yaml
+    # cat ${WC_NAME}.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+    kind: Kustomization
+    ...
+    spec:
+      ...
+      postBuild:
+        substitute:
+          cluster_name: "demo0"
+          organization: "gitops-demo"
+          cluster_release: "0.8.0"
+          default_apps_release: "0.2.0"
+      ...
+    ```
+
+1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources you have just created.
+
+## Recommended next steps
+
+- [add a new App CR to the Workload Cluster](./add_appcr.md)

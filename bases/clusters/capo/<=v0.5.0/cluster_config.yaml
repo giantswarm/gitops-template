@@ -3,9 +3,9 @@ bastion:
   rootVolume:
     diskSize: 10
     sourceUUID: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
-clusterDescription: Gitops cluster.
 cloudConfig: cloud-config
 cloudName: openstack
+clusterDescription: Gitops cluster. 
 clusterName: ${cluster_name}
 controlPlane:
   availabilityZones:
@@ -23,16 +23,16 @@ nodeClasses:
   name: default
 nodePools:
 - class: default
-  name: demo_az_1
   failureDomain: demo_az_1
+  name: demo_az_1
   replicas: 1
 - class: default
-  name: demo_az_2
   failureDomain: demo_az_2
+  name: demo_az_2
   replicas: 1
 - class: default
-  name: demo_az_3
   failureDomain: demo_az_3
+  name: demo_az_3
   replicas: 1
 organization: ${organization}
 rootVolume:

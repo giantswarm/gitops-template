@@ -31,11 +31,11 @@ nodePools:
   name: demo_az_1
   replicas: 1
 - class: default
-  name: demo_az_2
   failureDomain: demo_az_2
+  name: demo_az_2
   replicas: 1
 - class: default
-  name: demo_az_3
   failureDomain: demo_az_3
+  name: demo_az_3
   replicas: 1
 organization: ${organization}
