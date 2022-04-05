@@ -2,11 +2,15 @@
 
 Follow the below instructions to store CAPx cluster in the repository. The instructions respect the [repository structure](./repo_structure.md).
 
-This doc will show you both how to add a CAPX cluster definition and how to create a cluster based on one of the ready definitions. Adding definition can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base-optional) and [create versioned base](#create-versioned-base-optional).
+This doc will show you both how to add a CAPX cluster definition and how to create a cluster based on one of the ready definitions.
+Adding definition can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base-optional)
+and [create versioned base](#create-versioned-base-optional).
 
-If all you want is to create a new CAPX cluster using an existing definition, skip to [creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
+If all you want is to create a new CAPX cluster using an existing definition,
+skip to the [creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
 
-**IMPORTANT**, CAPx configuration utilizes the [App Platform Configuration Levels](https://docs.giantswarm.io/app-platform/app-configuration/#levels), in the following manner:
+**IMPORTANT**, CAPx configuration utilizes the
+[App Platform Configuration Levels](https://docs.giantswarm.io/app-platform/app-configuration/#levels),in the following manner:
 
 - bases provide default configuration via App' `config` field,
 - users provide custom configuration via App' `userConfig` field, that is overlaid on top of `config`.
@@ -15,7 +19,8 @@ See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across this instruction,
+the least error prone way of providing them is by exporting as environment variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -25,7 +30,9 @@ export WC_NAME=CLUSTER_NAME
 
 ## Choose bases
 
-In order to avoid code duplication, it is advised to utilize the [bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays) of Kustomize in order to configure cluster.
+In order to avoid code duplication, it is advised to utilize
+the [bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays) of Kustomize
+in order to configure cluster.
 
 This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters) directory and search for some that meet your needs, then export their paths with:
 
