@@ -64,46 +64,46 @@ strongly depend on resources involved, how much out of them you would like to in
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/template/cluster.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  labels:
-    app-operator.giantswarm.io/version: 0.0.0
-  name: \${cluster_name}
-  namespace: org-\${organization}
-spec:
-  catalog: giantswarm
-  kubeConfig:
-    inCluster: true
-  name: cluster-${PROVIDER}
-  namespace: org-\${organization}
-  version: \${cluster_release}
-EOF
-      ```
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      labels:
+        app-operator.giantswarm.io/version: 0.0.0
+      name: \${cluster_name}
+      namespace: org-\${organization}
+    spec:
+      catalog: giantswarm
+      kubeConfig:
+        inCluster: true
+      name: cluster-${PROVIDER}
+      namespace: org-\${organization}
+      version: \${cluster_release}
+    EOF
+    ```
 
 1. Create a default apps App CR template, note version of the App is set to `0.1.0` by default:
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/template/default_apps.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  labels:
-    app-operator.giantswarm.io/version: 0.0.0
-  name: \${cluster_name}-default-apps
-  namespace: org-\${organization}
-spec:
-  catalog: giantswarm
-  config:
-    configMap:
-      name: \${cluster_name}-default-apps-config
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      labels:
+        app-operator.giantswarm.io/version: 0.0.0
+      name: \${cluster_name}-default-apps
       namespace: org-\${organization}
-  kubeConfig:
-    inCluster: true
-  name: default-apps-${PROVIDER}
-  namespace: org-\${organization}
-  version: \${default_apps_release:=0.1.0}
-EOF
+    spec:
+      catalog: giantswarm
+      config:
+        configMap:
+          name: \${cluster_name}-default-apps-config
+          namespace: org-\${organization}
+      kubeConfig:
+        inCluster: true
+      name: default-apps-${PROVIDER}
+      namespace: org-\${organization}
+      version: \${default_apps_release:=0.1.0}
+    EOF
     ```
 
 1. Create default Apps config, note we do not yet put values in a ConfigMap to have YAML syntax highlighting:
