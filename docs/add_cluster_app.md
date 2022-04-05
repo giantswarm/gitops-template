@@ -2,7 +2,7 @@
 
 Follow the below instructions to store CAPx cluster in the repository. The instructions respect the [repository structure](./repo_structure.md).
 
-This doc will show you both how to add a CAPX cluster definition and how to create a cluster based on one of the ready definitions. Adding definition can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base-optional) and [create versioned base](#create-versioned-base).
+This doc will show you both how to add a CAPX cluster definition and how to create a cluster based on one of the ready definitions. Adding definition can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base-optional) and [create versioned base](#create-versioned-base-optional).
 
 If all you want is to create a new CAPX cluster using an existing definition, skip to [creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
 
