@@ -5,7 +5,7 @@ bastion:
     sourceUUID: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 cloudConfig: cloud-config
 cloudName: openstack
-clusterDescription: Gitops cluster. 
+clusterDescription: Gitops cluster.
 clusterName: ${cluster_name}
 controlPlane:
   availabilityZones:

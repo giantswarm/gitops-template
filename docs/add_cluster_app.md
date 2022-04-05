@@ -15,8 +15,7 @@ See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
-this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across this instruction, the least error prone way of providing them is by exporting as environment variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -26,8 +25,7 @@ export WC_NAME=CLUSTER_NAME
 
 ## Choose bases
 
-In order to avoid code duplication, it is advised to utilize the
-[bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays) of Kustomize in order to configure cluster.
+In order to avoid code duplication, it is advised to utilize the [bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays) of Kustomize in order to configure cluster.
 
 This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters) directory and search for some that meet your needs, then export their paths with:
 
