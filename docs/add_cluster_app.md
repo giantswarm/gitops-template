@@ -10,7 +10,8 @@ If all you want is to create a new CAPX cluster using an existing definition,
 skip to the [creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
 
 **IMPORTANT**, CAPx configuration utilizes the
-[App Platform Configuration Levels](https://docs.giantswarm.io/app-platform/app-configuration/#levels),in the following manner:
+[App Platform Configuration Levels](https://docs.giantswarm.io/app-platform/app-configuration/#levels),
+in the following manner:
 
 - bases provide default configuration via App' `config` field,
 - users provide custom configuration via App' `userConfig` field, that is overlaid on top of `config`.
@@ -19,8 +20,8 @@ See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across this instruction,
-the least error prone way of providing them is by exporting as environment variables:
+**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places
+across this instruction, the least error prone way of providing them is by exporting as environment variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -30,11 +31,12 @@ export WC_NAME=CLUSTER_NAME
 
 ## Choose bases
 
-In order to avoid code duplication, it is advised to utilize
-the [bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays) of Kustomize
-in order to configure cluster.
+In order to avoid code duplication, it is advised to utilize the
+[bases and overlays](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays)
+of Kustomize in order to configure cluster.
 
-This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters) directory and search for some that meet your needs, then export their paths with:
+This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters)
+directory and search for some that meet your needs, then export their paths with:
 
 ```sh
 export CLUSTER_PATH=CLUSTER_BASE_PATH
@@ -44,13 +46,16 @@ If desired base is not there, you can add it. Reference the next section to get 
 
 ## Create shared template base (optional)
 
-**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to only abstract App CRs that are common to all clusters versions, and to provide basic configuration for default apps App. It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid code duplication across bases.
+**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to only abstract
+App CRs that are common to all clusters versions, and to provide basic configuration for default apps App.
+It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid
+code duplication across bases.
 
 If a template base for your provider is already here, you may skip this part.
 
-**Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic steps
-needed to move forward. Hence, instructions here will not always be precise in telling you what to change, as this can
-strongly depend on resources involved, how much out of them you would like to include into a base, etc.
+**Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic
+steps needed to move forward. Hence, instructions here will not always be precise in telling you what to change,
+as this canstrongly depend on resources involved, how much out of them you would like to include into a base, etc.
 
 1. Export provider' and CAPx' names you are about to create, for example `capo` and `openstack`:
 
@@ -120,7 +125,10 @@ strongly depend on resources involved, how much out of them you would like to in
     EOF
     ```
 
-1. Create the `kustomization.yaml`, note usage of [ConfigMap Generator](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/configGeneration.md) for turning config from the previous step into ConfigMap and placing it under the [values](https://docs.giantswarm.io/app-platform/app-configuration/#values-format) key:
+1. Create the `kustomization.yaml`, note usage of
+[ConfigMap Generator](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/configGeneration.md)
+for turning config from the previous step into ConfigMap and placing it under the
+[values](https://docs.giantswarm.io/app-platform/app-configuration/#values-format) key:
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/template/kustomization.yaml
@@ -158,11 +166,18 @@ strongly depend on resources involved, how much out of them you would like to in
 
 ## Create versioned base (optional)
 
-**IMPORTANT**, versioned bases use a shared template base and overlay it with a preferably generic configuration for a given cluster version. Versioning comes from the fact that `values.yaml` schema may change over multiple releases, and although minor differences can be handled in the `userConfig` level, it is advised for the bases to follow major `values.yaml` schema versions to avoid confusion.
+**IMPORTANT**, versioned bases use a shared template base and overlay it with a preferably generic configuration for a
+given cluster version. Versioning comes from the fact that `values.yaml` schema may change over multiple releases,
+and although minor differences can be handled in the `userConfig` level, it is advised for the bases to follow major
+`values.yaml` schema versions to avoid confusion.
 
-For example, both CAPO bases in this repository, the [v0.5.0](../bases/clusters/capo/<=v0.5.0) and the [v0.6.0](../bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in the the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
+For example, both CAPO bases in this repository, the [v0.5.0](../bases/clusters/capo/<=v0.5.0) and
+the [v0.6.0](../bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
+the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
 
-**IMPORTANT**, despite the below instructions reference `kubectl-gs` for templating configuration, `kubectl-gs` generates configuration for the most recent schema only. If you configure a base for older versions of cluster app, it is advised to check what is generated against the version-specific `values.yaml`.
+**IMPORTANT**, despite the below instructions reference `kubectl-gs` for templating configuration, `kubectl-gs`
+generates configuration for the most recent schema only. If you configure a base for older versions of cluster app,
+it is advised to check what is generated against the version-specific `values.yaml`.
 
 1. Export CAPX' name, provider' name and cluster App' version you are about to create, for example `capo` and `v0.8.0`:
 
@@ -235,7 +250,9 @@ cluster resources, see example for the `openstack` provider below. Use arbitrary
     sed -i "" 's/mywcl/${cluster_id}/g' bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
     ```
 
-1. Compare `cluster_config.yaml` against the version-specific `values.yaml`, and tweak it if necessary to match the expected schema. At this point you may also provide extra configuration, like additional availability zones, node pools, etc.:
+1. Compare `cluster_config.yaml` against the version-specific `values.yaml`, and tweak it if necessary to match the
+expected schema. At this point you may also provide extra configuration, like additional availability zones, node
+pools, etc.:
 
     ```sh
     wget https://github.com/giantswarm/cluster-openstack/archive/refs/tags/${CLUSTER_VERSION}.tar.gz
@@ -385,7 +402,8 @@ cluster resources, see example for the `openstack` provider below. Use arbitrary
       ...
     ```
 
-1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources you have just created.
+1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
+you have just created.
 
 ## Recommended next steps
 
