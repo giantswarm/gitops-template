@@ -110,45 +110,45 @@ strongly depend on resources involved, how much out of them you would like to in
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/template/default_apps_config.yaml
-clusterName: \${cluster_name}
-organization: \${organization}
-EOF
+    clusterName: \${cluster_name}
+    organization: \${organization}
+    EOF
     ```
 
 1. Create the `kustomization.yaml`, note usage of [ConfigMap Generator](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/configGeneration.md) for turning config from the previous step into ConfigMap and placing it under the [values](https://docs.giantswarm.io/app-platform/app-configuration/#values-format) key:
 
     ```sh
-cat <<EOF > bases/clusters/${CAPX}/template/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-configMapGenerator:
-  - files:
-    - values=default_apps_config.yaml
-    name:  \${cluster_name}-default-apps-config
-    namespace: org-\${organization}
-generatorOptions:
-  disableNameSuffixHash: true
-kind: Kustomization
-resources:
-  - cluster.yaml
-  - default_apps.yaml
-EOF
+    cat <<EOF > bases/clusters/${CAPX}/template/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    configMapGenerator:
+      - files:
+        - values=default_apps_config.yaml
+        name:  \${cluster_name}-default-apps-config
+        namespace: org-\${organization}
+    generatorOptions:
+      disableNameSuffixHash: true
+    kind: Kustomization
+    resources:
+      - cluster.yaml
+      - default_apps.yaml
+    EOF
     ```
 
 1. Create the `readme.md` listing variables supported and expected values:
 
     ```sh
     cat <<EOF > readme.md
-# Input Variables
+    # Input Variables
 
-Expected variables are in the table below.
+    Expected variables are in the table below.
 
-| Variable | Expected Value |
-| :--: | :--: |
-| \`cluster_name\` | Unique name of the Workload Cluster, MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-| \`organization\` | Organization name, the \`org-\` prefix MUST not be part of it and MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-| \`cluster_release\` | Cluster App version, reference the [Cluster Openstack](https://github.com/giantswarm/cluster-openstack/releases) for more insight on releases |
-| \`default_apps_release\` | Defaults Apps App version, reference the [Default Apps for Openstack](https://github.com/giantswarm/default-apps-openstack/releases) for more insight on releases |
-EOF
+    | Variable | Expected Value |
+    | :--: | :--: |
+    | \`cluster_name\` | Unique name of the Workload Cluster, MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
+    | \`organization\` | Organization name, the \`org-\` prefix MUST not be part of it and MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
+    | \`cluster_release\` | Cluster App version, reference the [Cluster Openstack](https://github.com/giantswarm/cluster-openstack/releases) for more insight on releases |
+    | \`default_apps_release\` | Defaults Apps App version, reference the [Default Apps for Openstack](https://github.com/giantswarm/default-apps-openstack/releases) for more insight on releases |
+    EOF
     ```
 
 ## Create versioned base (optional)
@@ -242,37 +242,37 @@ cluster resources, see example for the `openstack` provider below. Use arbitrary
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/${VERSION}/patch_config.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: \${cluster_name}
-  namespace: org-\${organization}
-spec:
-  config:
-    configMap:
-      name: \${cluster_name}-config
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      name: \${cluster_name}
       namespace: org-\${organization}
-EOF
+    spec:
+      config:
+        configMap:
+          name: \${cluster_name}-config
+          namespace: org-\${organization}
+    EOF
     ```
 
 1. Create the `kustomization.yaml`, referencing the template, and generating the ConfigMap out of `cluster_config.yaml`:
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/${VERSION}/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-configMapGenerator:
-  - files:
-    - values=cluster_config.yaml
-    name: \${cluster_name}-config
-    namespace: org-\${organization}
-generatorOptions:
-  disableNameSuffixHash: true
-kind: Kustomization
-patchesStrategicMerge:
-  - patch_config.yaml
-resources:
-  - ../template
-EOF
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    configMapGenerator:
+      - files:
+        - values=cluster_config.yaml
+        name: \${cluster_name}-config
+        namespace: org-\${organization}
+    generatorOptions:
+      disableNameSuffixHash: true
+    kind: Kustomization
+    patchesStrategicMerge:
+      - patch_config.yaml
+    resources:
+      - ../template
+    EOF
     ```
 
 1. Copy `readme.md` from the template base:
@@ -309,48 +309,48 @@ EOF
 
     ```sh
     cat <<EOF > cluster_userconfig.yaml
-apiVersion: v1
-data:
-  values: |
-$(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
-kind: ConfigMap
-metadata:
-  name: ${WC_NAME}-userconfig
-  namespace: org-${ORG_NAME}
-EOF
+    apiVersion: v1
+    data:
+      values: |
+    $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
+    kind: ConfigMap
+    metadata:
+      name: ${WC_NAME}-userconfig
+      namespace: org-${ORG_NAME}
+    EOF
     ```
 
 1. Create patch for applying user-config values:
 
     ```sh
     cat <<EOF > patch_userconfig.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: \${cluster_name}
-  namespace: org-\${organization}
-spec:
-  userConfig:
-    configMap:
-      name: \${cluster_name}-userconfig
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      name: \${cluster_name}
       namespace: org-\${organization}
-EOF
+    spec:
+      userConfig:
+        configMap:
+          name: \${cluster_name}-userconfig
+          namespace: org-\${organization}
+    EOF
     ```
 
 1. Create the `kustomization.yaml` referencing base and newly created files:
 
     ```sh
     cat <<EOF > kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-commonLabels:
-  giantswarm.io/managed-by: flux
-kind: Kustomization
-patchesStrategicMerge:
-  - patch_userconfig.yaml
-resources:
-- ../../../../../../../${CLUSTER_PATH}
-- cluster_userconfig.yaml
-EOF
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    commonLabels:
+      giantswarm.io/managed-by: flux
+    kind: Kustomization
+    patchesStrategicMerge:
+      - patch_userconfig.yaml
+    resources:
+    - ../../../../../../../${CLUSTER_PATH}
+    - cluster_userconfig.yaml
+    EOF
     ```
 
 1. (optional) Repeat the same steps if you need to customize default apps App.
