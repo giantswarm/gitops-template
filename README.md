@@ -19,7 +19,6 @@ fork a repo from it, then follow the docs below to learn how it works:
 1. [add a new Management Cluster](./docs/add_mc.md)
 1. [add a new Organization](./docs/add_org.md)
 1. [add a new Workload Cluster](./docs/add_wc.md)
-1. [add Workload Cluster definition (Legacy CRs)](./docs/add_cluster_crs.md)
 1. [add a new App to a Workload Cluster](./docs/add_appcr.md)
 1. [update an existing App](./docs/update_appcr.md)
 1. [enable automatic updates of an existing App](./docs/automatic_updates_appcr.md)

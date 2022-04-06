@@ -1,4 +1,4 @@
-# Add a new App to the Workload Cluster
+# Add a new App to a Workload Cluster
 
 Follow the instructions below to add a new App to a cluster managed in this repository.
 
@@ -19,7 +19,7 @@ export APP_NAMESPACE=APP_NAMESPACE
 export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
 ```
 
-## Directory tree
+## Setting up directory tree structure for managing apps
 
 1. Go to the `apps` directory:
 
