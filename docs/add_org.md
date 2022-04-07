@@ -1,6 +1,9 @@
 # Add a new organization
 
-Follow the below instructions to add a new organization to this repository.
+Follow the below instructions to add a new Organization to this repository. Organizations are created within the
+[Management Cluster's configuration](./add_mc.md) directory and in turn are meant to include
+[Workload Cluster](add_wc.md) definitions (more details about the layout are available in
+[repository structure](./repo_structure.md) doc).
 
 ## Export environment variables
 

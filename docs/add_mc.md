@@ -1,7 +1,19 @@
 # Add a new management cluster
 
-Follow the instructions below to add a new management cluster to this repository. You have to be using the right
-Management Cluster API before to start. The instructions respect the [repository structure](./repo_structure.md).
+Follow the instructions below to add a new management cluster to this repository. You need to have a valid connection
+(`kube.config`) to the Management Cluster. The instructions respect the [repository structure](./repo_structure.md).
+
+In general, we have to complete 3 major steps to provide the necessary structure for a new MC:
+
+1. [Preparing master GPG key pair](#flux-gpg-master-key-pair) to encrypt individual encryption keys of Workload Clusters
+   you'll be [creating](add_wc.md) later. These keys are needed to put Secret objects in a secure manner into the gitops
+   repository itself.
+1. [Preparing directory tree](#directory-tree) - which shows files, directories and their layout that are needed to complete
+   our configuration.
+1. [Initial configuration](#initial-cluster-configuration) that shows what objects do we have to create on the Management
+   Cluster to bootstrap our gitops management process.
+
+*Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
 ## Export Management Cluster codename
 

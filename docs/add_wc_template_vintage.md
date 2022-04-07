@@ -1,6 +1,7 @@
-# Add vintage workload cluster definition (Legacy CRs)
+# Add a vintage Workload Cluster template (Legacy CRs)
 
-Follow the below instructions to store vintage cluster CRs in the repository. The instructions respect the [repository structure](./repo_structure.md).
+Follow the below instructions to store vintage cluster CRs in the repository. These CRs provide a
+[Cluster Template](./add_wc_template.md) that is later used to create Cluster Definitions.
 
 The instructions below take into account that CAPI like objects are frequently versioned (so you have `v1beta1`, `v1beta2`),
 but often the changes between the versions are rather small and in practice sometimes don't even affect you.
@@ -8,6 +9,8 @@ but often the changes between the versions are rather small and in practice some
 Since CAPI objects are big in general, in this repo we have extracted a common base for some of them. This base is to
 share what is common in CAPI objects across many versions. To make such bases useful, we're introducing another base on
 top of them to set specific CAPI versions and version specific properties on top of the shared base.
+
+*Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
 ## Export environment variables
 
@@ -219,69 +222,8 @@ specific API versions,  see example for the `aws` provider below:
     export NODEPOOL_PATH=NODEPOOL_BASE_PATH
     ```
 
-## Creating cluster based on existing bases
-
-1. Go to the Workload Cluster definition directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/cluster
-    ```
-
-1. Create the `kustomization.yaml` referencing the bases:
-
-    ```sh
-    cat <<EOF > kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    resources:
-    - ${CLUSTER_PATH}
-    #- ${NODEPOOL_PATH}
-    EOF
-    ```
-
-    **Note**, the node pool base is commented out at this point, because Giant Swarm's **admission controllers** will complain
-    if we try to create both groups at the same time. We're working on a solution. Until this is solved and support for
-    the `managedBy: flux` is implemented, a workaround is to create cluster CRs and node pools CRs **in two, separate PRs**.
-
-1. (optional) create and apply additional patches if needed.
-
-1. Leave the `cluster` directory and go to `workload-clusters`:
-
-    ```sh
-    # cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    cd ../../
-    ```
-
-1. Edit the Kustomization CR for the workload cluster and assign values to the variables from bases, see example below:
-
-    ```yaml
-    # ${WC_NAME}.yaml
-    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-    kind: Kustomization
-    ...
-    spec:
-      ...
-      postBuild:
-        substitute:
-          cluster_id: "demo0"
-          control_plane_id: "km2k8"
-          machine_deployment_id: "bg2i8"
-          organization: "gitops-demo"
-          release: "16.3.1"
-      ...
-    ```
-
-1. Create a Pull Request with the changes you have just done. Once it is merged and Cluster' CRs are created, revisit the
-`kustomization.yaml` and uncomment node pools base:
-
-    ```sh
-    # BSD sed
-    sed -i "" "s/^#-/-/" kustomization.yaml
-    ```
-
-After completing this step, you can open another PR with the changes. Once it is merged, Flux should create accompanying
-node pool for your cluster.
-
 ## Recommended next steps
 
-- [add a new App CR to the Workload Cluster](./add_appcr.md)
+- [adding a WC structure](./add_wc_structure.md)
+- [adding a WC definition](./add_cluster_crs.md)
+- [adding a new App CR to a Workload Cluster](./add_appcr.md)
