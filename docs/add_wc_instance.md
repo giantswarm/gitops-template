@@ -17,7 +17,7 @@ export WC_NAME=CLUSTER_NAME
 ## Pick your Cluster Template
 
 First step needed to create a Cluster instance is to pick a cluster template it will be based on. Templates are available
-as Kustomize bases in the [bases](./bases/) directory. There's also
+as Kustomize bases in the [bases](../bases/) directory. There's also
 [documentation about how to create them](./add_wc_cluster_template.md) if the base you need doesn't yet exist.
 
 ## Creating cluster based on vintage cluster template
