@@ -1,9 +1,9 @@
 # Add CAPx workload cluster definition (cluster App)
 
-Follow the below instructions to store CAPx cluster in the repository. The instructions respect the [repository structure](./repo_structure.md).
+Follow the below instructions to store CAPx clusters in the repository. The instructions respect the [repository structure](./repo_structure.md).
 
-This doc will show you both how to add a CAPX cluster definition and how to create a cluster based on one of the ready definitions.
-Adding definition can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base-optional)
+This doc will show you both how to add a CAPx cluster definition and how to create a cluster based on one of the ready definitions.
+Adding definitions can be done on two levels: templates and version specific, see [create template base](#create-shared-template-base-optional)
 and [create versioned base](#create-versioned-base-optional).
 
 If all you want is to create a new CAPX cluster using an existing definition,
@@ -33,7 +33,7 @@ export WC_NAME=CLUSTER_NAME
 
 In order to avoid code duplication, it is advised to utilize the
 [bases and overlays](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays)
-of Kustomize in order to configure cluster.
+of Kustomize in order to configure the cluster.
 
 This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters)
 directory and search for some that meet your needs, then export their paths with:
@@ -46,7 +46,7 @@ If desired base is not there, you can add it. Reference the next section to get 
 
 ## Create shared template base (optional)
 
-**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there to only abstract
+**IMPORTANT:** template base cannot serve as a standalone base for cluster creation, it is there only to abstract
 App CRs that are common to all clusters versions, and to provide basic configuration for default apps App.
 It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid
 code duplication across bases.
@@ -55,7 +55,7 @@ If a template base for your provider is already here, you may skip this part.
 
 **Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic
 steps needed to move forward. Hence, instructions here will not always be precise in telling you what to change,
-as this canstrongly depend on resources involved, how much out of them you would like to include into a base, etc.
+as this can strongly depend on resources involved, how much of them you would like to include into a base, etc.
 
 1. Export provider' and CAPx' names you are about to create, for example `capo` and `openstack`:
 
@@ -127,7 +127,7 @@ as this canstrongly depend on resources involved, how much out of them you would
 
 1. Create the `kustomization.yaml`, note usage of
 [ConfigMap Generator](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/configGeneration.md)
-for turning config from the previous step into ConfigMap and placing it under the
+for turning config from the previous step into a ConfigMap and placing it under the
 [values](https://docs.giantswarm.io/app-platform/app-configuration/#values-format) key:
 
     ```sh
@@ -175,11 +175,11 @@ For example, both CAPO bases in this repository, the [v0.5.0](../bases/clusters/
 the [v0.6.0](../bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
 the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
 
-**IMPORTANT**, despite the below instructions reference `kubectl-gs` for templating configuration, `kubectl-gs`
+**IMPORTANT**, despite the below instructions referencing `kubectl-gs` for templating configuration, `kubectl-gs`
 generates configuration for the most recent schema only. If you configure a base for older versions of cluster app,
 it is advised to check what is generated against the version-specific `values.yaml`.
 
-1. Export CAPX' name, provider' name and cluster App' version you are about to create, for example `capo` and `v0.8.0`:
+1. Export CAPx name, provider name and cluster App version you are about to create, for example `capo`, `openstack` and `v0.8.0`:
 
     ```sh
     export CAPX=capo
