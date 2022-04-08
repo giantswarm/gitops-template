@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+configMapGenerator:
+  - files:
+    - values=cluster_config.yaml
+    name: ${cluster_name}-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+patchesStrategicMerge:
+  - patch_config.yaml
+resources:
+  - ../template

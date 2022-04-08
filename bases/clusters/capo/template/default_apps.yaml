@@ -1,0 +1,18 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    app-operator.giantswarm.io/version: 0.0.0
+  name: ${cluster_name}-default-apps
+  namespace: org-${organization}
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: ${cluster_name}-default-apps-config
+      namespace: org-${organization}
+  kubeConfig:
+    inCluster: true
+  name: default-apps-openstack
+  namespace: org-${organization}
+  version: ${default_apps_release:=0.1.0}
