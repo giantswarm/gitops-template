@@ -1,0 +1,8 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: ${workload_cluster_name}-nginx-ingress-controller
+spec:
+  userConfig:
+    configMap:
+      name: ${workload_cluster_name}-nginx-ingress-controller-user-values
