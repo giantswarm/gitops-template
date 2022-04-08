@@ -295,5 +295,4 @@ the new workload cluster and apps.
 ## Recommended next steps
 
 - [add Workload Cluster instance](./add_wc_instance.md)
-- [add Workload Cluster template](./add_wc_template.md)
 - [add a new App CR to the Workload Cluster](./add_appcr.md)
