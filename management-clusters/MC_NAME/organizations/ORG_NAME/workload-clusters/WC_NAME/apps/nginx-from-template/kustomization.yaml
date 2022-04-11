@@ -1,12 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
-    - values=override_config.yaml
+      - values=override_config.yaml
     name: ${workload_cluster_name}-nginx-ingress-controller-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 patchesStrategicMerge:
-- config_patch.yaml
+  - config_patch.yaml
 resources:
-- ../../../../../../../../bases/apps/nginx-ingress-controller
+  - ../../../../../../../../bases/apps/nginx-ingress-controller
