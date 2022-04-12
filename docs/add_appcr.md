@@ -2,6 +2,13 @@
 
 Follow the instructions below to add a new App to a cluster managed in this repository.
 
+## Example
+
+Examples of creating apps are available in following locations:
+
+- the simplest use case: an [app without configuration](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
+- an [app that uses a configuration ConfigMap](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
+
 ## Export environment variables
 
 **Note**, Management Cluster codename, Organization name, Workload Cluster name and several App-related values are needed

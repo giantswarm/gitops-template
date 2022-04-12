@@ -14,6 +14,10 @@ export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
 ```
 
+## Example
+
+An example of a WC cluster instance created using the vintage API is available in [WC_NAME/cluster](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/cluster/).
+
 ## Pick your Cluster Template
 
 First step needed to create a Cluster instance is to pick a cluster template it will be based on. Templates are available
