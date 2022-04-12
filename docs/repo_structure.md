@@ -114,6 +114,12 @@ User MAY omit it if they do not relay on the
 and when feeling confident about Flux auto discovering resources. Otherwise it is RECOMMENDED to create it and use it
 to explicitly control resources to be reconciled (with `.bases` and `.resources` fields).
 
+Make sure that if you create the `kustomization.yaml` file, it contains the following option, which makes debugging easier:
+
+```yaml
+buildMetadata: [originAnnotations]
+```
+
 ### `[organizations]`
 
 It is RECOMMENDED to use it explicitly when there are other resources populated under the `MC_NAME` directory, see
