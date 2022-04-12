@@ -139,7 +139,7 @@ already be configured.
     patchesStrategicMerge:
       - config_patch.yaml
     resources:
-      - ../../../../../../../../${APP_TEMPLATE_DIR}
+      - ../../../../../../../../${APP_TEMPLATE_PATH}
 
     ```
 
