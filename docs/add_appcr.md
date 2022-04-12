@@ -1,8 +1,19 @@
 # Add a new App to a Workload Cluster
 
 Follow the instructions below to add a new App to a cluster managed in this repository.
+You can add an App directly (without any intermediate step) or use an [App Template](add_app_template.md).
+The documentation below shows common steps as well as what is different in both cases.
 
-## Export environment variables
+## Examples
+
+- An example of an App created directly is available in [WC_NAME/apps/nginx-ingress-controller](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/).
+- An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
+
+## Common steps
+
+Please follow this steps when installing an App directly as well as using App Template.
+
+### Export environment variables
 
 **Note**, Management Cluster codename, Organization name, Workload Cluster name and several App-related values are needed
 in multiple places across this instruction, the least error prone way of providing them is by exporting as environment variables:
@@ -12,14 +23,9 @@ export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
 export APP_NAME=APP_NAME
-export APP_VERSION=APP_VERSION
-export APP_CATALOG=APP_CATALOG
-export APP_NAMESPACE=APP_NAMESPACE
-# OPTIONAL
-export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
 ```
 
-## Setting up directory tree structure for managing apps
+### Setting up directory tree structure for managing apps
 
 1. Go to the `apps` directory:
 
@@ -31,6 +37,18 @@ export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
 
     ```sh
     mkdir ${APP_NAME}
+    ```
+
+## Adding App directly
+
+1. Set remaining env variables
+
+    ```sh
+    export APP_VERSION=APP_VERSION
+    export APP_CATALOG=APP_CATALOG
+    export APP_NAMESPACE=APP_NAMESPACE
+    # OPTIONAL
+    export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
     ```
 
 1. Go to the newly created directory and use [the kubectl-gs plugin](https://github.com/giantswarm/kubectl-gs) to
@@ -91,6 +109,66 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
 
 At this point, if you have followed [the WC configuration guide](./add_wc.md), all the necessary Flux resources should
 already be configured.
+
+## Adding App using App Template
+
+1. First, you need to pick your template from the [`bases/apps`](../bases/apps/) dir. Export the directory in an env variable:
+
+    ```sh
+    export APP_TEMPLATE_DIR=[YOUR_BASE_DIR]
+    ```
+
+    Make sure your `APP_NAME` variable is set to the exact same name as used for the app in the App Template you're
+    pointing to.
+
+1. In the current directory
+    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}`)
+    create a new `kustomization.yaml` with the following content:
+
+    ```sh
+    cat <<EOF > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    buildMetadata: [originAnnotations]
+    configMapGenerator:
+      - files:
+          - values=override_config.yaml
+        name: ${WC_NAME}-${APP_NAME}-user-values
+    generatorOptions:
+      disableNameSuffixHash: true
+    kind: Kustomization
+    patchesStrategicMerge:
+      - config_patch.yaml
+    resources:
+      - ../../../../../../../../${APP_TEMPLATE_DIR}
+
+    ```
+
+    Remove the `patchesStrategicMerge:` section in case you're not going to override config options from the App Template
+    (unlikely, probably makes sense only if you override Secret only).
+
+1. Create a patch configuration file, that will enhance your App Template with a `userConfig` attribute (refer to
+    [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about how `config`
+    and `userConfig` properties of App CR are used).
+
+    ```sh
+    cat <<EOF > config_patch.yaml
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      name: ${WC_NAME}-${APP_NAME}
+    spec:
+      userConfig:
+        configMap:
+          name: ${WC_NAME}-${APP_NAME}-user-values
+    ```
+
+1. Create a YAML file `override_config.yaml` containing the App configuration you want to override in comparison to App Template.
+
+1. Patching App CR, not the App configuration.
+
+    If you want to, you can use the same idea of App Templates to override any property (like app version) of base
+    App Template by using
+    [kustomize patches](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patches/).
 
 ## Recommended next steps
 
