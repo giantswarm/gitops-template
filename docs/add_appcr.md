@@ -115,7 +115,7 @@ already be configured.
 1. First, you need to pick your template from the [`bases/apps`](../bases/apps/) dir. Export the directory in an env variable:
 
     ```sh
-    export APP_TEMPLATE_DIR=[YOUR_BASE_DIR]
+    export APP_TEMPLATE_DIR=[YOUR_BASE_PATH]
     ```
 
     Make sure your `APP_NAME` variable is set to the exact same name as used for the app in the App Template you're
