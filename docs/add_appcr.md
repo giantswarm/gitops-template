@@ -115,7 +115,8 @@ already be configured.
 
 ## Adding App using App Template
 
-1. First, you need to pick your template from the [`bases/apps`](../bases/apps/) dir. Export the directory in an env variable:
+1. First, you need to pick your app template directory from the [`bases/apps`](../bases/apps/) dir. Export the
+directory in an env variable:
 
     ```sh
     export APP_TEMPLATE_DIR=[YOUR_BASE_PATH]
@@ -146,8 +147,9 @@ already be configured.
 
     ```
 
-    Remove the `patchesStrategicMerge:` section in case you're not going to override config options from the App Template
-    (unlikely, probably makes sense only if you override Secret only).
+    In unlikely case you're not going to override the configuration from the Template App (probably makes sense only if
+    you override Secret only), please remove the `patchesStrategicMerge:` section and skip the following two points, which
+    describe how to create config patch configuration.
 
 1. Create a patch configuration file, that will enhance your App Template with a `userConfig` attribute (refer to
     [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about how `config`
