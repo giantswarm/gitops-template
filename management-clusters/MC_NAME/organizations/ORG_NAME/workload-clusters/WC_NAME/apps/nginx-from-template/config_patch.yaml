@@ -6,3 +6,5 @@ spec:
   userConfig:
     configMap:
       name: ${workload_cluster_name}-nginx-ingress-controller-user-values
+    secret:
+      name: ${workload_cluster_name}-nginx-ingress-controller-user-secret

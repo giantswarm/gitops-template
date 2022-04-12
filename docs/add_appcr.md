@@ -164,7 +164,22 @@ already be configured.
 
 1. Create a YAML file `override_config.yaml` containing the App configuration you want to override in comparison to App Template.
 
-1. Patching App CR, not the App configuration.
+1. If you want to add/override Secret object as well, create a `sops` encrypted secret as [explained above](#adding-app-directly).
+   Make sure that the Secret name is `${WC_NAME}-${APP_NAME}-user-secret`. Then, append the following to the
+   `spec.userConfig` section of file `config_patch.yaml`:
+
+   ```yaml
+   secret:
+     name: ${WC_NAME}-${APP_NAME}-user-secret
+   ```
+
+   Also, add the line below to the `resources:` section of the `kustomization.yaml` file:
+
+   ```yaml
+   - secret.enc.yaml
+   ```
+
+1. Additional notes
 
     If you want to, you can use the same idea of App Templates to override any property (like app version) of base
     App Template by using
