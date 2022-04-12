@@ -6,7 +6,10 @@ The documentation below shows common steps as well as what is different in both 
 
 ## Examples
 
-- An example of an App created directly is available in [WC_NAME/apps/nginx-ingress-controller](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/).
+Examples of creating apps are available in following locations:
+
+- An example of a directly configured App (the simplest use case): an [app without configuration](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
+- An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
 - An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
 
 ## Common steps

@@ -12,6 +12,10 @@ top of them to set specific CAPI versions and version specific properties on top
 
 *Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
+## Example
+
+An example of a WC cluster template created using the vintage API is available in [bases/clusters/aws/v1alpha3](../bases/clusters/aws/v1alpha3/).
+
 ## Export environment variables
 
 **Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
