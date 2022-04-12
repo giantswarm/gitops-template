@@ -19,6 +19,10 @@ will do it by pushing commits to this repository.
 **Note**, in order to use this mechanism you have to make sure that image tags of your App corresponds to its version,
 otherwise this process will result in setting meaningless version in the `.spec.version` field.
 
+## Example
+
+An example of an App automated updates is available in [WC_NAME/apps/web-assets](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/web-assets/).
+
 ## Export environment variables
 
 **Note**, Management Cluster codename, Organization name, Workload Cluster name and some App-related values are needed in

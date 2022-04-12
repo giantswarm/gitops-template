@@ -12,6 +12,10 @@ This includes:
 
 *Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
+## Example
+
+An example of a WC cluster directory structure is available in [WC_NAME/](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
+
 ## Export environment variables
 
 **Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across

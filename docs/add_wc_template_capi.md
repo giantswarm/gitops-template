@@ -24,6 +24,10 @@ in the following manner:
 
 See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/merging-configmaps-gitops).
 
+## Example
+
+An example of a WC cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](../bases/clusters/capo/).
+
 ## Export environment variables
 
 **Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places
