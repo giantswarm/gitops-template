@@ -25,7 +25,7 @@ export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
 
 ## Setting up directory tree structure for managing apps
 
-1. Go to the `apps` directory and prepare directory for the new App Template:
+1. Go to the `apps` directory and prepare a directory for the new App Template:
 
     ```sh
     cd bases/apps/
