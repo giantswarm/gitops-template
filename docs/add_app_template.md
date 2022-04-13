@@ -1,8 +1,8 @@
 # Add a new App Template to the repository
 
 In order to avoid adding the same application from scratch across all your clusters, you can prepare App Templates that provide
-a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is not
-yet installed in any cluster.
+a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is
+not yet installed in any cluster.
 
 ## Example
 
@@ -54,11 +54,11 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     ```
 
     Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about
-    how to properly create respective ConfigMaps or Secrets.
+    how to properly create the respective ConfigMaps or Secrets.
 
-    If you want to provide a default config, we're using the `kustomize`'s feature of ConfigMap generator.
-    This allows us to use pure YAML file for the configuration, without the wrapping into ConfigMap. Still, for Secrets
-    we need to encrypt them as a Secret object and the generator approach won't work. Refer our [adding App](./add_appcr.md)
+    If you want to provide a default config, we can use us the ConfigMap generator feature of `kustomize`.
+    This allows us to use a pure YAML file for the configuration, without the wrapping into a ConfigMap. Still, for Secrets
+    we need to encrypt them as a Secret object and the generator approach won't work. Refer our [adding an App](./add_appcr.md)
     docs to check how to add and encrypt a Secret. For configuration that can be used as a ConfigMap, just add the content
     to a `default_config.yaml` file.
 
