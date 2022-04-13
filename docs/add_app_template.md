@@ -46,7 +46,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --version {$APP_VERSION} > appcr.yaml
     ```
 
-    **Note**, you most probably want to provide a default configuration, so add any of the below flags to the previous command:
+    **Note**, you most likely want to provide a default configuration, so add any of the below flags to the previous command:
 
     ```sh
     --user-configmap ${APP_USER_VALUES}
