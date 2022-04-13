@@ -1,0 +1,15 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    giantswarm.io/cluster: ${workload_cluster_name}
+    giantswarm.io/managed-by: flux
+  name: hello-world
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: ${workload_cluster_name}-hello-world-values
+  name: hello-world-app
+  namespace: hello-world
+  version: 0.2.0
