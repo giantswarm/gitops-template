@@ -1,8 +1,8 @@
 # Add a new App Template to the repository
 
 In order to avoid adding the same application from scratch across all your clusters, you can prepare App Templates that provide
-a pre-configured version of an App. This also allows you to manage and version app's config even if the app itself is not
-yet installed to any cluster.
+a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is not
+yet installed in any cluster.
 
 ## Example
 
