@@ -53,14 +53,14 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-secret ${APP_USER_VALUES}
     ```
 
-    Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details of how
-    to properly create respective ConfigMaps or Secrets.
+    Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about
+    how to properly create respective ConfigMaps or Secrets.
 
-1. (optional) If you want to provide a default config, we're using the `kustomize`'s feature of ConfigMap generator.
-   This allows us to use pure YAML file for the configuration, without the wrapping into ConfigMap. Still, for Secrets
-   we need to encrypt them as a Secret object and the generator approach won't work. Refer our [adding App](./add_appcr.md)
-   docs to check how to add and encrypt a Secret. For configuration that can be used as a ConfigMap, just add the content
-   to a `default_config.yaml` file.
+    If you want to provide a default config, we're using the `kustomize`'s feature of ConfigMap generator.
+    This allows us to use pure YAML file for the configuration, without the wrapping into ConfigMap. Still, for Secrets
+    we need to encrypt them as a Secret object and the generator approach won't work. Refer our [adding App](./add_appcr.md)
+    docs to check how to add and encrypt a Secret. For configuration that can be used as a ConfigMap, just add the content
+    to a `default_config.yaml` file.
 
 1. Add the `kustomization.yaml` file, adding an optional Secret as a resource and a ConfigMapGenerator for plain text config:
 
@@ -68,15 +68,17 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     buildMetadata: [originAnnotations]
+    # default config block start - include if you provide default config
     configMapGenerator:
       - files:
         - values=default_config.yaml
         name: ${workload_cluster_name}-nginx-ingress-controller-values
     generatorOptions:
       disableNameSuffixHash: true
+    # default config block end
     resources:
       - appcr.yaml
-      - secret.enc.yaml
+      - secret.enc.yaml # only if you provide default Secret
     ```
 
 At this point, you should have a ready App Template.

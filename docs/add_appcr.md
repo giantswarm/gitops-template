@@ -8,13 +8,13 @@ The documentation below shows common steps as well as what is different in both 
 
 Examples of creating apps are available in following locations:
 
-- An example of a directly configured App (the simplest use case): an [app without configuration](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
+- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
 - An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
 - An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
 
 ## Common steps
 
-Please follow this steps when installing an App directly as well as using App Template.
+Please follow these steps when installing an App directly as well as using App Template.
 
 ### Export environment variables
 
@@ -78,7 +78,8 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details of how
     to properly create respective ConfigMaps or Secrets.
 
-1. (optional) Place ConfigMap and Secrets with values as the `configmap.yaml` and `secret.enc.yaml` files respectively:
+1. (optional - if adding configuration) Place ConfigMap and Secrets with values as the `configmap.yaml`
+  and `secret.enc.yaml` files respectively:
 
     ```sh
     # Use one of the two for respective kind
@@ -86,7 +87,8 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     # cp ${APP_USER_VALUES} ./secret.enc.yaml
     ```
 
-1. (optional) Import the regular GPG public key of the Workload Cluster and encrypt the `secret.enc.yaml` file:
+1. (optional - if encrypting secrets) Import the regular GPG public key of the Workload Cluster and encrypt
+  the `secret.enc.yaml` file:
 
     ```sh
     gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc
@@ -110,13 +112,13 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     - ${APP_NAME}/configmap.yaml
     ```
 
-At this point, if you have followed [the WC configuration guide](./add_wc.md), all the necessary Flux resources should
-already be configured.
+  At this point, if you have followed [the WC configuration guide](./add_wc.md), all the necessary Flux resources should
+  already be configured.
 
 ## Adding App using App Template
 
-1. First, you need to pick your app template directory from the [`bases/apps`](../bases/apps/) dir. Export the
-directory in an env variable:
+1. First, you need to pick a directory with an App Template from the [`bases/apps`](../bases/apps/) dir. Export the
+path to the directory in an env variable:
 
     ```sh
     export APP_TEMPLATE_DIR=[YOUR_BASE_PATH]
@@ -133,25 +135,28 @@ directory in an env variable:
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     buildMetadata: [originAnnotations]
+    # configuration override block start - include only if overriding default config from the Template
     configMapGenerator:
       - files:
           - values=override_config.yaml
         name: ${WC_NAME}-${APP_NAME}-user-values
     generatorOptions:
       disableNameSuffixHash: true
+    # configuration override block end
     kind: Kustomization
     patchesStrategicMerge:
       - config_patch.yaml
     resources:
       - ../../../../../../../../${APP_TEMPLATE_PATH}
-
+      - secret.enc.yaml # only if including a secret
     ```
 
-    In unlikely case you're not going to override the configuration from the Template App (probably makes sense only if
-    you override Secret only), please remove the `patchesStrategicMerge:` section and skip the following two points, which
-    describe how to create config patch configuration.
+    Please note, that the block marked "configuration override block" is needed only if you override the default (from the
+    Template) config and the `- secret.enc.yaml` only if you override the secret. If you don't override any, skip both
+    parts in `kustomization.yaml` and also skip next three configuration points below.
 
-1. Create a patch configuration file, that will enhance your App Template with a `userConfig` attribute (refer to
+1. (optional - if you override either config or secret) Create a patch configuration file, that will enhance your App
+    Template with a `userConfig` attribute (refer to
     [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about how `config`
     and `userConfig` properties of App CR are used).
 
@@ -163,13 +168,16 @@ directory in an env variable:
       name: ${WC_NAME}-${APP_NAME}
     spec:
       userConfig:
-        configMap:
+        configMap: # include if you override the config from Template
           name: ${WC_NAME}-${APP_NAME}-user-values
+        secret: # include if you override the secret from Template
+          name: ${workload_cluster_name}-nginx-ingress-controller-user-secret
     ```
 
-1. Create a YAML file `override_config.yaml` containing the App configuration you want to override in comparison to App Template.
+1. (optional - if you override config) Create a YAML file `override_config.yaml` containing the App configuration you
+  want to override in comparison to App Template.
 
-1. If you want to add/override Secret object as well, create a `sops` encrypted secret as [explained above](#adding-app-directly).
+1. (optional - if you override secret) Create a `sops` encrypted secret as [explained above](#adding-app-directly).
    Make sure that the Secret name is `${WC_NAME}-${APP_NAME}-user-secret`. Then, append the following to the
    `spec.userConfig` section of file `config_patch.yaml`:
 
@@ -189,6 +197,8 @@ directory in an env variable:
     If you want to, you can use the same idea of App Templates to override any property (like app version) of base
     App Template by using
     [kustomize patches](https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/patches/).
+
+1. Everything is ready, commit the changes to the branch your Flux is using.
 
 ## Recommended next steps
 
