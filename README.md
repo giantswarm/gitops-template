@@ -24,6 +24,7 @@ fork a repo from it, then follow the docs below to learn how it works:
       1. [create the necessary GitOps repo structure](./docs/add_wc_structure.md)
       1. [create a cluster infrastructure](./docs/add_wc_instance.md)
 1. manage applications deployed to a cluster
+   1. [create an App Template](./docs/add_app_template.md)
    1. [add a new App to a Workload Cluster](./docs/add_appcr.md)
    1. [update an existing App](./docs/update_appcr.md)
    1. [enable automatic updates of an existing App](./docs/automatic_updates_appcr.md)
