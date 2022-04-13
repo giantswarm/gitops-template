@@ -187,11 +187,16 @@ to the cluster. Follow the below instructions in order to do it.
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
-    namespace: ${WC_NAME}
     patches:
     - path: patch_cluster_config.yaml
       target:
         kind: App
+    - patch: |-
+        - op: replace
+          path: "/metadata/namespace"
+          value: ${WC_NAME}
+      target:
+        kind: ".*"
     resources: []
     EOF
     ```

@@ -147,10 +147,23 @@ scan for new tags:
     ```yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
-    namespace: default
     resources:
     - ${APP_NAME}/imagepolicy.yaml
     - ${APP_NAME}/imagerepository.yaml
+    ```
+
+1. Edit the `kustomization.yaml` file again, and add patch for placing Flux' resources in a default or one of your organization namespaces:
+
+    ```yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    patches:
+    - patch: |-
+      - op: replace
+        path: "/metadata/namespace"
+        value: default
+    target:
+      kind: 'ImagePolicy|ImageRepository'
     ```
 
 ## App CR version field mark
