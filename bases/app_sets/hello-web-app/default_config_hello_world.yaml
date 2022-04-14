@@ -1,0 +1,6 @@
+db_config:
+  db_port: 5433 # has to be in sync with config in default_config_simple_db.yaml
+  host: simple-db.simple-web.svc # has to be in sync with 'namespace:' set in kustomization.yaml
+  db_user: hello-web-app # has to be in sync with config in default_config_simple_db.yaml
+thread_pool_size: 16
+admin_login: admin

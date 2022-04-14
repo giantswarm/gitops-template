@@ -1,0 +1,15 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    giantswarm.io/cluster: ${workload_cluster_name}
+    giantswarm.io/managed-by: flux
+  name: simple-db
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: ${workload_cluster_name}-simple-db-values
+  name: simple-db-app
+  namespace: simple-db
+  version: 0.1.0
