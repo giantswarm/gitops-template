@@ -89,4 +89,4 @@ node pool for your cluster.
 
 ## Recommended next steps
 
-- [add a new App CR to the Workload Cluster](./add_appcr.md)
+- [add a new app to the Workload Cluster](./apps/README.md)

@@ -230,4 +230,4 @@ specific API versions,  see example for the `aws` provider below:
 
 - [adding a WC structure](./add_wc_structure.md)
 - [adding a WC definition](./add_cluster_crs.md)
-- [adding a new App CR to a Workload Cluster](./add_appcr.md)
+- [adding a new app to a Workload Cluster](./apps/README.md)
