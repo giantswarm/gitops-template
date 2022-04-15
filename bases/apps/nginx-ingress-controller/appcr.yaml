@@ -1,15 +1,13 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  labels:
-    giantswarm.io/cluster: ${workload_cluster_name}
-    giantswarm.io/managed-by: flux
-  name: ${workload_cluster_name}-nginx-ingress-controller
+  name: nginx-ingress-controller
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: ${workload_cluster_name}-nginx-ingress-controller-values
+      name: nginx-ingress-controller-values
+      namespace: kube-system
   name: nginx-ingress-controller-app
   namespace: kube-system
   version: 2.8.0
