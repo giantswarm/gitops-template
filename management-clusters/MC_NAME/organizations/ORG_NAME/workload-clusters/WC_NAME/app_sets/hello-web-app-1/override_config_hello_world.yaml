@@ -1,2 +1,2 @@
-thread_pool_size: 32
 admin_login: hello-admin
+thread_pool_size: 32
