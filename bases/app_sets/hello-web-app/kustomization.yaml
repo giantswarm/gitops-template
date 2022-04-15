@@ -1,17 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 commonLabels:
-  gitops.giantswarm.io/app_set: hello-web-app
+  gitops.giantswarm.io/appSet: hello-web-app
 # (optional) replace default config of apps included in the set
 configMapGenerator:
   - behavior: replace
     files:
     - values=default_config_simple_db.yaml
-    name: ${workload_cluster_name}-simple-db-values # has to be in sync with the name used by included app
+    name: simple-db-values # has to be in sync with the name used by included app
   - behavior: replace
     files:
     - values=default_config_hello_world.yaml
-    name: ${workload_cluster_name}-hello-world-values # has to be in sync with the name used by included app
+    name: hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
 namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
