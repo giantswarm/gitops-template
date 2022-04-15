@@ -304,4 +304,4 @@ the new workload cluster and apps.
 ## Recommended next steps
 
 - [add Workload Cluster instance](./add_wc_instance.md)
-- [add a new App CR to the Workload Cluster](./add_appcr.md)
+- [add a new app to the Workload Cluster](./apps/README.md)

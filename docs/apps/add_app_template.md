@@ -86,3 +86,4 @@ At this point, you should have a ready App Template.
 ## Recommended next steps
 
 - [install an App](add_appcr.md)
+- [create an App Set](app_sets.md)

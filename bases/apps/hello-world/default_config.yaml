@@ -1,0 +1,7 @@
+admin_login: root
+db_config:
+  db_port: 5432
+  # parameters below have to be set for the app to work
+  # host: FILL_IN
+  # db_user: FILL_IN
+thread_pool_size: 16

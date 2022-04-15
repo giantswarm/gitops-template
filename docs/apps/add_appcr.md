@@ -112,7 +112,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     - ${APP_NAME}/configmap.yaml
     ```
 
-  At this point, if you have followed [the WC configuration guide](./add_wc.md), all the necessary Flux resources should
+  At this point, if you have followed [the WC configuration guide](../add_wc.md), all the necessary Flux resources should
   already be configured.
 
 ## Adding App using App Template
