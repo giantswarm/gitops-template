@@ -189,6 +189,27 @@ in the `default` namespace.
     EOF
     ```
 
+2. Create the MC kustomization file poiting the git repo and applied it:
+
+   ```sh
+   cat <<EOF | kubectl apply -f -
+   apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+   kind: Kustomization
+   metadata:
+     name: ${MC_NAME}-gitops
+     namespace: default
+   spec:
+     serviceAccountName: automation
+     prune: true
+     interval: 1m
+     path: "./management-clusters/${MC_NAME}"
+     sourceRef:
+       kind: GitRepository
+       name: GIT_REPO
+     timeout: 2m
+   EOF
+   ```
+
 After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
 e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
 
