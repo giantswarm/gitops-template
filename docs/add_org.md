@@ -73,7 +73,7 @@ reconcile your new organization.
 
 ## Create a regular GPG key pair for encrypting Organization' secrets (optional step)
 
-If you intend to keep a secret data under your organization in this repository you need to encrypt them with
+If you intend to keep secret data under your organization in this repository you need to encrypt them with
 Mozilla SOPS. In order to do so, you need to first generate a regular (dedicated for this single organization) GPG
 keypair and deliver it to the cluster. Follow the below instructions in order to do it.
 
