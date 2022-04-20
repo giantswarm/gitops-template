@@ -189,7 +189,7 @@ in the `default` namespace.
     EOF
     ```
 
-2. Create the MC kustomization file poiting the git repo and applied it:
+2. Create the MC kustomization file pointing to the git repo and apply it:
 
    ```sh
    cat <<EOF | kubectl apply -f -
