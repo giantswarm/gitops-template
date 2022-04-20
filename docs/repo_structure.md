@@ -28,6 +28,9 @@ management-clusters
     ├── .sops.keys
     ├── [kustomization.yaml]
     ├── [OTHER_RESOURCES]
+    ├── secrets
+    |   ├── MC_NAME.gpgkey.enc.yaml
+    |   └── [WC_NAME.gpgkey.enc.yaml]
     ├── MC_NAME.yaml
     └── [organizations]
         ├── [kustomization.yaml]
@@ -62,6 +65,35 @@ This is to offer flexibility and allow different environments and use-cases.
 The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
 the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
 [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved).
+
+Security of resources is provided by the means of GPG encryption. Repository provides a way to manage all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
+
+## Security Architecture
+
+Security of the repository relies on the [Mozilla' SOPS](https://github.com/mozilla/sops) and GPG encryption.
+
+At minimum, each management cluster MUST be created a GPG master key-pair, even when no encryption is required at
+the time of bootstraping. The master key-pair MUST be used to encrypt other GPG key-pairs as a mean of delivering
+them to the cluster in a GitOps manner, though user MAY also choose to encrypt other resources with the master key.
+The public key of the master key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory.
+The private key of the master key-pair MUST be wrapped into the `MC_NAME.gpgkey.enc.yaml` Kubernetes Secret and
+encrypted with itself.
+The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered by the `MC_NAME.yaml` Kustomization CR
+(see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence is responsible for
+decrypting everything up to the `[workload-clusters]` directory (inclusive), see the horizontal line.
+
+Enabling encryption for the workload clustere resources REQUIRES creating a new GPG key-pair.
+The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
+key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
+GPG key, and placed under the management cluster' secrets directory. It effectively enables it into a GitOps process.
+The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence is responsible for
+decrypting everything from the `WC_NAME` directory (inclusive), see the horizontal line.
+
+In their basic forms both, the `MC_NAME.gpgkey.enc.yaml` and the `WC_NAME.gpgkey.enc.yaml` secrets, contain
+only a single private GPG key of the master and workload cluster key-pair respectively. Each key is being
+prescribed a basic encryption rule in within the `.sops.yaml`. If more granular encryption scenario is
+needed, user MAY choose to enrich either one them with additional private keys. In such case user is also REQUIRED
+to update the `.sops.yaml` file with the respective encryption rules.
 
 ## Rules for Naming Resources
 

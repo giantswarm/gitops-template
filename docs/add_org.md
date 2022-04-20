@@ -71,6 +71,124 @@ export ORG_NAME=ORGANIZATION
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should automatically
 reconcile your new organization.
 
+## Create a regular GPG key pair for encrypting Organization' secrets (optional step)
+
+If you intend to keep a secret data under your organization in this repository you need to encrypt them with
+Mozilla SOPS. In order to do so, you need to first generate a regular (dedicated for this single organization) GPG
+keypair and deliver it to the cluster. Follow the below instructions in order to do it.
+
+1. Generate a GPG key with no passphrase (`%no-protection`):
+
+    ```sh
+    export KEY_NAME="${ORG_NAME}"
+    export KEY_COMMENT="${ORG_NAME} Flux Secrets"
+
+    gpg --batch --full-generate-key <<EOF
+    %no-protection
+    Key-Type: 1
+    Key-Length: 4096
+    Subkey-Type: 1
+    Subkey-Length: 4096
+    Expire-Date: 0
+    Name-Comment: ${KEY_COMMENT}
+    Name-Real: ${KEY_NAME}
+    EOF
+    ```
+
+1. Retrieve the key fingerprint and store it in an environment variable:
+
+    ```sh
+    gpg --list-secret-keys "${KEY_NAME}"
+
+    sec   rsa4096 2021-11-25 [SC]
+          YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+
+    export KEY_FP=YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    ```
+
+1. Share the new GPG public key in this repository:
+
+    ```sh
+    gpg --export --armor "${KEY_FP}" \
+    > management-clusters/${MC_NAME}/.sops.keys/.sops.${ORG_NAME}.asc
+    ```
+
+1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+
+    ```sh
+    cat <<EOF >> .sops.yaml
+      - path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/secrets/.*\.enc\.yaml
+        encrypted_regex: ^(data|stringData)$
+        pgp: ${KEY_FP}
+    EOF
+    ```
+
+1. Import the MC's master GPG private key from your safe storage into your keychain. In our example, we're gonna
+   use `LastPass` for that:
+
+    ```sh
+    gpg --import \
+    <(lpass show --notes "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)")
+    ```
+
+1. Decrypt the `${MC_NAME}.gpgkey.enc.yaml` file with SOPS:
+
+    ```sh
+    sops --decrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Update `${MC_NAME}.gpgkey.enc.yaml` file with the new private key:
+
+    ```sh
+    (
+    cat <<EOF
+    data:
+      ${MC_NAME}.${ORG_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64)
+    EOF
+    ) | kubectl patch \
+    --dry-run=client \
+    -f management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml \
+    --patch-file=/dev/stdin \
+    -o yaml > management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml.new
+    ```
+
+1. Replace old `${MC_NAME}.gpgkey.enc.yaml` file:
+
+    ```sh
+    mv management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml.new \
+    management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Re-encrypt the secret:
+
+    ```sh
+    sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Push changes to the repository and wait for Flux to reconcile the secret. After that, Flux should be ready to decrypt and reconcile the organization' secrets.
+
+1. Go to the Organization' directory:
+
+    ```sh
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}
+    ```
+
+1. Create the `secrets` directory for storing your secret data, and enter it:
+
+    ```sh
+    mkdir secrets
+    cd secrets
+    ```
+
+1. Place your Kubernetes Secret into this directory and encrypt it with SOPS.
+SOPS encryption rule configured earlier ensures it will get encrypted with the Organization' key:
+
+    ```sh
+    sops --encrypt --in-place management-clusters/${MC_NAME}/organizations/${ORG_NAME}/secrets/secret.enc.yaml
+    ```
+
+1. Push changes to the repository.
+
 ## Recommended next steps
 
 - [add a new Workload Cluster](./add_wc.md)

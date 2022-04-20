@@ -33,6 +33,11 @@ If you intend to keep a secret data for your new cluster in this repository you 
 In order to do so, you need to first generate a regular (dedicated for this single cluster) GPG keypair and deliver it
 to the cluster. Follow the below instructions in order to do it.
 
+**Important**, the instructions here will tell you how to create a single GPG key-pair for the entire WC-related
+structure. If you need more granular encryption you can repeat most of the steps to produce multiple key-pair and
+encryption rules for them, remember though of saving all of them under a single `${WC_NAME}.gpgkey.enc.yaml`
+Kubernetes Secret, you MUST not create multiple Secrets.
+
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
     ```sh
