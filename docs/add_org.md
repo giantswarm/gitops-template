@@ -73,7 +73,7 @@ reconcile your new organization.
 
 ## Create a regular GPG key pair for encrypting Organization' secrets (optional step)
 
-Each management cluster comes with a master GPG key-pair that is always avaialble to encrypt your organization's
+Each management cluster comes with a master GPG key-pair that is always available to encrypt your organization's
 data. However, in case you wish to increase security by cryptographic splitting, and hence encrypting different data
 with different keys you can follow the instructions below. It will guide you through creation and configuration of a
 new regular (dedicated for this single organization) GPG key-pair for your organization.
