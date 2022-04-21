@@ -79,7 +79,7 @@ due to its platform independence and simplicity.
 At minimum, each management cluster MUST have a dedicated GPG master key-pair, even when no encryption is required at
 the time of bootstrapping. The GPG master key-pair is what enables users to store other GPG key-pairs safely into this
 repository and deliver them to the cluster in a GitOps manner. Hence it SHOULD be used to encrypt other GPG key-pairs,
-but user MAY also choose to encrypt other resources with the master key.
+but a user MAY also choose to encrypt other resources with the master key.
 The public key of the master key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory.
 The private key of the master key-pair MUST be wrapped into the mandatory `MC_NAME.gpgkey.enc.yaml` Kubernetes Secret
 and encrypted with itself.
