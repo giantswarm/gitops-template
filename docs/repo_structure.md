@@ -116,7 +116,7 @@ The relation between Kustomization CRs and Kubernetes Secrets is depicted in the
 ### Number of GPG Keys
 
 In their most basic forms, both the `MC_NAME.gpgkey.enc.yaml` and the `WC_NAME.gpgkey.enc.yaml` secrets contain
-only a single private GPG key each, of the master and workload cluster' key-pair respectively. Each key is being
+only a single private GPG key each: the master and workload cluster' key-pair, respectively. Each key is being
 prescribed a basic encryption rule in within the `.sops.yaml`, see example below:
 
 ```yaml
