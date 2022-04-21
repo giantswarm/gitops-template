@@ -183,7 +183,7 @@ Flux should be ready to decrypt and reconcile the organization' secrets.
     ```
 
 1. Place your Kubernetes Secret into this directory and encrypt it with SOPS.
-SOPS encryption rule configured earlier ensures it will get encrypted with the Organization' key:
+SOPS encryption rule configured earlier ensures it will get encrypted with the Organization's key:
 
     ```sh
     sops --encrypt --in-place management-clusters/${MC_NAME}/organizations/${ORG_NAME}/secrets/secret.enc.yaml
