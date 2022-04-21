@@ -73,9 +73,10 @@ reconcile your new organization.
 
 ## Create a regular GPG key pair for encrypting Organization' secrets (optional step)
 
-If you intend to keep secret data under your organization in this repository you need to encrypt them with
-Mozilla SOPS. In order to do so, you need to first generate a regular (dedicated for this single organization) GPG
-keypair and deliver it to the cluster. Follow the below instructions in order to do it.
+Each management cluster comes with a master GPG key-pair that is always avaialble to encrypt your organization's
+data. However, in case you wish to increase security by cryptographic splitting, and hence encrypting different data
+with different keys you can follow the blow instruction. It will guide you through creation and configuration of a
+regular (dedicated  for this single organization) GPG key-pair.
 
 1. Generate a GPG key with no passphrase (`%no-protection`):
 

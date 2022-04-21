@@ -74,7 +74,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     kubectl create secret generic sops-gpg-${WC_NAME} \
     --dry-run=client \
     --namespace=default \
-    --from-file=sops.asc=/dev/stdin \
+    --from-file=${WC_NAME}.main.asc=/dev/stdin \
     -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
     ```
 
