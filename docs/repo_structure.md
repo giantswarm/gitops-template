@@ -76,7 +76,7 @@ due to its platform independence and simplicity.
 
 ### Overview
 
-At minimum, each management cluster MUST be created a GPG master key-pair, even when no encryption is required at
+At minimum, each management cluster MUST have a dedicated GPG master key-pair, even when no encryption is required at
 the time of bootstraping. The GPG master key-pair is what enables user to store other GPG key-paris safely into this
 repository and deliver them to the cluster in a GitOps manner. Hence it SHOULD be used to encrypt other GPG key-pairs,
 but user MAY also choose to encrypt other resources with the master key.
