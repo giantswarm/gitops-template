@@ -189,7 +189,10 @@ in the `default` namespace.
     EOF
     ```
 
-1. Create the MC kustomization file pointing to the git repo and apply it:
+1. Apply the cluster's Kustomization CR:
+
+```sh
+kubectl apply -f management-clusters/${MC_NAME}/${MC_NAME}.yaml
 
    ```sh
    cat <<EOF | kubectl apply -f -
