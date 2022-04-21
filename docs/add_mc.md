@@ -189,6 +189,12 @@ in the `default` namespace.
     EOF
     ```
 
+1. Apply the cluster's Kustomization CR:
+
+    ```sh
+    kubectl apply -f management-clusters/${MC_NAME}/${MC_NAME}.yaml
+    ```
+
 After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
 e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
 
