@@ -191,27 +191,9 @@ in the `default` namespace.
 
 1. Apply the cluster's Kustomization CR:
 
-```sh
-kubectl apply -f management-clusters/${MC_NAME}/${MC_NAME}.yaml
-
-   ```sh
-   cat <<EOF | kubectl apply -f -
-   apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-   kind: Kustomization
-   metadata:
-     name: ${MC_NAME}-gitops
-     namespace: default
-   spec:
-     serviceAccountName: automation
-     prune: true
-     interval: 1m
-     path: "./management-clusters/${MC_NAME}"
-     sourceRef:
-       kind: GitRepository
-       name: GIT_REPO
-     timeout: 2m
-   EOF
-   ```
+    ```sh
+    kubectl apply -f management-clusters/${MC_NAME}/${MC_NAME}.yaml
+    ```
 
 After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
 e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
