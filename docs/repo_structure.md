@@ -71,7 +71,7 @@ all the encryption and decryption keys through its structure, see the [Security 
 
 ## Security Architecture
 
-Security of the repository relies on the [Mozilla' SOPS](https://github.com/mozilla/sops) and GPG encryption, mostly
+Security of the repository relies on [Mozilla SOPS](https://github.com/mozilla/sops) and GPG encryption, mostly
 due to its platform independence and simplicity.
 
 ### Overview
