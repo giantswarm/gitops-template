@@ -90,7 +90,7 @@ everything up to the `[workload-clusters]` directory (inclusive).
 Enabling encryption for the workload cluster resources REQUIRES creating a new GPG key-pair.
 The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
 key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
-GPG key, and placed under the management cluster' secrets directory. It effectively enables it into a GitOps process.
+GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a GitOps process.
 The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence MAY be used for
 decrypting everything from the `WC_NAME` directory (inclusive).
 
