@@ -161,8 +161,8 @@ creation_rules:
 ## MC_NAME.gpgkey.enc.yaml ##
 apiVersion: v1
 data:
-    demomc.master.asc: BASE64_ENCODED_MASTER_PRIVATE_KEY #01
-    demomc.demo-gitops.asc: BASE64_ENCODED_ORGANIZATION_PRIVATE_KEY #02
+    demomc.master.asc: SOPS_ENCRYPTED_BASE64_ENCODED_MASTER_PRIVATE_KEY #01
+    demomc.demo-gitops.asc: SOPS_ENCRYPTED_BASE64_ENCODED_ORGANIZATION_PRIVATE_KEY #02
 kind: Secret
 metadata:
     name: sops-gpg-master
@@ -172,8 +172,8 @@ metadata:
 ## WC_NAME.gpgkey.enc.yaml ##
 apiVersion: v1
 data:
-    demo0.app1.asc: BASE64_ENCODED_APP1_PRIVATE_KEY #03
-    demo0.app2.asc: BASE64_ENCODED_APP2_PRIVATE_KEY #04
+    demo0.app1.asc: SOPS_ENCRYPTED_BASE64_ENCODED_APP1_PRIVATE_KEY #03
+    demo0.app2.asc: SOPS_ENCRYPTED_BASE64_ENCODED_APP2_PRIVATE_KEY #04
 kind: Secret
 metadata:
     name: sops-gpg-demo0
