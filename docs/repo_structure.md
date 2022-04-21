@@ -4,6 +4,9 @@
 
 - [Table of Content](#table-of-content)
 - [General Remarks](#general-remarks)
+- [Security Architecture](#security-architecture)
+  - [Overview](#overview)
+  - [Number of GPG Keys](#number-of-gpg-keys)
 - [Rules for Naming Resources](#rules-for-naming-resources)
 - [Rules for Optional Components](#rules-for-optional-components)
   - [`[OTHER_RESOURCES]`](#other_resources)
