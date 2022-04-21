@@ -74,7 +74,7 @@ all the encryption and decryption keys through its structure, see the [Security 
 Security of the repository relies on the [Mozilla' SOPS](https://github.com/mozilla/sops) and GPG encryption, mostly
 due to its platform independence and simplicity.
 
-### General Remarks
+### Overview
 
 At minimum, each management cluster MUST be created a GPG master key-pair, even when no encryption is required at
 the time of bootstraping. The GPG master key-pair is what enables user to store other GPG key-paris safely into this
