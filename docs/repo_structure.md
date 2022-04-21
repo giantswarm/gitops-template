@@ -66,7 +66,7 @@ The horizontal line marks the delegation of responsibility for reconciliation. R
 the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
 [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved).
 
-Security of resources is provided by the means of GPG encryption. Repository provides a way to manage
+The security of resources is provided by GPG encryption. The repository provides a way to manage
 all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
 
 ## Security Architecture
