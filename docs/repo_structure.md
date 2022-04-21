@@ -131,7 +131,7 @@ creation_rules:
 
 If more granular encryption scenario is needed, user MAY choose to enrich either one them with additional
 private keys. In such case user is also REQUIRED to update the `.sops.yaml` file with the respective encryption rules.
-Let's consider a simple example of such scenario. Imagine user decides to provide encryption for the `demo-gitops`
+Let's consider a simple example of such scenario. Imagine a user decides to provide encryption for the `demo-gitops`
 organization secrets with a separate key-pair, and then also to keep both `app1` and `app2` Apps secured with
 their own individual key-pairs. The resultant configuration may look like the one presented below.
 
