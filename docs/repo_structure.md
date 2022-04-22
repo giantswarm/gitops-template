@@ -91,7 +91,7 @@ The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered b
 everything up to the `[workload-clusters]` directory (inclusive).
 
 Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml` Kubernetes
-Secret, which is otherwise optional, and at minimum a single GPG key-pair.
+Secret, which is otherwise optional, and at minimum needs to contain a single GPG key-pair.
 The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
 key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
 GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a
