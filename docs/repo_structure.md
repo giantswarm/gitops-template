@@ -134,7 +134,7 @@ creation_rules:
     pgp: 0000000000000000000000000000000000000002
 ```
 
-If more a granular encryption scenario is needed, users MAY choose to enrich either one of them with additional
+If a more granular encryption scenario is needed, users MAY choose to enrich any one of them with additional
 private keys. In such cases, the user is also REQUIRED to update the `.sops.yaml` file with the respective encryption rules.
 Let's consider a simple example of such scenario. Imagine a user decides to provide encryption for the `demo-gitops`
 organization secrets with a separate key-pair, and then also to keep both `app1` and `app2` Apps secured with
