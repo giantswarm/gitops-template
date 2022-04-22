@@ -138,7 +138,7 @@ new GPG key-pair dedicated for an organization.
     sops --decrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Update `${MC_NAME}.gpgkey.enc.yaml` file with the new private key:
+1. Update `${MC_NAME}.gpgkey.enc.yaml` file with the new organization's private key:
 
     ```sh
     (
