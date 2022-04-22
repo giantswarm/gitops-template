@@ -138,7 +138,7 @@ If more a granular encryption scenario is needed, users MAY choose to enrich eit
 private keys. In such cases, the user is also REQUIRED to update the `.sops.yaml` file with the respective encryption rules.
 Let's consider a simple example of such scenario. Imagine a user decides to provide encryption for the `demo-gitops`
 organization secrets with a separate key-pair, and then also to keep both `app1` and `app2` Apps secured with
-their own individual key-pairs. The resultant configuration may look like the one presented below.
+their own individual key-pairs. The resulting configuration may look like the one presented below.
 
 ```yaml
 ## .sops.yaml ##
