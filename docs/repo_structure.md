@@ -4,6 +4,9 @@
 
 - [Table of Content](#table-of-content)
 - [General Remarks](#general-remarks)
+- [Security Architecture](#security-architecture)
+  - [Overview](#overview)
+  - [Multiple GPG Keys](#number-of-gpg-keys)
 - [Rules for Naming Resources](#rules-for-naming-resources)
 - [Rules for Optional Components](#rules-for-optional-components)
   - [`[OTHER_RESOURCES]`](#other_resources)
@@ -28,6 +31,9 @@ management-clusters
     ├── .sops.keys
     ├── [kustomization.yaml]
     ├── [OTHER_RESOURCES]
+    ├── secrets
+    |   ├── MC_NAME.gpgkey.enc.yaml
+    |   └── [WC_NAME.gpgkey.enc.yaml]
     ├── MC_NAME.yaml
     └── [organizations]
         ├── [kustomization.yaml]
@@ -62,6 +68,116 @@ This is to offer flexibility and allow different environments and use-cases.
 The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
 the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
 [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved).
+
+The security of resources is provided by GPG encryption. The repository provides a way to manage
+all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
+
+## Security Architecture
+
+Security of the repository relies on [Mozilla SOPS](https://github.com/mozilla/sops) and GPG encryption, mostly
+due to its platform independence and simplicity.
+
+### Overview
+
+At minimum, each management cluster MUST have a dedicated GPG master key-pair, even when no encryption is required at
+the time of bootstrapping. The GPG master key-pair is what enables users to store other GPG key-pairs safely into this
+repository and deliver them to the cluster in a GitOps manner. Hence it SHOULD be used to encrypt other GPG key-pairs,
+but a user MAY also choose to encrypt other resources with the master key.
+The public key of the master key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory.
+The private key of the master key-pair MUST be wrapped into the mandatory `MC_NAME.gpgkey.enc.yaml` Kubernetes Secret
+and encrypted with itself.
+The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered by the `MC_NAME.yaml` Kustomization CR
+(see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence MAY be used for decrypting
+everything up to the `[workload-clusters]` directory (inclusive).
+
+Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml` Kubernetes
+Secret, which is otherwise optional, and at minimum needs to contain a single GPG key-pair.
+The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
+key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
+GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a
+GitOps process.
+The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence MAY be used for
+decrypting everything from the `WC_NAME` directory (inclusive).
+
+The relation between Kustomization CRs and Kubernetes Secrets is depicted in the figure below.
+
+```text
+                MC_NAME.yaml
+                     |
+                     |
+                 (creates) <---(decrypts with)--- MC_NAME.gpgkey.enc.yaml
+                     |
+                     |
+  OTHER_RESOURCES <--+--> WC_NAME.yaml
+                               |
+                               |
+                           (creates) <---(decrypts with)--- WC_NAME.gpgkey.enc.yaml
+                               |
+                               |
+                               ˅
+                         OTHER_RESOURCES
+```
+
+### Number of GPG Keys
+
+In their most basic forms, both the `MC_NAME.gpgkey.enc.yaml` and the `WC_NAME.gpgkey.enc.yaml` secrets contain
+only a single private GPG key each: the master and workload cluster' key-pair, respectively. Each key is being
+prescribed a basic encryption rule in the `.sops.yaml`, see example below:
+
+```yaml
+creation_rules:
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000001
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000002
+```
+
+If a more granular encryption scenario is needed, users MAY choose to enrich any one of them with additional
+private keys. In such cases, the user is also REQUIRED to update the `.sops.yaml` file with the respective encryption rules.
+Let's consider a simple example of such scenario. Imagine a user decides to provide encryption for the `demo-gitops`
+organization secrets with a separate key-pair, and then also to keep both `app1` and `app2` Apps secured with
+their own individual key-pairs. The resulting configuration may look like the one presented below.
+
+```yaml
+## .sops.yaml ##
+creation_rules:
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000001 # master key
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/secrets/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000002 # organization key
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/apps/app1/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000003 # app1 key
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/apps/app2/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000004 # app2 key
+```
+
+```yaml
+## MC_NAME.gpgkey.enc.yaml ##
+apiVersion: v1
+data:
+    demomc.master.asc: SOPS_ENCRYPTED_BASE64_ENCODED_MASTER_PRIVATE_KEY #01
+    demomc.demo-gitops.asc: SOPS_ENCRYPTED_BASE64_ENCODED_ORGANIZATION_PRIVATE_KEY #02
+kind: Secret
+metadata:
+    name: sops-gpg-master
+```
+
+```yaml
+## WC_NAME.gpgkey.enc.yaml ##
+apiVersion: v1
+data:
+    demo0.app1.asc: SOPS_ENCRYPTED_BASE64_ENCODED_APP1_PRIVATE_KEY #03
+    demo0.app2.asc: SOPS_ENCRYPTED_BASE64_ENCODED_APP2_PRIVATE_KEY #04
+kind: Secret
+metadata:
+    name: sops-gpg-demo0
+```
 
 ## Rules for Naming Resources
 
