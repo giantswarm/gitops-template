@@ -1,0 +1,7 @@
+apiVersion: infrastructure.giantswarm.io/v1alpha3
+kind: AWSControlPlane
+metadata:
+  name: ${control_plane_id}
+  namespace: org-${organization}
+spec:
+  instanceType: m5.medium

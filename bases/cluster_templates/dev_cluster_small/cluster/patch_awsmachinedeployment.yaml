@@ -1,0 +1,19 @@
+
+apiVersion: infrastructure.giantswarm.io/v1alpha3
+kind: AWSMachineDeployment
+metadata:
+  name: ${machine_deployment_id}
+  namespace: org-${organization}
+spec:
+  nodePool:
+    description: General purpose
+    machine:
+      dockerVolumeSizeGB: 100
+      kubeletVolumeSizeGB: 50
+    scaling:
+      max: 3
+      min: 1
+  provider:
+    worker:
+      instanceType: m5.medium
+      useAlikeInstanceTypes: false
