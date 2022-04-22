@@ -4,6 +4,10 @@ metadata:
   name: MC_NAME-gitops # change mc-name
   namespace: default
 spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-gpg-master
   interval: 1m0s
   path: ./management-clusters/MC_NAME
   prune: true
