@@ -6,7 +6,7 @@
 - [General Remarks](#general-remarks)
 - [Security Architecture](#security-architecture)
   - [Overview](#overview)
-  - [Multiple GPG Keys](#number-of-gpg-keys)
+  - [Multiple GPG Keys](#multiple-gpg-keys)
 - [Rules for Naming Resources](#rules-for-naming-resources)
 - [Rules for Optional Components](#rules-for-optional-components)
   - [`[OTHER_RESOURCES]`](#other_resources)
@@ -67,7 +67,7 @@ This is to offer flexibility and allow different environments and use-cases.
 
 The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
 the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
-[Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved).
+[Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
 The security of resources is provided by GPG encryption. The repository provides a way to manage
 all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
@@ -118,7 +118,7 @@ The relation between Kustomization CRs and Kubernetes Secrets is depicted in the
                          OTHER_RESOURCES
 ```
 
-### Number of GPG Keys
+### Multiple GPG Keys
 
 In their most basic forms, both the `MC_NAME.gpgkey.enc.yaml` and the `WC_NAME.gpgkey.enc.yaml` secrets contain
 only a single private GPG key each: the master and workload cluster' key-pair, respectively. Each key is being
@@ -388,7 +388,7 @@ resources:
 ```
 
 The `WC_NAME.yaml` Kustomization CR, when created, points to the respective `WC_NAME/` directory and reconciles
-everything there, including itself, and hence takes over the reconciliation from where the `MC_NAME.yaml` leaves it.
+everything there and hence takes over the reconciliation from where the `MC_NAME.yaml` leaves it.
 
 ### Two Kustomization CRs motivation
 
