@@ -167,7 +167,7 @@ new regular (dedicated for this single organization) GPG key-pair for your organ
     ```
 
 1. Push changes to the repository and wait for Flux to reconcile the secret. After that,
-Flux should be ready to decrypt and reconcile the organization' secrets.
+Flux should be ready to decrypt and reconcile the organization's secrets.
 
 1. Go to the Organization's directory:
 
