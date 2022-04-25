@@ -3,7 +3,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=default_config.yaml
-    name: nginx-ingress-controller-values
+    name: ${workload_cluster_name}-nginx-ingress-controller-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization

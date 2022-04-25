@@ -8,7 +8,7 @@ generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 patchesStrategicMerge:
-  - config_patch.yaml
+  - patch_config.yaml
 resources:
   - secret.enc.yaml
   - ../../../../../../../../bases/apps/nginx-ingress-controller

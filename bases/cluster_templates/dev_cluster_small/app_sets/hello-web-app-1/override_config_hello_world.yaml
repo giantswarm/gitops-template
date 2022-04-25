@@ -1,2 +1,2 @@
-admin_login: hello-admin
+admin_login: hello-admin-in-cluster-template
 thread_pool_size: 32

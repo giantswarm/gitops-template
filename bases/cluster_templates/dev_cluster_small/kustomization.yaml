@@ -1,0 +1,10 @@
+
+# TODO: delete this file! Dev time file only!
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+resources:
+  - cluster
+  - app_sets/hello-web-app-1
+  # - apps/hello-world
+  - apps/nginx-from-template
