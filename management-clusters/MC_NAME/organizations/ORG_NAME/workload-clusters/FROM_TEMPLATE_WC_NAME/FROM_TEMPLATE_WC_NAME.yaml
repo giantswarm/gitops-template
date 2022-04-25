@@ -4,6 +4,10 @@ metadata:
   name: ${workload_cluster_name}
   namespace: default
 spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-gpg-FROM_TEMPLATE_WC_NAME
   interval: 1m
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/FROM_TEMPLATE_WC_NAME"
   postBuild:
