@@ -1,11 +1,11 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: hello-world
+  name: ${workload_cluster_name}-hello-world
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: hello-world-values
+      name: ${workload_cluster_name}-hello-world-values
   name: hello-world-app
   version: 0.2.0

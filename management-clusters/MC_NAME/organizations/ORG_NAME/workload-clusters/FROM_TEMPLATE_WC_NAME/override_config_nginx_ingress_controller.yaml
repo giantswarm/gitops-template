@@ -1,0 +1,4 @@
+controller:
+  resources:
+    requests:
+      cpu: 700m

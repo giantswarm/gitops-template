@@ -3,7 +3,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=default_config.yaml
-    name: simple-db-values
+    name: ${workload_cluster_name}-simple-db-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
