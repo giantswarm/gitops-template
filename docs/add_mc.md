@@ -66,7 +66,7 @@ en- and decrypt real user-related data.
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-master \
     --namespace=default \
-    --from-file=sops.asc=/dev/stdin
+    --from-file=${MC_NAME}.master.asc=/dev/stdin
     ```
 
 1. Add the private to a safe encrypted storage of your choice. For example, to export the key to `LastPass`
@@ -125,13 +125,32 @@ en- and decrypt real user-related data.
     > .sops.keys/.sops.master.asc
     ```
 
+1. Save the `sops-gpg-master` Secret from the [previous section](#flux-gpg-master-key-pair) to the `secrets` directory:
+
+   ```sh
+   gpg --export-secret-keys --armor "${KEY_FP}" |
+   kubectl create secret generic sops-gpg-master \
+   --dry-run=client \
+   --namespace=default \
+   --from-file=${MC_NAME}.master.asc=/dev/stdin \
+   -o yaml > secrets/${MC_NAME}.gpgkey.enc.yaml
+   ```
+
+1. Encrypt `sops-gpg-master` Secret with a GPG master public key:
+
+    ```sh
+    gpg --import .sops.keys/.sops.master.asc
+    sops --encrypt --in-place secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
 1. Create the `kustomization.yaml` file under `secrets` directory and populate it with the below content:
 
     ```sh
     cat <<EOF > secrets/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
-    resources: []
+    resources:
+    - ${MC_NAME}.master.gpgkey.enc.yaml
     EOF
     ```
 
@@ -187,6 +206,12 @@ in the `default` namespace.
         !bases/**
         **.md
     EOF
+    ```
+
+1. Apply the cluster's Kustomization CR:
+
+    ```sh
+    kubectl apply -f management-clusters/${MC_NAME}/${MC_NAME}.yaml
     ```
 
 After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
