@@ -12,7 +12,7 @@ not yet installed in any cluster.
 
 ## Example
 
-An example of an App Template is available in [bases/apps/nginx-ingress-controller](../bases/apps/nginx-ingress-controller).
+An example of an App Template is available in [bases/apps/nginx-ingress-controller](../../bases/apps/nginx-ingress-controller).
 
 ## Export environment variables
 

@@ -28,7 +28,7 @@ otherwise this process will result in setting meaningless version in the `.spec.
 
 ## Example
 
-An example of an App automated updates is available in [WC_NAME/apps/web-assets](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/web-assets/).
+An example of an App automated updates is available in [WC_NAME/apps/web-assets](../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/web-assets/).
 
 ## Export environment variables
 
