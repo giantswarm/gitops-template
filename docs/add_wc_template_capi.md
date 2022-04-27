@@ -95,8 +95,6 @@ as this can strongly depend on resources involved, how much of them you would li
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      labels:
-        app-operator.giantswarm.io/version: 0.0.0
       name: \${cluster_name}
       namespace: org-\${organization}
     spec:
@@ -117,8 +115,6 @@ as this can strongly depend on resources involved, how much of them you would li
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      labels:
-        app-operator.giantswarm.io/version: 0.0.0
       name: \${cluster_name}-default-apps
       namespace: org-\${organization}
     spec:
