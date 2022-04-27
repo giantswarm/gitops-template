@@ -226,4 +226,4 @@ e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely p
 
 ## Recommended next steps
 
-- [add a new Organization](./add_org.md)
+- [Add a new organization](./add_org.md)

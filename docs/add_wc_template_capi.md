@@ -332,4 +332,4 @@ pools, etc.:
 
 ## Recommended next steps
 
-- [add a new app to the Workload Cluster](./apps/README.md)
+- [Managing apps installed in clusters with GitOps](./apps/README.md)

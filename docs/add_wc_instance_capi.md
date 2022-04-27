@@ -2,6 +2,7 @@
 
 - [Add Workload Cluster instance (CAPx/CAPI)](#add-workload-cluster-instance-capxcapi)
   - [Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases)
+  - [Recommended next steps](#recommended-next-steps)
 
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
 [cluster structure](./add_wc_structure.md) preparation step.
@@ -101,3 +102,7 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 
 1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
 you have just created.
+
+## Recommended next steps
+
+- [Managing apps installed in clusters with GitOps](./apps/README.md)

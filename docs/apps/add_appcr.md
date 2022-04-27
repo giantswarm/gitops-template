@@ -211,5 +211,5 @@ path to the directory in an env variable:
 
 ## Recommended next steps
 
-- [enable automatic updates of an existing App](./automatic_updates_appcr.md)
-- [update an existing App](./update_appcr.md)
+- [Enable automatic updates of an existing App](./automatic_updates_appcr.md)
+- [Update an existing App](./update_appcr.md)

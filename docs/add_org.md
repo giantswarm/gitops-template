@@ -199,4 +199,4 @@ SOPS encryption rule configured earlier ensures it will get encrypted with the O
 
 ## Recommended next steps
 
-- [add a new Workload Cluster](./add_wc.md)
+- [Add a new workload cluster](./add_wc.md)

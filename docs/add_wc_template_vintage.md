@@ -236,6 +236,5 @@ specific API versions,  see example for the `aws` provider below:
 
 ## Recommended next steps
 
-- [adding a WC structure](./add_wc_structure.md)
-- [adding a WC definition](./add_cluster_crs.md)
-- [adding a new app to a Workload Cluster](./apps/README.md)
+- [Add a new Workload Cluster repository structure](./add_wc_structure.md)
+- [Add Workload Cluster instance (vintage)](./add_wc_instance_vintage.md)

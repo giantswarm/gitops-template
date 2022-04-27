@@ -91,5 +91,5 @@ At this point, you should have a ready App Template.
 
 ## Recommended next steps
 
-- [install an App](add_appcr.md)
-- [create an App Set](app_sets.md)
+- [Add a new App to a Workload Cluster](add_appcr.md)
+- [Creating and using App Sets](app_sets.md)
