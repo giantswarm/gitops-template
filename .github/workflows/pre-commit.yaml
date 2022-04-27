@@ -1,4 +1,4 @@
-name: pre-commit
+name: validate
 
 on:
   pull_request:
@@ -12,3 +12,15 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
     - uses: pre-commit/action@v2.0.3
+  test:
+    needs: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: apt-get install -y YAMLLint
+      - uses: giantswarm/install-binary-action@v1
+        with:
+          binary: kubeval
+          download_url: "https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz"
+          smoke_test: "${binary} --version"
+      - run: ./tools/test-all-ffb
