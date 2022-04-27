@@ -91,11 +91,10 @@ en- and decrypt real user-related data.
     gpg --delete-secret-keys "${KEY_FP}"
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Add the automatic key selection rule to the `creation_rules` section of the [SOPS configuration file](../.sops.yaml):
 
     ```sh
     cat <<EOF >> .sops.yaml
-    creation_rules:
       - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
         encrypted_regex: ^(data|stringData)$
         pgp: ${KEY_FP}
