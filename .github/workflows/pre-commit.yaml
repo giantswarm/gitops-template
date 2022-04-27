@@ -23,4 +23,5 @@ jobs:
           binary: kubeval
           download_url: "https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz"
           smoke_test: "${binary} --version"
+          vaersion: "latest"
       - run: ./tools/test-all-ffb
