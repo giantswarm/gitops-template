@@ -185,8 +185,7 @@ or one of your organization namespaces:
 2. Mark the `.spec.version` field for update in the App CR:
 
     ```sh
-    # BSD sed
-    sed -i "" "s/version:.*$/& # {\"\$imagepolicy\": \"default:${APP_NAME}:tag\"}/" appcr.yaml
+    sed -i "s/version:.*$/& # {\"\$imagepolicy\": \"default:${APP_NAME}:tag\"}/" appcr.yaml
     ```
 
    The resultant file should looks similar to this:

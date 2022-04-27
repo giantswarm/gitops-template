@@ -266,9 +266,8 @@ will configure them later in our process:
 1. Replace `mywcl`, `myorg` values from the previous step with variables:
 
     ```sh
-    # BSD sed
-    sed -i "" 's/myorg/${organization}/g' bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
-    sed -i "" 's/mywcl/${cluster_id}/g' bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
+    sed -i "s/myorg/${organization}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
+    sed -i "s/mywcl/${cluster_id}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
     ```
 
 1. Compare `cluster_config.yaml` against the version-specific `values.yaml`, and tweak it if necessary to match the

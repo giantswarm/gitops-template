@@ -87,8 +87,7 @@ as Kustomize bases in the [bases](../bases/) directory. There's also
 `kustomization.yaml` and uncomment node pools base:
 
     ```sh
-    # BSD sed
-    sed -i "" "s/^#-/-/" kustomization.yaml
+    sed -i "s/^#-/-/" kustomization.yaml
     ```
 
 After completing this step, you can open another PR with the changes. Once it is merged, Flux should create accompanying

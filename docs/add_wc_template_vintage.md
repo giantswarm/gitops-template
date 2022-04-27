@@ -91,16 +91,15 @@ cluster resources, see example for the `aws` provider below. Use arbitrary value
 1. Replace values provided in the previous step by a shell-like variables:
 
     ```sh
-    # BSD sed
-    sed -i "" 's/myorg/${organization}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
-    sed -i "" 's/mywcl/${cluster_id}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
-    sed -i "" 's/17.0.3/${release}/g' bases/clusters/${PROVIDER}/template/cluster.yaml
+    sed -i "s/myorg/${organization}/g" bases/clusters/${PROVIDER}/template/cluster.yaml
+    sed -i "s/mywcl/${cluster_id}/g" bases/clusters/${PROVIDER}/template/cluster.yaml
+    sed -i "s/17.0.3/${release}/g" bases/clusters/${PROVIDER}/template/cluster.yaml
     ```
 
 1. Replace API versions with a `replaceme` token:
 
     ```sh
-    sed -i "" 's/\/v[0-9][a-z]*[0-9]$/\/replaceme/g' bases/clusters/${PROVIDER}/template/cluster.yaml
+    sed -i "s/\/v[0-9][a-z]*[0-9]$/\/replaceme/g" bases/clusters/${PROVIDER}/template/cluster.yaml
     ```
 
 1. Open the `cluster.yaml` file in your favourite editor and take two action:
