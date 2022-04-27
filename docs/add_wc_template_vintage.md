@@ -1,5 +1,13 @@
 # Add a vintage Workload Cluster template (Legacy CRs)
 
+- [Add a vintage Workload Cluster template (Legacy CRs)](#add-a-vintage-workload-cluster-template-legacy-crs)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Choose bases](#choose-bases)
+  - [Create shared template base (optional)](#create-shared-template-base-optional)
+  - [Create versioned base (optional)](#create-versioned-base-optional)
+  - [Recommended next steps](#recommended-next-steps)
+
 Follow the below instructions to store vintage cluster CRs in the repository. These CRs provide a
 [Cluster Template](./add_wc_template.md) that is later used to create Cluster Definitions.
 

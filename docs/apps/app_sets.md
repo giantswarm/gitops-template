@@ -1,5 +1,13 @@
 # Creating and using App Sets
 
+- [Creating and using App Sets](#creating-and-using-app-sets)
+  - [Limitations](#limitations)
+  - [Example](#example)
+    - [App Set Template](#app-set-template)
+    - [Using App Set](#using-app-set)
+  - [Creating an App Set Template](#creating-an-app-set-template)
+  - [Using an App Set](#using-an-app-set)
+
 It is often desireable to deploy a group of apps together, as a single deployment step. We call such groups "App Sets".
 There's nothing special about App Sets: they are not a separate API entity, rather just a configuration pattern
 enabled by `kustomize` and `flux`. The purpose of such approach can vary, but it's usually to meet the following benefits:

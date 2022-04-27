@@ -1,20 +1,18 @@
 # Repository Structure
 
-## Table of Content
-
-- [Table of Content](#table-of-content)
-- [General Remarks](#general-remarks)
-- [Security Architecture](#security-architecture)
-  - [Overview](#overview)
-  - [Multiple GPG Keys](#multiple-gpg-keys)
-- [Rules for Naming Resources](#rules-for-naming-resources)
-- [Rules for Optional Components](#rules-for-optional-components)
-  - [`[OTHER_RESOURCES]`](#other_resources)
-  - [`[kustomization.yaml]`](#kustomizationyaml)
-  - [`[organizations]`](#organizations)
-  - [`[workload-clusters]`](#workload-clusters)
-- [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
-  - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
+- [Repository Structure](#repository-structure)
+  - [General Remarks](#general-remarks)
+  - [Security Architecture](#security-architecture)
+    - [Overview](#overview)
+    - [Multiple GPG Keys](#multiple-gpg-keys)
+  - [Rules for Naming Resources](#rules-for-naming-resources)
+  - [Rules for Optional Components](#rules-for-optional-components)
+    - [`[OTHER_RESOURCES]`](#other_resources)
+    - [`[kustomization.yaml]`](#kustomizationyaml)
+    - [`[organizations]`](#organizations)
+    - [`[workload-clusters]`](#workload-clusters)
+  - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
+    - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
 ## General Remarks
 

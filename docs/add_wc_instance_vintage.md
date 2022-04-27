@@ -1,5 +1,12 @@
 # Add Workload Cluster instance (vintage)
 
+- [Add Workload Cluster instance (vintage)](#add-workload-cluster-instance-vintage)
+  - [Export environment variables](#export-environment-variables)
+  - [Example](#example)
+  - [Pick your Cluster Template](#pick-your-cluster-template)
+  - [Creating cluster based on vintage cluster template](#creating-cluster-based-on-vintage-cluster-template)
+  - [Recommended next steps](#recommended-next-steps)
+
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
 [cluster structure](./add_wc_structure.md) preparation step.
 

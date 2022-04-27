@@ -1,5 +1,11 @@
 # Add a new organization
 
+- [Add a new organization](#add-a-new-organization)
+  - [Export environment variables](#export-environment-variables)
+  - [Directory tree](#directory-tree)
+  - [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
+  - [Recommended next steps](#recommended-next-steps)
+
 Follow the below instructions to add a new Organization to this repository. Organizations are created within the
 [Management Cluster's configuration](./add_mc.md) directory and in turn are meant to include
 [Workload Cluster](add_wc.md) definitions (more details about the layout are available in

@@ -1,5 +1,14 @@
 # Add a new App to a Workload Cluster
 
+- [Add a new App to a Workload Cluster](#add-a-new-app-to-a-workload-cluster)
+  - [Examples](#examples)
+  - [Common steps](#common-steps)
+    - [Export environment variables](#export-environment-variables)
+    - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
+  - [Adding App directly](#adding-app-directly)
+  - [Adding App using App Template](#adding-app-using-app-template)
+  - [Recommended next steps](#recommended-next-steps)
+
 Follow the instructions below to add a new App to a cluster managed in this repository.
 You can add an App directly (without any intermediate step) or use an [App Template](add_app_template.md).
 The documentation below shows common steps as well as what is different in both cases.

@@ -1,5 +1,13 @@
 # Add a new Workload Cluster repository structure
 
+- [Add a new Workload Cluster repository structure](#add-a-new-workload-cluster-repository-structure)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Create Flux GPG regular key pair (optional step)](#create-flux-gpg-regular-key-pair-optional-step)
+  - [Directory tree](#directory-tree)
+  - [MC configuration](#mc-configuration)
+  - [Recommended next steps](#recommended-next-steps)
+
 Adding a new Workload Cluster requires a few major steps in the configuration process. One of them
 is to prepare the necessary structure and configuration for the GitOps repository itself.
 

@@ -1,5 +1,12 @@
 # Update an existing App
 
+- [Update an existing App](#update-an-existing-app)
+  - [Export environment variables](#export-environment-variables)
+  - [Updating App](#updating-app)
+    - [Updating App CR](#updating-app-cr)
+    - [Updating ConfigMap-based user values](#updating-configmap-based-user-values)
+    - [Updating Secret-based user values](#updating-secret-based-user-values)
+
 Follow the below instructions to update an existing App.
 
 ## Export environment variables

@@ -1,5 +1,8 @@
 # Add Workload Cluster instance (CAPx/CAPI)
 
+- [Add Workload Cluster instance (CAPx/CAPI)](#add-workload-cluster-instance-capxcapi)
+  - [Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases)
+
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
 [cluster structure](./add_wc_structure.md) preparation step.
 

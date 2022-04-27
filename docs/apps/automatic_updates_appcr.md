@@ -1,5 +1,12 @@
 # Enable automatic updates of an existing App
 
+- [Enable automatic updates of an existing App](#enable-automatic-updates-of-an-existing-app)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Directory tree](#directory-tree)
+  - [App CR version field mark](#app-cr-version-field-mark)
+  - [Secrets for scanning private images (optional)](#secrets-for-scanning-private-images-optional)
+
 Follow the below instructions to tell Flux to automatically update an existing App. Automatic update means
 that Flux will scan a remote repository for you and automatically update your deployed application version
 while also creating commits in your repository to reflect these changes.
