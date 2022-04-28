@@ -22,7 +22,7 @@ top of them to set specific CAPI versions and version specific properties on top
 
 ## Example
 
-An example of a WC cluster template created using the vintage API is available in [bases/clusters/aws/v1alpha3](../bases/clusters/aws/v1alpha3/).
+An example of a WC cluster template created using the vintage API is available in [bases/clusters/aws/v1alpha3](/bases/clusters/aws/v1alpha3/).
 
 ## Export environment variables
 
@@ -41,7 +41,7 @@ In order to avoid code duplication, it is advised to utilize the
 [bases and overlays concept](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays)
 of Kustomize in order to configure clusters and node pools.
 
-This repository comes with some built in bases you can choose from, go to the [bases](../bases) directory and search for
+This repository comes with some built in bases you can choose from, go to the [bases](/bases) directory and search for
 some that meet your needs, then export their paths with:
 
 ```sh
@@ -106,7 +106,7 @@ cluster resources, see example for the `aws` provider below. Use arbitrary value
 
     - replace often repeating values with variables in the same manner as above. Fields to replace could be virtually anything,
     see example below, also please check the [repository structure](./repo_structure.md#flux-kustomization-crs-involved)
-    and other [bases](../bases) for more,
+    and other [bases](/bases) for more,
     - remove version-specific fields, making sure template carries only a common code.
 
     ```yaml

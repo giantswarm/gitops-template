@@ -41,14 +41,14 @@ as [sub-charts](https://helm.sh/docs/chart_template_guide/subcharts_and_globals/
 
 ### App Set Template
 
-An example of an App Set Template is available in [bases/app_sets/hello-web-app](../../bases/app_sets/hello-web-app/).
+An example of an App Set Template is available in [bases/app_sets/hello-web-app](/bases/app_sets/hello-web-app/).
 This App Set assumes, that it's impossible to build a shared ConfigMap for both Apps and as such does full config
 override on App Set template level and override using `userConfig:` field in App Set instance.
 
 ### Using App Set
 
 An example showing how to use an App Set is available in
-[aWC_NAME/app_sets/hello-web-app-1](../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/app_sets/hello-web-app-1).
+[aWC_NAME/app_sets/hello-web-app-1](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/app_sets/hello-web-app-1).
 
 ## Creating an App Set Template
 
@@ -118,7 +118,7 @@ Please note the following in the example above:
 
 Using an App Set Template is once again very similar to using a single
 [App Set](./add_appcr.md#adding-app-using-app-template). To create one, save a path that contains your desired
-App Set Template in the [bases/app_sets](../../bases/app_sets/) directory. Then, create a new directory in the
+App Set Template in the [bases/app_sets](/bases/app_sets/) directory. Then, create a new directory in the
 `app_sets` directory of your Working Cluster. In that directory, create a `kustomization.yaml` file based on the
 following pattern:
 

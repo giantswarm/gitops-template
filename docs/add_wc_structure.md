@@ -22,7 +22,7 @@ This includes:
 
 ## Example
 
-An example of a WC cluster directory structure is available in [WC_NAME/](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
+An example of a WC cluster directory structure is available in [WC_NAME/](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
 
 ## Export environment variables
 
@@ -121,7 +121,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     > management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
     cat <<EOF >> .sops.yaml

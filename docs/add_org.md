@@ -120,7 +120,7 @@ new GPG key-pair dedicated for an organization.
     > management-clusters/${MC_NAME}/.sops.keys/.sops.${ORG_NAME}.asc
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
     cat <<EOF >> .sops.yaml

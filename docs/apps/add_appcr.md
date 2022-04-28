@@ -17,9 +17,9 @@ The documentation below shows common steps as well as what is different in both 
 
 Examples of creating apps are available in following locations:
 
-- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
-- An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
-- An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
+- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
+- An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
+- An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
 
 ## Common steps
 
@@ -130,7 +130,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
 
 ## Adding App using App Template
 
-1. First, you need to pick a directory with an App Template from the [`bases/apps`](../../bases/apps/) dir. Export the
+1. First, you need to pick a directory with an App Template from the [`bases/apps`](/bases/apps/) dir. Export the
 path to the directory in an env variable:
 
     ```sh

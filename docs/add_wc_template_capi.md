@@ -34,7 +34,7 @@ See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/
 
 ## Example
 
-An example of a WC cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](../bases/clusters/capo/).
+An example of a WC cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](/bases/clusters/capo/).
 
 ## Export environment variables
 
@@ -53,7 +53,7 @@ In order to avoid code duplication, it is advised to utilize the
 [bases and overlays](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays)
 of Kustomize in order to configure the cluster.
 
-This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters)
+This repository comes with some built in bases you can choose from, go to the [bases](/bases/clusters)
 directory and search for some that meet your needs, then export their paths with:
 
 ```sh
@@ -187,8 +187,8 @@ over multiple releases,
 and although minor differences can be handled on the `userConfig` level, it is advised for the bases to follow major
 `values.yaml` schema versions to avoid confusion.
 
-For example, both CAPO bases in this repository, the [v0.5.0](../bases/clusters/capo/<=v0.5.0) and
-the [v0.6.0](../bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
+For example, both CAPO bases in this repository, the [v0.5.0](/bases/clusters/capo/<=v0.5.0) and
+the [v0.6.0](/bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
 the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
 
 **IMPORTANT**, despite the below instructions referencing `kubectl-gs` for templating configuration, `kubectl-gs`
