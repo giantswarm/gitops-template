@@ -13,6 +13,8 @@ A good starting point is the
 [repository structure](docs/repo_structure.md) doc, which explains how this repository
 works.
 
+Please check [Appendices](docs/appendices.md) on the assumptions made for the code examples throughout this repository.
+
 To start creating and managing your infrastructure using this template, please
 fork a repo from it, then follow the docs below to learn how it works:
 

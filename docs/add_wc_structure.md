@@ -1,5 +1,13 @@
 # Add a new Workload Cluster repository structure
 
+- [Add a new Workload Cluster repository structure](#add-a-new-workload-cluster-repository-structure)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Create Flux GPG regular key pair (optional step)](#create-flux-gpg-regular-key-pair-optional-step)
+  - [Directory tree](#directory-tree)
+  - [MC configuration](#mc-configuration)
+  - [Recommended next steps](#recommended-next-steps)
+
 Adding a new Workload Cluster requires a few major steps in the configuration process. One of them
 is to prepare the necessary structure and configuration for the GitOps repository itself.
 
@@ -14,7 +22,7 @@ This includes:
 
 ## Example
 
-An example of a WC cluster directory structure is available in [WC_NAME/](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
+An example of a WC cluster directory structure is available in [WC_NAME/](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
 
 ## Export environment variables
 
@@ -32,6 +40,11 @@ export WC_NAME=CLUSTER_NAME
 If you intend to keep a secret data for your new cluster in this repository you need to encrypt them with Mozilla SOPS.
 In order to do so, you need to first generate a regular (dedicated for this single cluster) GPG keypair and deliver it
 to the cluster. Follow the below instructions in order to do it.
+
+**Important**, the instructions here will tell you how to create a single GPG key-pair for the entire WC-related
+structure. If you need more granular encryption you can repeat most of the steps to produce multiple key-pair and
+encryption rules for them, remember though of saving all of them under a single `${WC_NAME}.gpgkey.enc.yaml`
+Kubernetes Secret, you MUST not create multiple Secrets.
 
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
@@ -69,7 +82,7 @@ to the cluster. Follow the below instructions in order to do it.
     kubectl create secret generic sops-gpg-${WC_NAME} \
     --dry-run=client \
     --namespace=default \
-    --from-file=sops.asc=/dev/stdin \
+    --from-file=${WC_NAME}.main.asc=/dev/stdin \
     -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
     ```
 
@@ -108,7 +121,7 @@ to the cluster. Follow the below instructions in order to do it.
     > management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
     cat <<EOF >> .sops.yaml
@@ -286,7 +299,7 @@ to the cluster. Follow the below instructions in order to do it.
 1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource:
 
     ```sh
-    yq -i e ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
+    yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
     ```
 
     The resulting file should look like this:
@@ -303,5 +316,5 @@ the new workload cluster and apps.
 
 ## Recommended next steps
 
-- [add Workload Cluster instance](./add_wc_instance.md)
-- [add a new app to the Workload Cluster](./apps/README.md)
+- [Add Workload Cluster instance](./add_wc_instance.md)
+- [Managing Apps installed in clusters with GitOps](./apps/README.md)

@@ -1,5 +1,12 @@
 # Enable automatic updates of an existing App
 
+- [Enable automatic updates of an existing App](#enable-automatic-updates-of-an-existing-app)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Directory tree](#directory-tree)
+  - [App CR version field mark](#app-cr-version-field-mark)
+  - [Secrets for scanning private images (optional)](#secrets-for-scanning-private-images-optional)
+
 Follow the below instructions to tell Flux to automatically update an existing App. Automatic update means
 that Flux will scan a remote repository for you and automatically update your deployed application version
 while also creating commits in your repository to reflect these changes.
@@ -21,7 +28,7 @@ otherwise this process will result in setting meaningless version in the `.spec.
 
 ## Example
 
-An example of an App automated updates is available in [WC_NAME/apps/web-assets](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/web-assets/).
+An example of an App automated updates is available in [WC_NAME/apps/web-assets](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/web-assets/).
 
 ## Export environment variables
 
@@ -139,7 +146,7 @@ scan for new tags:
 1. Edit the `kustomization.yaml` file listing newly created files:
 
     ```sh
-    yq -i e ".resources += [\"${APP_NAME}/imagepolicy.yaml\",\"${APP_NAME}/imagerepository.yaml\"] | .resources style=\"\"" kustomization.yaml
+    yq -i eval ".resources += [\"${APP_NAME}/imagepolicy.yaml\",\"${APP_NAME}/imagerepository.yaml\"] | .resources style=\"\"" kustomization.yaml
     ```
 
     The resultant file should looks similar to this:
@@ -178,8 +185,7 @@ or one of your organization namespaces:
 2. Mark the `.spec.version` field for update in the App CR:
 
     ```sh
-    # BSD sed
-    sed -i "" "s/version:.*$/& # {\"\$imagepolicy\": \"default:${APP_NAME}:tag\"}/" appcr.yaml
+    sed -i "s/version:.*$/& # {\"\$imagepolicy\": \"default:${APP_NAME}:tag\"}/" appcr.yaml
     ```
 
    The resultant file should looks similar to this:
@@ -228,7 +234,7 @@ or one of your organization namespaces:
 1. Edit `kustomization.yaml` and list newly created secret as resource:
 
     ```sh
-    yq -i e '.resources += "pullsecrets.enc.yaml" | .resources style=""' kustomization.yaml
+    yq -i eval '.resources += "pullsecrets.enc.yaml" | .resources style=""' kustomization.yaml
     ```
 
 1. Go to the App directory:

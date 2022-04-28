@@ -3,12 +3,12 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
       - values=override_config_hello_world.yaml
-    name: hello-world-user-values
+    name: ${cluster_id}-hello-world-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 namespace: hello-web-team1
 patchesStrategicMerge:
-  - config_patch.yaml
+  - patch_app_config.yaml
 resources:
   - ../../../../../../../../bases/app_sets/hello-web-app
