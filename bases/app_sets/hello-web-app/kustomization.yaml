@@ -23,14 +23,14 @@ patches:
         value: 0.1.9
     target:
       kind: App
-      name: ${cluster_id}-hello-world
+      name: \${cluster_id}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
         value: 0.1.1
     target:
       kind: App
-      name: ${cluster_id}-simple-db
+      name: \${cluster_id}-simple-db
 # block end
 resources:
   - ../../apps/hello-world
