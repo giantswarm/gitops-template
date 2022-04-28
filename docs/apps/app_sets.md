@@ -68,11 +68,11 @@ configMapGenerator:
   - behavior: replace
     files:
     - values=default_config_simple_db.yaml
-    name: simple-db-values # has to be in sync with the name used by included app
+    name: ${cluster_id}-simple-db-values # has to be in sync with the name used by included app
   - behavior: replace
     files:
     - values=default_config_hello_world.yaml
-    name: hello-world-values # has to be in sync with the name used by included app
+    name: ${cluster_id}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
 namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
@@ -128,7 +128,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
       - values=override_config_hello_world.yaml
-    name: hello-world-user-values
+    name: ${cluster_id}-hello-world-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization

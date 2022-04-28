@@ -12,10 +12,10 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME"
   postBuild:
     substitute:
-      cluster_id: "${workload_cluster_id}"
-      control_plane_id: "${control_plane_id}"
-      machine_deployment_id: "${machine_deployment_id}"
-      organization: "${organization}"
+      cluster_id: "WC_ID"
+      control_plane_id: "CP_ID"
+      machine_deployment_id: "MD_ID"
+      organization: "ORG_NAME"
       release: "16.3.1"
   prune: true
   serviceAccountName: automation
