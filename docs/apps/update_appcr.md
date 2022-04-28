@@ -73,7 +73,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
 1. Grab the `.data.values` field from the Secret and base64-decode it:
 
     ```sh
-    yq r secret.enc.yaml data.values | base64 -d > values.tmp.yaml
+    yq eval .data.values secret.enc.yaml | base64 -d > values.tmp.yaml
     ```
 
 1. Edit the `values.tmp.yaml` if you want to update a secret user configuration

@@ -146,7 +146,7 @@ scan for new tags:
 1. Edit the `kustomization.yaml` file listing newly created files:
 
     ```sh
-    yq -i e ".resources += [\"${APP_NAME}/imagepolicy.yaml\",\"${APP_NAME}/imagerepository.yaml\"] | .resources style=\"\"" kustomization.yaml
+    yq -i eval ".resources += [\"${APP_NAME}/imagepolicy.yaml\",\"${APP_NAME}/imagerepository.yaml\"] | .resources style=\"\"" kustomization.yaml
     ```
 
     The resultant file should looks similar to this:
@@ -234,7 +234,7 @@ or one of your organization namespaces:
 1. Edit `kustomization.yaml` and list newly created secret as resource:
 
     ```sh
-    yq -i e '.resources += "pullsecrets.enc.yaml" | .resources style=""' kustomization.yaml
+    yq -i eval '.resources += "pullsecrets.enc.yaml" | .resources style=""' kustomization.yaml
     ```
 
 1. Go to the App directory:

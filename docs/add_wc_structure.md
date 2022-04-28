@@ -299,7 +299,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource:
 
     ```sh
-    yq -i e ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
+    yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
     ```
 
     The resulting file should look like this:
