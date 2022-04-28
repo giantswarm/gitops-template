@@ -15,7 +15,7 @@ in multiple places across this instruction, the least error prone way of providi
 
 ```sh
 export WC_NAME=CLUSTER_NAME
-export APP_NAME=APP_NAME
+export APP_NAME="\${cluster_id}-APP_NAME"
 export APP_VERSION=APP_VERSION
 export APP_CATALOG=APP_CATALOG
 export APP_NAMESPACE=APP_NAMESPACE
@@ -53,10 +53,14 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-secret ${APP_USER_VALUES}
     ```
 
+    **Note**, We're including `${cluster_id}` in the app name to avoid a problem when two
+    or more clusters in the same organization want to deploy the same app with its
+    default name.
+
     Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about
     how to properly create the respective ConfigMaps or Secrets.
 
-    If you want to provide a default config, we can use us the ConfigMap generator feature of `kustomize`.
+    If you want to provide a default config, we can use use the ConfigMap generator feature of `kustomize`.
     This allows us to use a pure YAML file for the configuration, without the wrapping into a ConfigMap. Still, for Secrets
     we need to encrypt them as a Secret object and the generator approach won't work. Refer our [adding an App](./add_appcr.md)
     docs to check how to add and encrypt a Secret. For configuration that can be used as a ConfigMap, just add the content
@@ -72,7 +76,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     configMapGenerator:
       - files:
         - values=default_config.yaml
-        name: ${workload_cluster_name}-nginx-ingress-controller-values
+        name: ${cluster_id}-nginx-ingress-controller-values
     generatorOptions:
       disableNameSuffixHash: true
     # default config block end

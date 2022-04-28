@@ -25,7 +25,7 @@ in multiple places across this instruction, the least error prone way of providi
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export APP_NAME=APP_NAME
+export APP_NAME="\${cluster_id}-APP_NAME"
 ```
 
 ### Setting up directory tree structure for managing apps
@@ -74,6 +74,10 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-configmap ${APP_USER_VALUES}
     --user-secret ${APP_USER_VALUES}
     ```
+
+    **Note**, We're including `${cluster_id}` in the app name to avoid a problem when two
+    or more clusters in the same organization want to deploy the same app with its
+    default name.
 
     Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details of how
     to properly create respective ConfigMaps or Secrets.
@@ -171,7 +175,7 @@ path to the directory in an env variable:
         configMap: # include if you override the config from Template
           name: ${WC_NAME}-${APP_NAME}-user-values
         secret: # include if you override the secret from Template
-          name: ${workload_cluster_name}-nginx-ingress-controller-user-secret
+          name: ${WC_NAME}-${APP_NAME}-user-secret
     ```
 
 1. (optional - if you override config) Create a YAML file `override_config.yaml` containing the App configuration you
