@@ -316,5 +316,5 @@ the new workload cluster and apps.
 
 ## Recommended next steps
 
-- [Add workload cluster instance](./add_wc_instance.md)
-- [Managing apps installed in clusters with GitOps](./apps/README.md)
+- [Add Workload Cluster instance](./add_wc_instance.md)
+- [Managing Apps installed in clusters with GitOps](./apps/README.md)

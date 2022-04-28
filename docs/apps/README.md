@@ -1,4 +1,4 @@
-# Managing apps installed in clusters with GitOps
+# Managing Apps installed in clusters with GitOps
 
 Below is an index of docs about how to manage applications deployed to clusters:
 

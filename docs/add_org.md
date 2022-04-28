@@ -1,6 +1,6 @@
-# Add a new organization
+# Add a new Organization
 
-- [Add a new organization](#add-a-new-organization)
+- [Add a new Organization](#add-a-new-organization)
   - [Export environment variables](#export-environment-variables)
   - [Directory tree](#directory-tree)
   - [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
@@ -199,4 +199,4 @@ SOPS encryption rule configured earlier ensures it will get encrypted with the O
 
 ## Recommended next steps
 
-- [Add a new workload cluster](./add_wc.md)
+- [Add a new Workload Cluster](./add_wc.md)

@@ -10,4 +10,4 @@ of the cases.
 If the template you need already exists, you can skip this step and continue to recommended next steps:
 
 - [Add a new Workload Cluster repository structure](./add_wc_structure.md)
-- [Add workload cluster instance](./add_wc_instance.md)
+- [Add Workload Cluster instance](./add_wc_instance.md)

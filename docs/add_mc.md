@@ -1,6 +1,6 @@
-# Add a new management cluster
+# Add a new Management Cluster
 
-- [Add a new management cluster](#add-a-new-management-cluster)
+- [Add a new Management Cluster](#add-a-new-management-cluster)
   - [Export Management Cluster codename](#export-management-cluster-codename)
   - [Flux GPG master key pair](#flux-gpg-master-key-pair)
   - [Directory tree](#directory-tree)
@@ -225,4 +225,4 @@ e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely p
 
 ## Recommended next steps
 
-- [Add a new organization](./add_org.md)
+- [Add a new Organization](./add_org.md)

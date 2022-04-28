@@ -327,4 +327,4 @@ pools, etc.:
 
 ## Recommended next steps
 
-- [Managing apps installed in clusters with GitOps](./apps/README.md)
+- [Managing Apps installed in clusters with GitOps](./apps/README.md)
