@@ -9,5 +9,5 @@ of the cases.
 
 If the template you need already exists, you can skip this step and continue to recommended next steps:
 
-- [adding a WC structure](./add_wc_structure.md)
-- [adding a WC instance](./add_wc_instance.md)
+- [Add a new Workload Cluster repository structure](./add_wc_structure.md)
+- [Add Workload Cluster instance](./add_wc_instance.md)

@@ -1,5 +1,12 @@
 # Update an existing App
 
+- [Update an existing App](#update-an-existing-app)
+  - [Export environment variables](#export-environment-variables)
+  - [Updating App](#updating-app)
+    - [Updating App CR](#updating-app-cr)
+    - [Updating ConfigMap-based user values](#updating-configmap-based-user-values)
+    - [Updating Secret-based user values](#updating-secret-based-user-values)
+
 Follow the below instructions to update an existing App.
 
 ## Export environment variables
@@ -66,7 +73,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
 1. Grab the `.data.values` field from the Secret and base64-decode it:
 
     ```sh
-    yq r secret.enc.yaml data.values | base64 -d > values.tmp.yaml
+    yq eval .data.values secret.enc.yaml | base64 -d > values.tmp.yaml
     ```
 
 1. Edit the `values.tmp.yaml` if you want to update a secret user configuration

@@ -1,4 +1,10 @@
-# Add a new organization
+# Add a new Organization
+
+- [Add a new Organization](#add-a-new-organization)
+  - [Export environment variables](#export-environment-variables)
+  - [Directory tree](#directory-tree)
+  - [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
+  - [Recommended next steps](#recommended-next-steps)
 
 Follow the below instructions to add a new Organization to this repository. Organizations are created within the
 [Management Cluster's configuration](./add_mc.md) directory and in turn are meant to include
@@ -114,7 +120,7 @@ new GPG key-pair dedicated for an organization.
     > management-clusters/${MC_NAME}/.sops.keys/.sops.${ORG_NAME}.asc
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
     cat <<EOF >> .sops.yaml
@@ -193,4 +199,4 @@ SOPS encryption rule configured earlier ensures it will get encrypted with the O
 
 ## Recommended next steps
 
-- [add a new Workload Cluster](./add_wc.md)
+- [Add a new Workload Cluster](./add_wc.md)

@@ -1,5 +1,12 @@
 # Add Workload Cluster instance (vintage)
 
+- [Add Workload Cluster instance (vintage)](#add-workload-cluster-instance-vintage)
+  - [Export environment variables](#export-environment-variables)
+  - [Example](#example)
+  - [Pick your Cluster Template](#pick-your-cluster-template)
+  - [Creating cluster based on vintage cluster template](#creating-cluster-based-on-vintage-cluster-template)
+  - [Recommended next steps](#recommended-next-steps)
+
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
 [cluster structure](./add_wc_structure.md) preparation step.
 
@@ -16,12 +23,12 @@ export WC_NAME=CLUSTER_NAME
 
 ## Example
 
-An example of a WC cluster instance created using the vintage API is available in [WC_NAME/cluster](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/cluster/).
+An example of a WC cluster instance created using the vintage API is available in [WC_NAME/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/cluster/).
 
 ## Pick your Cluster Template
 
 First step needed to create a Cluster instance is to pick a cluster template it will be based on. Templates are available
-as Kustomize bases in the [bases](../bases/) directory. There's also
+as Kustomize bases in the [bases](/bases/) directory. There's also
 [documentation about how to create them](./add_wc_cluster_template.md) if the base you need doesn't yet exist.
 
 ## Creating cluster based on vintage cluster template
@@ -80,8 +87,7 @@ as Kustomize bases in the [bases](../bases/) directory. There's also
 `kustomization.yaml` and uncomment node pools base:
 
     ```sh
-    # BSD sed
-    sed -i "" "s/^#-/-/" kustomization.yaml
+    sed -i "s/^#-/-/" kustomization.yaml
     ```
 
 After completing this step, you can open another PR with the changes. Once it is merged, Flux should create accompanying
@@ -89,4 +95,4 @@ node pool for your cluster.
 
 ## Recommended next steps
 
-- [add a new app to the Workload Cluster](./apps/README.md)
+- [Managing Apps installed in clusters with GitOps](./apps/README.md)

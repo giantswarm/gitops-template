@@ -1,5 +1,11 @@
 # Add a new App Template to the repository
 
+- [Add a new App Template to the repository](#add-a-new-app-template-to-the-repository)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
+  - [Recommended next steps](#recommended-next-steps)
+
 In order to avoid adding the same application from scratch across all your clusters, you can prepare App Templates that provide
 a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is
 not yet installed in any cluster.
@@ -89,5 +95,5 @@ At this point, you should have a ready App Template.
 
 ## Recommended next steps
 
-- [install an App](add_appcr.md)
-- [create an App Set](app_sets.md)
+- [Add a new App to a Workload Cluster](add_appcr.md)
+- [Creating and using App Sets](app_sets.md)

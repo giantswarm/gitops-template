@@ -5,5 +5,5 @@ which provider you're using, you have to choose a correct [cluster template](./a
 with this step, you also need to have [workload cluster structure](./add_wc_structure.md) prepared. Then, depending
 on your provider continue to either:
 
-- [vintage cluster infrastructure creation](./add_wc_instance_vintage.md)
-- [CAPx cluster infrastructure creation](./add_wc_instance_capi.md)
+- [Add Workload Cluster instance (vintage)](./add_wc_instance_vintage.md)
+- [Add Workload Cluster instance (CAPx/CAPI)](./add_wc_instance_capi.md)
