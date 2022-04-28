@@ -36,7 +36,7 @@ management-clusters
     └── [organizations]
         ├── [kustomization.yaml]
         └── ORG_NAME
-            ├── [kustomization.yaml]
+            ├── [kustomization.yaml]                    (mandatory when there are no workload-clusters)
             ├── [OTHER_RESOURCES]
             ├── ORG_NAME.yaml
             └── [workload-clusters]
