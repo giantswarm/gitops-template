@@ -40,7 +40,7 @@ export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
 export APP_NAME=APP_NAME
-export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY
+export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY # most likely giantswarmpublic.azurecr.io/giantswarm-catalog
 ```
 
 ## Directory tree
@@ -80,7 +80,11 @@ export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY
           author:
             email: fluxcdbot@users.noreply.github.com
             name: fluxcdbot
-          messageTemplate: '{{range .Updated.Images}}{{println .}}{{end}}'
+          messageTemplate: |
+            automated app upgrades:
+            {{ range $image, $_ := .Updated.Images -}}
+            - {{ $image.Repository }} to {{ $image.Identifier }}
+            {{ end -}}
         push:
           branch: main
       update:
@@ -106,7 +110,7 @@ scan for new tags:
       name: ${APP_NAME}
       namespace: default
     spec:
-      image: ${APP_IMAGE_REGISTRY}
+      image: ${APP_IMAGE_REGISTRY}/${APP_NAME}
       interval: 1m0s
     EOF
     ```
