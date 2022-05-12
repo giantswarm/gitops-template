@@ -34,7 +34,7 @@ in multiple places across this instruction, the least error prone way of providi
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export APP_NAME="\${cluster_id}-APP_NAME"
+export APP_NAME=APP_NAME
 ```
 
 ### Setting up directory tree structure for managing apps
@@ -69,7 +69,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     ```sh
     cd ${APP_NAME}/
     kubectl gs template app \
-    --app-name ${APP_NAME} \
+    --app-name "\${cluster_id}-${APP_NAME}" \
     --catalog ${APP_CATALOG} \
     --cluster ${WC_NAME} \
     --name ${APP_NAME} \
@@ -148,20 +148,21 @@ path to the directory in an env variable:
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     buildMetadata: [originAnnotations]
-    # configuration override block start - include only if overriding default config from the Template
+    ## CONFIGURATION OVERRIDE BLOCK START - include only if overriding default config from the Template
     configMapGenerator:
       - files:
           - values=override_config.yaml
-        name: ${WC_NAME}-${APP_NAME}-user-values
+        name: \${cluster_id}-${APP_NAME}-user-values
     generatorOptions:
       disableNameSuffixHash: true
-    # configuration override block end
+    ## CONFIGURATION OVERRIDE BLOCK END
     kind: Kustomization
     patchesStrategicMerge:
       - config_patch.yaml
     resources:
       - ../../../../../../../../${APP_TEMPLATE_PATH}
-      - secret.enc.yaml # only if including a secret
+      - secret.enc.yaml ## ONLY IF INCLUDING SECRET
+    EOF
     ```
 
     Please note, that the block marked "configuration override block" is needed only if you override the default (from the
@@ -178,32 +179,15 @@ path to the directory in an env variable:
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      name: ${WC_NAME}-${APP_NAME}
+      name: \${cluster_id}-${APP_NAME}
     spec:
       userConfig:
         configMap: # include if you override the config from Template
-          name: ${WC_NAME}-${APP_NAME}-user-values
+          name: \${cluster_id}-${APP_NAME}-user-values
         secret: # include if you override the secret from Template
-          name: ${WC_NAME}-${APP_NAME}-user-secret
+          name: \${cluster_id}-${APP_NAME}-user-secret
+    EOF
     ```
-
-1. (optional - if you override config) Create a YAML file `override_config.yaml` containing the App configuration you
-  want to override in comparison to App Template.
-
-1. (optional - if you override secret) Create a `sops` encrypted secret as [explained above](#adding-app-directly).
-   Make sure that the Secret name is `${WC_NAME}-${APP_NAME}-user-secret`. Then, append the following to the
-   `spec.userConfig` section of file `config_patch.yaml`:
-
-   ```yaml
-   secret:
-     name: ${WC_NAME}-${APP_NAME}-user-secret
-   ```
-
-   Also, add the line below to the `resources:` section of the `kustomization.yaml` file:
-
-   ```yaml
-   - secret.enc.yaml
-   ```
 
 1. Additional notes
 
