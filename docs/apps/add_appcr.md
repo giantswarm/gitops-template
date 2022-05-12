@@ -74,7 +74,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --cluster ${WC_NAME} \
     --name ${APP_NAME} \
     --namespace ${APP_NAMESPACE} \
-    --version {$APP_VERSION} > appcr.yaml
+    --version ${APP_VERSION} > appcr.yaml
     ```
 
     **Note**, you can optionally configure App with the user-provided values by adding below flags to the previous command:
