@@ -1,5 +1,13 @@
 # Add a CAPx (CAPI) Workload Cluster template (cluster App based)
 
+- [Add a CAPx (CAPI) Workload Cluster template (cluster App based)](#add-a-capx-capi-workload-cluster-template-cluster-app-based)
+  - [Example](#example)
+  - [Export environment variables](#export-environment-variables)
+  - [Choose bases](#choose-bases)
+  - [Create shared cluster template base (optional)](#create-shared-cluster-template-base-optional)
+  - [Create versioned base (optional)](#create-versioned-base-optional)
+  - [Recommended next steps](#recommended-next-steps)
+
 Our CAPx (CAPI provider-specific clusters) are delivered by Giant Swarm as a set of two applications. First one
 is an App with Cluster instance definition, second one is an App with all the default applications a new cluster
 needs in order to run correctly. As such, creating a CAPx cluster means that you need to deliver two correctly
@@ -26,7 +34,7 @@ See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/
 
 ## Example
 
-An example of a WC cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](../bases/clusters/capo/).
+An example of a WC cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](/bases/clusters/capo/).
 
 ## Export environment variables
 
@@ -45,7 +53,7 @@ In order to avoid code duplication, it is advised to utilize the
 [bases and overlays](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#bases-and-overlays)
 of Kustomize in order to configure the cluster.
 
-This repository comes with some built in bases you can choose from, go to the [bases](../bases/clusters)
+This repository comes with some built in bases you can choose from, go to the [bases](/bases/clusters)
 directory and search for some that meet your needs, then export their paths with:
 
 ```sh
@@ -87,8 +95,6 @@ as this can strongly depend on resources involved, how much of them you would li
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      labels:
-        app-operator.giantswarm.io/version: 0.0.0
       name: \${cluster_name}
       namespace: org-\${organization}
     spec:
@@ -109,8 +115,6 @@ as this can strongly depend on resources involved, how much of them you would li
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      labels:
-        app-operator.giantswarm.io/version: 0.0.0
       name: \${cluster_name}-default-apps
       namespace: org-\${organization}
     spec:
@@ -183,8 +187,8 @@ over multiple releases,
 and although minor differences can be handled on the `userConfig` level, it is advised for the bases to follow major
 `values.yaml` schema versions to avoid confusion.
 
-For example, both CAPO bases in this repository, the [v0.5.0](../bases/clusters/capo/<=v0.5.0) and
-the [v0.6.0](../bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
+For example, both CAPO bases in this repository, the [v0.5.0](/bases/clusters/capo/<=v0.5.0) and
+the [v0.6.0](/bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
 the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
 
 **IMPORTANT**, despite the below instructions referencing `kubectl-gs` for templating configuration, `kubectl-gs`
@@ -258,9 +262,8 @@ will configure them later in our process:
 1. Replace `mywcl`, `myorg` values from the previous step with variables:
 
     ```sh
-    # BSD sed
-    sed -i "" 's/myorg/${organization}/g' bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
-    sed -i "" 's/mywcl/${cluster_id}/g' bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
+    sed -i "s/myorg/${organization}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
+    sed -i "s/mywcl/${cluster_id}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
     ```
 
 1. Compare `cluster_config.yaml` against the version-specific `values.yaml`, and tweak it if necessary to match the
@@ -324,4 +327,4 @@ pools, etc.:
 
 ## Recommended next steps
 
-- [add a new app to the Workload Cluster](./apps/README.md)
+- [Managing Apps installed in clusters with GitOps](./apps/README.md)

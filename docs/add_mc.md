@@ -1,4 +1,11 @@
-# Add a new management cluster
+# Add a new Management Cluster
+
+- [Add a new Management Cluster](#add-a-new-management-cluster)
+  - [Export Management Cluster codename](#export-management-cluster-codename)
+  - [Flux GPG master key pair](#flux-gpg-master-key-pair)
+  - [Directory tree](#directory-tree)
+  - [Initial cluster configuration](#initial-cluster-configuration)
+  - [Recommended next steps](#recommended-next-steps)
 
 Follow the instructions below to add a new management cluster to this repository. You need to have a valid connection
 (`kube.config`) to the Management Cluster. The instructions respect the [repository structure](./repo_structure.md).
@@ -84,11 +91,10 @@ en- and decrypt real user-related data.
     gpg --delete-secret-keys "${KEY_FP}"
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](../.sops.yaml):
+1. Add the automatic key selection rule to the `creation_rules` section of the [SOPS configuration file](/.sops.yaml):
 
     ```sh
     cat <<EOF >> .sops.yaml
-    creation_rules:
       - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
         encrypted_regex: ^(data|stringData)$
         pgp: ${KEY_FP}
@@ -219,4 +225,4 @@ e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely p
 
 ## Recommended next steps
 
-- [add a new Organization](./add_org.md)
+- [Add a new Organization](./add_org.md)

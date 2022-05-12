@@ -1,20 +1,18 @@
 # Repository Structure
 
-## Table of Content
-
-- [Table of Content](#table-of-content)
-- [General Remarks](#general-remarks)
-- [Security Architecture](#security-architecture)
-  - [Overview](#overview)
-  - [Multiple GPG Keys](#multiple-gpg-keys)
-- [Rules for Naming Resources](#rules-for-naming-resources)
-- [Rules for Optional Components](#rules-for-optional-components)
-  - [`[OTHER_RESOURCES]`](#other_resources)
-  - [`[kustomization.yaml]`](#kustomizationyaml)
-  - [`[organizations]`](#organizations)
-  - [`[workload-clusters]`](#workload-clusters)
-- [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
-  - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
+- [Repository Structure](#repository-structure)
+  - [General Remarks](#general-remarks)
+  - [Security Architecture](#security-architecture)
+    - [Overview](#overview)
+    - [Multiple GPG Keys](#multiple-gpg-keys)
+  - [Rules for Naming Resources](#rules-for-naming-resources)
+  - [Rules for Optional Components](#rules-for-optional-components)
+    - [`[OTHER_RESOURCES]`](#other_resources)
+    - [`[kustomization.yaml]`](#kustomizationyaml)
+    - [`[organizations]`](#organizations)
+    - [`[workload-clusters]`](#workload-clusters)
+  - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
+    - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
 ## General Remarks
 
@@ -38,7 +36,7 @@ management-clusters
     └── [organizations]
         ├── [kustomization.yaml]
         └── ORG_NAME
-            ├── [kustomization.yaml]
+            ├── [kustomization.yaml]                    (mandatory when there are no workload-clusters)
             ├── [OTHER_RESOURCES]
             ├── ORG_NAME.yaml
             └── [workload-clusters]
@@ -187,7 +185,7 @@ Naming recommendations are in the table below.
 | :--: | :--: |
 | `MC_NAME`   | User is REQUIRED to use the Management Cluster codename for clarity |
 | `ORG_NAME`  | Organization name, it is RECOMMENDED to not use capital letters and omit the `org-` prefix |
-| `WC_NAME`   | User MAY may give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster id |
+| `WC_NAME`   | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster id |
 
 ## Rules for Optional Components
 
@@ -225,7 +223,7 @@ as it does not break the general structure presented here.
 If the file is not present under a path supplied to Flux, it will then auto-generate it for a given directory and its
 sub-directories, recursively continuing the process until either reaching the bottom of directory hierarchy or finding
 a `kustomization.yaml`. Hence, the file **plays a crucial role in the GitOps process**, even if not explicitly created.
-User MAY omit it if they do not relay on the
+User MAY omit it if they do not rely on the
 [kustomize feature](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#kustomize-feature-list)
 and when feeling confident about Flux auto discovering resources. Otherwise it is RECOMMENDED to create it and use it
 to explicitly control resources to be reconciled (with `.bases` and `.resources` fields).

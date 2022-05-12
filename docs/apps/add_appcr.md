@@ -1,5 +1,14 @@
 # Add a new App to a Workload Cluster
 
+- [Add a new App to a Workload Cluster](#add-a-new-app-to-a-workload-cluster)
+  - [Examples](#examples)
+  - [Common steps](#common-steps)
+    - [Export environment variables](#export-environment-variables)
+    - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
+  - [Adding App directly](#adding-app-directly)
+  - [Adding App using App Template](#adding-app-using-app-template)
+  - [Recommended next steps](#recommended-next-steps)
+
 Follow the instructions below to add a new App to a cluster managed in this repository.
 You can add an App directly (without any intermediate step) or use an [App Template](add_app_template.md).
 The documentation below shows common steps as well as what is different in both cases.
@@ -8,9 +17,9 @@ The documentation below shows common steps as well as what is different in both 
 
 Examples of creating apps are available in following locations:
 
-- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
-- An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
-- An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
+- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
+- An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-ingress-controller/)
+- An example of an App created from App Template is available in [WC_NAME/apps/nginx-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/nginx-from-template/).
 
 ## Common steps
 
@@ -60,7 +69,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     ```sh
     cd ${APP_NAME}/
     kubectl gs template app \
-    --app-name ${APP_NAME} \
+    --app-name "\${cluster_id}-${APP_NAME}" \
     --catalog ${APP_CATALOG} \
     --cluster ${WC_NAME} \
     --name ${APP_NAME} \
@@ -74,6 +83,10 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-configmap ${APP_USER_VALUES}
     --user-secret ${APP_USER_VALUES}
     ```
+
+    **Note**, We're including `${cluster_id}` in the app name to avoid a problem when two
+    or more clusters in the same organization want to deploy the same app with its
+    default name.
 
     Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details of how
     to properly create respective ConfigMaps or Secrets.
@@ -117,7 +130,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
 
 ## Adding App using App Template
 
-1. First, you need to pick a directory with an App Template from the [`bases/apps`](../bases/apps/) dir. Export the
+1. First, you need to pick a directory with an App Template from the [`bases/apps`](/bases/apps/) dir. Export the
 path to the directory in an env variable:
 
     ```sh
@@ -135,20 +148,21 @@ path to the directory in an env variable:
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     buildMetadata: [originAnnotations]
-    # configuration override block start - include only if overriding default config from the Template
+    ## CONFIGURATION OVERRIDE BLOCK START - include only if overriding default config from the Template
     configMapGenerator:
       - files:
           - values=override_config.yaml
-        name: ${WC_NAME}-${APP_NAME}-user-values
+        name: \${cluster_id}-${APP_NAME}-user-values
     generatorOptions:
       disableNameSuffixHash: true
-    # configuration override block end
+    ## CONFIGURATION OVERRIDE BLOCK END
     kind: Kustomization
     patchesStrategicMerge:
       - config_patch.yaml
     resources:
       - ../../../../../../../../${APP_TEMPLATE_PATH}
-      - secret.enc.yaml # only if including a secret
+      - secret.enc.yaml ## ONLY IF INCLUDING SECRET
+    EOF
     ```
 
     Please note, that the block marked "configuration override block" is needed only if you override the default (from the
@@ -165,32 +179,15 @@ path to the directory in an env variable:
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      name: ${WC_NAME}-${APP_NAME}
+      name: \${cluster_id}-${APP_NAME}
     spec:
       userConfig:
         configMap: # include if you override the config from Template
-          name: ${WC_NAME}-${APP_NAME}-user-values
+          name: \${cluster_id}-${APP_NAME}-user-values
         secret: # include if you override the secret from Template
-          name: ${workload_cluster_name}-nginx-ingress-controller-user-secret
+          name: \${cluster_id}-${APP_NAME}-user-secret
+    EOF
     ```
-
-1. (optional - if you override config) Create a YAML file `override_config.yaml` containing the App configuration you
-  want to override in comparison to App Template.
-
-1. (optional - if you override secret) Create a `sops` encrypted secret as [explained above](#adding-app-directly).
-   Make sure that the Secret name is `${WC_NAME}-${APP_NAME}-user-secret`. Then, append the following to the
-   `spec.userConfig` section of file `config_patch.yaml`:
-
-   ```yaml
-   secret:
-     name: ${WC_NAME}-${APP_NAME}-user-secret
-   ```
-
-   Also, add the line below to the `resources:` section of the `kustomization.yaml` file:
-
-   ```yaml
-   - secret.enc.yaml
-   ```
 
 1. Additional notes
 
@@ -202,5 +199,5 @@ path to the directory in an env variable:
 
 ## Recommended next steps
 
-- [enable automatic updates of an existing App](./automatic_updates_appcr.md)
-- [update an existing App](./update_appcr.md)
+- [Enable automatic updates of an existing App](./automatic_updates_appcr.md)
+- [Update an existing App](./update_appcr.md)
