@@ -84,7 +84,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-secret ${APP_USER_VALUES}
     ```
 
-    **Note**, We're including `${cluster_id}` in the app name to avoid a problem when two
+    **Note**, We're including `${WC_NAME}` in the app name to avoid a problem when two
     or more clusters in the same organization want to deploy the same app with its
     default name.
 
