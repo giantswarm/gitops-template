@@ -34,7 +34,7 @@ in multiple places across this instruction, the least error prone way of providi
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export APP_NAME="\${WC_NAME}-APP_NAME"
+export APP_NAME="${WC_NAME}-APP_NAME"
 ```
 
 ### Setting up directory tree structure for managing apps
