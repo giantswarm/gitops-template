@@ -1,4 +1,3 @@
-
 apiVersion: infrastructure.giantswarm.io/v1alpha3
 kind: AWSMachineDeployment
 metadata:
