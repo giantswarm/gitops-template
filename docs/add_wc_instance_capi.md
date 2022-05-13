@@ -1,11 +1,15 @@
 # Add Workload Cluster instance (CAPx/CAPI)
 
-- [Add Workload Cluster instance (CAPx/CAPI)](#add-workload-cluster-instance-capxcapi)
-  - [Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases)
-  - [Recommended next steps](#recommended-next-steps)
+- [Example](#example)
+- [Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases)
+- [Recommended next steps](#recommended-next-steps)
 
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
 [cluster structure](./add_wc_structure.md) preparation step.
+
+## Example
+
+An example of a WC cluster instance created using the CAPI is available in [CAPI_WC_NAME/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/cluster/).
 
 ## Creating cluster based on existing bases
 
@@ -18,11 +22,11 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 1. If you need to customize cluster configuration, prepare the values overrides and export its path. Find example below:
 
     ```sh
-    cat /tmp/values
+    $ cat /tmp/values
     clusterDescription: My GitOps Cluster
     cloudConfig: my-cloud-config
 
-    export USERCONFIG_VALUES=/tmp/values
+    $ export USERCONFIG_VALUES=/tmp/values
     ```
 
 1. Create a `ConfigMap` out of the values overrides:
