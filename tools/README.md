@@ -6,7 +6,7 @@ You can use this bash tool under a repository based on this template to run auto
 
 ### Requirements
 
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) 
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [yq](https://github.com/mikefarah/yq)
 - [fake-flux-build](https://github.com/giantswarm/gitops-template/tools)
 
@@ -35,6 +35,3 @@ fake-flux-build build gamma multi-project flux01 /
 ## Test All FFB
 
 You can use this bash tool under a repository based on this template to get verify the syntax of your manifests.
-
-
-
