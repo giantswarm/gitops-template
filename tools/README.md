@@ -8,6 +8,7 @@ You can use this bash tool under a repository based on this template to run auto
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) 
 - [yq](https://github.com/mikefarah/yq)
+- [fake-flux-build](https://github.com/giantswarm/gitops-template/tools)
 
 ### Examples
 
