@@ -1,5 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
+commonLabels:
+  giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
 - CAPI_WC_NAME.yaml
