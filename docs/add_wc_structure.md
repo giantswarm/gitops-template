@@ -125,8 +125,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
     ```sh
     cat <<EOF >> .sops.yaml
-      - path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/.*\.enc\.yaml
-        encrypted_regex: ^(data|stringData)$
+      - encrypted_regex: ^(data|stringData)$
+        path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/.*\.enc\.yaml
         pgp: ${KEY_FP}
     EOF
     ```
