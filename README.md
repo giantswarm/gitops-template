@@ -6,6 +6,7 @@ using Flux available by default on Giant Swarm Management Clusters.
 *Warning:* This repository is of a preview quality right now and still a work in progress.
 Please bear in mind that it might have some elements that are not strictly needed or left
 loose after we ported some ideas from other repositories.
+Work in progress and new features are tracked [in this ticket](https://github.com/giantswarm/giantswarm/issues/21243).
 
 ## Using this repository
 
