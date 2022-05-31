@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+      - values=override_config_nginx_ingress_controller.yaml
+    name: ${workload_cluster_name}-nginx-ingress-controller-user-values
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+resources:
+  - ../../../../../../bases/cluster_templates/dev_cluster_small

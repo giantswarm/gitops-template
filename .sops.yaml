@@ -5,3 +5,6 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/.*\.enc\.yaml
     pgp: F385 A864 5CA5 5C0A A5D1  263D 9B05 BF26 4528 D991
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/FROM_TEMPLATE_WC_NAME/.*\.enc\.yaml
+    pgp: EA38 1E1C 6A90 C39B 8545  1385 9D02 FFD1 231A 8B4F

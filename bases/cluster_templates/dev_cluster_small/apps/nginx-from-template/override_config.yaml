@@ -1,0 +1,7 @@
+configmap:
+  use-forwarded-headers: "false"
+controller:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 256Mi

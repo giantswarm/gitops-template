@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: replace
+    files:
+      - values=override_config_hello_world.yaml
+    name: ${workload_cluster_name}-hello-world-values
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+resources:
+  - ../../../../app_sets/hello-web-app
