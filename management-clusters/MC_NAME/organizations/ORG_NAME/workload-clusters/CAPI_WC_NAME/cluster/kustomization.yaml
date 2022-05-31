@@ -3,7 +3,8 @@ buildMetadata: [originAnnotations]
 commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
+patchesStrategicMerge:
+  - patch_userconfig.yaml
 resources:
-  - MC_NAME.gpgkey.enc.yaml
-  - WC_NAME.gpgkey.enc.yaml
-  - FROM_TEMPLATE_WC_NAME.gpgkey.enc.yaml
+- ../../../../../../../bases/clusters/capo/>=v0.6.0
+- cluster_userconfig.yaml

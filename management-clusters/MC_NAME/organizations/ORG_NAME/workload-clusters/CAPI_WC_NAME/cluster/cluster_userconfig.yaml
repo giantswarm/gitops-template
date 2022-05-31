@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  values: |
+    cloudConfig: cloud-config-giantswarm-2
+    cloudName: openstack
+    externalNetworkID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+kind: ConfigMap
+metadata:
+  name: ${cluster_name}-userconfig
+  namespace: org-${organization}
