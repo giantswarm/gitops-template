@@ -21,12 +21,16 @@ An example of a WC cluster instance created using the CAPI is available in [CAPI
 
 1. If you need to customize cluster configuration, prepare the values overrides and export its path. Find example below:
 
-    ```sh
-    $ cat /tmp/values
+    ```yaml
+    # cat /tmp/values
     clusterDescription: My GitOps Cluster
     cloudConfig: my-cloud-config
+    ```
 
-    $ export USERCONFIG_VALUES=/tmp/values
+    Export the path to the file:
+
+    ```sh
+    export USERCONFIG_VALUES=/tmp/values
     ```
 
 1. Create a `ConfigMap` out of the values overrides:
