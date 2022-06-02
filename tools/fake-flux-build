@@ -75,7 +75,7 @@ build() {
 
     if ! [ -e ${match}/${wcluster}/${subpath} ]
     then
-        echo -e "No resources found at ${match}/${wcluster}/${subpath} path."
+        echo -e "No resources found at ${match}${wcluster}${subpath} path."
         build_help
     fi
 
@@ -92,7 +92,6 @@ build() {
         cat <<EOF > ${match}/${wcluster}/${subpath}/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-buildMetadata: [originAnnotations]
 resources:
 $(for f in ${resources[@]}; do echo "- $f"; done)
 EOF
