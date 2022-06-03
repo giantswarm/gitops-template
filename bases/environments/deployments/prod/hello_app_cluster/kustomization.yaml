@@ -31,4 +31,4 @@ patches:
       name: \${cluster_id}-simple-db
 # block end
 resources:
-  - ../../../cluster_templates/hello_app_cluster
+  - ../../../../cluster_templates/hello_app_cluster
