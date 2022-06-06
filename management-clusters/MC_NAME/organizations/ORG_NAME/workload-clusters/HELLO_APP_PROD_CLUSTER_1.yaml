@@ -9,7 +9,8 @@ spec:
   postBuild:
     substitute:
       cluster_domain: "MY_DOMAIN"
-      cluster_name: "CAPI_WC_NAME"
+      cluster_id: "HELLO_PROD_1"
+      cluster_name: "HELLO_PROD_1"
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "ORG_NAME"
