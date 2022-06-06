@@ -1,0 +1,14 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: Catalog
+metadata:
+  labels:
+    application.giantswarm.io/catalog-visibility: internal
+  name: giantswarm-catalog-oci
+  namespace: org-${organization}
+spec:
+  description: giantswarm-catalog-oci
+  logoURL: "https://avatars.githubusercontent.com/u/7556340?s=60&v=4"
+  storage:
+    URL: oci://giantswarmpublic.azurecr.io/giantswarm-catalog/
+    type: helm
+  title: giantswarm-catalog-oci
