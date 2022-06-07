@@ -1,10 +1,9 @@
 # Add a new Organization
 
-- [Add a new Organization](#add-a-new-organization)
-  - [Export environment variables](#export-environment-variables)
-  - [Directory tree](#directory-tree)
-  - [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
-  - [Recommended next steps](#recommended-next-steps)
+- [Export environment variables](#export-environment-variables)
+- [Directory tree](#directory-tree)
+- [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
+- [Recommended next steps](#recommended-next-steps)
 
 Follow the below instructions to add a new Organization to this repository. Organizations are created within the
 [Management Cluster's configuration](./add_mc.md) directory and in turn are meant to include
@@ -106,11 +105,19 @@ new GPG key-pair dedicated for an organization.
 
     ```sh
     gpg --list-secret-keys "${KEY_NAME}"
+    ```
 
+    The command above should produce the output like:
+
+    ```text
     sec   rsa4096 2021-11-25 [SC]
-          YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+          XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    ```
 
-    export KEY_FP=YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    Now, export the fingerprint:
+
+    ```sh
+    export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
 1. Share the new GPG public key in this repository:
