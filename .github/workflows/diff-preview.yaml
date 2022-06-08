@@ -17,7 +17,7 @@ jobs:
         run: pip install --user yamllint==1.26.3
       - name: install kubeval
         run: wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz && \
-tar xf kubeval-linux-amd64.tar.gz && \
-sudo cp kubeval /usr/local/bin
+          tar xf kubeval-linux-amd64.tar.gz && \
+          sudo cp kubeval /usr/local/bin
       - name: template all for the new branch
         run: ./tools/test-all-ffb
