@@ -25,8 +25,11 @@ jobs:
           tarball_binary_path: "${binary}"
           version: "latest"
       - uses: actions/checkout@v3
-      - run: "::set-output name=validate ./tools/test-all-ffb validate"
+      - name: run validation
+        uses: mathiasvr/command-output@v1
         id: validate
+        with:
+          run: "./tools/test-all-ffb validate"
       - name: Find validation comment
         uses: peter-evans/find-comment@v2
         id: fc
@@ -41,5 +44,5 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             Validation output log
-            ${{ steps.validate.outputs.build-log }}
+            ${{ steps.validate.outputs.stdout }}
           edit-mode: replace
