@@ -18,7 +18,12 @@ jobs:
           tarball_binary_path: "${binary}"
           version: "latest"
       - uses: actions/checkout@v3
-        #      - name: yq - portable yaml processor
-        #uses: mikefarah/yq@v4.25.2
       - name: template all for the new branch
-        run: ./tools/test-all-ffb template
+        run: ./tools/test-all-ffb template > /tmp/new.yaml
+      - uses: actions/checkout@v3
+        with:
+          ref: 'main'
+      - name: template all for the old branch
+        run: ./tools/test-all-ffb template > /tmp/old.yaml
+      - name: save the diff
+        run: diff /tmp/old.yaml /tmp/new.yaml
