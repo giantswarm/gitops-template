@@ -23,7 +23,8 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: 'main'
+          path: 'old'
       - name: template all for the old branch
-        run: ./tools/test-all-ffb template > /tmp/old.yaml
+        run: cd old/ && ../tools/test-all-ffb template > /tmp/old.yaml && cd ..
       - name: save the diff
         run: diff /tmp/old.yaml /tmp/new.yaml
