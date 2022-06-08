@@ -14,7 +14,7 @@ jobs:
         with:
           binary: dyff
           download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
-          smoke_test: "${binary} --version"
+          smoke_test: "${binary} version"
           tarball_binary_path: "${binary}"
           version: "1.5.4"
       - uses: giantswarm/install-binary-action@v1
