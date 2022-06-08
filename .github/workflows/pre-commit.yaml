@@ -25,4 +25,21 @@ jobs:
           tarball_binary_path: "${binary}"
           version: "latest"
       - uses: actions/checkout@v3
-      - run: ./tools/test-all-ffb validate
+      - run: "::set-output name=validate ./tools/test-all-ffb validate"
+        id: validate
+      - name: Find validation comment
+        uses: peter-evans/find-comment@v2
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Validation output log
+      - name: Create or update validation comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Validation output log
+            ${{ steps.validate.outputs.build-log }}
+          edit-mode: replace
