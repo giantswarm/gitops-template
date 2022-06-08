@@ -27,4 +27,26 @@ jobs:
       - name: template all for the old branch
         run: cd old/ && ../tools/test-all-ffb template > /tmp/old.yaml && cd ..
       - name: save the diff
-        run: diff /tmp/old.yaml /tmp/new.yaml
+        uses: mathiasvr/command-output@v1
+        id: diff
+        with:
+          run: "diff /tmp/old.yaml /tmp/new.yaml || true"
+      - name: Find diff comment
+        uses: peter-evans/find-comment@v2
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Diff output log
+      - name: Create or update validation comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Diff output log
+
+            ```diff
+            ${{ steps.diff.outputs.stdout }}
+            ```
+          edit-mode: replace

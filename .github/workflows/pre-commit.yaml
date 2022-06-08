@@ -44,5 +44,8 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             Validation output log
+
+            ```text
             ${{ steps.validate.outputs.stdout }}
+            ```
           edit-mode: replace
