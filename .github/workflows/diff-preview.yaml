@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v3
       - name: install yamllint
         run: pip install --user yamllint==1.26.3
-      - name: install system apckages: tar
+      - name: install system packages
         run: apt-get install -y tar
       - name: install kubeval
         run: wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz && \
