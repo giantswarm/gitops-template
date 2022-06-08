@@ -1,0 +1,23 @@
+name: Diff preview
+
+on:
+  pull_request:
+  push:
+    branches: [HEAD_BRANCH, main]
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: yq - portable yaml processor
+        uses: mikefarah/yq@v4.25.2
+      - uses: actions/setup-python@v3
+      - name: install yamllint
+        run: pip install --user yamllint==1.26.3
+      - name: install kubeval
+        run: wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz && \
+tar xf kubeval-linux-amd64.tar.gz && \
+sudo cp kubeval /usr/local/bin
+      - name: template all for the new branch
+        run: ./tools/test-all-ffb
