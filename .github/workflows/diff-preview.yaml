@@ -30,7 +30,7 @@ jobs:
         uses: mathiasvr/command-output@v1
         id: diff
         with:
-          run: "diff /tmp/old.yaml /tmp/new.yaml && echo "No diffi detected" || if [[ $? -eq 2 ]]; then echo "Diff error"; fi;
+          run: 'diff /tmp/old.yaml /tmp/new.yaml && echo "No diff detected" || if [[ $? -eq 2 ]]; then echo "Diff error"; fi;'
       - name: Find diff comment
         uses: peter-evans/find-comment@v2
         id: fc
