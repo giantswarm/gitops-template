@@ -13,6 +13,13 @@ jobs:
       - uses: giantswarm/install-binary-action@v1
         with:
           binary: kubeval
+          download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
+          smoke_test: "${binary} --version"
+          tarball_binary_path: "${binary}"
+          version: "latest"
+      - uses: giantswarm/install-binary-action@v1
+        with:
+          binary: kubeval
           download_url: "https://github.com/instrumenta/kubeval/releases/${version}/download/kubeval-linux-amd64.tar.gz"
           smoke_test: "${binary} --version"
           tarball_binary_path: "${binary}"
@@ -30,7 +37,7 @@ jobs:
         uses: mathiasvr/command-output@v1
         id: diff
         with:
-          run: 'diff -U 10 /tmp/old.yaml /tmp/new.yaml && echo "No diff detected" || if [[ $? -eq 2 ]]; then echo "Diff error"; fi;'
+          run: 'dyff between -s -i -b -g /tmp/old.yaml /tmp/new.yaml && echo "No diff detected" || if [[ $? -eq 255 ]]; then echo "Diff error"; fi;'
       - name: Find diff comment
         uses: peter-evans/find-comment@v2
         id: fc
