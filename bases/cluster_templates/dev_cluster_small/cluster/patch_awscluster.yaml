@@ -5,4 +5,4 @@ metadata:
   namespace: org-${organization}
 spec:
   cluster:
-    description: "GitOps Demo Cluster"
+    description: "GitOps Demo Cluster from Cluster Template"
