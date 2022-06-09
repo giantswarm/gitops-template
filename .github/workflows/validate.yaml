@@ -32,6 +32,7 @@ jobs:
           run: "./tools/test-all-ffb validate"
       - name: Find validation comment
         uses: peter-evans/find-comment@v2
+        continue-on-error: true
         id: fc
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -39,6 +40,7 @@ jobs:
           body-includes: Validation output log
       - name: Delete old comment
         uses: jungwinter/comment@v1
+        continue-on-error: true
         with:
           type: delete
           comment_id: ${{ steps.fc.outputs.comment-id }}
