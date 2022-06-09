@@ -1,0 +1,63 @@
+name: diff preview
+
+on:
+  pull_request:
+  push:
+    branches: [HEAD_BRANCH, main]
+
+jobs:
+  get-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get install -y yamllint
+      - uses: giantswarm/install-binary-action@v1
+        with:
+          binary: dyff
+          download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
+          smoke_test: "${binary} version"
+          tarball_binary_path: "${binary}"
+          version: "1.5.4"
+      - uses: giantswarm/install-binary-action@v1
+        with:
+          binary: kubeval
+          download_url: "https://github.com/instrumenta/kubeval/releases/${version}/download/kubeval-linux-amd64.tar.gz"
+          smoke_test: "${binary} --version"
+          tarball_binary_path: "${binary}"
+          version: "latest"
+      - uses: actions/checkout@v3
+      - name: template all for the new branch
+        run: ./tools/test-all-ffb template > /tmp/new.yaml
+      - uses: actions/checkout@v3
+        with:
+          ref: 'main'
+          path: 'old'
+      - name: template all for the old branch
+        run: cd old/ && ../tools/test-all-ffb template > /tmp/old.yaml && cd ..
+      - name: save the diff
+        uses: mathiasvr/command-output@v1
+        id: diff
+        with:
+          run: 'dyff between -s -i -b -g /tmp/old.yaml /tmp/new.yaml && echo "No diff detected" || if [[ $? -eq 255 ]]; then echo "Diff error"; fi;'
+      - name: Find diff comment
+        uses: peter-evans/find-comment@v2
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Rendered manifest diff output log
+      - name: Delete old comment
+        uses: jungwinter/comment@v1
+        with:
+          type: delete
+          comment_id: ${{ steps.fc.outputs.comment-id }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create or update validation comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Rendered manifest diff output log
+
+            ```diff
+            ${{ steps.diff.outputs.stdout }}
+            ```

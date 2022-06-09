@@ -7,12 +7,14 @@ help() {
 Test syntax using fake-flux-build helper. Must be run from repo root dir (a dir that contains
 'management-clusters' dir).
 
+Usage: $0 [validate|template]
+
 "
     exit 1
 }
 
 test() {
-
+    mode="$1"
     mc_dir="management-clusters"
     for mc in $(find ${mc_dir}/ -maxdepth 1 -type d ! -path ${mc_dir}/); do
         mc_name=${mc##*/}
@@ -24,21 +26,33 @@ test() {
                 wc_name=${wc##*/}
                 for d in $(find ${wc}/ -maxdepth 1 -type d ! -path ${wc}/); do
                     dir_name=${d##*/}
-                    echo "Testing: $mc_name $org_name $wc_name $dir_name"
-                    echo -n "yamllint: "
-                    ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | yamllint - && echo "OK"
-                    echo "kubeval: "
-                    ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | kubeval --ignore-missing-schemas
-                    echo ""
+                    if [[ "$mode" == "validate" ]]; then
+                      echo "Testing: $mc_name $org_name $wc_name $dir_name"
+                      echo -n "yamllint: "
+                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | yamllint - && echo "OK"
+                      echo "kubeval: "
+                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | kubeval --ignore-missing-schemas
+                      echo ""
+                    else
+                      echo "---"
+                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name
+                    fi
                 done
             done
         done
     done
 }
 
-if [[ $# -gt 0 ]]; then
+if [[ $# -gt 1 ]]; then
     help
     exit 1
 fi
 
-test
+case "$1" in
+    validate|template)
+        test $1
+        ;;
+    *|help)
+        help
+        ;;
+esac
