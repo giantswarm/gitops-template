@@ -40,6 +40,7 @@ jobs:
           run: 'dyff between -s -i -b -g /tmp/old.yaml /tmp/new.yaml && echo "No diff detected" || if [[ $? -eq 255 ]]; then echo "Diff error"; fi;'
       - name: Find diff comment
         uses: peter-evans/find-comment@v2
+        continue-on-error: true
         id: fc
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -47,6 +48,7 @@ jobs:
           body-includes: Rendered manifest diff output log
       - name: Delete old comment
         uses: jungwinter/comment@v1
+        continue-on-error: true
         with:
           type: delete
           comment_id: ${{ steps.fc.outputs.comment-id }}
