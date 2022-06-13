@@ -3,9 +3,12 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
       - values=override_config_nginx_ingress_controller.yaml
-    name: ${workload_cluster_name}-nginx-ingress-controller-user-values
+    name: ${cluster_id}-nginx-ingress-controller-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
+patchesStrategicMerge:
+  - patch_nginx_ingress_config.yaml
 resources:
   - ../../../../../../bases/cluster_templates/dev_cluster_small
+  - override_secret_nginx_ingress_controller.enc.yaml

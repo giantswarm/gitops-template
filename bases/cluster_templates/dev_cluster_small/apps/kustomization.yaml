@@ -4,5 +4,4 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
-  - hello-world/
   - nginx-from-template/

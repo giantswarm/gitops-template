@@ -1,10 +1,11 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: ${workload_cluster_name}-nginx-ingress-controller
+  name: ${cluster_id}-nginx-ingress-controller
+  namespace: kube-system
 spec:
   userConfig:
     configMap:
-      name: ${workload_cluster_name}-nginx-ingress-controller-user-values
+      name: ${cluster_id}-nginx-ingress-controller-user-values
     secret:
-      name: ${workload_cluster_name}-nginx-ingress-controller-user-secret
+      name: ${cluster_id}-nginx-ingress-controller-user-secret
