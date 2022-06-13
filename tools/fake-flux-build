@@ -3,17 +3,17 @@
 set -e
 
 help() {
-    echo -e "
+	echo -e "
 Fake a Flux build helper.
 
 Commands:
   build     Build resources like Flux.
 "
-    exit 1
+	exit 1
 }
 
 build_help() {
-    echo -e "
+	echo -e "
 Command mimics Flux when buiding resources.
 
 Uses Kustomization CR 'spec.postBuild.substitute' field to substitute variables and
@@ -41,96 +41,87 @@ Examples:
   # Build flux01 workload cluster Cluster and App CRs
   build gamma multi-project flux01 /
 "
-    exit 1
+	exit 1
 }
 
 build() {
-    mcluster=$1
-    organization=$2
-    wcluster=$3
-    subpath=$4
+	mcluster=$1
+	organization=$2
+	wcluster=$3
+	subpath=$4
 
-    if [ -z "$mcluster" ] || [ -z "$organization" ] || [ -z "$wcluster" ] || [ -z "$subpath" ]
-    then
-        build_help
-    fi
+	if [ -z "$mcluster" ] || [ -z "$organization" ] || [ -z "$wcluster" ] || [ -z "$subpath" ]; then
+		build_help
+	fi
 
-    # Paths that meet the repository structure
-    declare structure=(
-        "management-clusters/$mcluster/$organization/"
-        "management-clusters/$mcluster/organizations/$organization/"
-        "management-clusters/$mcluster/$organization/workload-clusters/"
-        "management-clusters/$mcluster/organizations/$organization/workload-clusters/"
-    )
+	# Paths that meet the repository structure
+	declare structure=(
+		"management-clusters/$mcluster/$organization/"
+		"management-clusters/$mcluster/organizations/$organization/"
+		"management-clusters/$mcluster/$organization/workload-clusters/"
+		"management-clusters/$mcluster/organizations/$organization/workload-clusters/"
+	)
 
-    match=
-    for i in "${structure[@]}"
-    do
-        if [ -e "${i}/${wcluster}.yaml" ]
-        then
-            match=$i
-            break
-        fi
-    done
+	match=
+	for i in "${structure[@]}"; do
+		if [ -e "${i}/${wcluster}.yaml" ]; then
+			match=$i
+			break
+		fi
+	done
 
-    if ! [ -e "${match}"/"${wcluster}"/"${subpath}" ]
-    then
-        echo -e "No resources found at ${match}/${wcluster}/${subpath} path."
-        build_help
-    fi
+	if ! [ -e "${match}"/"${wcluster}"/"${subpath}" ]; then
+		echo -e "No resources found at ${match}/${wcluster}/${subpath} path."
+		build_help
+	fi
 
-    cleanup() {
-        rm "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
-    }
+	cleanup() {
+		rm "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
+	}
 
-    if ! [ -e "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml ]
-    then
-        declare -a resources=()
-        findres "${match}/${wcluster}/${subpath}" "${match}/${wcluster}/${subpath}"
+	if ! [ -e "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml ]; then
+		declare -a resources=()
+		findres "${match}/${wcluster}/${subpath}" "${match}/${wcluster}/${subpath}"
 
-        trap cleanup EXIT SIGINT
-        cat <<EOF > "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
+		trap cleanup EXIT SIGINT
+		cat <<EOF >"${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 buildMetadata: [originAnnotations]
 resources:
 $(for f in "${resources[@]}"; do echo "- $f"; done)
 EOF
-    fi
+	fi
 
-    toexport=$(yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml | tr -d ' ' | tr ':' '=' | tr -d '"')
-    for v in $toexport
-    do
-        export "${v?}"
-    done
+	toexport=$(yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml | tr -d ' ' | tr ':' '=' | tr -d '"')
+	for v in $toexport; do
+		export "${v?}"
+	done
 
-    kubectl kustomize "${match}"/"${wcluster}"/"${subpath}" | envsubst
+	kubectl kustomize "${match}"/"${wcluster}"/"${subpath}" | envsubst
 }
 
 findres() {
-    if ! [ -e "$1"/kustomization.yaml ]
-    then
-        for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/||g")
-        do
-            resources+=("$f")
-        done
+	if ! [ -e "$1"/kustomization.yaml ]; then
+		for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/||g"); do
+			resources+=("$f")
+		done
 
-        for d in $(find "$1" -maxdepth 1 -type d ! -path "$1")
-        do
-            findres "$d" "$2"
-        done
-    else
-        r=$(echo "$1" | sed "s|$2/||g")
-        resources+=("$r")
-    fi
+		for d in $(find "$1" -maxdepth 1 -type d ! -path "$1"); do
+			findres "$d" "$2"
+		done
+	else
+		r=$(echo "$1" | sed "s|$2/||g")
+		resources+=("$r")
+	fi
 }
 
 case "$1" in
-    build)
-        shift
-        build "$@"
-        ;;
-    *)
-        help
-        ;;
+build)
+	shift
+	build "$@"
+	;;
+*)
+	help
+	;;
 esac
