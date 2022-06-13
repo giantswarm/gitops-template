@@ -24,18 +24,27 @@ test() {
             wc_dir="${org}/workload-clusters"
             for wc in $(find ${wc_dir}/ -maxdepth 1 -type d ! -path ${wc_dir}/); do
                 wc_name=${wc##*/}
-                for d in $(find ${wc}/ -maxdepth 1 -type d ! -path ${wc}/); do
-                    dir_name=${d##*/}
+                dir_list=""
+                if [[ -f "$wc/kustomization.yaml" ]]; then
+                    dir_list="/"
+                else
+                    dir_list=$(find ${wc}/ -maxdepth 1 -type d ! -path ${wc}/)
+                fi
+                for dir_name in "$dir_list"; do
+                    if [[ "$dir_name" != "/" ]]; then
+                        dir_name=${dir_name##*/}
+                    fi
+
                     if [[ "$mode" == "validate" ]]; then
-                      echo "Testing: $mc_name $org_name $wc_name $dir_name"
-                      echo -n "yamllint: "
-                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | yamllint - && echo "OK"
-                      echo "kubeval: "
-                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | kubeval --ignore-missing-schemas
-                      echo ""
+                        echo "Testing: $mc_name $org_name $wc_name $dir_name"
+                        echo -n "yamllint: "
+                        ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | yamllint - && echo "OK"
+                        echo "kubeval: "
+                        ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | kubeval --ignore-missing-schemas
+                        echo ""
                     else
-                      echo "---"
-                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name
+                        echo "---"
+                        ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name
                     fi
                 done
             done
