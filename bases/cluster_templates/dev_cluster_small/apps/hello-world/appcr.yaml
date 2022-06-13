@@ -1,7 +1,7 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: ${workload_cluster_name}-hello-world
+  name: ${cluster_id}-hello-world
   namespace: demo0
 spec:
   catalog: giantswarm
