@@ -4,7 +4,7 @@ configMapGenerator:
   - behavior: replace
     files:
       - values=override_config_hello_world.yaml
-    name: ${workload_cluster_name}-hello-world-values
+    name: ${cluster_id}-hello-world-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
