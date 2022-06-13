@@ -24,7 +24,6 @@ test() {
             wc_dir="${org}/workload-clusters"
             for wc in $(find ${wc_dir}/ -maxdepth 1 -type d ! -path ${wc_dir}/); do
                 wc_name=${wc##*/}
-                echo "*** $wc_name"
                 dir_list=""
                 if [[ -f "$wc/kustomization.yaml" ]]; then
                     dir_list="/"
