@@ -19,23 +19,23 @@ test() {
     for mc in $(find ${mc_dir}/ -maxdepth 1 -type d ! -path ${mc_dir}/); do
         mc_name=${mc##*/}
         org_dir="${mc}/organizations"
-        for org in $(find ${org_dir}/ -maxdepth 1 -type d ! -path ${org_dir}/); do
+        for org in $(find "${org_dir}"/ -maxdepth 1 -type d ! -path "${org_dir}"/); do
             org_name=${org##*/}
             wc_dir="${org}/workload-clusters"
-            for wc in $(find ${wc_dir}/ -maxdepth 1 -type d ! -path ${wc_dir}/); do
+            for wc in $(find "${wc_dir}"/ -maxdepth 1 -type d ! -path "${wc_dir}"/); do
                 wc_name=${wc##*/}
-                for d in $(find ${wc}/ -maxdepth 1 -type d ! -path ${wc}/); do
+                for d in $(find "${wc}"/ -maxdepth 1 -type d ! -path "${wc}"/); do
                     dir_name=${d##*/}
                     if [[ "$mode" == "validate" ]]; then
                       echo "Testing: $mc_name $org_name $wc_name $dir_name"
                       echo -n "yamllint: "
-                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | yamllint - && echo "OK"
+                      ./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint - && echo "OK"
                       echo "kubeval: "
-                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name | kubeval --ignore-missing-schemas
+                      ./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | kubeval --ignore-missing-schemas
                       echo ""
                     else
                       echo "---"
-                      ./tools/fake-flux-build build $mc_name $org_name $wc_name $dir_name
+                      ./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name"
                     fi
                 done
             done
@@ -50,9 +50,9 @@ fi
 
 case "$1" in
     validate|template)
-        test $1
+        test "$1"
         ;;
-    *|help)
+    *)
         help
         ;;
 esac

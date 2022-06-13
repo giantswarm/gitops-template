@@ -50,7 +50,7 @@ build() {
     wcluster=$3
     subpath=$4
 
-    if [ -z $mcluster ] || [ -z $organization ] || [ -z $wcluster ] || [ -z $subpath ]
+    if [ -z "$mcluster" ] || [ -z "$organization" ] || [ -z "$wcluster" ] || [ -z "$subpath" ]
     then
         build_help
     fi
@@ -64,7 +64,7 @@ build() {
     )
 
     match=
-    for i in ${structure[@]}
+    for i in "${structure[@]}"
     do
         if [ -e "${i}/${wcluster}.yaml" ]
         then
@@ -73,64 +73,64 @@ build() {
         fi
     done
 
-    if ! [ -e ${match}/${wcluster}/${subpath} ]
+    if ! [ -e "${match}"/"${wcluster}"/"${subpath}" ]
     then
         echo -e "No resources found at ${match}/${wcluster}/${subpath} path."
         build_help
     fi
 
     cleanup() {
-        rm ${match}/${wcluster}/${subpath}/kustomization.yaml
+        rm "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
     }
 
-    if ! [ -e ${match}/${wcluster}/${subpath}/kustomization.yaml ]
+    if ! [ -e "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml ]
     then
         declare -a resources=()
         findres "${match}/${wcluster}/${subpath}" "${match}/${wcluster}/${subpath}"
 
         trap cleanup EXIT SIGINT
-        cat <<EOF > ${match}/${wcluster}/${subpath}/kustomization.yaml
+        cat <<EOF > "${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 buildMetadata: [originAnnotations]
 resources:
-$(for f in ${resources[@]}; do echo "- $f"; done)
+$(for f in "${resources[@]}"; do echo "- $f"; done)
 EOF
     fi
 
-    toexport=$(yq e '.spec.postBuild.substitute' ${match}/${wcluster}.yaml | tr -d ' ' | tr ':' '=' | tr -d '"')
-    for v in $(echo $toexport)
+    toexport=$(yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml | tr -d ' ' | tr ':' '=' | tr -d '"')
+    for v in $toexport
     do
-        export $v
+        export "${v?}"
     done
 
-    kubectl kustomize ${match}/${wcluster}/${subpath} | envsubst
+    kubectl kustomize "${match}"/"${wcluster}"/"${subpath}" | envsubst
 }
 
 findres() {
-    if ! [ -e $1/kustomization.yaml ]
+    if ! [ -e "$1"/kustomization.yaml ]
     then
-        for f in $(find $1 -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/||g")
+        for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/||g")
         do
-            resources+=($f)
+            resources+=("$f")
         done
 
-        for d in $(find $1 -maxdepth 1 -type d ! -path $1)
+        for d in $(find "$1" -maxdepth 1 -type d ! -path "$1")
         do
-            findres $d $2
+            findres "$d" "$2"
         done
     else
-        r=$(echo $1 | sed "s|$2/||g")
-        resources+=($r)
+        r=$(echo "$1" | sed "s|$2/||g")
+        resources+=("$r")
     fi
 }
 
 case "$1" in
     build)
         shift
-        build $@
+        build "$@"
         ;;
-    *|help)
+    *)
         help
         ;;
 esac
