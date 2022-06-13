@@ -4,7 +4,7 @@ configMapGenerator:
   - behavior: replace
     files:
       - values=override_config.yaml
-    name: ${workload_cluster_name}-nginx-ingress-controller-values
+    name: ${cluster_id}-nginx-ingress-controller-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
