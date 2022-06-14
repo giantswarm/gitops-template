@@ -10,17 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       dyff_ver: 1.5.4
+      kubeval_ver: 0.16.1
     steps:
       - run: sudo apt-get install -y yamllint
-      - name: try to restore cached dyff
-        uses: actions/cache@v3
-        id: cache-dyff
-        with:
-          path: /opt/hostedtoolcache/dyff/${{ env.dyff_ver }}/x64/dyff
-          key: ${{ runner.os }}-dyff-${{ env.dyff_ver }}
       - name: install dyff
         uses: giantswarm/install-binary-action@v1
-        if: steps.cache-dyff.outputs.cache-hit != 'true'
         with:
           binary: dyff
           download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
@@ -34,7 +28,7 @@ jobs:
           download_url: "https://github.com/instrumenta/kubeval/releases/${version}/download/kubeval-linux-amd64.tar.gz"
           smoke_test: "${binary} --version"
           tarball_binary_path: "${binary}"
-          version: "latest"
+          version: "v${{ env.kubeval_ver }}"
       - run: which kubeval
       - run: ls -la /opt/hostedtoolcache
       - uses: actions/checkout@v3
