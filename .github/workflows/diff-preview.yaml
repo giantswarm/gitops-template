@@ -26,6 +26,7 @@ jobs:
           tarball_binary_path: "${binary}"
           version: "latest"
       - run: which kubeval
+      - run: ls -la /opt/hostedtoolcache
       - uses: actions/checkout@v3
       - name: template all for the new branch
         run: ./tools/test-all-ffb template > /tmp/new.yaml
