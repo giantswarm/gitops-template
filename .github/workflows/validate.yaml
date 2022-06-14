@@ -9,7 +9,13 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo snap install shfmt
+      - uses: giantswarm/install-binary-action@v1
+        with:
+          binary: shfmt
+          download_url: "https://github.com/mvdan/sh/releases/download/v${version}/shfmt_v${version}_linux_amd64"
+          smoke_test: "${binary} -version"
+          version: "latest"
+      # - run: sudo snap install shfmt
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: cache pre-commit environment

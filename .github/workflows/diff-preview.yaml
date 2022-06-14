@@ -17,6 +17,7 @@ jobs:
           smoke_test: "${binary} version"
           tarball_binary_path: "${binary}"
           version: "1.5.4"
+      - run: which dyff
       - uses: giantswarm/install-binary-action@v1
         with:
           binary: kubeval
@@ -24,6 +25,7 @@ jobs:
           smoke_test: "${binary} --version"
           tarball_binary_path: "${binary}"
           version: "latest"
+      - run: which kubeval
       - uses: actions/checkout@v3
       - name: template all for the new branch
         run: ./tools/test-all-ffb template > /tmp/new.yaml
