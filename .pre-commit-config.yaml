@@ -19,3 +19,11 @@ repos:
       rev: v1.26.3
       hooks:
           - id: yamllint
+
+    - repo: https://github.com/syntaqx/git-hooks
+      rev: v0.0.17
+      hooks:
+          - id: shellcheck
+          - id: shfmt
+            args:
+              - "-w"
