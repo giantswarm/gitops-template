@@ -8,15 +8,25 @@ on:
 jobs:
   get-diff:
     runs-on: ubuntu-latest
+    env:
+      dyff_ver: 1.5.4
     steps:
       - run: sudo apt-get install -y yamllint
-      - uses: giantswarm/install-binary-action@v1
+      - name: try to restore cached dyff
+        uses: actions/cache@v3
+        id: cache-dyff
+        with:
+          path: /opt/hostedtoolcache/dyff/${{ env.dyff_ver }}/x64/dyff
+          key: ${{ runner.os }}-dyff-${{ env.dyff_ver }}
+      - name: install dyff
+        uses: giantswarm/install-binary-action@v1
+        if: steps.cache-dyff.outputs.cache-hit != 'true'
         with:
           binary: dyff
           download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
           smoke_test: "${binary} version"
           tarball_binary_path: "${binary}"
-          version: "1.5.4"
+          version: ${{ env.dyff_version }}
       - run: which dyff
       - uses: giantswarm/install-binary-action@v1
         with:

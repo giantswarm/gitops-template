@@ -9,13 +9,7 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: giantswarm/install-binary-action@v1
-        with:
-          binary: shfmt
-          download_url: "https://github.com/mvdan/sh/releases/download/v${version}/shfmt_v${version}_linux_amd64"
-          smoke_test: "${binary} -version"
-          version: "latest"
-      # - run: sudo snap install shfmt
+      - run: sudo snap install shfmt
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - name: cache pre-commit environment
@@ -35,7 +29,12 @@ jobs:
           download_url: "https://github.com/instrumenta/kubeval/releases/${version}/download/kubeval-linux-amd64.tar.gz"
           smoke_test: "${binary} --version"
           tarball_binary_path: "${binary}"
-          version: "latest"
+          version: "v0.16.1"
+      - name: cache validation tools
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-gitops-validate-${{ hashFiles('.pre-commit-config.yaml') }}
       - uses: actions/checkout@v3
       - name: run validation
         uses: mathiasvr/command-output@v1
