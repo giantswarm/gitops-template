@@ -3,7 +3,7 @@ name: diff preview
 on:
   pull_request:
   push:
-    branches: [HEAD_BRANCH, main]
+    branches: [HEAD_BRANCH]
 
 jobs:
   get-diff:

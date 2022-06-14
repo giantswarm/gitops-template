@@ -3,7 +3,7 @@ name: validate
 on:
   pull_request:
   push:
-    branches: [HEAD_BRANCH]
+    branches: [HEAD_BRANCH, main]
 
 jobs:
   pre-commit:
