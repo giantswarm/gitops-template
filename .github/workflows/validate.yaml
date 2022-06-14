@@ -43,6 +43,7 @@ jobs:
         id: validate
         with:
           run: "./tools/test-all-ffb validate"
+      - run: "echo ${{ github.ref_name }}"
       - name: Find validation comment
         uses: peter-evans/find-comment@v2
         if: ${{ github.ref_name }} != "main"
