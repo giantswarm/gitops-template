@@ -12,6 +12,11 @@ jobs:
       - run: sudo snap install shfmt
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
+      - name: cache pre-commit environment
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-gitops-validate-${{ hashFiles('.pre-commit-config.yaml') }}
       - uses: pre-commit/action@v2.0.3
   test:
     needs: pre-commit
