@@ -18,6 +18,7 @@ patches:
       group: application.giantswarm.io
       kind: "App"
       name: \${cluster_id}-nginx-ingress-controller
+      namespace: kube-system
       version: v1alpha1
   - patch: |-
       - op: replace
