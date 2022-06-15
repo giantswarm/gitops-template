@@ -28,6 +28,17 @@ fork a repo from it, then follow the docs below to learn how it works:
       1. [create a cluster infrastructure](./docs/add_wc_instance.md)
 1. [manage applications deployed to a cluster](./docs/apps/README.md)
 
+## Configuring extra validation and diff previews on GitHub
+
+With this repository, we're also including two GitHub workflows, that can make your work with this
+repo easier:
+
+1. [validate.yaml](.github/workflows/validate.yaml), which uses a set of tools like linters and
+   Kubernetes YAML validators to make sure that your code is valid YAML and produces final manifests understandable to
+   Kubernetes. It attaches validation report as a comment to your PR.
+1. [diff-preview.yaml](.github/workflows/diff-preview.yaml), which renders all your manifests and does a diff
+   against your `main` branch, then attaches the diff as a comment to your PR.
+
 ## Contributing
 
 To ensure your YAML and Markdown formatting is OK even before you push to the repository,
