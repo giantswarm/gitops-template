@@ -65,8 +65,8 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            Rendered manifest diff output log
-
-            ```diff
+            <details>
+            <summary> Rendered manifest diff output log </summary>
+            
             ${{ steps.diff.outputs.stdout }}
-            ```
+            </details>
