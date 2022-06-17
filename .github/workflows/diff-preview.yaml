@@ -67,6 +67,5 @@ jobs:
           body: |
             <details>
             <summary> Rendered manifest diff output log </summary>
-            
             ${{ steps.diff.outputs.stdout }}
             </details>
