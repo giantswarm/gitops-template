@@ -9,8 +9,8 @@ spec:
   postBuild:
     substitute:
       cluster_domain: "MY_DOMAIN"
-      cluster_id: "HELLO_STAGING_1"
-      cluster_name: "HELLO_STAGING_1"
+      cluster_id: "HELLO_APP_STAGING_1"
+      cluster_name: "HELLO_APP_STAGING_1"
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "ORG_NAME"
