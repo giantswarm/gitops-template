@@ -26,7 +26,7 @@ In that cases we recommend putting region or data center specific configurations
 `/bases/environments/regions` folder and under there create a let's say `ap-east-1`, `eu-central-1`,
 `us-west-2` folders.
 
-Later you will reference all these layers in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
+Later you will reference your environment templates in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
 
 > :warning: :construction: Please note that if you want to use multiple environment templates to create a single cluster
