@@ -1,13 +1,12 @@
 # Add Workload Cluster environments
 
-- [Add Workload Cluster environments](#add-workload-cluster-environments)
-  - [Environments](#environments)
-    - [Stages](#stages)
-      - [The development cluster](#the-development-cluster)
-      - [The staging cluster](#the-staging-cluster)
-      - [The production cluster](#the-production-cluster)
-  - [Add Workload Clusters based on the environment cluster bases](#add-workload-clusters-based-on-the-environment-cluster-bases)
-  - [Tips for developing environments](#tips-for-developing-environments)
+- [Environments](#environments)
+  - [Stages](#stages)
+    - [The development cluster](#the-development-cluster)
+    - [The staging cluster](#the-staging-cluster)
+    - [The production cluster](#the-production-cluster)
+- [Add Workload Clusters based on the environment cluster bases](#add-workload-clusters-based-on-the-environment-cluster-bases)
+- [Tips for developing environments](#tips-for-developing-environments)
 
 You might want to set up multiple, similar Workload Clusters that serve as for example development,
 staging and production environments. You can utilize [bases](/bases) to achieve that. Let's take a look at the
@@ -29,6 +28,13 @@ In that cases we recommend putting region or data center specific configurations
 
 Later you will reference all these layers in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
+
+*Note*
+Please note that if you want to use multiple environment templates to create a single cluster that uses `App CR`s for deployments,
+like you would like to use `dev` out of `staging` layout to set app configuration and then use `east` from the `data-centers`
+to set the IP ranges, you will run into issues
+around merging configurations, as currently one configuration source (ie. `ConfigMap` in `spec.config.configMap`) completely
+overrides the whole value of the same attribute coming from the other base. We're working to remove this limitation.
 
 ### Stages
 
