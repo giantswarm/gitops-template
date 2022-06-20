@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  values: |-
+    test data
+kind: ConfigMap
+metadata:
+  name: wc-secret
