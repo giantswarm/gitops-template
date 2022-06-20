@@ -5,7 +5,7 @@
     - [The development cluster](#the-development-cluster)
     - [The staging cluster](#the-staging-cluster)
     - [The production cluster](#the-production-cluster)
-- [Add Workload Clusters based on the environment cluster bases](#add-workload-clusters-based-on-the-environment-cluster-bases)
+- [Add Workload Clusters based on the environment cluster templates](#add-workload-clusters-based-on-the-environment-cluster-templates)
 - [Tips for developing environments](#tips-for-developing-environments)
 
 You might want to set up multiple, similar Workload Clusters that serve as for example development,
@@ -19,8 +19,9 @@ There is a good reason for this additional layer of grouping. You can use this a
 different clusters - like the dev, staging, production example - but also having multiple different
 regions or data centers where you want to spin these clusters up.
 
-We're assuming that all the clusters using this environaments pattern should in many regards look the same wherever they are. But also whatever cluster
-is hosted in a given region or data center should use a specific IP range, certificates or ingresses.
+We're assuming that all the clusters using this environments pattern should in many regards look the same
+wherever they are. But also whatever cluster is hosted in a given region or data center should use a specific IP range,
+certificates or ingresses.
 
 In that cases we recommend putting region or data center specific configurations into for example
 `/bases/environments/regions` folder and under there create a let's say `ap-east-1`, `eu-central-1`,
@@ -207,7 +208,7 @@ We tell Flux to use version `0.1.8` of `hello-world-app` and version `0.1.0` of 
 In this example when we sufficiently validated our released changes in the staging environment we update the versions
 in the `Kustomization`, merge the change and let Flux do the work.
 
-## Add Workload Clusters based on the environment cluster bases
+## Add Workload Clusters based on the environment cluster templates
 
 Just as any other Workload Clusters we define them in
 [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
