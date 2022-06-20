@@ -19,7 +19,7 @@ There is a good reason for this additional layer of grouping. You can use this a
 different clusters - like the dev, staging, production example - but also having multiple different
 regions or data centers where you want to spin these clusters up.
 
-Think that these cluster should in many regards look the same wherever they are. But also whatever cluster
+We're assuming that all the clusters using this environaments pattern should in many regards look the same wherever they are. But also whatever cluster
 is hosted in a given region or data center should use a specific IP range, certificates or ingresses.
 
 In that cases we recommend putting region or data center specific configurations into for example
