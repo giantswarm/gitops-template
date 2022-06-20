@@ -67,9 +67,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            ```text
             <details>
             <summary> Validation output log </summary>
             ${{ steps.validate.outputs.stdout }}
             </details>
-            ```
