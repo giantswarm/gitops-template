@@ -1,5 +1,14 @@
 # Add Workload Cluster environments
 
+- [Add Workload Cluster environments](#add-workload-cluster-environments)
+  - [Environments](#environments)
+    - [Stages](#stages)
+      - [The development cluster](#the-development-cluster)
+      - [The staging cluster](#the-staging-cluster)
+      - [The production cluster](#the-production-cluster)
+  - [Add Workload Clusters based on the environment cluster bases](#add-workload-clusters-based-on-the-environment-cluster-bases)
+  - [Tips for developing environments](#tips-for-developing-environments)
+
 You might want to set up multiple, similar Workload Clusters that serve as for example development,
 staging and production environments. You can utilize [bases](/bases) to achieve that. Let's take a look at the
 [/bases/environments](/bases/environments) folder structure.
@@ -48,7 +57,7 @@ resources:
 You can put additional configuration under these folders that should be same for each instances of these clusters.
 Let's take a closer look at our examples.
 
-#### The dev cluster
+#### The development cluster
 
 In [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
 [hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters.
@@ -234,3 +243,9 @@ resources:
   - ../../../../../../bases/environments/stages/dev/hello_app_cluster
   - ../../../../../../bases/environments/regions/[[ REGION_NAME ]]
 ```
+
+## Tips for developing environments
+
+For complex clusters, you can end up merging a lot of layers of templates and configurations.
+Under `tools` folder in this repository you can find the `fake-flux-build` script that helps
+you render and inspect the final result. For more information check [tools/README.md](/tools/README.md).
