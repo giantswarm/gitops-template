@@ -133,7 +133,7 @@ It is similar to the development cluster in the following manners:
 It also provides overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
 [hello_world_app_user_config.yaml](
 /bases/environments/stages/staging/hello_app_cluster/hello_world_app_user_config.yaml).
-We want this environment to be more close to production so let's say we set a larger thread pool size.
+We want this environment to be closer to production so let's say we set a larger thread pool size.
 
 ```yaml
 thread_pool_size: 64
