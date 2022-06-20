@@ -15,7 +15,7 @@ staging and production environments. You can utilize [bases](/bases) to achieve 
 ## Environments
 
 The `stages` folder is a convenient wrapper to group our environment specifications.
-There is a good reason for this additional layer of grouping. Think of the use case of having multiple
+There is a good reason for this additional layer of grouping. You can use this approach to have multiple
 different clusters - like the dev, staging, production example - but also having multiple different
 regions or data centers where you want to spin these clusters up.
 
