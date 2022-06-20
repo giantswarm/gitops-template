@@ -30,7 +30,7 @@ In that cases we recommend putting region or data center specific configurations
 Later you will reference your environment templates in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
 
-> :warning: :construction: Please note that if you want to use multiple environment templates to create a single cluster
+> :construction: Please note that if you want to use multiple environment templates to create a single cluster
 that uses `App CR`s for deployments, like you would like to use `dev` out of `staging` layout to set app configuration
 and then use `east` from the `data-centers` to set the IP ranges, you will run into issues around merging
 configurations, as currently one configuration source (ie. `ConfigMap` in `spec.config.configMap`) completely
