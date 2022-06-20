@@ -22,4 +22,4 @@ For `yq` the [github.com/mikefarah/yq](https://github.com/mikefarah/yq/) version
 You need the following tools installed to use [test-all-ffb](/tools/test-all-ffb) script.
 
 - `yamllint` of [github.com/adrienverge/yamllint](https://github.com/adrienverge/yamllint)
-- `kubeval` of [github.com/instrumenta/kubeval](https://github.com/instrumenta/kubeval)
+- `kubeconform` of [github.com/yannh/kubeconform](https://github.com/yannh/kubeconform)
