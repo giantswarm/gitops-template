@@ -128,7 +128,7 @@ And pretty much that is it for the development cluster. Let's look at the stagin
 It is similar to the development cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
-- it has automatic updated set up
+- it has automatic updates set up
 
 It also provides overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
 [hello_world_app_user_config.yaml](
