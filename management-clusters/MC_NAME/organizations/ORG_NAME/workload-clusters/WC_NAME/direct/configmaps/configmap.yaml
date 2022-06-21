@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  values: |-
+    Test ConfigMap.
+    Variable substitution still possible here.
+    I am the ${cluster_id} cluster!
+    I belong to the ${organization} org!
+kind: ConfigMap
+metadata:
+  name: secret-to-be-created-directly-in-WC
