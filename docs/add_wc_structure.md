@@ -140,7 +140,6 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
 ## Directory tree
 
-
 1. Go to the `workload-clusters` directory:
 
     ```sh
