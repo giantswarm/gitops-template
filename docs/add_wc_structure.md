@@ -140,6 +140,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
 ## Directory tree
 
+
 1. Go to the `workload-clusters` directory:
 
     ```sh
@@ -152,7 +153,16 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     mkdir ${WC_NAME}
     ```
 
-1. Go to the newly created directory and create 2 sub-directories there:
+1. Go to the newly created directory and if you need out-of-band method of delivering resources
+to the Workload Cluster create 2 sub-directories there. Otherwise, skip this and the next step.
+
+    - `mapi` - resources managed with Management API,
+    - `out-of-band` - resources managed outside Management API, meant to be created directly in the
+      Workload Cluster.
+
+1. Go to the `mapi` directory.
+
+1. Create 2 sub-directories:
 
     - `apps` - Workload Cluster managed apps,
     - `cluster` - Workload Cluster definition.
@@ -252,7 +262,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         namespace: default
       spec:
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/[mapi]"
         postBuild:
           substitute:
             cluster_id: "${WC_NAME}"
@@ -262,6 +272,26 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           kind: GitRepository
           name: YOUR_REPO
         timeout: 2m
+      ---
+      ### USE ONLY FOR OUT-OF-BAND DELIVERY ###
+      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      kind: Kustomization
+      metadata:
+        name: ${MC_NAME}-clusters-${WC_NAME}
+        namespace: default
+      spec:
+        interval: 1m
+        kubeConfig:
+          secretRef:
+            name: WC_NAME-kubeconfig
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
+        prune: false
+        serviceAccountName: automation
+        sourceRef:
+          kind: GitRepository
+          name: YOUR_REPO
+        timeout: 2m
+      ### ### USE ONLY FOR OUT-OF-BAND DELIVERY ###
       EOF
       ```
 
@@ -282,7 +312,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           secretRef:
             name: sops-gpg-${WC_NAME}
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/[mapi]"
         postBuild:
           substitute:
             cluster_id: "${WC_NAME}"
@@ -292,6 +322,26 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           kind: GitRepository
           name: YOUR_REPO
         timeout: 2m
+      ---
+      ### USE ONLY FOR OUT-OF-BAND DELIVERY ###
+      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      kind: Kustomization
+      metadata:
+        name: ${MC_NAME}-clusters-${WC_NAME}
+        namespace: default
+      spec:
+        interval: 1m
+        kubeConfig:
+          secretRef:
+            name: WC_NAME-kubeconfig
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
+        prune: false
+        serviceAccountName: automation
+        sourceRef:
+          kind: GitRepository
+          name: YOUR_REPO
+        timeout: 2m
+      ### ### USE ONLY FOR OUT-OF-BAND DELIVERY ###
       EOF
       ```
 

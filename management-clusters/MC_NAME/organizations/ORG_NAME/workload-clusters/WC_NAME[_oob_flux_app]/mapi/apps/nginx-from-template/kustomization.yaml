@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+      - values=override_config.yaml
+    name: ${cluster_id}-tmpl-nginx-ingress-controller-user-values
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+# patches block: needed only because we already install nginx in `nginx-ingress-controller` app
+#  and we would have name conflicts. Normally not needed.
+patches:
+  - patch: |-
+      - op: replace
+        path: "/metadata/name"
+        value: ${cluster_id}-tmpl-nginx-ingress-controller
+    target:
+      group: application.giantswarm.io
+      kind: "App"
+      name: \${cluster_id}-nginx-ingress-controller
+      namespace: kube-system
+      version: v1alpha1
+  - patch: |-
+      - op: replace
+        path: "/metadata/name"
+        value: ${cluster_id}-tmpl-nginx-ingress-controller-values
+    target:
+      group: ""
+      kind: "ConfigMap"
+      name: \${cluster_id}-nginx-ingress-controller-values
+      version: v1
+# block end
+patchesStrategicMerge:
+  - patch_app_config.yaml
+resources:
+  - secret.enc.yaml
+  - ../../../../../../../../bases/apps/nginx-ingress-controller

@@ -4,7 +4,5 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
-- FROM_TEMPLATE_WC_NAME.yaml
-- CAPI_WC_NAME.yaml
-- WC_NAME_without_oob.yaml
-- WC_NAME_with_oob_and_without_flux_app.yaml
+- catalog.yaml
+- imageupdate.yaml

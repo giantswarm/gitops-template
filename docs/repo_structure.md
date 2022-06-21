@@ -11,6 +11,7 @@
     - [`[kustomization.yaml]`](#kustomizationyaml)
     - [`[organizations]`](#organizations)
     - [`[workload-clusters]`](#workload-clusters)
+    - [`[mapi]` and `[out-of-band]`](#mapi-and-out-of-band)
   - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
     - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
@@ -44,10 +45,14 @@ management-clusters
                 ├── WC_NAME.yaml
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
-                    ├── [kustomization.yaml]            WC_NAME.yaml responsibility
-                    ├── apps
-                    ├── cluster
-                    └── [OTHER_RESOURCES]
+                    ├── [out-of-band]                  WC_NAME.yaml responsibility
+                    |   ├── [kustomization.yaml]
+                    |   └── [OTHER_RESOURCES]
+                    └── [mapi]
+                        ├── [kustomization.yaml]
+                        ├── apps
+                        ├── cluster
+                        └── [OTHER_RESOURCES]
 ```
 
 Capital letters are placeholders for the actual names of user resources and MUST be changed upon configuration. In case
@@ -356,6 +361,26 @@ management-clusters
             ├── demo0.yaml
             └── demo0
 ```
+
+### `[mapi] and [out-of-band]`
+
+The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, both optional by default.
+The `mapi`, when used, MUST hold resources orchestrated by the means of Management API, so for example App CRs,
+configuration for these App CRs, etc., basically any resources that configure Workload Cluster from the
+Management Cluster. The `out-of-band`, when used, MUST hold the manifests that are meant to be reconciled
+directly in the Workload Cluster, without ever referring to the Management API, so additional ConfigMaps, Secret,
+Deployments, etc., or basically everything that iss not supported by the App CRs.
+
+The rules of governing these directories are:
+
+1. If out of band method of delivering resources directly to the Workload Cluster is needed, both `mapi` and
+`out-of-band` directories MUST be created.
+1. If out of band method of delivering resources is not needed, user MAY skip creating the directories and
+instead put all the manifests directly under the `WC_NAME` directory. User MAY however choose to create both
+directories anyway.
+1. If user has not been using `mapi` and `out-of-band` directories so far, but now wants to switch, he MUST
+creates them, and then he MUST move all the resources kept under the `WC_NAME` directory into the `mapi`
+directory, and then he MUST adjust the `WC_NAME.yaml` file with the right paths.
 
 ## Flux Kustomization CRs Involved
 
