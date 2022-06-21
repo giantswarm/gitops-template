@@ -1,5 +1,6 @@
 # Add Workload Cluster environments
 
+- [General note](#general-note)
 - [Environments](#environments)
   - [Stages](#stages)
     - [The development cluster](#the-development-cluster)
@@ -12,22 +13,40 @@ You might want to set up multiple, similar Workload Clusters that serve as for e
 staging and production environments. You can utilize [bases](/bases) to achieve that. Let's take a look at the
 [/bases/environments](/bases/environments) folder structure.
 
+## General note
+
+It is possible to solve the environment and environment propagation problem in multiple ways, notably by:
+
+- using a multi-directory structure, where each environment is represented as a directory in a `main` branch of a single
+  repository
+- using a multi-branch approach, where each branch corresponds to one environment, but they are in the same repo
+- using a multi-repo setup, where there's one root repository providing all the necessary templates, then there is one another
+  repository per each environment.
+
+Each of these approaches has pros and cons. Over here, we're proposing the multi-directory approach. The pros of it are:
+a single repo and branch serving as the source of truth for all the environments, very easy template sharing and
+relatively easy way to compare and promote configuration across environments. On the other hand, it might not be the
+best solution for access control, templates versioning and also easy comparing of environments.
+
 ## Environments
 
-The `stages` folder is a convenient wrapper to group our environment specifications.
+The `stages` folder is how we propose to group environment specifications.
 There is a good reason for this additional layer of grouping. You can use this approach to have multiple
-different clusters - like the dev, staging, production example - but also having multiple different
+different clusters - like the dev, staging, production - but also to have multiple different
 regions or data centers where you want to spin these clusters up.
 
 We're assuming that all the clusters using this environments pattern should in many regards look the same
-wherever they are. But also whatever cluster is hosted in a given region or data center should use a specific IP range,
-certificates or ingresses.
+across all the environments. Still, each environment layer introduces some key differences, like app version being deployed
+for `dev/staging/prod` environments or a specific IP range, certificate or ingresses config for data center related environments
+like `us-east-1/us-west-2`.
 
-In that cases we recommend putting region or data center specific configurations into for example
-`/bases/environments/regions` folder and under there create a let's say `ap-east-1`, `eu-central-1`,
-`us-west-2` folders.
+To create an environment template, you need to make a  directory in `environments` that describes the best the
+differentating factor for that kind of environment, then you should create subfolder there for different possible values.
+For example, for multiple data centers, we recommend putting region specific configuration into
+`/bases/environments/regions` folder and under there create `ap-east-1`, `eu-central-1` and `us-west-2` folders.
 
-Later you will reference your environment templates in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
+Once your environment templates are ready, you can use them to create new clusters by placing cluster definitions in
+in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
 
 > :construction: Please note that if you want to use multiple environment templates to create a single cluster
