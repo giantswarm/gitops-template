@@ -3,14 +3,14 @@ name: diff preview
 on:
   pull_request:
   push:
-    branches: [HEAD_BRANCH, main]
+    branches: [HEAD_BRANCH]
 
 jobs:
   get-diff:
     runs-on: ubuntu-latest
     env:
       dyff_ver: 1.5.4
-      kubeval_ver: 0.16.1
+      kubeconform_ver: 0.4.13
     steps:
       - run: sudo apt-get install -y yamllint
       - name: install dyff
@@ -24,12 +24,12 @@ jobs:
       - run: which dyff
       - uses: giantswarm/install-binary-action@v1
         with:
-          binary: kubeval
-          download_url: "https://github.com/instrumenta/kubeval/releases/download/v${version}/kubeval-linux-amd64.tar.gz"
-          smoke_test: "${binary} --version"
+          binary: kubeconform
+          download_url: "https://github.com/yannh/kubeconform/releases/download/v${version}/kubeconform-linux-amd64.tar.gz"
+          smoke_test: "${binary} -v"
           tarball_binary_path: "${binary}"
-          version: ${{ env.kubeval_ver }}
-      - run: which kubeval
+          version: ${{ env.kubeconform_ver }}
+      - run: which kubeconform
       - run: ls -la /opt/hostedtoolcache
       - uses: actions/checkout@v3
       - name: template all for the new branch
@@ -65,8 +65,7 @@ jobs:
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            Rendered manifest diff output log
-
-            ```diff
+            <details>
+            <summary> Rendered manifest diff output log </summary>
             ${{ steps.diff.outputs.stdout }}
-            ```
+            </details>
