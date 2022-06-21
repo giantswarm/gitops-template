@@ -379,8 +379,12 @@ The rules of governing these directories are:
 instead put all the manifests directly under the `WC_NAME` directory. User MAY however choose to create both
 directories anyway.
 1. If user has not been using `mapi` and `out-of-band` directories so far, but now wants to switch, he MUST
-creates them, and then he MUST move all the resources kept under the `WC_NAME` directory into the `mapi`
-directory, and then he MUST adjust the `WC_NAME.yaml` file with the right paths.
+create them, and then he MUST move all the resources kept under the `WC_NAME` directory into the `mapi`
+directory.
+1. User MAY choose between two out-of-band delivery methods. The first one involves creating Flux app in the
+Workload Cluster and configure it to reconcile `out-of-band` directory. The other method involves creating
+additional Kustomization CR in the Management Cluster that uses `kubeconfig` for the Workload Cluster to
+remotely create resources there.
 
 ## Flux Kustomization CRs Involved
 
