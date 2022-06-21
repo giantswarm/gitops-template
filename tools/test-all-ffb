@@ -39,7 +39,7 @@ test() {
 						echo "Testing: $mc_name $org_name $wc_name $dir_name"
 						echo -n "yamllint: "
 						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint - && echo "OK"
-						echo "kubeconform: "
+						echo -n "kubeconform: "
 						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | kubeconform -ignore-missing-schemas -output text && echo "OK"
 						echo ""
 					else
