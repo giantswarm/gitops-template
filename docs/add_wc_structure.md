@@ -246,7 +246,7 @@ to the Workload Cluster create 2 sub-directories there. Otherwise, skip this and
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one fo the templates:
+1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
