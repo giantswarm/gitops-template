@@ -68,6 +68,10 @@ jobs:
             <details>
             <summary> Rendered manifest diff output log </summary>
             <!-- mandatory empty line -->
+
+            ```
             ${{ steps.diff.outputs.stdout }}
+            ```
+
             </details>
             <!-- mandatory empty line -->
