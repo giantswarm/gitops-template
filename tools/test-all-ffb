@@ -24,6 +24,9 @@ mkdir -p "${GS_SCHEMA_REPOSITORY_CACHE}"
 
 test() {
 	mode="$1"
+
+	has_validation_errors=0
+
 	mc_dir="management-clusters"
 	for mc in $(find ${mc_dir}/ -maxdepth 1 -type d ! -path ${mc_dir}/); do
 		mc_name=${mc##*/}
@@ -44,8 +47,6 @@ test() {
 						dir_name=${dir_name##*/}
 					fi
 					if [[ "$mode" == "validate" ]]; then
-						has_validation_errors=0
-
 						echo "Testing: $mc_name $org_name $wc_name $dir_name"
 
 						echo -n "yamllint: "
@@ -56,12 +57,6 @@ test() {
 							kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text; then has_validation_errors=1; else echo "OK"; fi
 
 						echo ""
-
-						if [[ ${has_validation_errors} -ne 0 ]]; then
-							echo ""
-							echo "There are validation errors, please check the above output! Exiting with an error code..."
-							exit 2
-						fi
 					else
 						echo "---"
 						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name"
@@ -70,6 +65,11 @@ test() {
 			done
 		done
 	done
+
+	if [[ ${has_validation_errors} -ne 0 ]]; then
+		echo "There are validation errors, please check the above output!g"
+		exit 2
+	fi
 }
 
 if [[ $# -gt 1 ]]; then
