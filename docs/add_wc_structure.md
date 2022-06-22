@@ -327,6 +327,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
      sourceRef:
        kind: GitRepository
        name: ${GIT_REPOSITORY_NAME}
+       namespace: default
      timeout: 2m
    EOF
    ```
