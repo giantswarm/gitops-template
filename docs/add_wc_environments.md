@@ -26,7 +26,7 @@ It is possible to solve the environment and environment propagation problem in m
 Each of these approaches has pros and cons. We propose the multi-directory approach. The pros of it are:
 a single repo and branch serving as the source of truth for all the environments, very easy template sharing and
 relatively easy way to compare and promote configuration across environments. On the other hand, it might not be the
-best solution for access control, templates versioning and also easy comparing of environments.
+best solution for access control, template versioning and also easy comparing of environments.
 
 ## Environments
 
