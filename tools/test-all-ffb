@@ -67,7 +67,7 @@ test() {
 	done
 
 	if [[ ${has_validation_errors} -ne 0 ]]; then
-		echo "There are validation errors, please check the above output!g"
+		echo "There are validation errors, please check the above output!"
 		exit 2
 	fi
 }
