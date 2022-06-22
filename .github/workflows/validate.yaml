@@ -43,11 +43,9 @@ jobs:
         id: validate
         with:
           run: "./tools/test-all-ffb validate"
-        continue-on-error: true
-      - run: "echo ${{ github.ref_name }}"
       - name: Find validation comment
         uses: peter-evans/find-comment@v2
-        if: github.ref_name != 'main'
+        if: always() && github.ref_name != 'main'
         continue-on-error: true
         id: fc
         with:
@@ -56,7 +54,7 @@ jobs:
           body-includes: Validation output log
       - name: Delete old comment
         uses: jungwinter/comment@v1
-        if: github.ref_name != 'main'
+        if: always() && github.ref_name != 'main'
         continue-on-error: true
         with:
           type: delete
@@ -64,7 +62,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create or update validation comment
         uses: peter-evans/create-or-update-comment@v2
-        if: github.ref_name != 'main'
+        if: always() && github.ref_name != 'main'
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
