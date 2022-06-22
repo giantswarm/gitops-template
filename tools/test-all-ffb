@@ -58,6 +58,8 @@ test() {
 						echo ""
 
 						if [[ ${has_validation_errors} -ne 0 ]]; then
+							echo ""
+							echo "There are validation errors, please check the above output! Exiting with an error code..."
 							exit 2
 						fi
 					else
