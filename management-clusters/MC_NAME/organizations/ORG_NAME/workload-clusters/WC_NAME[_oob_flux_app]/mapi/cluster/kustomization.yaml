@@ -6,5 +6,5 @@ kind: Kustomization
 patchesStrategicMerge:
 - patch_awscluster.yaml
 resources:
-- ../../../../../../../bases/clusters/aws/v1alpha3
-#- ../../../../../../../bases/nodepools/aws/v1alpha3
+- ../../../../../../../../bases/clusters/aws/v1alpha3
+#- ../../../../../../../../bases/nodepools/aws/v1alpha3
