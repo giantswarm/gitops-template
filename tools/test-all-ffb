@@ -14,6 +14,11 @@ Usage: $0 [validate|template]
 	exit 1
 }
 
+GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/main/master"
+GS_SCHEMA_REPOSITORY_CACHE="/tmp/gs-schema-repository-cache"
+
+mkdir -p "${GS_SCHEMA_REPOSITORY_CACHE}"
+
 test() {
 	mode="$1"
 	mc_dir="management-clusters"
@@ -40,7 +45,8 @@ test() {
 						echo -n "yamllint: "
 						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint - && echo "OK"
 						echo -n "kubeconform: "
-						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | kubeconform -ignore-missing-schemas -output text && echo "OK"
+						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" |
+							kubeconform -ignore-missing-schemas -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text && echo "OK"
 						echo ""
 					else
 						echo "---"
