@@ -94,7 +94,15 @@ $(for f in "${resources[@]}"; do echo "- $f"; done)
 EOF
 	fi
 
-	toexport=$(yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml | tr -d ' ' | tr ':' '=' | tr -d '"')
+	toexport=$(
+			yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml |\
+			grep -v "\-\-\-" |\
+			sort | uniq |\
+			tr -d ' ' |\
+			tr ':' '=' |\
+			tr -d '"'
+		)
+
 	for v in $toexport; do
 		export "${v?}"
 	done
