@@ -379,7 +379,7 @@ The rules of governing these directories are:
 instead put all the manifests directly under the `WC_NAME` directory. User MAY however choose to create both
 directories anyway.
 1. If user has not been using `mapi` and `out-of-band` directories so far, but now wants to switch, they MUST
-create them, and then he MUST move all the resources kept under the `WC_NAME` directory into the `mapi`
+create them, and then they MUST move all the resources kept under the `WC_NAME` directory into the `mapi`
 directory.
 1. User MAY choose between two out-of-band delivery methods. The first one involves creating Flux app in the
 Workload Cluster and configure it to reconcile `out-of-band` directory. The other method involves creating
