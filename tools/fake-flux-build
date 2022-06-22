@@ -95,11 +95,11 @@ EOF
 	fi
 
 	toexport=$(
-yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml |\
-grep -v "\-\-\-" |\
-sort | uniq |\
-tr -d ' ' |\
-tr ':' '=' |\
+yq e '.spec.postBuild.substitute' "${match}"/"${wcluster}".yaml |
+grep -v "\-\-\-" |
+sort | uniq |
+tr -d ' ' |
+tr ':' '=' |
 tr -d '"'
 )
 
