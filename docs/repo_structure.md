@@ -384,7 +384,7 @@ directory.
 1. User MAY choose between two out-of-band delivery methods. The first one involves creating Flux app in the
 Workload Cluster and configure it to reconcile `out-of-band` directory. The other method involves creating
 additional Kustomization CR in the Management Cluster that uses `kubeconfig` for the Workload Cluster to
-remotely create resources there.
+remotely create resources from the `out-of-band` directory.
 
 ## Flux Kustomization CRs Involved
 
