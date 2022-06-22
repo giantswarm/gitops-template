@@ -82,13 +82,13 @@ def capi_controllers() -> None:
 
 
 @pytest.fixture
-def flux_environment(flux_app_deployment: ConfiguredApp,
-                     gs_crds: Callable[[Cluster], Iterable[Any]],
-                     capi_controllers: Callable[[], None]) -> ConfiguredApp:
+def gitops_environment(flux_app_deployment: ConfiguredApp,
+                       gs_crds: Callable[[Cluster], Iterable[Any]],
+                       capi_controllers: Callable[[], None]) -> ConfiguredApp:
     return flux_app_deployment
 
 
 @pytest.mark.smoke
-def test_dummy(flux_app_deployment: Callable[[AppFactoryFunc], ConfiguredApp]) -> None:
+def test_dummy(gitops_environment) -> None:
     print("good")
     pass
