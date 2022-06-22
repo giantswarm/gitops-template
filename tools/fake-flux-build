@@ -99,7 +99,7 @@ EOF
 		export "${v?}"
 	done
 
-	kubectl kustomize "${match}"/"${wcluster}"/"${subpath}" | envsubst
+	kustomize build "${match}"/"${wcluster}"/"${subpath}" | envsubst
 }
 
 findres() {

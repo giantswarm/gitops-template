@@ -315,11 +315,12 @@ Kubernetes Secret, you MUST not create multiple Secrets.
    kind: Kustomization
    metadata:
      name: ${MC_NAME}-clusters-${WC_NAME}
-     namespace: default
+     namespace: ${WC_NAME}
    spec:
      interval: 1m
      kubeConfig:
        secretRef:
+         # key: kubeConfig
          name: ${WC_NAME}-kubeconfig
      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
      prune: false
@@ -329,6 +330,9 @@ Kubernetes Secret, you MUST not create multiple Secrets.
      timeout: 2m
    EOF
    ```
+
+   **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
+   in the above command to tell Flux where to look for the `kubeconfig`.
 
 ## MC configuration
 
