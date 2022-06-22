@@ -21,7 +21,7 @@ It is possible to solve the environment and environment propagation problem in m
   repository
 - using a multi-branch approach, where each branch corresponds to one environment, but they are in the same repo
 - using a multi-repo setup, where there's one root repository providing all the necessary templates, then there is one another
-  repository per each environment.
+  repository per environment.
 
 Each of these approaches has pros and cons. Over here, we're proposing the multi-directory approach. The pros of it are:
 a single repo and branch serving as the source of truth for all the environments, very easy template sharing and
