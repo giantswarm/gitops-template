@@ -32,6 +32,7 @@ this instruction, the least error prone way of providing them is by exporting as
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
+export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
 ## Create Flux GPG regular key pair (optional step)
@@ -152,7 +153,18 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     mkdir ${WC_NAME}
     ```
 
-1. Go to the newly created directory and create 2 sub-directories there:
+1. Go to the newly created directory and if you need out-of-band method of delivering resources
+   to the Workload Cluster create 2 sub-directories there. If you not sure you need it now, but want
+   to be prepared for it, also create them. Otherwise skip this step.
+
+    ```sh
+    mkdir mapi              # resources managed with Management API
+    mkdir out-of-band       # resources managed outside Management API, created directly in WC
+    cd mapi
+    export IN_BOUND="/mapi"
+    ```
+
+1. Create 2 sub-directories:
 
     - `apps` - Workload Cluster managed apps,
     - `cluster` - Workload Cluster definition.
@@ -237,7 +249,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one fo the templates:
+1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
@@ -252,7 +264,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         namespace: default
       spec:
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}${IN_BOUND}"
         postBuild:
           substitute:
             cluster_id: "${WC_NAME}"
@@ -260,9 +272,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
-          name: YOUR_REPO
+          name: ${GIT_REPOSITORY_NAME}
         timeout: 2m
-      EOF
       ```
 
     - if you have created a dedicated GPG key for the cluster (running with Secrets encryption):
@@ -282,7 +293,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           secretRef:
             name: sops-gpg-${WC_NAME}
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}${IN_BOUND}"
         postBuild:
           substitute:
             cluster_id: "${WC_NAME}"
@@ -290,10 +301,39 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
-          name: YOUR_REPO
+          name: ${GIT_REPOSITORY_NAME}
         timeout: 2m
-      EOF
       ```
+
+1. If you use the `out-of-band` delivery method, enrich the file created in the previous step with another
+   Kustomization CR pointing to `out-of-band` directory and referencing the right `kubeconfig` file:
+
+   ```sh
+   cat <<EOF >> ${WC_NAME}.yaml
+   ---
+   apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+   kind: Kustomization
+   metadata:
+     name: ${MC_NAME}-clusters-${WC_NAME}
+     namespace: ${WC_NAME}
+   spec:
+     interval: 1m
+     kubeConfig:
+       secretRef:
+         # key: kubeConfig
+         name: ${WC_NAME}-kubeconfig
+     path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
+     prune: false
+     sourceRef:
+       kind: GitRepository
+       name: ${GIT_REPOSITORY_NAME}
+       namespace: default
+     timeout: 2m
+   EOF
+   ```
+
+   **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
+   in the above command to tell Flux where to look for the `kubeconfig`.
 
 ## MC configuration
 
