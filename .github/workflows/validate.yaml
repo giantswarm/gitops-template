@@ -37,7 +37,7 @@ jobs:
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-gitops-validate-${{ hashFiles('.pre-commit-config.yaml') }}
-      -  uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: run validation
         uses: mathiasvr/command-output@v1
         id: validate
