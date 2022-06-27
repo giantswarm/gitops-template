@@ -50,11 +50,21 @@ test() {
 						echo "Testing: $mc_name $org_name $wc_name $dir_name"
 
 						echo -n "yamllint: "
-						if ! ./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint -; then has_validation_errors=1; else echo "OK"; fi
+						if ! (./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint -); then
+							has_validation_errors=1
+						else
+							echo "OK"
+						fi
 
 						echo -n "kubeconform: "
-						if ! ./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" |
-							kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text; then has_validation_errors=1; else echo "OK"; fi
+						if ! (
+							./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" |
+								kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text
+						); then
+							has_validation_errors=1
+						else
+							echo "OK"
+						fi
 
 						echo ""
 					else
