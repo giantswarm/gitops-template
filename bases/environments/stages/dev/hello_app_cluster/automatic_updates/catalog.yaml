@@ -8,6 +8,9 @@ metadata:
 spec:
   description: giantswarm-catalog-oci
   logoURL: "https://avatars.githubusercontent.com/u/7556340?s=60&v=4"
+  repositories:
+    - URL: oci://giantswarmpublic.azurecr.io/giantswarm-catalog/
+      type: helm
   storage:
     URL: oci://giantswarmpublic.azurecr.io/giantswarm-catalog/
     type: helm
