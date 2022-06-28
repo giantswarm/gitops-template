@@ -35,6 +35,10 @@ There is a good reason for this additional layer of grouping. You can use this a
 different clusters - like the dev, staging, production - but also to have multiple different
 regions or data centers where you want to spin these clusters up.
 
+```sh
+mkdir -p bases/environments/stages
+```
+
 We're assuming that all the clusters using this environments pattern should in many regards look the same
 across all the environments. Still, each environment layer introduces some key differences, like app version being deployed
 for `dev/staging/prod` environments or a specific IP range, certificate or ingresses config for data center related environments
@@ -45,7 +49,7 @@ differentiating factor for that kind of environment, then you should create sub 
 For example, for multiple data centers, we recommend putting region specific configuration into
 `/bases/environments/regions` folder and under there create `ap-east-1`, `eu-central-1` and `us-west-2` folders.
 
-Once your environment templates are ready, you can use them to create new clusters by placing cluster definitions in
+Once your environment templates are ready, you can use them to create new clusters by placing cluster definitions
 in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
 
@@ -63,8 +67,20 @@ We have 3 example clusters under [/bases/environments/stages](/bases/environment
 - [staging](/bases/environments/stages/staging)
 - [prod](/bases/environments/stages/prod)
 
+```sh
+mkdir -p bases/environments/stages/dev
+mkdir -p bases/environments/stages/staging
+mkdir -p bases/environments/stages/prod
+```
+
 Each of these contain a `hello_app_cluster` example.
 This name might already be familiar to you from [Preparing a cluster definition template](./add_wc_template.md) section.
+
+```sh
+mkdir -p bases/environments/stages/dev/hello_app_cluster
+mkdir -p bases/environments/stages/staging/hello_app_cluster
+mkdir -p bases/environments/stages/prod/hello_app_cluster
+```
 
 By checking each `kustomization.yaml` files - the [dev](
 /bases/environments/stages/dev/hello_app_cluster/kustomization.yaml) one for example - you will notice that they
@@ -84,20 +100,124 @@ Let's take a closer look at our examples.
 
 #### The development cluster
 
+Set up our environment first.
+
+```sh
+export WC_NAME=CLUSTER_NAME
+export ORG_NAME=ORGANIZATION
+export GIT_REPOSITORY_NAME=REPOSITORY_NAME
+```
+
+Change our working directory to the `hello_app_cluster` development cluster environment base.
+
+```sh
+cd bases/environments/stages/dev/hello_app_cluster
+```
+
+Let's crete the `kustomization.yaml` file for the development cluster.
+
+```sh
+cat <<EOF > kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: create
+    files:
+      - values=hello_world_app_user_config.yaml
+    name: ${WC_NAME}-hello-world-user-config
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+resources:
+  - automatic_updates/
+  - imagepolicies.yaml
+  - imagerepositories.yaml
+  - ../../../../cluster_templates/hello_app_cluster
+EOF
+```
+
 In [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
 [hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters.
 We can  provide overrides to the settings via the [hello_world_app_user_config.yaml](
 /bases/environments/stages/dev/hello_app_cluster/hello_world_app_user_config.yaml) file, for example
 setting a lower thread pool size.
 
-```yaml
+```sh
+cat <<EOF > hello_world_app_user_config.yaml
 thread_pool_size: 16
+EOF
 ```
 
 It also makes sense to configure `Automatic Updates` for our development cluster. We store these configurations under
 the [/bases/environments/stages/dev/hello_app_cluster/automatic_updates](
 /bases/environments/stages/dev/hello_app_cluster/automatic_updates) folder. You can read more about how
 `Automatic Updates` work [here](/docs/apps/automatic_updates_appcr.md)
+
+```sh
+mkdir automatic_updates
+
+# Let's create the Kustomization for automatic updates
+cat <<EOF > automatic_updates/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+commonLabels:
+  giantswarm.io/managed-by: flux
+kind: Kustomization
+resources:
+- catalog.yaml
+- imageupdate.yaml
+EOF
+
+# Let's create the catalog
+cat <<EOF > automatic_updates/catalog.yaml
+apiVersion: application.giantswarm.io/v1alpha1
+kind: Catalog
+metadata:
+  labels:
+    application.giantswarm.io/catalog-visibility: internal
+  name: giantswarm-catalog-oci
+  namespace: org-${ORG_NAME}
+spec:
+  description: giantswarm-catalog-oci
+  logoURL: "https://avatars.githubusercontent.com/u/7556340?s=60&v=4"
+  storage:
+    URL: oci://giantswarmpublic.azurecr.io/giantswarm-catalog/
+    type: helm
+  title: giantswarm-catalog-oci
+EOF
+
+# Let' create the image update automation for Flux
+cat <<EOF > automatic_updates/imageupdate.yaml
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: ${cluster_id}-image-updates
+  namespace: org-${ORG_NAME}
+spec:
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.github.com
+        name: fluxcdbot
+      messageTemplate: |
+        automated app upgrades:
+        {{ range $image, $_ := .Updated.Images -}}
+        - {{ $image.Repository }} to {{ $image.Identifier }}
+        {{ end -}}
+    push:
+      branch: main
+  interval: 1m0s
+  sourceRef:
+    kind: GitRepository
+    name: ${GIT_REPOSITORY_NAME}
+  update:
+    path: ./management-clusters/MC_NAME
+    strategy: Setters
+EOF
+```
 
 Now that we have automation set up around `Automatic Updates` we can set up our rules for the development cluster
 on how it should update `Apps`. We need 2 things to achieve that, and we recommend setting up one multi-document YAML
@@ -110,14 +230,25 @@ where to look for updates stored in: [imagerepositories.yaml](
 Let's tell Flux to look for available images for the `hello-world-app`
 in the `giantswarmpublic.azurecr.io/giantswarm-catalog` registry every 10 minutes.
 
-```yaml
+```sh
+cat <<EOF > imagerepositories.yaml
+---
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageRepository
 metadata:
-  name: ${cluster_id}-hello-app
+  name: ${WC_NAME}-hello-app
 spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
   interval: 10m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: ${WC_NAME}-simple-db-app
+spec:
+  image: giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app
+  interval: 10m0s
+EOF
 ```
 
 The second half are the [ImagePolicy](https://fluxcd.io/docs/components/image/imagepolicies/) definitions to tell Flux
@@ -126,24 +257,69 @@ which versions it should automatically apply stored in: [imagepolicies.yaml](
 
 Let's have Flux automatically roll out all `-dev` releases that are of at least version `0.1.0` or above.
 
-```yaml
+```sh
+cat <<EOF > imagepolicies.yaml
+---
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${cluster_id}-hello-app
+  name: ${WC_NAME}-hello-app
 spec:
   filterTags:
     pattern: '.*-dev.*'
   imageRepositoryRef:
-    name: ${cluster_id}-hello-app
+    name: ${WC_NAME}-hello-app
   policy:
     semver:
       range: '>=0.1.0'
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImagePolicy
+metadata:
+  name: ${WC_NAME}-simple-db-app
+spec:
+  imageRepositoryRef:
+    name: ${WC_NAME}-simple-db
+  policy:
+    semver:
+      range: '>=0.1.0 <0.2.0'
+EOF
+```
+
+We can also use `Kustomization` patches to set exact versions to use in the cluster's `kustomization.yaml` file.
+
+```sh
+cat <<EOF >> kustomization.yaml
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: '0.1.8
+    target:
+      kind: App
+      name: ${WC_NAME}-hello-world
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: '0.1.0'
+    target:
+      kind: App
+      name: ${WC_NAME}-simple-db
+EOF
 ```
 
 And pretty much that is it for the development cluster. Let's look at the staging cluster next to the minor differences.
 
 #### The staging cluster
+
+Let's change our working directory to the staging cluster.
+
+```sh
+cd ../../staging/hello_app_cluster
+```
+
+We will use the same environment variables and `kustomization.yaml` for this cluster template as we did for the
+development cluster.
 
 It is similar to the development cluster in the following manners:
 
@@ -155,26 +331,45 @@ It also provides overrides to the [hello-web-app app set](/bases/app_sets/hello-
 /bases/environments/stages/staging/hello_app_cluster/hello_world_app_user_config.yaml).
 We want this environment to be closer to production so let's say we set a larger thread pool size.
 
-```yaml
+```sh
+cat <<EOF > hello_world_app_user_config.yaml
 thread_pool_size: 64
+EOF
 ```
+
+Setting up the `automatic_updates` folder and the `imagerepositories.yaml` files requires exactly the same steps
+as we did above for the development cluster.
 
 We also want the images automatically rolled out here to be more stable, so we have a slightly different
 [imagepolicies.yaml](/bases/environments/stages/staging/hello_app_cluster/imagepolicies.yaml) here where
 we tell Flux to automatically install all stable versions that are at least version `0.1.0` but we do not want
 to automatically introduce possibly breaking changes in major version bump, so let's stay below `1.0.0`.
 
-```yaml
+```sh
+cat <<EOF > imagepolicies.yaml
+---
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${cluster_id}-hello-app
+  name: ${WC_NAME}-hello-app
 spec:
   imageRepositoryRef:
-    name: ${cluster_id}-hello-app
+    name: ${WC_NAME}-hello-app
   policy:
     semver:
       range: '>=0.1.0 <1.0.0'
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImagePolicy
+metadata:
+  name: ${WC_NAME}-simple-db-app
+spec:
+  imageRepositoryRef:
+    name: ${WC_NAME}-simple-db
+  policy:
+    semver:
+      range: '>=0.1.0 <0.2.0'
+EOF
 ```
 
 So basically our staging cluster in our example is a smaller scale cluster carrying stable versions of our applications.
@@ -183,16 +378,68 @@ Now, let's take a look at the production cluster example.
 
 #### The production cluster
 
+Let's change our working directory to the staging cluster.
+
+```sh
+cd ../../prod/hello_app_cluster
+```
+
+We will use the same environment variables for this cluster template as we did for the development cluster.
+
+Let's create the `Kustomization` for the production cluster environment template.
+
+```sh
+cat <<EOF > kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: create
+    files:
+      - values=hello_world_app_user_config.yaml
+    name: ${WC_NAME}-hello-world-user-config
+  - behavior: replace
+    files:
+      - values=cluster_user_config.yaml
+    name: ${WC_NAME}-user-config
+    namespace: org-${ORG_NAME}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+resources:
+  - ../../../../cluster_templates/hello_app_cluster
+EOF
+```
+
 It is similar to the staging cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 
-Then it provides some overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
+Note in the `kustomization.yaml` above that we create another `ConfigMap` for the production cluster
+that contains some extra settings for our cluster.
+
+```sh
+cat <<EOF > cluster_user_config.yaml
+values: |
+  cloudConfig: cloud-config-giantswarm-2
+  cloudName: openstack
+  externalNetworkID: prod-bbbb-cccc-dddd-eeeeeeeeeeee
+  nodeClasses:
+    - bootFromVolume: true
+      diskSize: 150
+      flavor: n1.large
+      image: dddddddd-dddd-dddd-dddd-dddddddddddd
+      name: default
+EOF
+```
+
+Then we provide some overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
 [hello_world_app_user_config.yaml](
 /bases/environments/stages/prod/hello_app_cluster/hello_world_app_user_config.yaml).
 
 ```yaml
+cat <<EOF > hello_world_app_user_config.yaml
 thread_pool_size: 256
+EOF
 ```
 
 Notice however that we decided not to set up `Automatic Updates` for this cluster.
@@ -201,10 +448,8 @@ Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
 in out App CRs.
 
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-# ...
+```sh
+cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
@@ -212,14 +457,15 @@ patches:
         value: 0.1.8
     target:
       kind: App
-      name: \${cluster_id}-hello-world
+      name: ${WC_NAME}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
         value: 0.1.0
     target:
       kind: App
-      name: \${cluster_id}-simple-db
+      name: ${WC_NAME}-simple-db
+EOF
 ```
 
 We tell Flux to use version `0.1.8` of `hello-world-app` and version `0.1.0` of `simple-db-app`.
