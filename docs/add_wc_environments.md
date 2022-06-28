@@ -41,7 +41,7 @@ for `dev/staging/prod` environments or a specific IP range, certificate or ingre
 like `us-east-1/us-west-2`.
 
 To create an environment template, you need to make a  directory in `environments` that describes the best the
-differentating factor for that kind of environment, then you should create subfolder there for different possible values.
+differentiating factor for that kind of environment, then you should create sub folder there for different possible values.
 For example, for multiple data centers, we recommend putting region specific configuration into
 `/bases/environments/regions` folder and under there create `ap-east-1`, `eu-central-1` and `us-west-2` folders.
 
@@ -52,7 +52,7 @@ in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 > :construction: Please note that if you want to use multiple environment templates to create a single cluster
 that uses `App CR`s for deployments, like you would like to use `dev` out of `staging` layout to set app configuration
 and then use `east` from the `data-centers` to set the IP ranges, you will run into issues around merging
-configurations, as currently one configuration source (ie. `ConfigMap` in `spec.config.configMap`) completely
+configurations, as currently one configuration source (i.e. `ConfigMap` in `spec.config.configMap`) completely
 overrides the whole value of the same attribute coming from the other base. We're working to remove this limitation.
 
 ### Stages
