@@ -1,11 +1,10 @@
 # Add a new Management Cluster
 
-- [Add a new Management Cluster](#add-a-new-management-cluster)
-  - [Export Management Cluster codename](#export-management-cluster-codename)
-  - [Flux GPG master key pair](#flux-gpg-master-key-pair)
-  - [Directory tree](#directory-tree)
-  - [Initial cluster configuration](#initial-cluster-configuration)
-  - [Recommended next steps](#recommended-next-steps)
+- [Export Management Cluster codename](#export-management-cluster-codename)
+- [Flux GPG master key pair](#flux-gpg-master-key-pair)
+- [Directory tree](#directory-tree)
+- [Initial cluster configuration](#initial-cluster-configuration)
+- [Recommended next steps](#recommended-next-steps)
 
 Follow the instructions below to add a new management cluster to this repository. You need to have a valid connection
 (`kube.config`) to the Management Cluster. The instructions respect the [repository structure](./repo_structure.md).
@@ -60,10 +59,18 @@ en- and decrypt real user-related data.
 
     ```sh
     gpg --list-secret-keys "${KEY_NAME}"
+    ```
 
+    The command above should produce the output like:
+
+    ```text
     sec   rsa4096 2021-11-25 [SC]
           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    ```
 
+    Now, export the fingerprint:
+
+    ```sh
     export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
