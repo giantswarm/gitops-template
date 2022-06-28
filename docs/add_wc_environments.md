@@ -103,6 +103,7 @@ Let's take a closer look at our examples.
 Set up our environment first.
 
 ```sh
+export MC_NAME=CODENAME
 export WC_NAME=CLUSTER_NAME
 export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
@@ -479,6 +480,42 @@ Just as any other Workload Clusters we define them in
 [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters).
 
+Relative to the root of the repository, let's change our working directory to our `workload-clusters` folder.
+
+```sh
+cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
+```
+
+Then let's tell Flux to manage our cluster instance.
+
+```sh
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: clusters-${WC_NAME}
+  namespace: default
+spec:
+  interval: 1m
+  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1"
+  postBuild:
+    substitute:
+      cluster_domain: "MY_DOMAIN"
+      cluster_id: "HELLO_APP_DEV_1"
+      cluster_name: "HELLO_APP_DEV_1"
+      cluster_release: "0.8.1"
+      default_apps_release: "0.2.0"
+      organization: "${ORG_NAME}"
+  prune: false
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: ${GIT_REPOSITORY_NAME}
+  timeout: 2m
+
+EOF
+```
+
 In our example we create one instance from each cluster environment base:
 
 - from the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
@@ -490,12 +527,16 @@ In our example we create one instance from each cluster environment base:
 
 All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
 
-```yaml
+```sh
+mkdir HELLO_APP_DEV_CLUSTER_1
+
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 resources:
   - ../../../../../../bases/environments/stages/dev/hello_app_cluster
+EOF
 ```
 
 It basically just references our environment base. But in more complex examples it could do more.
