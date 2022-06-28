@@ -22,7 +22,7 @@ spec:
   interval: 1m0s
   sourceRef:
     kind: GitRepository
-    name: ${gitops_repo}
+    name: https://github.com/GITOPS_REPO
   update:
     path: ./management-clusters/MC_NAME
     strategy: Setters

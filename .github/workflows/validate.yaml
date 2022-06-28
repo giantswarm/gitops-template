@@ -43,10 +43,11 @@ jobs:
         id: validate
         with:
           run: "./tools/test-all-ffb validate"
-      - run: "echo ${{ github.ref_name }}"
       - name: Find validation comment
         uses: peter-evans/find-comment@v2
-        if: github.ref_name != 'main'
+        # We always want to look up the comment for the result of the previous `validation` step result message (whether current validation failed or not)
+        # See: https://docs.github.com/en/actions/learn-github-actions/expressions#always
+        if: always() && github.ref_name != 'main'
         continue-on-error: true
         id: fc
         with:
@@ -55,7 +56,9 @@ jobs:
           body-includes: Validation output log
       - name: Delete old comment
         uses: jungwinter/comment@v1
-        if: github.ref_name != 'main'
+        # We always want to delete the comment for the result of the previous `validation` step result message (whether current validation failed or not)
+        # See: https://docs.github.com/en/actions/learn-github-actions/expressions#always
+        if: always() && github.ref_name != 'main'
         continue-on-error: true
         with:
           type: delete
@@ -63,7 +66,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create or update validation comment
         uses: peter-evans/create-or-update-comment@v2
-        if: github.ref_name != 'main'
+        # We always want to comment back the result of the current `validation` step (whether it failed or not)
+        # See: https://docs.github.com/en/actions/learn-github-actions/expressions#always
+        if: always() && github.ref_name != 'main'
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
