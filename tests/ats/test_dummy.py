@@ -3,7 +3,7 @@ import os
 import platform
 import shutil
 import subprocess
-import sys
+import stat
 import tempfile
 from typing import Callable, Iterable, Any
 
@@ -25,7 +25,7 @@ GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def flux_app_deployment(kube_cluster: Cluster, app_factory: AppFactoryFunc) -> ConfiguredApp:
     flux_app = app_factory("flux-app", FLUX_VERSION, "giantswarm", "default",
                            "https://giantswarm.github.io/giantswarm-catalog/")
@@ -46,36 +46,44 @@ def flux_app_deployment(kube_cluster: Cluster, app_factory: AppFactoryFunc) -> C
 
 
 @pytest.fixture
-def gs_crds(kube_cluster: Cluster) -> Iterable[Any]:
+def gs_crds(kube_cluster: Cluster) -> None:
     logger.debug("Deploying Giant Swarm CRDs to the test cluster")
-    yield kube_cluster.kubectl(f"create -f {GS_CRDS_COMMIT_URL}")
-    logger.debug("Deleting Giant Swarm CRDs from the test cluster")
-    kube_cluster.kubectl(f"delete -f {GS_CRDS_COMMIT_URL}")
+    kube_cluster.kubectl(f"apply -f {GS_CRDS_COMMIT_URL}")
 
 
 @pytest.fixture
-def capi_controllers() -> None:
-    clusterctl_path = shutil.which("clusterctl")
+def capi_controllers(kube_config: str) -> None:
+    cluster_ctl_path = shutil.which("clusterctl")
 
-    if not clusterctl_path:
-        logger.debug("Cannot find existing 'clusterctl' binary, attempting to download")
-        uname_info = platform.uname()
-        bin_type = uname_info.system.lower()
-        bin_type += "-" + "arm64" if uname_info.machine == "arm64" else "amd64"
-        url = CLUSTER_CTL_URL + bin_type
-        r = requests.get(url, allow_redirects=True)
-        clusterctl_path = os.path.join(tempfile.gettempdir(), "clusterctl")
-        open(clusterctl_path, 'wb').write(r.content)
-    logger.debug(f"Using '{clusterctl_path}' to bootstrap CAPI controllers")
+    if not cluster_ctl_path:
+        cluster_ctl_path = os.path.join(tempfile.gettempdir(), "clusterctl")
+
+        if not os.access(cluster_ctl_path, os.X_OK):
+            logger.debug("Cannot find existing 'clusterctl' binary, attempting to download")
+            uname_info = platform.uname()
+            sys_type = uname_info.system.lower()
+            arch_type = "arm64" if uname_info.machine == "arm64" else "amd64"
+            url = f"{CLUSTER_CTL_URL}-{sys_type}-{arch_type}"
+            r = requests.get(url, allow_redirects=True)
+            if not r.ok:
+                logger.error(f"Can't download 'clusterctl': [{r.status_code}] {r.reason}")
+                raise Exception("error downloading `clusterctl`")
+            open(cluster_ctl_path, 'wb').write(r.content)
+            st = os.stat(cluster_ctl_path)
+            os.chmod(cluster_ctl_path, st.st_mode | stat.S_IEXEC)
+
+    logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
     infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
-    # FIXME: probably also needs
-    # export AWS_B64ENCODED_CREDENTIALS = "${MOCK_CREDENTIALS}"
-    # export AZURE_SUBSCRIPTION_ID_B64="${MOCK_CREDENTIALS}"
-    # export AZURE_TENANT_ID_B64="${MOCK_CREDENTIALS}"
-    # export AZURE_CLIENT_ID_B64="${MOCK_CREDENTIALS}"
-    # export AZURE_CLIENT_SECRET_B64="${MOCK_CREDENTIALS}"
-    # export EXP_MACHINE_POOL="true"`
-    run_res = subprocess.run([clusterctl_path, "init", f"--infrastructure={infra_providers}"])
+    env_vars = os.environ | {
+        "AWS_B64ENCODED_CREDENTIALS": "abc123",
+        "AZURE_SUBSCRIPTION_ID_B64": "abc123",
+        "AZURE_TENANT_ID_B64": "abc123",
+        "AZURE_CLIENT_ID_B64": "abc123",
+        "AZURE_CLIENT_SECRET_B64": "abc123",
+        "EXP_MACHINE_POOL": "true"}
+    run_res = subprocess.run(
+        [cluster_ctl_path, "init", "--kubeconfig", kube_config, f"--infrastructure={infra_providers}"],
+        capture_output=True, env=env_vars)
     if run_res.returncode != 0:
         logger.error(f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'")
         raise Exception(f"Cannot bootstrap CAPI")
