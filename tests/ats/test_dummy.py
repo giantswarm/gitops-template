@@ -8,6 +8,7 @@ import stat
 import tempfile
 from typing import Callable, Iterable, Any
 
+import pykube
 import pytest
 import requests
 from pytest_helm_charts.clusters import Cluster
@@ -28,32 +29,18 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def flux_app_deployment(kube_cluster: Cluster, app_factory: AppFactoryFunc) -> ConfiguredApp:
-    flux_app = app_factory("flux-app", FLUX_VERSION, "giantswarm", "default",
-                           "https://giantswarm.github.io/giantswarm-catalog/")
-    wait_for_deployments_to_run(
-        kube_cluster.kube_client,
-        [
-            "helm-controller",
-            "image-automation-controller",
-            "image-reflector-controller",
-            "kustomize-controller",
-            "notification-controller",
-            "source-controller",
-        ],
-        FLUX_NAMESPACE_NAME,
-        FLUX_DEPLOYMENTS_READY_TIMEOUT,
-    )
-    return flux_app
+    return app_factory("flux-app", FLUX_VERSION, "giantswarm", "default",
+                       "https://giantswarm.github.io/giantswarm-catalog/")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def gs_crds(kube_cluster: Cluster) -> None:
     logger.debug("Deploying Giant Swarm CRDs to the test cluster")
     kube_cluster.kubectl(f"apply -f {GS_CRDS_COMMIT_URL}")
 
 
-@pytest.fixture
-def capi_controllers(kube_config: str) -> None:
+@pytest.fixture(scope="module")
+def capi_controllers(kube_config: str) -> Iterable[Any]:
     cluster_ctl_path = shutil.which("clusterctl")
 
     if not cluster_ctl_path:
@@ -89,10 +76,18 @@ def capi_controllers(kube_config: str) -> None:
     if run_res.returncode != 0:
         logger.error(f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'")
         raise Exception(f"Cannot bootstrap CAPI")
+    yield None
+    run_res = subprocess.run(
+        [cluster_ctl_path, "delete", "--kubeconfig", kube_config, "--all"],
+        capture_output=True, env=env_vars)
+    if run_res.returncode != 0:
+        logger.error(f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'")
+        raise Exception(f"Cannot clean up CAPI")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def gitops_environment(flux_app_deployment: ConfiguredApp,
+                       flux_deployments: list[pykube.Deployment],
                        gs_crds: Callable[[Cluster], Iterable[Any]],
                        capi_controllers: Callable[[], None]) -> ConfiguredApp:
     return flux_app_deployment
