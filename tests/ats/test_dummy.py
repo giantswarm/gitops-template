@@ -119,12 +119,12 @@ def gitops_flux_deployment(git_repository_factory: GitRepositoryFactoryFunc,
         },
     })
     gpg_master_key.create()
-    git_repo = git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "3600s", FLUX_GIT_REPO_URL,
+    git_repo = git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "6s", FLUX_GIT_REPO_URL,
                                       FLUX_GIT_REPO_BRANCH)
     kube_cluster.kubectl("apply -f ../../management-clusters/MC_NAME/MC_NAME.yaml")
     yield None
-    kube_cluster.kubectl("delete -f ../../management-clusters/MC_NAME/MC_NAME.yaml")
     gpg_master_key.delete()
+    kube_cluster.kubectl("delete -f ../../management-clusters/MC_NAME/MC_NAME.yaml")
 
 
 @pytest.fixture(scope="module")
