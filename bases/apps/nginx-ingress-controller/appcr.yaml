@@ -8,6 +8,7 @@ spec:
   config:
     configMap:
       name: ${cluster_id}-nginx-ingress-controller-values
+      namespace: kube-system
   kubeConfig:
     inCluster: false
   name: nginx-ingress-controller-app

@@ -7,7 +7,9 @@ spec:
   config:
     configMap:
       name: ${cluster_id}-hello-world-values
+      namespace: hello-world-app
   kubeConfig:
     inCluster: false
   name: hello-world-app
+  namespace: hello-world-app
   version: 0.2.0
