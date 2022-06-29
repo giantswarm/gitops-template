@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: create
+    files:
+      - values=hello_world_app_user_config.yaml
+    name: ${cluster_id}-hello-world-user-config
+  - behavior: replace
+    files:
+      - values=cluster_user_config.yaml
+    name: ${cluster_name}-user-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+# (optional) here we can enforce versions for both component of the app that we want in prod
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: 0.1.8
+    target:
+      kind: App
+      name: \${cluster_id}-hello-world
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: 0.1.0
+    target:
+      kind: App
+      name: \${cluster_id}-simple-db
+# block end
+resources:
+  - ../../../../cluster_templates/hello_app_cluster

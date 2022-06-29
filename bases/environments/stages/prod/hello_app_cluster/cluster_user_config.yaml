@@ -1,0 +1,10 @@
+values: |
+  cloudConfig: cloud-config-giantswarm-2
+  cloudName: openstack
+  externalNetworkID: prod-bbbb-cccc-dddd-eeeeeeeeeeee
+  nodeClasses:
+    - bootFromVolume: true
+      diskSize: 150
+      flavor: n1.large
+      image: dddddddd-dddd-dddd-dddd-dddddddddddd
+      name: default
