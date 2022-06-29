@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 import platform
@@ -15,7 +16,7 @@ from pytest_helm_charts.k8s.deployment import wait_for_deployments_to_run
 
 FLUX_VERSION = "0.11.0"
 CLUSTER_CTL_VERSION = "1.1.4"
-CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v0.7.2", "azure": "v0.5.3"}
+CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT: int = 180
@@ -74,12 +75,13 @@ def capi_controllers(kube_config: str) -> None:
 
     logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
     infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
+    fake_secret = base64.b64encode(b'something')
     env_vars = os.environ | {
-        "AWS_B64ENCODED_CREDENTIALS": "abc123",
-        "AZURE_SUBSCRIPTION_ID_B64": "abc123",
-        "AZURE_TENANT_ID_B64": "abc123",
-        "AZURE_CLIENT_ID_B64": "abc123",
-        "AZURE_CLIENT_SECRET_B64": "abc123",
+        "AWS_B64ENCODED_CREDENTIALS": fake_secret,
+        "AZURE_SUBSCRIPTION_ID_B64": fake_secret,
+        "AZURE_TENANT_ID_B64": fake_secret,
+        "AZURE_CLIENT_ID_B64": fake_secret,
+        "AZURE_CLIENT_SECRET_B64": fake_secret,
         "EXP_MACHINE_POOL": "true"}
     run_res = subprocess.run(
         [cluster_ctl_path, "init", "--kubeconfig", kube_config, f"--infrastructure={infra_providers}"],
