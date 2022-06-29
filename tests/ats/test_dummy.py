@@ -12,8 +12,13 @@ import pykube
 import pytest
 import requests
 from pytest_helm_charts.clusters import Cluster
+from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.k8s.deployment import wait_for_deployments_to_run
+
+FLUX_GIT_REPO_NAME = "YOUR_REPO"
+FLUX_GIT_REPO_URL = "https://github.com/giantswarm/pytest-helm-charts"
+FLUX_GIT_REPO_BRANCH = "main"
 
 FLUX_VERSION = "0.11.0"
 CLUSTER_CTL_VERSION = "1.1.4"
@@ -86,10 +91,16 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
 
 
 @pytest.fixture(scope="module")
+def gitops_flux_deployment(git_repository_factory: GitRepositoryFactoryFunc) -> None:
+    git_repo = git_repository_factory(FLUX_GIT_REPO_NAME, "default", "3600s", FLUX_GIT_REPO_URL, FLUX_GIT_REPO_BRANCH)
+
+
+@pytest.fixture(scope="module")
 def gitops_environment(flux_app_deployment: ConfiguredApp,
                        flux_deployments: list[pykube.Deployment],
-                       gs_crds: Callable[[Cluster], Iterable[Any]],
-                       capi_controllers: Callable[[], None]) -> ConfiguredApp:
+                       gs_crds: None,
+                       capi_controllers: None,
+                       gitops_flux_deployment: None) -> ConfiguredApp:
     return flux_app_deployment
 
 
