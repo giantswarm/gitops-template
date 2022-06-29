@@ -115,7 +115,7 @@ def gitops_flux_deployment(git_repository_factory: GitRepositoryFactoryFunc,
         },
         "type": "Opaque",
         "data": {
-            "test": master_private_key,
+            "mc-name.master.asc": master_private_key,
         },
     })
     gpg_master_key.create()
