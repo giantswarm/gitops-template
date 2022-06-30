@@ -24,7 +24,9 @@ FLUX_GIT_REPO_BRANCH = "tests/deploy-gitops-repo"
 
 FLUX_OBJECTS_NAMESPACE = "default"
 FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"
+FLUX_IMPERSONATION_SA_NAME = "automation"
 
+FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
 GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
 
 FLUX_VERSION = "0.11.0"
@@ -96,9 +98,50 @@ def flux_app_deployment(kube_cluster: Cluster, app_factory: AppFactoryFunc) -> C
 #        logger.error(f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'")
 #        raise Exception(f"Cannot clean up CAPI")
 
+@pytest.fixture(scope="module")
+def init_namespaces(kube_cluster: Cluster) -> None:
+    env_var_namespaces = os.getenv(FLUX_INIT_NAMESPACES_ENV_VAR_NAME)
+
+    if env_var_namespaces:
+        namespaces = env_var_namespaces.split(",")
+    else:
+        namespaces = ["default"]
+
+    created_namespaces = []
+    for ns in namespaces:
+        ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_by_name(ns)
+        if not ns_on_cluster:
+            new_ns = pykube.Namespace(kube_cluster.kube_client, {"name": ns})
+            new_ns.create()
+            created_namespaces.append(new_ns)
+        sa_on_cluster = pykube.ServiceAccount.objects(kube_cluster.kube_client).filter(namespace=ns).get_by_name(FLUX_IMPERSONATION_SA_NAME)
+        if not sa_on_cluster:
+            pykube.ServiceAccount(kube_cluster.kube_client, {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}).create()
+            pykube.ClusterRoleBinding(kube_cluster.kube_client, {
+                "metadata": {
+                    "name": f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin",
+                },
+                "roleRef": {
+                    "kind": "ClusterRole",
+                    "name": "cluster-admin"
+                },
+                "subjects": [
+                                {
+                                    "kind": "ServiceAccount",
+                                    "name": FLUX_IMPERSONATION_SA_NAME,
+                                    "namespace": ns
+                                }
+                            ]
+            }).create()
+    yield
+
+    for ns in created_namespaces:
+        ns.delete()
+
 
 @pytest.fixture(scope="module")
 def gitops_flux_deployment(git_repository_factory: GitRepositoryFactoryFunc,
+                           init_namespaces: Any,
                            kube_cluster: Cluster) -> Iterable[Any]:
     # create the master gpg secret used to unlock all encrypted values
     master_private_key = os.environ[GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME]
