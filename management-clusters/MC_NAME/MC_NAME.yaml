@@ -8,6 +8,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-gpg-master
+      namespace: default
   interval: 1m0s
   path: ./management-clusters/MC_NAME
   prune: true
