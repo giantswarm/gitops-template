@@ -109,29 +109,31 @@ def init_namespaces(kube_cluster: Cluster) -> None:
 
     created_namespaces = []
     for ns in namespaces:
-        ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_by_name(ns)
+        ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(name=ns)
         if not ns_on_cluster:
-            new_ns = pykube.Namespace(kube_cluster.kube_client, {"name": ns})
+            new_ns = pykube.Namespace(kube_cluster.kube_client, {"metadata": {"name": ns}})
             new_ns.create()
             created_namespaces.append(new_ns)
-        sa_on_cluster = pykube.ServiceAccount.objects(kube_cluster.kube_client).filter(namespace=ns).get_by_name(FLUX_IMPERSONATION_SA_NAME)
+        sa_on_cluster = pykube.ServiceAccount.objects(kube_cluster.kube_client).filter(namespace=ns).get_or_none(
+            name=FLUX_IMPERSONATION_SA_NAME)
         if not sa_on_cluster:
-            pykube.ServiceAccount(kube_cluster.kube_client, {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}).create()
+            pykube.ServiceAccount(kube_cluster.kube_client,
+                                  {"metadata": {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}}).create()
             pykube.ClusterRoleBinding(kube_cluster.kube_client, {
                 "metadata": {
-                    "name": f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin",
+                    "name": f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin-{ns}",
                 },
                 "roleRef": {
                     "kind": "ClusterRole",
                     "name": "cluster-admin"
                 },
                 "subjects": [
-                                {
-                                    "kind": "ServiceAccount",
-                                    "name": FLUX_IMPERSONATION_SA_NAME,
-                                    "namespace": ns
-                                }
-                            ]
+                    {
+                        "kind": "ServiceAccount",
+                        "name": FLUX_IMPERSONATION_SA_NAME,
+                        "namespace": ns
+                    }
+                ]
             }).create()
     yield
 
