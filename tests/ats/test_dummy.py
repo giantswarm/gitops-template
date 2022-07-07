@@ -7,16 +7,20 @@ import subprocess
 import stat
 import tempfile
 import validators
-from typing import Callable, Iterable, Any
+from typing import Callable, Iterable, Any, Type, TypeVar
 
 import pykube
 import pytest
 import requests
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
-from pytest_helm_charts.flux.kustomization import KustomizationFactoryFunc
+from pytest_helm_charts.flux.helm_release import HelmReleaseCR
+from pytest_helm_charts.flux.kustomization import KustomizationFactoryFunc, KustomizationCR, \
+    wait_for_kustomizations_to_be_ready
+from pytest_helm_charts.flux.utils import _flux_cr_ready, NamespacedFluxCR
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.k8s.deployment import wait_for_deployments_to_run
+from pytest_helm_charts.utils import wait_for_objects_condition
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
@@ -30,10 +34,14 @@ CLUSTER_CTL_VERSION = "1.1.4"
 CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 
 FLUX_NAMESPACE_NAME = "default"
-FLUX_DEPLOYMENTS_READY_TIMEOUT: int = 180
+FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
+FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
 CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl-"
 GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions/15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
 GITOPS_TOP_DIR = "../../management-clusters"
+
+TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
+
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +225,31 @@ def gitops_environment(
     return
 
 
+def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -> None:
+    namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
+    for ns in namespaces:
+        objects = obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
+        if len(objects.response['items']) == 0:
+            continue
+        obj_names = [o.name for o in objects]
+        logger.debug(f"Waiting max {FLUX_OBJECTS_READY_TIMEOUT_SEC} s for the following {obj_type.__name__} objects "
+                     f"to be ready in '{ns.name}' namespace: '{obj_names}'.")
+        wait_for_objects_condition(
+            kube_cluster.kube_client,
+            obj_type,
+            obj_names,
+            ns.name,
+            _flux_cr_ready,
+            FLUX_OBJECTS_READY_TIMEOUT_SEC,
+            missing_ok=False,
+        )
+
+
 @pytest.mark.smoke
-def test_dummy(gitops_environment) -> None:
-    print("good")
-    pass
+def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment) -> None:
+    check_flux_objects_successful(kube_cluster, KustomizationCR)
+
+
+@pytest.mark.smoke
+def test_helm_release_successful(kube_cluster: Cluster, gitops_environment) -> None:
+    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
