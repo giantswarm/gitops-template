@@ -7,7 +7,7 @@ import subprocess
 import stat
 import tempfile
 import validators
-from typing import Callable, Iterable, Any, Type, TypeVar
+from typing import Iterable, Any, Type, TypeVar
 
 import pykube
 import pytest
@@ -15,11 +15,9 @@ import requests
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
-from pytest_helm_charts.flux.kustomization import KustomizationFactoryFunc, KustomizationCR, \
-    wait_for_kustomizations_to_be_ready
+from pytest_helm_charts.flux.kustomization import KustomizationCR
 from pytest_helm_charts.flux.utils import _flux_cr_ready, NamespacedFluxCR
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
-from pytest_helm_charts.k8s.deployment import wait_for_deployments_to_run
 from pytest_helm_charts.utils import wait_for_objects_condition
 
 FLUX_GIT_REPO_NAME = "your-repo"
@@ -27,7 +25,6 @@ FLUX_GIT_REPO_NAME = "your-repo"
 FLUX_OBJECTS_NAMESPACE = "default"
 FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"
 FLUX_IMPERSONATION_SA_NAME = "automation"
-
 
 FLUX_VERSION = "0.11.0"
 CLUSTER_CTL_VERSION = "1.1.4"
@@ -41,7 +38,6 @@ GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions
 GITOPS_TOP_DIR = "../../management-clusters"
 
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
-
 
 logger = logging.getLogger(__name__)
 
@@ -93,56 +89,57 @@ def flux_app_deployment(kube_cluster: Cluster, app_factory: AppFactoryFunc) -> C
                        "https://giantswarm.github.io/giantswarm-catalog/")
 
 
-# @pytest.fixture(scope="module")
-# def gs_crds(kube_cluster: Cluster) -> None:
-#    logger.debug("Deploying Giant Swarm CRDs to the test cluster")
-#    kube_cluster.kubectl(f"apply -f {GS_CRDS_COMMIT_URL}")
-#
-#
-# @pytest.fixture(scope="module")
-# def capi_controllers(kube_config: str) -> Iterable[Any]:
-#    cluster_ctl_path = shutil.which("clusterctl")
-#
-#    if not cluster_ctl_path:
-#        cluster_ctl_path = os.path.join(tempfile.gettempdir(), "clusterctl")
-#
-#        if not os.access(cluster_ctl_path, os.X_OK):
-#            logger.debug("Cannot find existing 'clusterctl' binary, attempting to download")
-#            uname_info = platform.uname()
-#            sys_type = uname_info.system.lower()
-#            arch_type = "arm64" if uname_info.machine == "arm64" else "amd64"
-#            url = f"{CLUSTER_CTL_URL}-{sys_type}-{arch_type}"
-#            r = requests.get(url, allow_redirects=True)
-#            if not r.ok:
-#                logger.error(f"Can't download 'clusterctl': [{r.status_code}] {r.reason}")
-#                raise Exception("error downloading `clusterctl`")
-#            open(cluster_ctl_path, 'wb').write(r.content)
-#            st = os.stat(cluster_ctl_path)
-#            os.chmod(cluster_ctl_path, st.st_mode | stat.S_IEXEC)
-#
-#    logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
-#    infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
-#    fake_secret = base64.b64encode(b'something')
-#    env_vars = os.environ | {
-#        "AWS_B64ENCODED_CREDENTIALS": fake_secret,
-#        "AZURE_SUBSCRIPTION_ID_B64": fake_secret,
-#        "AZURE_TENANT_ID_B64": fake_secret,
-#        "AZURE_CLIENT_ID_B64": fake_secret,
-#        "AZURE_CLIENT_SECRET_B64": fake_secret,
-#        "EXP_MACHINE_POOL": "true"}
-#    run_res = subprocess.run(
-#        [cluster_ctl_path, "init", "--kubeconfig", kube_config, f"--infrastructure={infra_providers}"],
-#        capture_output=True, env=env_vars)
-#    if run_res.returncode != 0:
-#        logger.error(f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'")
-#        raise Exception(f"Cannot bootstrap CAPI")
-#    yield None
-#    run_res = subprocess.run(
-#        [cluster_ctl_path, "delete", "--kubeconfig", kube_config, "--all"],
-#        capture_output=True, env=env_vars)
-#    if run_res.returncode != 0:
-#        logger.error(f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'")
-#        raise Exception(f"Cannot clean up CAPI")
+@pytest.fixture(scope="module")
+def gs_crds(kube_cluster: Cluster) -> None:
+    logger.debug("Deploying Giant Swarm CRDs to the test cluster")
+    kube_cluster.kubectl(f"apply -f {GS_CRDS_COMMIT_URL}")
+
+
+@pytest.fixture(scope="module")
+def capi_controllers(kube_config: str) -> Iterable[Any]:
+    cluster_ctl_path = shutil.which("clusterctl")
+
+    if not cluster_ctl_path:
+        cluster_ctl_path = os.path.join(tempfile.gettempdir(), "clusterctl")
+
+        if not os.access(cluster_ctl_path, os.X_OK):
+            logger.debug("Cannot find existing 'clusterctl' binary, attempting to download")
+            uname_info = platform.uname()
+            sys_type = uname_info.system.lower()
+            arch_type = "arm64" if uname_info.machine == "arm64" else "amd64"
+            url = f"{CLUSTER_CTL_URL}-{sys_type}-{arch_type}"
+            r = requests.get(url, allow_redirects=True)
+            if not r.ok:
+                logger.error(f"Can't download 'clusterctl': [{r.status_code}] {r.reason}")
+                raise Exception("error downloading `clusterctl`")
+            open(cluster_ctl_path, 'wb').write(r.content)
+            st = os.stat(cluster_ctl_path)
+            os.chmod(cluster_ctl_path, st.st_mode | stat.S_IEXEC)
+
+    logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
+    infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
+    fake_secret = base64.b64encode(b'something')
+    env_vars = os.environ | {
+        "AWS_B64ENCODED_CREDENTIALS": fake_secret,
+        "AZURE_SUBSCRIPTION_ID_B64": fake_secret,
+        "AZURE_TENANT_ID_B64": fake_secret,
+        "AZURE_CLIENT_ID_B64": fake_secret,
+        "AZURE_CLIENT_SECRET_B64": fake_secret,
+        "EXP_MACHINE_POOL": "true"}
+    run_res = subprocess.run(
+        [cluster_ctl_path, "init", "--kubeconfig", kube_config, f"--infrastructure={infra_providers}"],
+        capture_output=True, env=env_vars)
+    if run_res.returncode != 0:
+        logger.error(f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'")
+        raise Exception(f"Cannot bootstrap CAPI")
+    yield None
+    run_res = subprocess.run(
+        [cluster_ctl_path, "delete", "--kubeconfig", kube_config, "--all"],
+        capture_output=True, env=env_vars)
+    if run_res.returncode != 0:
+        logger.error(f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'")
+        raise Exception(f"Cannot clean up CAPI")
+
 
 @pytest.fixture(scope="module")
 def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> None:
@@ -186,7 +183,6 @@ def gitops_flux_deployment(kube_cluster: Cluster,
                            init_namespaces: Any,
                            gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
     # create the master gpg secret used to unlock all encrypted values
-
     gpg_master_key = pykube.Secret(kube_cluster.kube_client, {
         "metadata": {
             "name": FLUX_SOPS_MASTER_KEY_SECRET_NAME,
@@ -206,8 +202,9 @@ def gitops_flux_deployment(kube_cluster: Cluster,
             manifest_path = os.path.join(GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml")
             kube_cluster.kubectl(f"apply -f {manifest_path}")
             applied_manifests.append(manifest_path)
+
     yield None
-    # FIXME: delete doens't return text, so this call fails
+
     for manifest_path in applied_manifests:
         kube_cluster.kubectl(f"delete -f {manifest_path}", output_format="text")
     gpg_master_key.delete()
@@ -215,14 +212,13 @@ def gitops_flux_deployment(kube_cluster: Cluster,
 
 @pytest.fixture(scope="module")
 def gitops_environment(
-        # flux_app_deployment: ConfiguredApp,
+        flux_app_deployment: ConfiguredApp,
         flux_deployments: list[pykube.Deployment],
-        # gs_crds: None,
-        # capi_controllers: None,
+        gs_crds: None,
+        capi_controllers: None,
         gitops_flux_deployment: None,
 ) -> ConfiguredApp:
-    # return flux_app_deployment
-    return
+    return flux_app_deployment
 
 
 def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -> None:
