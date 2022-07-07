@@ -33,6 +33,7 @@ FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT: int = 180
 CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl-"
 GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions/15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
+GITOPS_TOP_DIR = "../../management-clusters"
 
 logger = logging.getLogger(__name__)
 
@@ -191,11 +192,17 @@ def gitops_flux_deployment(kube_cluster: Cluster,
     gpg_master_key.create()
     git_repo = git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "6s",
                                       gitops_test_config.gitops_repo_url, gitops_test_config.gitops_repo_branch)
-    kube_cluster.kubectl("apply -f ../../management-clusters/MC_NAME/MC_NAME.yaml")
+    applied_manifests: list[str] = []
+    for dir_entry in os.scandir(GITOPS_TOP_DIR):
+        if dir_entry.is_dir:
+            manifest_path = os.path.join(GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml")
+            kube_cluster.kubectl(f"apply -f {manifest_path}")
+            applied_manifests.append(manifest_path)
     yield None
-    gpg_master_key.delete()
     # FIXME: delete doens't return text, so this call fails
-    kube_cluster.kubectl("delete -f ../../management-clusters/MC_NAME/MC_NAME.yaml")
+    for manifest_path in applied_manifests:
+        kube_cluster.kubectl(f"delete -f {manifest_path}", output_format="text")
+    gpg_master_key.delete()
 
 
 @pytest.fixture(scope="module")
