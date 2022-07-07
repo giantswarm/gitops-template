@@ -1,6 +1,6 @@
 apiVersion: security.giantswarm.io/v1alpha1
 kind: Organization
 metadata:
-  name: ORG_NAME
+  name: org_name  # TODO: change 'org_name' to your organization name
 spec: {}
 status: {}
