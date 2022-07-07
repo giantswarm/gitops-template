@@ -7,7 +7,9 @@ spec:
   config:
     configMap:
       name: ${cluster_id}-simple-db-values
+      namespace: simple-db-app
   kubeConfig:
     inCluster: false
   name: simple-db-app
+  namespace: simple-db-app
   version: 0.1.0

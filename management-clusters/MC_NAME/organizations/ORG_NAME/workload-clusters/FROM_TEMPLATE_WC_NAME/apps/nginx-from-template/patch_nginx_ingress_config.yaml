@@ -7,5 +7,7 @@ spec:
   userConfig:
     configMap:
       name: ${cluster_id}-nginx-ingress-controller-user-values
+      namespace: kube-system
     secret:
       name: ${cluster_id}-nginx-ingress-controller-user-secret
+      namespace: kube-system
