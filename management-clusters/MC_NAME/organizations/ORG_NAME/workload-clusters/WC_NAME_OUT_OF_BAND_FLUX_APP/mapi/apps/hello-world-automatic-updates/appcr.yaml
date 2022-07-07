@@ -1,0 +1,14 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    giantswarm.io/cluster: ${workload_cluster_name}
+    giantswarm.io/managed-by: flux
+  name: ${cluster_id}-hello-world-app-auto
+spec:
+  catalog: giantswarm-catalog-oci
+  kubeConfig:
+    inCluster: false
+  name: hello-world-app
+  namespace: hello-world-auto
+  version: v0.3.0 # {"$imagepolicy": "default:WC_NAME-hello-world:tag"}
