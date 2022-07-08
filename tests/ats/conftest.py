@@ -198,12 +198,12 @@ def gpg_master_key(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) 
 @pytest.fixture(scope="module")
 def gitops_flux_deployment(kube_cluster: Cluster,
                            git_repository_factory: GitRepositoryFactoryFunc,
-                           init_namespaces: Any,
-                           gpg_master_key: Secret,
+                           # init_namespaces: Any,
+                           # gpg_master_key: Secret,
                            gitops_test_config: GitOpsTestConfig
                            ) -> Iterable[Any]:
-    git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "60s", gitops_test_config.gitops_repo_url,
-                           gitops_test_config.gitops_repo_branch)
+    # git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "60s", gitops_test_config.gitops_repo_url,
+    #                        gitops_test_config.gitops_repo_branch)
     applied_manifests: list[str] = []
     for dir_entry in os.scandir(GITOPS_TOP_DIR):
         if dir_entry.is_dir:
@@ -219,10 +219,11 @@ def gitops_flux_deployment(kube_cluster: Cluster,
 
 @pytest.fixture(scope="module")
 def gitops_environment(
-        flux_app_deployment: ConfiguredApp,
+        # flux_app_deployment: ConfiguredApp,
         flux_deployments: list[pykube.Deployment],
-        gs_crds: None,
-        capi_controllers: None,
+        # gs_crds: None,
+        # capi_controllers: None,
         gitops_flux_deployment: None,
 ) -> ConfiguredApp:
-    return flux_app_deployment
+    # return flux_app_deployment
+    return None

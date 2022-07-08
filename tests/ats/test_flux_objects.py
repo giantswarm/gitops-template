@@ -1,8 +1,10 @@
 import logging
+import os.path
 from typing import Type, TypeVar
 
 import pykube
 import pytest
+import yaml
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
@@ -13,6 +15,8 @@ from pytest_helm_charts.utils import wait_for_objects_condition
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
 
 FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
+ASSERTIONS_DIR = "assertions"
+EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
 
 logger = logging.getLogger(__name__)
 
@@ -37,16 +41,35 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
         )
 
 
-@pytest.mark.smoke
-def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
-    check_flux_objects_successful(kube_cluster, KustomizationCR)
-
-
-@pytest.mark.smoke
-def test_helm_release_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
-    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
+#@pytest.mark.smoke
+#def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+#    check_flux_objects_successful(kube_cluster, KustomizationCR)
+#
+#
+#@pytest.mark.smoke
+#def test_helm_release_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+#    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
 
 
 @pytest.mark.smoke
 def test_positive_assertions(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
-    pass
+    assertions = {}
+    for entry in os.scandir(EXISTS_ASSERTIONS_DIR):
+        if not entry.is_file() or os.path.splitext(entry.name)[1] != ".yaml":
+            logger.debug(f"Ignoring file '{entry.name}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it doesn't "
+                         f"have a '.yaml' extension.")
+            continue
+        with open(entry.path) as f:
+            from_file_assertions = yaml.safe_load_all(f.read())
+            assertions[entry.path] = from_file_assertions
+
+    for file, assert_list in assertions.items():
+        # I'm out names for "assertion" :P
+        for ass in assert_list:
+            query = pykube.objects.APIObject(kube_cluster.kube_client, ass)
+            setattr(query, "kind", ass["kind"])
+            setattr(query, "version", ass["apiVersion"])
+            endpoint = ass["kind"].lower() + ("es" if ass["kind"][-1] == "s" else "s")
+            setattr(query, "endpoint", endpoint)
+            query.reload()
+            # TODO: assert metadata, spec and status
