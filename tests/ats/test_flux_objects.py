@@ -7,6 +7,7 @@ from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 from pytest_helm_charts.flux.utils import NamespacedFluxCR, _flux_cr_ready
+from pytest_helm_charts.giantswarm_app_platform.app import ConfiguredApp
 from pytest_helm_charts.utils import wait_for_objects_condition
 
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
@@ -37,10 +38,15 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
 
 
 @pytest.mark.smoke
-def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment) -> None:
+def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
     check_flux_objects_successful(kube_cluster, KustomizationCR)
 
 
 @pytest.mark.smoke
-def test_helm_release_successful(kube_cluster: Cluster, gitops_environment) -> None:
+def test_helm_release_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
     check_flux_objects_successful(kube_cluster, HelmReleaseCR)
+
+
+@pytest.mark.smoke
+def test_positive_assertions(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+    pass

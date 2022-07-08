@@ -43,7 +43,7 @@ class GitOpsTestConfig:
     _FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
     _GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
 
-    def __init__(self):
+    def __init__(self) -> None:
         env_var_namespaces = os.getenv(self._FLUX_INIT_NAMESPACES_ENV_VAR_NAME)
         if env_var_namespaces:
             namespaces = env_var_namespaces.split(",")
@@ -127,7 +127,9 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     if run_res.returncode != 0:
         logger.error(f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'")
         raise Exception(f"Cannot bootstrap CAPI")
+
     yield None
+
     run_res = subprocess.run(
         [cluster_ctl_path, "delete", "--kubeconfig", kube_config, "--all"],
         capture_output=True, env=env_vars)
@@ -137,7 +139,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
 
 
 @pytest.fixture(scope="module")
-def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> None:
+def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
     created_namespaces = []
     for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(name=ns)
@@ -166,6 +168,7 @@ def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig)
                     }
                 ]
             }).create()
+
     yield
 
     for ns in created_namespaces:
@@ -197,9 +200,10 @@ def gitops_flux_deployment(kube_cluster: Cluster,
                            git_repository_factory: GitRepositoryFactoryFunc,
                            init_namespaces: Any,
                            gpg_master_key: Secret,
-                           gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
-    git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "60s",
-                           gitops_test_config.gitops_repo_url, gitops_test_config.gitops_repo_branch)
+                           gitops_test_config: GitOpsTestConfig
+                           ) -> Iterable[Any]:
+    git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "60s", gitops_test_config.gitops_repo_url,
+                           gitops_test_config.gitops_repo_branch)
     applied_manifests: list[str] = []
     for dir_entry in os.scandir(GITOPS_TOP_DIR):
         if dir_entry.is_dir:
