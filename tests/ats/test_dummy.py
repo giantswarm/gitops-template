@@ -12,6 +12,7 @@ from typing import Iterable, Any, Type, TypeVar
 import pykube
 import pytest
 import requests
+from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
@@ -33,7 +34,7 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
 FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
-CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl-"
+CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl"
 GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions/15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
 GITOPS_TOP_DIR = "../../management-clusters"
 
@@ -178,10 +179,7 @@ def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig)
 
 
 @pytest.fixture(scope="module")
-def gitops_flux_deployment(kube_cluster: Cluster,
-                           git_repository_factory: GitRepositoryFactoryFunc,
-                           init_namespaces: Any,
-                           gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
+def gpg_master_key(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> Iterable[Secret]:
     # create the master gpg secret used to unlock all encrypted values
     gpg_master_key = pykube.Secret(kube_cluster.kube_client, {
         "metadata": {
@@ -194,6 +192,18 @@ def gitops_flux_deployment(kube_cluster: Cluster,
         },
     })
     gpg_master_key.create()
+
+    yield gpg_master_key
+
+    gpg_master_key.delete()
+
+
+@pytest.fixture(scope="module")
+def gitops_flux_deployment(kube_cluster: Cluster,
+                           git_repository_factory: GitRepositoryFactoryFunc,
+                           init_namespaces: Any,
+                           gpg_master_key: Secret,
+                           gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
     git_repo = git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "6s",
                                       gitops_test_config.gitops_repo_url, gitops_test_config.gitops_repo_branch)
     applied_manifests: list[str] = []
@@ -207,7 +217,6 @@ def gitops_flux_deployment(kube_cluster: Cluster,
 
     for manifest_path in applied_manifests:
         kube_cluster.kubectl(f"delete -f {manifest_path}", output_format="text")
-    gpg_master_key.delete()
 
 
 @pytest.fixture(scope="module")
