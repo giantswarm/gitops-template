@@ -66,6 +66,14 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
     for file, assert_list in assertions.items():
         # I'm out names for "assertion" :P
         for ass in assert_list:
+            if "metadata" not in ass or "kind" not in ass:
+                msg = f"Expected object declared in the '{file}' has to have the 'metadata' and 'kind' properties."
+                logger.error(msg)
+                raise Exception(msg)
+            if "name" not in ass["metadata"]:
+                msg = f"Expected object declared in the '{file}' has to have 'name' property in the 'metadata' section."
+                logger.error(msg)
+                raise Exception(msg)
             cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
             setattr(cluster_obj, "kind", ass["kind"])
             setattr(cluster_obj, "version", ass["apiVersion"])

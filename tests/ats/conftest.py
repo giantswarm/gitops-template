@@ -208,13 +208,13 @@ def gitops_flux_deployment(kube_cluster: Cluster,
     for dir_entry in os.scandir(GITOPS_TOP_DIR):
         if dir_entry.is_dir:
             manifest_path = os.path.join(GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml")
-            kube_cluster.kubectl(f"apply -f {manifest_path}")
+            kube_cluster.kubectl(f"apply -f {manifest_path} --wait=true")
             applied_manifests.append(manifest_path)
 
     yield None
 
     for manifest_path in applied_manifests:
-        kube_cluster.kubectl(f"delete -f {manifest_path}", output_format="text")
+        kube_cluster.kubectl(f"delete -f {manifest_path} --wait=true", output_format="text")
 
 
 @pytest.fixture(scope="module")
