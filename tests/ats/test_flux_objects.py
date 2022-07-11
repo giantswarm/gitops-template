@@ -66,10 +66,15 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
     for file, assert_list in assertions.items():
         # I'm out names for "assertion" :P
         for ass in assert_list:
-            query = pykube.objects.APIObject(kube_cluster.kube_client, ass)
-            setattr(query, "kind", ass["kind"])
-            setattr(query, "version", ass["apiVersion"])
+            cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
+            setattr(cluster_obj, "kind", ass["kind"])
+            setattr(cluster_obj, "version", ass["apiVersion"])
             endpoint = ass["kind"].lower() + ("es" if ass["kind"][-1] == "s" else "s")
-            setattr(query, "endpoint", endpoint)
-            query.reload()
-            # TODO: assert metadata, spec and status
+            setattr(cluster_obj, "endpoint", endpoint)
+            if "namespace" in ass["metadata"]:
+                setattr(cluster_obj, "namespace", ass["metadata"]["namespace"])
+            cluster_obj.reload()
+            for key in ["metadata", "spec", "status"]:
+                if key not in ass:
+                    continue
+                assert ass[key].items() <= cluster_obj.obj[key].items()
