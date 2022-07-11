@@ -201,7 +201,7 @@ in the `default` namespace.
 
     ```sh
     cat <<EOF | kubectl apply -f -
-    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    apiVersion: source.toolkit.fluxcd.io/v1beta2
     kind: GitRepository
     metadata:
       name: GITOPS_REPO
