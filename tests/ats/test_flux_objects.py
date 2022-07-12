@@ -74,13 +74,15 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
                 msg = f"Expected object declared in the '{file}' has to have 'name' property in the 'metadata' section."
                 logger.error(msg)
                 raise Exception(msg)
-            cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
+            if "namespace" in ass["metadata"]:
+                cluster_obj = pykube.objects.NamespacedAPIObject(kube_cluster.kube_client, ass)
+                cluster_obj.obj["metadata"]["namespace"] = ass["metadata"]["namespace"]
+            else:
+                cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
             setattr(cluster_obj, "kind", ass["kind"])
             setattr(cluster_obj, "version", ass["apiVersion"])
             endpoint = ass["kind"].lower() + ("es" if ass["kind"][-1] == "s" else "s")
             setattr(cluster_obj, "endpoint", endpoint)
-            if "namespace" in ass["metadata"]:
-                setattr(cluster_obj, "namespace", ass["metadata"]["namespace"])
             cluster_obj.reload()
             for key in ["metadata", "spec", "status"]:
                 if key not in ass:
