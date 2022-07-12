@@ -5,6 +5,8 @@ from typing import Type, TypeVar
 import pykube
 import pytest
 import yaml
+from deepdiff import DeepDiff
+from deepdiff.helper import NotPresent
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
@@ -53,6 +55,8 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
 
 @pytest.mark.smoke
 def test_positive_assertions(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+    # FIXME: solve it better
+    check_flux_objects_successful(kube_cluster, KustomizationCR)
     assertions = {}
     for entry in os.scandir(EXISTS_ASSERTIONS_DIR):
         if not entry.is_file() or os.path.splitext(entry.name)[1] != ".yaml":
@@ -87,4 +91,23 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
             for key in ["metadata", "spec", "status"]:
                 if key not in ass:
                     continue
-                assert ass[key].items() <= cluster_obj.obj[key].items()
+                diff = DeepDiff(ass[key], cluster_obj.obj[key], ignore_order=True)
+                # we have no difference between the expectation and the real object
+                if len(diff) == 0:
+                    continue
+                # The only difference that we allow for is when the real object has some attributes that the
+                #  expectation doesn't have. This means that if a diff of a kind different from 'dictionary_item_added'
+                #  is detected, it's an error.
+                if len(diff) > 1 or 'dictionary_item_added' not in diff.tree:
+                    meta = cluster_obj.obj["metadata"]
+                    obj_name = meta["namespace"]+"/"+meta["name"] if "namespace" in meta else meta["name"]
+                    msg = f"Object '{obj_name}' of kind '{cluster_obj.obj['kind']}' is different than expectation in " \
+                          f"file '{file}'."
+                    logger.error(msg)
+                    logger.error(diff)
+                    pytest.fail(msg)
+                # Even if we only have 'dictionary_item_added', it has to show that added stuff is only on the
+                #  real object side. In other words, we check that all the attributes given in the expectation
+                # are present in the real object.
+                for d in diff.tree["dictionary_item_added"].items:
+                    assert isinstance(d.t1, NotPresent)

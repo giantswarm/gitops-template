@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pytest-helm-charts = ">=0.7.0"
 validators = "*"
+deepdiff = "*"
 
 [dev-packages]
 
