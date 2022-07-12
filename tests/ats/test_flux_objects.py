@@ -108,7 +108,8 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
 
 
 def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
-    for key in ["metadata", "spec", "status"]:
+    top_level_keys = cluster_obj.obj.keys()
+    for key in top_level_keys:
         if key not in ass:
             continue
         diff = DeepDiff(ass[key], cluster_obj.obj[key], ignore_order=True)
