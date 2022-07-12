@@ -44,20 +44,32 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
         )
 
 
-#@pytest.mark.smoke
-#def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
-#    check_flux_objects_successful(kube_cluster, KustomizationCR)
-#
-#
-#@pytest.mark.smoke
-#def test_helm_release_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
-#    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
+@pytest.fixture(scope="module")
+def check_kustomizations_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+    check_flux_objects_successful(kube_cluster, KustomizationCR)
 
 
 @pytest.mark.smoke
-def test_positive_assertions(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
-    # FIXME: solve it better
-    check_flux_objects_successful(kube_cluster, KustomizationCR)
+def test_kustomizations_successful(check_kustomizations_successful: None) -> None:
+    # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
+    pass
+
+
+@pytest.fixture(scope="module")
+def check_helm_release_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
+
+
+@pytest.mark.smoke
+def test_helm_release_successful(check_helm_release_successful: None) -> None:
+    # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
+    pass
+
+
+@pytest.mark.smoke
+def test_positive_assertions(kube_cluster: Cluster, gitops_environment: ConfiguredApp,
+                             check_helm_release_successful: None,
+                             check_kustomizations_successful: None) -> None:
     assertions = {}
     for entry in os.scandir(EXISTS_ASSERTIONS_DIR):
         if not entry.is_file() or os.path.splitext(entry.name)[1] != ".yaml":
