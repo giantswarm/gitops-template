@@ -71,14 +71,17 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
                              check_helm_release_successful: None,
                              check_kustomizations_successful: None) -> None:
     assertions = {}
-    for entry in os.scandir(EXISTS_ASSERTIONS_DIR):
-        if not entry.is_file() or os.path.splitext(entry.name)[1] != ".yaml":
-            logger.debug(f"Ignoring file '{entry.name}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it doesn't "
-                         f"have a '.yaml' extension.")
-            continue
-        with open(entry.path) as f:
-            from_file_assertions = yaml.safe_load_all(f.read())
-            assertions[entry.path] = from_file_assertions
+    walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
+    for (dir_path, _, filenames) in walk_dirs:
+        for file in filenames:
+            rel_path = os.path.join(dir_path, file)
+            if os.path.splitext(file)[1] != ".yaml":
+                logger.debug(f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
+                             f" doesn't have a '.yaml' extension.")
+                continue
+            with open(rel_path) as f:
+                from_file_assertions = yaml.safe_load_all(f.read())
+                assertions[rel_path] = from_file_assertions
 
     for file, assert_list in assertions.items():
         # I'm out names for "assertion" :P
