@@ -3,22 +3,19 @@ import logging
 import os
 import platform
 import shutil
-import subprocess
 import stat
+import subprocess
 import tempfile
-import validators
-from typing import Iterable, Any, Type, TypeVar
+from typing import Iterable, Any
 
 import pykube
 import pytest
 import requests
+import validators
+from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
-from pytest_helm_charts.flux.helm_release import HelmReleaseCR
-from pytest_helm_charts.flux.kustomization import KustomizationCR
-from pytest_helm_charts.flux.utils import _flux_cr_ready, NamespacedFluxCR
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
-from pytest_helm_charts.utils import wait_for_objects_condition
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
@@ -32,12 +29,10 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
-FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
-CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl-"
-GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions/15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
+CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl"
+GS_CRDS_COMMIT_URL = "https://raw.githubusercontent.com/giantswarm/apiextensions/" \
+                     "15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
 GITOPS_TOP_DIR = "../../management-clusters"
-
-TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +43,7 @@ class GitOpsTestConfig:
     _FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
     _GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
 
-    def __init__(self):
+    def __init__(self) -> None:
         env_var_namespaces = os.getenv(self._FLUX_INIT_NAMESPACES_ENV_VAR_NAME)
         if env_var_namespaces:
             namespaces = env_var_namespaces.split(",")
@@ -132,7 +127,9 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     if run_res.returncode != 0:
         logger.error(f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'")
         raise Exception(f"Cannot bootstrap CAPI")
+
     yield None
+
     run_res = subprocess.run(
         [cluster_ctl_path, "delete", "--kubeconfig", kube_config, "--all"],
         capture_output=True, env=env_vars)
@@ -142,7 +139,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
 
 
 @pytest.fixture(scope="module")
-def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> None:
+def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
     created_namespaces = []
     for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(name=ns)
@@ -171,6 +168,7 @@ def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig)
                     }
                 ]
             }).create()
+
     yield
 
     for ns in created_namespaces:
@@ -178,10 +176,7 @@ def init_namespaces(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig)
 
 
 @pytest.fixture(scope="module")
-def gitops_flux_deployment(kube_cluster: Cluster,
-                           git_repository_factory: GitRepositoryFactoryFunc,
-                           init_namespaces: Any,
-                           gitops_test_config: GitOpsTestConfig) -> Iterable[Any]:
+def gpg_master_key(kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig) -> Iterable[Secret]:
     # create the master gpg secret used to unlock all encrypted values
     gpg_master_key = pykube.Secret(kube_cluster.kube_client, {
         "metadata": {
@@ -194,58 +189,41 @@ def gitops_flux_deployment(kube_cluster: Cluster,
         },
     })
     gpg_master_key.create()
-    git_repo = git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "6s",
-                                      gitops_test_config.gitops_repo_url, gitops_test_config.gitops_repo_branch)
+
+    yield gpg_master_key
+
+    gpg_master_key.delete()
+
+
+@pytest.fixture(scope="module")
+def gitops_flux_deployment(kube_cluster: Cluster,
+                           git_repository_factory: GitRepositoryFactoryFunc,
+                           # init_namespaces: Any,
+                           # gpg_master_key: Secret,
+                           gitops_test_config: GitOpsTestConfig
+                           ) -> Iterable[Any]:
+    # git_repository_factory(FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE, "60s", gitops_test_config.gitops_repo_url,
+    #                        gitops_test_config.gitops_repo_branch)
     applied_manifests: list[str] = []
     for dir_entry in os.scandir(GITOPS_TOP_DIR):
         if dir_entry.is_dir:
             manifest_path = os.path.join(GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml")
-            kube_cluster.kubectl(f"apply -f {manifest_path}")
+            kube_cluster.kubectl(f"apply -f {manifest_path} --wait=true")
             applied_manifests.append(manifest_path)
 
     yield None
 
     for manifest_path in applied_manifests:
-        kube_cluster.kubectl(f"delete -f {manifest_path}", output_format="text")
-    gpg_master_key.delete()
+        kube_cluster.kubectl(f"delete -f {manifest_path} --wait=true", output_format="text")
 
 
 @pytest.fixture(scope="module")
 def gitops_environment(
-        flux_app_deployment: ConfiguredApp,
+        # flux_app_deployment: ConfiguredApp,
         flux_deployments: list[pykube.Deployment],
-        gs_crds: None,
-        capi_controllers: None,
+        # gs_crds: None,
+        # capi_controllers: None,
         gitops_flux_deployment: None,
 ) -> ConfiguredApp:
-    return flux_app_deployment
-
-
-def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -> None:
-    namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
-    for ns in namespaces:
-        objects = obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
-        if len(objects.response['items']) == 0:
-            continue
-        obj_names = [o.name for o in objects]
-        logger.debug(f"Waiting max {FLUX_OBJECTS_READY_TIMEOUT_SEC} s for the following {obj_type.__name__} objects "
-                     f"to be ready in '{ns.name}' namespace: '{obj_names}'.")
-        wait_for_objects_condition(
-            kube_cluster.kube_client,
-            obj_type,
-            obj_names,
-            ns.name,
-            _flux_cr_ready,
-            FLUX_OBJECTS_READY_TIMEOUT_SEC,
-            missing_ok=False,
-        )
-
-
-@pytest.mark.smoke
-def test_kustomizations_successful(kube_cluster: Cluster, gitops_environment) -> None:
-    check_flux_objects_successful(kube_cluster, KustomizationCR)
-
-
-@pytest.mark.smoke
-def test_helm_release_successful(kube_cluster: Cluster, gitops_environment) -> None:
-    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
+    # return flux_app_deployment
+    return None
