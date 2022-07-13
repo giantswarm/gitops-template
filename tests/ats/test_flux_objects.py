@@ -27,12 +27,16 @@ logger = logging.getLogger(__name__)
 def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -> None:
     namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
     for ns in namespaces:
-        objects = obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
-        if len(objects.response['items']) == 0:
+        objects = (
+            obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
+        )
+        if len(objects.response["items"]) == 0:
             continue
         obj_names = [o.name for o in objects]
-        logger.debug(f"Waiting max {FLUX_OBJECTS_READY_TIMEOUT_SEC} s for the following {obj_type.__name__} objects "
-                     f"to be ready in '{ns.name}' namespace: '{obj_names}'.")
+        logger.debug(
+            f"Waiting max {FLUX_OBJECTS_READY_TIMEOUT_SEC} s for the following {obj_type.__name__} objects "
+            f"to be ready in '{ns.name}' namespace: '{obj_names}'."
+        )
         wait_for_objects_condition(
             kube_cluster.kube_client,
             obj_type,
@@ -45,7 +49,9 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
 
 
 @pytest.fixture(scope="module")
-def check_kustomizations_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+def check_kustomizations_successful(
+    kube_cluster: Cluster, gitops_environment: ConfiguredApp
+) -> None:
     check_flux_objects_successful(kube_cluster, KustomizationCR)
 
 
@@ -56,7 +62,9 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
 
 
 @pytest.fixture(scope="module")
-def check_helm_release_successful(kube_cluster: Cluster, gitops_environment: ConfiguredApp) -> None:
+def check_helm_release_successful(
+    kube_cluster: Cluster, gitops_environment: ConfiguredApp
+) -> None:
     check_flux_objects_successful(kube_cluster, HelmReleaseCR)
 
 
@@ -67,17 +75,22 @@ def test_helm_release_successful(check_helm_release_successful: None) -> None:
 
 
 @pytest.mark.smoke
-def test_positive_assertions(kube_cluster: Cluster, gitops_environment: ConfiguredApp,
-                             check_helm_release_successful: None,
-                             check_kustomizations_successful: None) -> None:
+def test_positive_assertions(
+    kube_cluster: Cluster,
+    gitops_environment: ConfiguredApp,
+    check_helm_release_successful: None,
+    check_kustomizations_successful: None,
+) -> None:
     assertions = {}
     walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
     for (dir_path, _, filenames) in walk_dirs:
         for file in filenames:
             rel_path = os.path.join(dir_path, file)
             if os.path.splitext(file)[1] != ".yaml":
-                logger.debug(f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
-                             f" doesn't have a '.yaml' extension.")
+                logger.debug(
+                    f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
+                    f" doesn't have a '.yaml' extension."
+                )
                 continue
             with open(rel_path) as f:
                 from_file_assertions = yaml.safe_load_all(f.read())
@@ -95,7 +108,9 @@ def test_positive_assertions(kube_cluster: Cluster, gitops_environment: Configur
                 logger.error(msg)
                 raise Exception(msg)
             if "namespace" in ass["metadata"]:
-                cluster_obj = pykube.objects.NamespacedAPIObject(kube_cluster.kube_client, ass)
+                cluster_obj = pykube.objects.NamespacedAPIObject(
+                    kube_cluster.kube_client, ass
+                )
                 cluster_obj.obj["metadata"]["namespace"] = ass["metadata"]["namespace"]
             else:
                 cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
@@ -119,11 +134,17 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
         # The only difference that we allow for is when the real object has some attributes that the
         #  expectation doesn't have. This means that if a diff of a kind different from 'dictionary_item_added'
         #  is detected, it's an error.
-        if len(diff) > 1 or 'dictionary_item_added' not in diff.tree:
+        if len(diff) > 1 or "dictionary_item_added" not in diff.tree:
             meta = cluster_obj.obj["metadata"]
-            obj_name = meta["namespace"] + "/" + meta["name"] if "namespace" in meta else meta["name"]
-            msg = f"Object '{obj_name}' of kind '{cluster_obj.obj['kind']}' is different than expectation in " \
-                  f"file '{file}'."
+            obj_name = (
+                meta["namespace"] + "/" + meta["name"]
+                if "namespace" in meta
+                else meta["name"]
+            )
+            msg = (
+                f"Object '{obj_name}' of kind '{cluster_obj.obj['kind']}' is different than expectation in "
+                f"file '{file}'."
+            )
             logger.error(msg)
             logger.error(diff)
             pytest.fail(msg)
