@@ -154,7 +154,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     )
     if run_res.returncode != 0:
         logger.error(
-            f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'"
+            f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'"  # type: ignore
         )
         raise Exception("Cannot bootstrap CAPI")
 
@@ -167,7 +167,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     )
     if run_res.returncode != 0:
         logger.error(
-            f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'"
+            f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'"  # type: ignore
         )
         raise Exception("Cannot clean up CAPI")
 
