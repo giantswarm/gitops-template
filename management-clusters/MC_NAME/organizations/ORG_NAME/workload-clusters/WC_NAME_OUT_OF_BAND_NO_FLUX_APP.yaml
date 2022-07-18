@@ -28,7 +28,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: MC_NAME-clusters-WC_NAME-direct
-  namespace: default
+  namespace: org-ORG_NAME # Change to the `WC_NAME` for the legacy clusters. The rule of thumb: follow the `kubeconfig` namespace.
 spec:
   interval: 1m
   kubeConfig:
