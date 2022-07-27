@@ -279,10 +279,11 @@ def gitops_flux_deployment(
 
 @pytest.fixture(scope="module")
 def gitops_environment(
-    flux_app_deployment: ConfiguredApp,
+    # flux_app_deployment: ConfiguredApp,
     flux_deployments: list[pykube.Deployment],
     gs_crds: None,
-    capi_controllers: None,
-    gitops_flux_deployment: None,
+    # capi_controllers: None,
+    # gitops_flux_deployment: None,
 ) -> ConfiguredApp:
-    return flux_app_deployment
+    return None
+    # return flux_app_deployment
