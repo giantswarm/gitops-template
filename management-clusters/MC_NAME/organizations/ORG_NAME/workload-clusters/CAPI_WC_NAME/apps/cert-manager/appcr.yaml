@@ -5,5 +5,5 @@ metadata:
 spec:
   catalog: giantswarm
   name: cert-manager-app
-  namespace: kube-system
+  namespace: org-${organization}
   version: 2.12.0

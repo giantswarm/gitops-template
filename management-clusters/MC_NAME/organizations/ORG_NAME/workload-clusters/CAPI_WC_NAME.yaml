@@ -9,10 +9,10 @@ spec:
   postBuild:
     substitute:
       cluster_domain: "MY_DOMAIN"
-      cluster_name: "CAPI_WC_NAME"
+      cluster_name: "capi-wc-name"  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
-      organization: "ORG_NAME"
+      organization: "org-name"  # TODO: change 'org-name' to your organization name
   prune: false
   serviceAccountName: automation
   sourceRef:
