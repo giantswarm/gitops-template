@@ -1,7 +1,7 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: cert-manager
+  name: ${cluster_name}-cert-manager
 spec:
   catalog: giantswarm
   name: cert-manager-app
