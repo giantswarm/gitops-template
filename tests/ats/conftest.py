@@ -30,10 +30,10 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
 CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl"
-GS_CRDS_COMMIT_URL = (
-    "https://raw.githubusercontent.com/giantswarm/apiextensions/"
-    "15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
-)
+GS_CRDS_URLS = [
+    "https://raw.githubusercontent.com/giantswarm/apiextensions/master/helm/crds-common/templates/"
+    + "security.giantswarm.io_organizations.yaml"
+]
 GITOPS_TOP_DIR = "../../management-clusters"
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,8 @@ def flux_app_deployment(
 @pytest.fixture(scope="module")
 def gs_crds(kube_cluster: Cluster) -> None:
     logger.debug("Deploying Giant Swarm CRDs to the test cluster")
-    kube_cluster.kubectl(f"apply -f {GS_CRDS_COMMIT_URL}")
+    for crd in GS_CRDS_URLS:
+        kube_cluster.kubectl(f"apply -f {crd}")
 
 
 @pytest.fixture(scope="module")
@@ -279,11 +280,10 @@ def gitops_flux_deployment(
 
 @pytest.fixture(scope="module")
 def gitops_environment(
-    # flux_app_deployment: ConfiguredApp,
+    flux_app_deployment: ConfiguredApp,
     flux_deployments: list[pykube.Deployment],
     gs_crds: None,
-    # capi_controllers: None,
-    # gitops_flux_deployment: None,
+    capi_controllers: None,
+    gitops_flux_deployment: None,
 ) -> ConfiguredApp:
-    return None
-    # return flux_app_deployment
+    return flux_app_deployment
