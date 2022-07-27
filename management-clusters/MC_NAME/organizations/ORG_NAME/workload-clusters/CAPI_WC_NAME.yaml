@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: clusters-capi-wc-name
+  name: clusters-capi-wc-name  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
   namespace: default
 spec:
   interval: 1m

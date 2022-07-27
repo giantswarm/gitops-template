@@ -7,14 +7,14 @@ configMapGenerator:
   - behavior: replace
     files:
     - values=default_config_simple_db.yaml
-    name: ${cluster_id}-simple-db-values # has to be in sync with the name used by included app
+    name: ${cluster_name}-simple-db-values # has to be in sync with the name used by included app
   - behavior: replace
     files:
     - values=default_config_hello_world.yaml
-    name: ${cluster_id}-hello-world-values # has to be in sync with the name used by included app
+    name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
-namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
+namespace: ${namespace} # (optional) enforce the same namespace for all the apps in the set
 # (optional) here we can enforce versions for both apps that we know work well together
 patches:
   - patch: |-
@@ -23,14 +23,14 @@ patches:
         value: 0.1.9
     target:
       kind: App
-      name: \${cluster_id}-hello-world
+      name: \${cluster_name}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
         value: 0.1.1
     target:
       kind: App
-      name: \${cluster_id}-simple-db
+      name: \${cluster_name}-simple-db
 # block end
 resources:
   - ../../apps/hello-world

@@ -1,7 +1,7 @@
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageUpdateAutomation
 metadata:
-  name: ${cluster_id}-image-updates
+  name: ${cluster_name}-image-updates
   namespace: org-${organization}
 spec:
   git:
@@ -22,7 +22,7 @@ spec:
   interval: 1m0s
   sourceRef:
     kind: GitRepository
-    name: YOUR_GIT_REPO
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo
   update:
-    path: ./management-clusters/MC_NAME
+    path: ./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters
     strategy: Setters
