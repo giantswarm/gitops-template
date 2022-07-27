@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: clusters-CAPI_WC_NAME
+  name: clusters-capi-wc-name
   namespace: default
 spec:
   interval: 1m
