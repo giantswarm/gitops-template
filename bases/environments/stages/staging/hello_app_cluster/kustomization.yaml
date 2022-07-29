@@ -5,6 +5,7 @@ configMapGenerator:
     files:
       - values=hello_world_app_user_config.yaml
     name: ${cluster_name}-hello-world-user-config
+    namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
