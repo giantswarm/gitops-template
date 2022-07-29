@@ -1,6 +1,7 @@
 import logging
 import os.path
-from typing import Type, TypeVar
+import time
+from typing import Type, TypeVar, Iterator, Union
 
 import pykube
 import pytest
@@ -18,6 +19,7 @@ from pytest_helm_charts.utils import wait_for_objects_condition
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
 
 FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
+FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC = 15
 ASSERTIONS_DIR = "assertions"
 EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
 
@@ -81,21 +83,7 @@ def test_positive_assertions(
     check_helm_release_successful: None,
     check_kustomizations_successful: None,
 ) -> None:
-    assertions = {}
-    walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
-    for (dir_path, _, filenames) in walk_dirs:
-        for file in filenames:
-            rel_path = os.path.join(dir_path, file)
-            if os.path.splitext(file)[1] != ".yaml":
-                logger.debug(
-                    f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
-                    f" doesn't have a '.yaml' extension."
-                )
-                continue
-            with open(rel_path) as f:
-                from_file_assertions = yaml.safe_load_all(f.read())
-                assertions[rel_path] = from_file_assertions
-
+    assertions = load_assertions()
     for file, assert_list in assertions.items():
         # I'm out names for "assertion" :P
         for ass in assert_list:
@@ -118,8 +106,56 @@ def test_positive_assertions(
             setattr(cluster_obj, "version", ass["apiVersion"])
             endpoint = get_plural_from_kind(ass["kind"])
             setattr(cluster_obj, "endpoint", endpoint)
-            cluster_obj.reload()
+
+            reload_obj_from_cluster(cluster_obj)
             assert_objects(ass, cluster_obj, file)
+
+
+def reload_obj_from_cluster(
+    cluster_obj: Union[pykube.objects.NamespacedAPIObject, pykube.objects.APIObject]
+) -> None:
+    retries = 0
+    obj_loaded = False
+    while retries < FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC:
+        try:
+            cluster_obj.reload()
+            obj_loaded = True
+            break
+        except pykube.http.HTTPError as err:
+            # we might need to wait a bit for flux to create all the managed objects
+            if err.code != 404:
+                raise
+            time.sleep(1)
+            retries += 1
+    if not obj_loaded:
+        meta = cluster_obj.obj["metadata"]
+        obj_name = (
+            meta["namespace"] + "/" + meta["name"]
+            if "namespace" in meta
+            else meta["name"]
+        )
+        raise Exception(
+            f"Timeout of {FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC} sec reached while waiting "
+            + f"for object '{obj_name}' of kind '{cluster_obj.kind}'"
+        )
+
+
+def load_assertions() -> dict[str, Iterator]:
+    assertions = {}
+    walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
+    for (dir_path, _, filenames) in walk_dirs:
+        for file in filenames:
+            rel_path = str(os.path.join(dir_path, file))
+            if os.path.splitext(file)[1] != ".yaml":
+                logger.debug(
+                    f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
+                    f" doesn't have a '.yaml' extension."
+                )
+                continue
+            with open(rel_path) as f:
+                from_file_assertions = yaml.safe_load_all(f.read())
+                assertions[rel_path] = from_file_assertions
+    return assertions
 
 
 def get_plural_from_kind(kind: str) -> str:

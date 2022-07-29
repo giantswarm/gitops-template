@@ -178,6 +178,7 @@ def init_namespaces(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Any]:
     created_namespaces: list[pykube.Namespace] = []
+    created_cluster_role_bindings: list[pykube.ClusterRoleBinding] = []
     for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(
             name=ns
@@ -198,7 +199,7 @@ def init_namespaces(
                 kube_cluster.kube_client,
                 {"metadata": {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}},
             ).create()
-            pykube.ClusterRoleBinding(
+            crb = pykube.ClusterRoleBinding(
                 kube_cluster.kube_client,
                 {
                     "metadata": {
@@ -213,12 +214,16 @@ def init_namespaces(
                         }
                     ],
                 },
-            ).create()
+            )
+            crb.create()
+            created_cluster_role_bindings.append(crb)
 
     yield
 
     for namespace in created_namespaces:
         namespace.delete()
+    for crb in created_cluster_role_bindings:
+        crb.delete()
 
 
 @pytest.fixture(scope="module")
