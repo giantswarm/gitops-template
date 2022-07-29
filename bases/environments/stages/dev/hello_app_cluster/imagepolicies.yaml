@@ -3,6 +3,7 @@ apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
   name: ${cluster_name}-hello-app
+  namespace: org-${organization}
 spec:
   filterTags:
     pattern: '.*-dev.*'
