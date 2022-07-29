@@ -19,4 +19,3 @@ spec:
     kind: GitRepository
     name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo
   timeout: 2m
-

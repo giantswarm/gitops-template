@@ -2,10 +2,11 @@
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${cluster_id}-hello-app
+  name: ${cluster_name}-hello-app
+  namespace: org-${organization}
 spec:
   imageRepositoryRef:
-    name: ${cluster_id}-hello-app
+    name: ${cluster_name}-hello-app
   policy:
     semver:
       range: '>=0.1.0 <1.0.0'
@@ -13,10 +14,11 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${cluster_id}-simple-db-app
+  name: ${cluster_name}-simple-db-app
+  namespace: org-${organization}
 spec:
   imageRepositoryRef:
-    name: ${cluster_id}-simple-db
+    name: ${cluster_name}-simple-db
   policy:
     semver:
       range: '>=0.1.0 <0.2.0'

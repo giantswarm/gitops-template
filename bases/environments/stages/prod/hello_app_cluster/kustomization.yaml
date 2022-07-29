@@ -4,7 +4,7 @@ configMapGenerator:
   - behavior: create
     files:
       - values=hello_world_app_user_config.yaml
-    name: ${cluster_id}-hello-world-user-config
+    name: ${cluster_name}-hello-world-user-config
   - behavior: replace
     files:
       - values=cluster_user_config.yaml
@@ -21,14 +21,14 @@ patches:
         value: 0.1.8
     target:
       kind: App
-      name: \${cluster_id}-hello-world
+      name: \${cluster_name}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
         value: 0.1.0
     target:
       kind: App
-      name: \${cluster_id}-simple-db
+      name: \${cluster_name}-simple-db
 # block end
 resources:
   - ../../../../cluster_templates/hello_app_cluster
