@@ -116,10 +116,20 @@ def test_positive_assertions(
                 cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
             setattr(cluster_obj, "kind", ass["kind"])
             setattr(cluster_obj, "version", ass["apiVersion"])
-            endpoint = ass["kind"].lower() + ("es" if ass["kind"][-1] == "s" else "s")
+            endpoint = get_plural_from_kind(ass["kind"])
             setattr(cluster_obj, "endpoint", endpoint)
             cluster_obj.reload()
             assert_objects(ass, cluster_obj, file)
+
+
+def get_plural_from_kind(kind: str) -> str:
+    if kind[-1] == "s":
+        endpoint = kind.lower() + "es"
+    elif kind[-1] == "y":
+        endpoint = kind.lower()[:-1] + "ies"
+    else:
+        endpoint = kind.lower() + "s"
+    return endpoint
 
 
 def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
