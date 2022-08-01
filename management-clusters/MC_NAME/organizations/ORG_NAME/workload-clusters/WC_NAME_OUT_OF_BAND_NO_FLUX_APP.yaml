@@ -13,6 +13,7 @@ spec:
   postBuild:
     substitute:
       cluster_id: "WC_ID"
+      cluster_name: "WC_ID"
       control_plane_id: "CP_ID"
       machine_deployment_id: "MD_ID"
       organization: "ORG_NAME"
