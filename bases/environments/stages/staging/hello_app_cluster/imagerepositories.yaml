@@ -2,7 +2,8 @@
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageRepository
 metadata:
-  name: ${cluster_id}-hello-app
+  name: ${cluster_name}-hello-app
+  namespace: org-${organization}
 spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
   interval: 10m0s
@@ -10,7 +11,8 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageRepository
 metadata:
-  name: ${cluster_id}-simple-db-app
+  name: ${cluster_name}-simple-db-app
+  namespace: org-${organization}
 spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app
   interval: 10m0s

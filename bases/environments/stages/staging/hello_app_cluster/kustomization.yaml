@@ -4,7 +4,8 @@ configMapGenerator:
   - behavior: create
     files:
       - values=hello_world_app_user_config.yaml
-    name: ${cluster_id}-hello-world-user-config
+    name: ${cluster_name}-hello-world-user-config
+    namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -13,17 +14,17 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: '0.1.8 # {"$imagepolicy": "org-${organization}:${cluster_id}-hello-app"}'
+        value: '0.1.8 # {"$imagepolicy": "org-${organization}:${cluster_name}-hello-app"}'
     target:
       kind: App
-      name: \${cluster_id}-hello-world
+      name: \${cluster_name}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
-        value: '0.1.0 # {"$imagepolicy": "org-${organization}:${cluster_id}-simple-db-app"}'
+        value: '0.1.0 # {"$imagepolicy": "org-${organization}:${cluster_name}-simple-db-app"}'
     target:
       kind: App
-      name: \${cluster_id}-simple-db
+      name: \${cluster_name}-simple-db
 # block end
 resources:
   - automatic_updates/

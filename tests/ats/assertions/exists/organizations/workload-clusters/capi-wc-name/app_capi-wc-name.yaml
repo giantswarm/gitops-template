@@ -1,0 +1,20 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: capi-wc-name
+  namespace: org-org-name
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: capi-wc-name-config
+      namespace: org-org-name
+  kubeConfig:
+    inCluster: true
+  name: cluster-openstack
+  namespace: org-org-name
+  userConfig:
+    configMap:
+      name: capi-wc-name-userconfig
+      namespace: org-org-name
+  version: 0.8.1

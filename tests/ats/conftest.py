@@ -30,10 +30,10 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
 CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl"
-GS_CRDS_COMMIT_URL = (
-    "https://raw.githubusercontent.com/giantswarm/apiextensions/"
-    "15836a106059cc8d201e1237adf44aec340bbab6/helm/crds-common/templates/giantswarm.yaml"
-)
+GS_CRDS_URLS = [
+    "https://raw.githubusercontent.com/giantswarm/apiextensions/master/helm/crds-common/templates/"
+    + "security.giantswarm.io_organizations.yaml"
+]
 GITOPS_TOP_DIR = "../../management-clusters"
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,8 @@ def flux_app_deployment(
 @pytest.fixture(scope="module")
 def gs_crds(kube_cluster: Cluster) -> None:
     logger.debug("Deploying Giant Swarm CRDs to the test cluster")
-    kube_cluster.kubectl(f"apply -f {GS_CRDS_COMMIT_URL}")
+    for crd in GS_CRDS_URLS:
+        kube_cluster.kubectl(f"apply -f {crd}")
 
 
 @pytest.fixture(scope="module")
@@ -177,6 +178,7 @@ def init_namespaces(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Any]:
     created_namespaces: list[pykube.Namespace] = []
+    created_cluster_role_bindings: list[pykube.ClusterRoleBinding] = []
     for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(
             name=ns
@@ -197,7 +199,7 @@ def init_namespaces(
                 kube_cluster.kube_client,
                 {"metadata": {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}},
             ).create()
-            pykube.ClusterRoleBinding(
+            crb = pykube.ClusterRoleBinding(
                 kube_cluster.kube_client,
                 {
                     "metadata": {
@@ -212,12 +214,16 @@ def init_namespaces(
                         }
                     ],
                 },
-            ).create()
+            )
+            crb.create()
+            created_cluster_role_bindings.append(crb)
 
     yield
 
     for namespace in created_namespaces:
         namespace.delete()
+    for crb in created_cluster_role_bindings:
+        crb.delete()
 
 
 @pytest.fixture(scope="module")
