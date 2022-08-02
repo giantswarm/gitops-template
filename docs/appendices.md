@@ -11,7 +11,7 @@ This section contains the list of tools used thought the code examples in this r
 
 ### Core utilities
 
-For core utilties like `base64`, `sed`, `tr`, etc. GNU compatible versions are assumed in the code examples.
+For core utilities like `base64`, `sed`, `tr`, etc. GNU compatible versions are assumed in the code examples.
 
 ### Working with YAML files
 

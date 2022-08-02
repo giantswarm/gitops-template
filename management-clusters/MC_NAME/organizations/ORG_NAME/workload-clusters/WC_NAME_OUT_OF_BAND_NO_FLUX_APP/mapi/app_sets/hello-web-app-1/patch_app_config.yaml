@@ -1,0 +1,9 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: ${cluster_id}-hello-world
+spec:
+  userConfig:
+    configMap:
+      name: ${cluster_id}-hello-world-user-values
+      namespace: hello-world-app

@@ -14,8 +14,19 @@ Usage: $0 [validate|template]
 	exit 1
 }
 
+KUBERNETES_VERSION="master"
+
+KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/${KUBERNETES_VERSION}/"
+GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/main/master"
+
+GS_SCHEMA_REPOSITORY_CACHE="/tmp/gs-schema-repository-cache"
+mkdir -p "${GS_SCHEMA_REPOSITORY_CACHE}"
+
 test() {
 	mode="$1"
+
+	has_validation_errors=0
+
 	mc_dir="management-clusters"
 	for mc in $(find ${mc_dir}/ -maxdepth 1 -type d ! -path ${mc_dir}/); do
 		mc_name=${mc##*/}
@@ -37,10 +48,24 @@ test() {
 					fi
 					if [[ "$mode" == "validate" ]]; then
 						echo "Testing: $mc_name $org_name $wc_name $dir_name"
+
 						echo -n "yamllint: "
-						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint - && echo "OK"
-						echo "kubeconform: "
-						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | kubeconform -ignore-missing-schemas -output text && echo "OK"
+						if ! (./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint -); then
+							has_validation_errors=1
+						else
+							echo "OK"
+						fi
+
+						echo -n "kubeconform: "
+						if ! (
+							./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" |
+								kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text
+						); then
+							has_validation_errors=1
+						else
+							echo "OK"
+						fi
+
 						echo ""
 					else
 						echo "---"
@@ -50,6 +75,11 @@ test() {
 			done
 		done
 	done
+
+	if [[ ${has_validation_errors} -ne 0 ]]; then
+		echo "There are validation errors, please check the above output!"
+		exit 2
+	fi
 }
 
 if [[ $# -gt 1 ]]; then
