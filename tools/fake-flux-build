@@ -88,7 +88,6 @@ build() {
 		cat <<EOF >"${match}"/"${wcluster}"/"${subpath}"/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-buildMetadata: [originAnnotations]
 resources:
 $(for f in "${resources[@]}"; do echo "- $f"; done)
 EOF
