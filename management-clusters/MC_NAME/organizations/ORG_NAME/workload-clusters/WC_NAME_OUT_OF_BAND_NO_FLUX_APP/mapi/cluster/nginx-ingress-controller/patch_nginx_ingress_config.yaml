@@ -1,7 +1,7 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: WC_ID-nginx-ingress-controller
+  name: ${cluster_id}-nginx-ingress-controller
   namespace: kube-system
 spec:
   userConfig:

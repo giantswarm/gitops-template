@@ -2,6 +2,13 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 commonLabels:
   giantswarm.io/managed-by: flux
+configMapGenerator:
+  - files:
+      - values=nginx-ingress-controller/override_config_nginx_ingress_controller.yaml
+    name: ${cluster_id}-nginx-ingress-controller-user-values
 kind: Kustomization
+patchesStrategicMerge:
+  - nginx-ingress-controller/patch_nginx_ingress_config.yaml
 resources:
   - ../../../../../../../../bases/cluster_templates/hello_app_cluster
+  - nginx-ingress-controller/override_secret_nginx_ingress_controller.enc.yaml
