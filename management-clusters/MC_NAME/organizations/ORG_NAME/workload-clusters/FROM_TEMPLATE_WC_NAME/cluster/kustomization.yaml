@@ -9,8 +9,6 @@ generatorOptions:
 kind: Kustomization
 patchesStrategicMerge:
   - nginx-from-template/patch_nginx_ingress_config.yaml
-  - patch_userconfig.yaml
 resources:
-  - ../../../../../../../bases/clusters/capo/>=v0.6.0
-  - cluster_userconfig.yaml
+  - ../../../../../../../bases/cluster_templates/hello_app_cluster
   - nginx-from-template/override_secret_nginx_ingress_controller.enc.yaml

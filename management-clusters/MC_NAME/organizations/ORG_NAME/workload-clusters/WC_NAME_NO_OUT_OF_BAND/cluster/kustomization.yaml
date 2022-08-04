@@ -3,8 +3,5 @@ buildMetadata: [originAnnotations]
 commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
-patchesStrategicMerge:
-  - patch_userconfig.yaml
 resources:
-  - ../../../../../../../bases/clusters/capo/>=v0.6.0
-  - cluster_userconfig.yaml
+  - ../../../../../../../bases/cluster_templates/hello_app_cluster
