@@ -8,8 +8,21 @@ on:
 jobs:
   test_on_kind:
     runs-on: ubuntu-latest
+    env:
+      clusterctl_ver: "1.1.5"
+      apptestctl_ver: "0.14.5"
     steps:
       - uses: actions/checkout@v3
+      - name: install apptestctl
+        uses: giantswarm/install-binary-action@v1
+        with:
+          binary: apptestctl
+          download_url: "https://github.com/giantswarm/apptestctl/releases/download/v${version}/apptestctl-v${version}-linux-amd64.tar.gz"
+          smoke_test: "${binary} version"
+          tarball_binary_path: "apptestctl-v${version}-linux-amd64/${binary}"
+          version: ${{ env.apptestctl_ver }}
+      - name: install clusterctl
+        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.5/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.3.0
       - name: extract kind kube.config
