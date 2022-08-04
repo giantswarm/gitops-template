@@ -40,7 +40,7 @@ jobs:
       - name: install pipenv environment
         run: cd tests/ats && pipenv install --deploy
       - name: run tests
-        run: cd tests/ats && pipenv run pytest -m smoke .
+        run: cd tests/ats && pipenv run pytest .
         env:
           KUBECONFIG: /tmp/kube.config
           GITOPS_FLUX_APP_VERSION: "0.13.0"
