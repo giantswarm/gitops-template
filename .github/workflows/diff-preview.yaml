@@ -1,9 +1,10 @@
 name: diff preview
 
 on:
-  pull_request:
-  push:
-    branches: [HEAD_BRANCH]
+  workflow_run:
+    workflows: ["validate"]
+    types:
+      - completed
 
 jobs:
   get-diff:
