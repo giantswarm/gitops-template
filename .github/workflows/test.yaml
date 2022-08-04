@@ -11,6 +11,7 @@ jobs:
     env:
       clusterctl_ver: "1.1.5"
       apptestctl_ver: "0.14.5"
+      kind_ver: "0.12.0"
     steps:
       - uses: actions/checkout@v3
       - name: install apptestctl
@@ -22,9 +23,11 @@ jobs:
           tarball_binary_path: "apptestctl-v${version}-linux-amd64/${binary}"
           version: ${{ env.apptestctl_ver }}
       - name: install clusterctl
-        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.5/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl
+        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v${clusterctl_ver}/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.3.0
+        with:
+          version: "v${ env.kind_ver }"
       - name: extract kind kube.config
         run: kind get kubeconfig --name 'chart-testing' > /tmp/kube.config
       - name: Set up Python 3.9
