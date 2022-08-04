@@ -44,3 +44,4 @@ jobs:
           GITOPS_INIT_NAMESPACES: "default,org-org-name"
           GITOPS_REPO_BRANCH: "${{ github.head_ref }}"
           GITOPS_REPO_URL: "https://github.com/giantswarm/gitops-template"
+          GITOPS_MASTER_GPG_KEY: "${{ secrets.GITOPS_MASTER_GPG_KEY }}"
