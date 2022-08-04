@@ -1,16 +1,12 @@
 import base64
 import logging
 import os
-import platform
 import shutil
-import stat
 import subprocess  # nosec B404 - we need to invoke processes
-import tempfile
 from typing import Iterable, Any
 
 import pykube
 import pytest
-import requests
 import validators
 from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
@@ -23,13 +19,12 @@ FLUX_OBJECTS_NAMESPACE = "default"
 FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secret here
 FLUX_IMPERSONATION_SA_NAME = "automation"
 
-FLUX_VERSION = "0.11.0"
-CLUSTER_CTL_VERSION = "1.1.4"
 CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
-CLUSTER_CTL_URL = f"https://github.com/kubernetes-sigs/cluster-api/releases/download/v{CLUSTER_CTL_VERSION}/clusterctl"
+CLUSTER_CTL_URL = "https://github.com/kubernetes-sigs/cluster-api/releases/"
+APPTESTCTL_URL = "https://github.com/giantswarm/apptestctl/releases"
 GS_CRDS_URLS = [
     "https://raw.githubusercontent.com/giantswarm/apiextensions/master/helm/crds-common/templates/"
     + "security.giantswarm.io_organizations.yaml"
@@ -44,6 +39,7 @@ class GitOpsTestConfig:
     _GITOPS_REPO_BRANCH_ENV_VAR_NAME = "GITOPS_REPO_BRANCH"
     _FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
     _GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
+    _FLUX_APP_VERSION = "GITOPS_FLUX_APP_VERSION"
 
     def __init__(self) -> None:
         env_var_namespaces = os.getenv(self._FLUX_INIT_NAMESPACES_ENV_VAR_NAME)
@@ -80,6 +76,13 @@ class GitOpsTestConfig:
             )
             raise Exception("gitops repo branch name missing")
 
+        self.flux_app_version = os.environ[self._FLUX_APP_VERSION]
+        if not self.flux_app_version:
+            logger.error(
+                f"The '{self._FLUX_APP_VERSION}' environment variable must be set to a valid semver."
+            )
+            raise Exception("flux-app version not set")
+
 
 @pytest.fixture(scope="module")
 def gitops_test_config() -> GitOpsTestConfig:
@@ -88,11 +91,16 @@ def gitops_test_config() -> GitOpsTestConfig:
 
 @pytest.fixture(scope="module")
 def flux_app_deployment(
-    kube_cluster: Cluster, app_factory: AppFactoryFunc
+    kube_cluster: Cluster,
+    app_factory: AppFactoryFunc,
+    gitops_test_config: GitOpsTestConfig,
 ) -> ConfiguredApp:
+    logger.debug(
+        f"Deploying 'flux-app' in version '{gitops_test_config.flux_app_version}'."
+    )
     return app_factory(
         "flux-app",
-        FLUX_VERSION,
+        gitops_test_config.flux_app_version,
         "giantswarm",
         FLUX_OBJECTS_NAMESPACE,
         "https://giantswarm.github.io/giantswarm-catalog/",
@@ -111,25 +119,11 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     cluster_ctl_path = shutil.which("clusterctl")
 
     if not cluster_ctl_path:
-        cluster_ctl_path = os.path.join(tempfile.gettempdir(), "clusterctl")
-
-        if not os.access(cluster_ctl_path, os.X_OK):
-            logger.debug(
-                "Cannot find existing 'clusterctl' binary, attempting to download"
-            )
-            uname_info = platform.uname()
-            sys_type = uname_info.system.lower()
-            arch_type = "arm64" if uname_info.machine == "arm64" else "amd64"
-            url = f"{CLUSTER_CTL_URL}-{sys_type}-{arch_type}"
-            r = requests.get(url, allow_redirects=True)
-            if not r.ok:
-                logger.error(
-                    f"Can't download 'clusterctl': [{r.status_code}] {r.reason}"
-                )
-                raise Exception("error downloading `clusterctl`")
-            open(cluster_ctl_path, "wb").write(r.content)
-            st = os.stat(cluster_ctl_path)
-            os.chmod(cluster_ctl_path, st.st_mode | stat.S_IEXEC)
+        logger.error(
+            f"You must install `clusterctl` tool from '{CLUSTER_CTL_URL}' and make it available "
+            f"in your $PATH."
+        )
+        raise Exception("`clusterctl` not found")
 
     logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
     infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
@@ -155,7 +149,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     )
     if run_res.returncode != 0:
         logger.error(
-            f"Error bootstrapping CAPI on test cluster failed: '{run_res.stderr}'"  # type: ignore
+            f"Error bootstrapping CAPI on test cluster: '{run_res.stderr}'"  # type: ignore
         )
         raise Exception("Cannot bootstrap CAPI")
 
@@ -168,9 +162,37 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     )
     if run_res.returncode != 0:
         logger.error(
-            f"Error cleaning up CAPI on test cluster failed: '{run_res.stderr}'"  # type: ignore
+            f"Error cleaning up CAPI on test cluster: '{run_res.stderr}'"  # type: ignore
         )
         raise Exception("Cannot clean up CAPI")
+
+
+@pytest.fixture(scope="module")
+def app_platform_controllers(kube_config: str) -> None:
+    apptestctl_path = shutil.which("apptestctl")
+
+    if not apptestctl_path:
+        logger.error(
+            f"You must install `apptestctl` tool from '{APPTESTCTL_URL}' and make it available "
+            f"in your $PATH."
+        )
+        raise Exception("`apptestctl` not found")
+
+    logger.debug(f"Using '{apptestctl_path}' to bootstrap app platform controllers")
+    run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
+        [
+            apptestctl_path,
+            "bootstrap",
+            "--kubeconfig-path",
+            kube_config,
+        ],
+        capture_output=True,
+    )
+    if run_res.returncode != 0:
+        logger.error(
+            f"Error bootstrapping app platform on test cluster: '{run_res.stderr}'"  # type: ignore
+        )
+        raise Exception("Cannot bootstrap app platform")
 
 
 @pytest.fixture(scope="module")
@@ -252,11 +274,23 @@ def gpg_master_key(
 
 
 @pytest.fixture(scope="module")
-def gitops_flux_deployment(
-    kube_cluster: Cluster,
-    git_repository_factory: GitRepositoryFactoryFunc,
+def gitops_environment(
+    gs_crds: None,
+    capi_controllers: None,
+    app_platform_controllers: None,
     init_namespaces: Any,
     gpg_master_key: Secret,
+    flux_app_deployment: ConfiguredApp,
+    flux_deployments: list[pykube.Deployment],
+) -> ConfiguredApp:
+    return flux_app_deployment
+
+
+@pytest.fixture(scope="module")
+def gitops_deployment(
+    kube_cluster: Cluster,
+    gitops_environment: ConfiguredApp,
+    git_repository_factory: GitRepositoryFactoryFunc,
     gitops_test_config: GitOpsTestConfig,
 ) -> Iterable[Any]:
     git_repository_factory(
@@ -281,14 +315,3 @@ def gitops_flux_deployment(
         kube_cluster.kubectl(
             f"delete -f {manifest_path} --wait=true", output_format="text"
         )
-
-
-@pytest.fixture(scope="module")
-def gitops_environment(
-    flux_app_deployment: ConfiguredApp,
-    flux_deployments: list[pykube.Deployment],
-    gs_crds: None,
-    capi_controllers: None,
-    gitops_flux_deployment: None,
-) -> ConfiguredApp:
-    return flux_app_deployment

@@ -12,8 +12,7 @@ from pykube.objects import APIObject
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
-from pytest_helm_charts.flux.utils import NamespacedFluxCR, _flux_cr_ready
-from pytest_helm_charts.giantswarm_app_platform.app import ConfiguredApp
+from pytest_helm_charts.flux.utils import NamespacedFluxCR, flux_cr_ready
 from pytest_helm_charts.utils import wait_for_objects_condition
 
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
@@ -44,7 +43,7 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
             obj_type,
             obj_names,
             ns.name,
-            _flux_cr_ready,
+            flux_cr_ready,
             FLUX_OBJECTS_READY_TIMEOUT_SEC,
             missing_ok=False,
         )
@@ -52,7 +51,7 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
 
 @pytest.fixture(scope="module")
 def check_kustomizations_successful(
-    kube_cluster: Cluster, gitops_environment: ConfiguredApp
+    kube_cluster: Cluster, gitops_deployment: None
 ) -> None:
     check_flux_objects_successful(kube_cluster, KustomizationCR)
 
@@ -65,7 +64,7 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
 
 @pytest.fixture(scope="module")
 def check_helm_release_successful(
-    kube_cluster: Cluster, gitops_environment: ConfiguredApp
+    kube_cluster: Cluster, gitops_deployment: None
 ) -> None:
     check_flux_objects_successful(kube_cluster, HelmReleaseCR)
 
@@ -79,7 +78,7 @@ def test_helm_release_successful(check_helm_release_successful: None) -> None:
 @pytest.mark.smoke
 def test_positive_assertions(
     kube_cluster: Cluster,
-    gitops_environment: ConfiguredApp,
+    gitops_deployment: None,
     check_helm_release_successful: None,
     check_kustomizations_successful: None,
 ) -> None:
