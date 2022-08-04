@@ -56,7 +56,6 @@ def check_kustomizations_successful(
     check_flux_objects_successful(kube_cluster, KustomizationCR)
 
 
-@pytest.mark.smoke
 def test_kustomizations_successful(check_kustomizations_successful: None) -> None:
     # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
     pass
@@ -69,13 +68,11 @@ def check_helm_release_successful(
     check_flux_objects_successful(kube_cluster, HelmReleaseCR)
 
 
-@pytest.mark.smoke
 def test_helm_release_successful(check_helm_release_successful: None) -> None:
     # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
     pass
 
 
-@pytest.mark.smoke
 def test_positive_assertions(
     kube_cluster: Cluster,
     gitops_deployment: None,
