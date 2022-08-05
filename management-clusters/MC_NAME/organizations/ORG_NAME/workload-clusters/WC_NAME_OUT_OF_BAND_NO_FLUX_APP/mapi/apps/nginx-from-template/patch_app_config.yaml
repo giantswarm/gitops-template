@@ -4,10 +4,13 @@ metadata:
   name: ${cluster_id}-nginx-ingress-controller
   namespace: kube-system
 spec:
+  config:
+    configMap:
+      name: ${cluster_id}-tmpl-nginx-ingress-controller-values
   userConfig:
     configMap:
-      name: ${cluster_id}-nginx-ingress-controller-user-values
+      name: ${cluster_id}-tmpl-nginx-ingress-controller-user-values
       namespace: kube-system
     secret:
-      name: ${cluster_id}-nginx-ingress-controller-user-secret
+      name: ${cluster_id}-tmpl-nginx-ingress-controller-user-secret
       namespace: kube-system
