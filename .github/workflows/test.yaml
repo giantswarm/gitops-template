@@ -3,6 +3,7 @@ name: run tests on kind
 on:
   workflow_run:
     workflows: ["validate"]
+    branches: [HEAD_BRANCH]
     types:
       - completed
 
