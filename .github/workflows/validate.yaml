@@ -19,7 +19,7 @@ jobs:
           key: ${{ runner.os }}-pre-commit-gitops-validate-${{ hashFiles('.pre-commit-config.yaml') }}
       - uses: pre-commit/action@v2.0.3
   validate:
-    needs: pre-commit
+    needs: check-pre-commit
     runs-on: ubuntu-latest
     env:
       kubeconform_ver: 0.4.13
