@@ -153,3 +153,46 @@ jobs:
 
             </details>
             <!-- mandatory empty line -->
+  test_on_kind:
+    runs-on: ubuntu-latest
+    needs: validate
+    env:
+      clusterctl_ver: "1.1.5"
+      apptestctl_ver: "0.14.5"
+      kind_ver: "0.12.0"
+    steps:
+      - uses: actions/checkout@v3
+      - name: install apptestctl
+        uses: giantswarm/install-binary-action@v1
+        with:
+          binary: apptestctl
+          download_url: "https://github.com/giantswarm/apptestctl/releases/download/v${version}/apptestctl-v${version}-linux-amd64.tar.gz"
+          smoke_test: "${binary} version"
+          tarball_binary_path: "apptestctl-v${version}-linux-amd64/${binary}"
+          version: ${{ env.apptestctl_ver }}
+      - name: install clusterctl
+        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v${{ env.clusterctl_ver }}/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          version: "v${{ env.kind_ver }}"
+      - name: extract kind kube.config
+        run: kind get kubeconfig --name 'chart-testing' > /tmp/kube.config
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install pipenv
+        run: |
+          python -m pip install --upgrade pipenv
+      - name: install pipenv environment
+        run: cd tests/ats && pipenv install --deploy
+      - name: run tests
+        run: cd tests/ats && pipenv run pytest .
+        env:
+          KUBECONFIG: /tmp/kube.config
+          GITOPS_FLUX_APP_VERSION: "0.13.0"
+          GITOPS_INIT_NAMESPACES: "default,org-org-name"
+          GITOPS_REPO_BRANCH: "${{ github.head_ref }}"
+          GITOPS_REPO_URL: "https://github.com/giantswarm/gitops-template"
+          GITOPS_MASTER_GPG_KEY: "${{ secrets.GITOPS_MASTER_GPG_KEY }}"
