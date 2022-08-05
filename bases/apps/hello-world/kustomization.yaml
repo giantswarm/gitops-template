@@ -3,7 +3,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=default_config.yaml
-    name: ${cluster_id}-hello-world-values
+    name: ${cluster_name}-hello-world-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization

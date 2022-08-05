@@ -1,0 +1,102 @@
+---
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: ../../../../../../bases/clusters/capo/template/cluster.yaml
+  labels:
+    app-operator.giantswarm.io/version: 0.0.0
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1
+  namespace: org-org-name
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: hello-app-staging-1-config
+      namespace: org-org-name
+  kubeConfig:
+    inCluster: true
+  name: cluster-openstack
+  namespace: org-org-name
+  userConfig:
+    configMap:
+      name: hello-app-staging-1-user-config
+      namespace: org-org-name
+  version: 0.8.1
+---
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: ../../../../../../bases/clusters/capo/template/default_apps.yaml
+  labels:
+    app-operator.giantswarm.io/version: 0.0.0
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-default-apps
+  namespace: org-org-name
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: hello-app-staging-1-default-apps-config
+      namespace: org-org-name
+  kubeConfig:
+    inCluster: true
+  name: default-apps-openstack
+  namespace: org-org-name
+  version: 0.2.0
+---
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: ../../../../../../bases/apps/hello-world/appcr.yaml
+  labels:
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-hello-world
+  namespace: org-org-name
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: hello-app-staging-1-hello-world-values
+      namespace: org-org-name
+  kubeConfig:
+    inCluster: false
+  name: hello-world-app
+  namespace: org-org-name
+  version: '0.1.8 # {"$imagepolicy": "org-org-name:hello-app-staging-1-hello-app"}'
+---
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  annotations:
+    config.kubernetes.io/origin: |
+      path: ../../../../../../bases/apps/simple-db/appcr.yaml
+  labels:
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-simple-db
+  namespace: org-org-name
+spec:
+  catalog: giantswarm
+  config:
+    configMap:
+      name: hello-app-staging-1-simple-db-values
+      namespace: org-org-name
+  kubeConfig:
+    inCluster: false
+  name: simple-db-app
+  namespace: org-org-name
+  version: '0.1.0 # {"$imagepolicy": "org-org-name:hello-app-staging-1-simple-db-app"}'

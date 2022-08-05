@@ -1,0 +1,17 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: capi-wc-name-cert-manager
+  namespace: org-org-name
+spec:
+  catalog: giantswarm
+  kubeConfig:
+    context:
+      name: capi-wc-name-admin@capi-wc-name
+    inCluster: false
+    secret:
+      name: capi-wc-name-kubeconfig
+      namespace: org-org-name
+  name: cert-manager-app
+  namespace: org-org-name
+  version: 2.12.0

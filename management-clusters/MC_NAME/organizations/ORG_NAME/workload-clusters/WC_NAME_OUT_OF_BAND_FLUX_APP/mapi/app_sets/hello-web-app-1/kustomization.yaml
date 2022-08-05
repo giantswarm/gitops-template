@@ -5,7 +5,7 @@ commonLabels:
 configMapGenerator:
   - files:
       - values=override_config_hello_world.yaml
-    name: ${cluster_id}-hello-world-user-values
+    name: ${cluster_name}-hello-world-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization

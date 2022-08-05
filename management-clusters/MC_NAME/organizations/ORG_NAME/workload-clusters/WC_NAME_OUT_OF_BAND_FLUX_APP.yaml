@@ -13,6 +13,7 @@ spec:
   postBuild:
     substitute:
       cluster_id: "WC_ID"
+      cluster_name: "WC_ID"
       cluster_release: "0.8.1"
       control_plane_id: "CP_ID"
       default_apps_release: "0.2.0"

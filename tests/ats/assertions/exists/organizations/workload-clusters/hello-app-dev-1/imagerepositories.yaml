@@ -1,0 +1,18 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: hello-app-dev-1-hello-app
+  namespace: org-org-name
+spec:
+  image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
+  interval: 10m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: hello-app-dev-1-simple-db-app
+  namespace: org-org-name
+spec:
+  image: giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app
+  interval: 10m0s
