@@ -2,7 +2,7 @@ apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
   name: hello-world
-  namespace: org-${ogranization}
+  namespace: org-${organization}
 spec:
   catalog: giantswarm
   kubeConfig:

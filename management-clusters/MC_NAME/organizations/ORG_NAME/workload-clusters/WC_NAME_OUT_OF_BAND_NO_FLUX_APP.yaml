@@ -14,7 +14,9 @@ spec:
     substitute:
       cluster_id: "WC_ID"
       cluster_name: "WC_ID"
+      cluster_release: "0.8.1"
       control_plane_id: "CP_ID"
+      default_apps_release: "0.2.0"
       machine_deployment_id: "MD_ID"
       organization: "ORG_NAME"
       release: "16.3.1"
@@ -29,7 +31,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: MC_NAME-clusters-WC_NAME-direct
-  namespace: default
+  namespace: org-ORG_NAME # Change to the `WC_NAME` for the legacy clusters. The rule of thumb: follow the `kubeconfig` namespace.
 spec:
   interval: 1m
   kubeConfig:

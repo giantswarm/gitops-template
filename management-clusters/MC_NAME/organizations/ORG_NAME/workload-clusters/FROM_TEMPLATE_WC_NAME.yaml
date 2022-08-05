@@ -13,6 +13,7 @@ spec:
   postBuild:
     substitute:
       cluster_id: "TMPL_WC_ID"
+      cluster_release: "0.8.1"
       control_plane_id: "TMPL_CP_ID"
       machine_deployment_id: "TMPL_MD_ID"
       organization: "ORG_NAME"

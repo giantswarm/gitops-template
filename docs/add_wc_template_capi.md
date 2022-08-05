@@ -187,9 +187,8 @@ over multiple releases,
 and although minor differences can be handled on the `userConfig` level, it is advised for the bases to follow major
 `values.yaml` schema versions to avoid confusion.
 
-For example, both CAPO bases in this repository, the [v0.5.0](/bases/clusters/capo/<=v0.5.0) and
-the [v0.6.0](/bases/clusters/capo/>=v0.6.0), are product of the major changes introduced to the `values.yaml` in
-the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
+There is an example for CAPO [v0.6.0](/bases/clusters/capo/>=v0.6.0) as major changes were introduced
+to the `values.yaml` in the [cluster-openstack v0.6.0 release](https://github.com/giantswarm/cluster-openstack/releases/tag/v0.6.0).
 
 **IMPORTANT**, despite the below instructions referencing `kubectl-gs` for templating configuration, `kubectl-gs`
 generates configuration for the most recent schema only. If you configure a base for older versions of cluster app,
