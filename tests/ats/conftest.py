@@ -201,6 +201,8 @@ def init_namespaces(
 ) -> Iterable[Any]:
     created_namespaces: list[pykube.Namespace] = []
     created_cluster_role_bindings: list[pykube.ClusterRoleBinding] = []
+    created_service_accounts: list[pykube.ServiceAccount] = []
+
     for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(
             name=ns
@@ -211,21 +213,30 @@ def init_namespaces(
             )
             new_ns.create()
             created_namespaces.append(new_ns)
+
         sa_on_cluster = (
             pykube.ServiceAccount.objects(kube_cluster.kube_client)
             .filter(namespace=ns)
             .get_or_none(name=FLUX_IMPERSONATION_SA_NAME)
         )
         if not sa_on_cluster:
-            pykube.ServiceAccount(
+            sa = pykube.ServiceAccount(
                 kube_cluster.kube_client,
                 {"metadata": {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}},
-            ).create()
+            )
+            sa.create()
+            created_service_accounts.append(sa)
+
+        crb_name = f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin-{ns}"
+        crb_on_cluster = pykube.ClusterRoleBinding.objects(
+            kube_cluster.kube_client
+        ).get_or_none(name=crb_name)
+        if not crb_on_cluster:
             crb = pykube.ClusterRoleBinding(
                 kube_cluster.kube_client,
                 {
                     "metadata": {
-                        "name": f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin-{ns}",
+                        "name": crb_name,
                     },
                     "roleRef": {"kind": "ClusterRole", "name": "cluster-admin"},
                     "subjects": [
@@ -242,6 +253,8 @@ def init_namespaces(
 
     yield
 
+    for sa in created_service_accounts:
+        sa.delete()
     for namespace in created_namespaces:
         namespace.delete()
     for crb in created_cluster_role_bindings:
