@@ -171,7 +171,7 @@ jobs:
           tarball_binary_path: "apptestctl-v${version}-linux-amd64/${binary}"
           version: ${{ env.apptestctl_ver }}
       - name: install clusterctl
-        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v${{ env.clusterctl_ver }}/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl
+        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v${{ env.clusterctl_ver }}/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl && clusterctl version
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.3.0
         with:
