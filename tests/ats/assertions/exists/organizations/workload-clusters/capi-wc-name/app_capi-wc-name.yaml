@@ -15,6 +15,6 @@ spec:
   namespace: org-org-name
   userConfig:
     configMap:
-      name: capi-wc-name-userconfig
+      name: capi-wc-name-user-config
       namespace: org-org-name
   version: 0.8.1

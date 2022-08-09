@@ -6,5 +6,5 @@ data:
     externalNetworkID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
 kind: ConfigMap
 metadata:
-  name: capi-wc-name-userconfig
+  name: capi-wc-name-user-config
   namespace: org-org-name
