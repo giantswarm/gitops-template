@@ -12,7 +12,6 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi"
   postBuild:
     substitute:
-      cluster_id: "WC_ID"
       cluster_name: "WC_ID"
       cluster_release: "0.8.1"
       control_plane_id: "CP_ID"
