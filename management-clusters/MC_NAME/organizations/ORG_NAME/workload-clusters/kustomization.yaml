@@ -5,10 +5,9 @@ commonLabels:
 kind: Kustomization
 resources:
   - CAPI_WC_NAME.yaml
-    #  - FROM_TEMPLATE_WC_NAME.yaml
   - HELLO_APP_DEV_CLUSTER_1.yaml
   - HELLO_APP_PROD_CLUSTER_1.yaml
   - HELLO_APP_STAGING_CLUSTER_1.yaml
-  - WC_NAME_NO_OUT_OF_BAND.yaml
-  - WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
-  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
+    #  - WC_NAME_NO_OUT_OF_BAND.yaml
+    #  - WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
+    #  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
