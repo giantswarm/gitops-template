@@ -3,5 +3,5 @@ buildMetadata: [originAnnotations]
 kind: Kustomization
 resources:
   - app_sets/hello-web-app/
-  - apps/
+    #- apps/
   - cluster/
