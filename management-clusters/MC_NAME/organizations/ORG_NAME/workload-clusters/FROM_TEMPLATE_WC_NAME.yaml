@@ -12,15 +12,15 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/FROM_TEMPLATE_WC_NAME"
   postBuild:
     substitute:
-      cluster_id: "TMPL_WC_ID"
+      cluster_name: "TMPL_WC_ID"
       cluster_release: "0.8.1"
       control_plane_id: "TMPL_CP_ID"
       machine_deployment_id: "TMPL_MD_ID"
       organization: "ORG_NAME"
       release: "16.3.1"
-  prune: true
+  prune: false
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: ${gitops_repo}
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo
   timeout: 2m
