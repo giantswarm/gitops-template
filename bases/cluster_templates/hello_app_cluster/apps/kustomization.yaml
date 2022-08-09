@@ -3,5 +3,6 @@ buildMetadata: [originAnnotations]
 commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
+namespace: org-${ organization }
 resources:
   - nginx-from-template/
