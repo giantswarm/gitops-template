@@ -3,7 +3,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
       - values=override_config.yaml
-    name: ${cluster_id}-tmpl-nginx-ingress-controller-user-values
+    name: ${cluster_name}-tmpl-nginx-ingress-controller-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -13,21 +13,21 @@ patches:
   - patch: |-
       - op: replace
         path: "/metadata/name"
-        value: ${cluster_id}-tmpl-nginx-ingress-controller
+        value: ${cluster_name}-tmpl-nginx-ingress-controller
     target:
       group: application.giantswarm.io
       kind: "App"
-      name: \${cluster_id}-nginx-ingress-controller
+      name: \${cluster_name}-nginx-ingress-controller
       namespace: kube-system
       version: v1alpha1
   - patch: |-
       - op: replace
         path: "/metadata/name"
-        value: ${cluster_id}-tmpl-nginx-ingress-controller-values
+        value: ${cluster_name}-tmpl-nginx-ingress-controller-values
     target:
       group: ""
       kind: "ConfigMap"
-      name: \${cluster_id}-nginx-ingress-controller-values
+      name: \${cluster_name}-nginx-ingress-controller-values
       version: v1
 # block end
 patchesStrategicMerge:
