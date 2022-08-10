@@ -18,4 +18,4 @@ data:
       source_name: my-repository
 kind: ConfigMap
 metadata:
-  name: ${cluster_id}-flux-app-user-values
+  name: ${cluster_name}-flux-app-user-values
