@@ -11,3 +11,4 @@ data:
 kind: ConfigMap
 metadata:
   name: ${cluster_name}-nginx-ingress-controller-user-values
+  namespace: org-${organization}
