@@ -9,7 +9,7 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-namespace: hello-web-team1
+namespace: org-${organization}
 patchesStrategicMerge:
   - patch_app_config.yaml
 resources:
