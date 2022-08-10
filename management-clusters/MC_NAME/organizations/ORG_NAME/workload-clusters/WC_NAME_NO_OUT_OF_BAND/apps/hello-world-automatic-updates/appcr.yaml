@@ -5,6 +5,7 @@ metadata:
     giantswarm.io/cluster: ${workload_cluster_name}
     giantswarm.io/managed-by: flux
   name: ${cluster_name}-hello-world-app-auto
+  namespace: org-${organization}
 spec:
   catalog: giantswarm-catalog-oci
   kubeConfig:
