@@ -4,6 +4,7 @@ configMapGenerator:
   - files:
       - values=override_config.yaml
     name: ${cluster_name}-tmpl-nginx-ingress-controller-user-values
+    namespace: kube-system
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
