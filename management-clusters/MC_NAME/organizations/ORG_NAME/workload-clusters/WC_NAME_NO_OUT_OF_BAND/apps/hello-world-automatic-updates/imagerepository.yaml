@@ -2,6 +2,7 @@ apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageRepository
 metadata:
   name: ${cluster_name}-hello-world
+  namespace: org-${organization}
 spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
   interval: 30m0s
