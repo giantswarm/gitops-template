@@ -4,10 +4,10 @@ configMapGenerator:
   - files:
       - values=override_config.yaml
     name: ${cluster_name}-tmpl-nginx-ingress-controller-user-values
-    namespace: kube-system
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
+namespace: kube-system
 # patches block: needed only because we already install nginx in `nginx-ingress-controller` app
 #  and we would have name conflicts. Normally not needed.
 patches:
