@@ -6,5 +6,5 @@ metadata:
 spec:
   userConfig:
     configMap:
-      name: ${cluster_id}-hello-world-user-values
-      namespace: hello-web-team1
+      name: ${cluster_name}-hello-world-user-values
+      namespace: hello-world-app
