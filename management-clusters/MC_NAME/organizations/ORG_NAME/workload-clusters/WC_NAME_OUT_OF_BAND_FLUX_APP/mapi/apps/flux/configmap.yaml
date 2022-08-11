@@ -19,3 +19,4 @@ data:
 kind: ConfigMap
 metadata:
   name: ${cluster_name}-flux-app-user-values
+  namespace: org-${organization}
