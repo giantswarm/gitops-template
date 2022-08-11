@@ -4,8 +4,6 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
-- flux/appcr.yaml
-- flux/configmap.yaml
 - hello-world/appcr.yaml
 - hello-world-automatic-updates/appcr.yaml
 - hello-world-automatic-updates/imagepolicy.yaml

@@ -13,7 +13,7 @@ spec:
   postBuild:
     substitute:
       cluster_domain: "your-cluster-domain-name"  # TODO: change 'your-cluster-domain-name' to real domain name
-      cluster_name: "clusters-mapi-out-of-band-flux-app"
+      cluster_name: "mapi-out-of-band-flux-app"
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "org-name"  # TODO: change 'org-name' to your organization name

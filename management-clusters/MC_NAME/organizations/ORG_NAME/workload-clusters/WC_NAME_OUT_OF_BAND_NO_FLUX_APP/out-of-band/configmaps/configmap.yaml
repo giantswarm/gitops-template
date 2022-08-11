@@ -8,5 +8,5 @@ data:
     Encryption is possible here as well, but I am not encrypted atm.
 kind: ConfigMap
 metadata:
-  name: secret-to-be-created-directly-in-WC
+  name: secret-to-be-created-directly-in-wc
   namespace: default
