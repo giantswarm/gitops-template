@@ -34,4 +34,4 @@ patchesStrategicMerge:
   - patch_app_config.yaml
 resources:
   - secret.enc.yaml
-  - ../../../../../../../../../bases/apps/nginx-ingress-controller
+  - ../../../../../../../../../../bases/apps/nginx-ingress-controller
