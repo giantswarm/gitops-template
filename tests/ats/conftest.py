@@ -40,6 +40,7 @@ class GitOpsTestConfig:
     _FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
     _GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
     _FLUX_APP_VERSION = "GITOPS_FLUX_APP_VERSION"
+    _IGNORED_OBJECTS = "GITOPS_IGNORED_OBJECTS"
 
     def __init__(self) -> None:
         env_var_namespaces = os.getenv(self._FLUX_INIT_NAMESPACES_ENV_VAR_NAME)
@@ -82,6 +83,10 @@ class GitOpsTestConfig:
                 f"The '{self._FLUX_APP_VERSION}' environment variable must be set to a valid semver."
             )
             raise Exception("flux-app version not set")
+
+        ignored_objects = os.environ[self._IGNORED_OBJECTS]
+        if ignored_objects:
+            self.ignored_objects = ignored_objects.split(";")
 
 
 @pytest.fixture(scope="module")

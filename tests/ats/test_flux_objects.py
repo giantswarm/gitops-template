@@ -15,6 +15,8 @@ from pytest_helm_charts.flux.kustomization import KustomizationCR
 from pytest_helm_charts.flux.utils import NamespacedFluxCR, flux_cr_ready
 from pytest_helm_charts.utils import wait_for_objects_condition
 
+from conftest import GitOpsTestConfig
+
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
 
 FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
@@ -25,15 +27,21 @@ EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
 logger = logging.getLogger(__name__)
 
 
-def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -> None:
+def check_flux_objects_successful(
+    kube_cluster: Cluster, obj_type: Type[TFNS], ignored_objects: list[str] = None
+) -> None:
     namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
     for ns in namespaces:
         objects = (
             obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
         )
-        if len(objects.response["items"]) == 0:
+        if not objects.response["items"]:
             continue
-        obj_names = [o.name for o in objects]
+        if not ignored_objects:
+            ignored_objects = []
+        obj_names = [o.name for o in objects if f"{ns}/{o.name}" not in ignored_objects]
+        if not obj_names:
+            continue
         logger.debug(
             f"Waiting max {FLUX_OBJECTS_READY_TIMEOUT_SEC} s for the following {obj_type.__name__} objects "
             f"to be ready in '{ns.name}' namespace: '{obj_names}'."
@@ -51,9 +59,11 @@ def check_flux_objects_successful(kube_cluster: Cluster, obj_type: Type[TFNS]) -
 
 @pytest.fixture(scope="module")
 def check_kustomizations_successful(
-    kube_cluster: Cluster, gitops_deployment: None
+    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> None:
-    check_flux_objects_successful(kube_cluster, KustomizationCR)
+    check_flux_objects_successful(
+        kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
+    )
 
 
 def test_kustomizations_successful(check_kustomizations_successful: None) -> None:
@@ -63,9 +73,11 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
 
 @pytest.fixture(scope="module")
 def check_helm_release_successful(
-    kube_cluster: Cluster, gitops_deployment: None
+    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> None:
-    check_flux_objects_successful(kube_cluster, HelmReleaseCR)
+    check_flux_objects_successful(
+        kube_cluster, HelmReleaseCR, gitops_test_config.ignored_objects
+    )
 
 
 def test_helm_release_successful(check_helm_release_successful: None) -> None:

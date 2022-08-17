@@ -13,6 +13,7 @@ env:
   kind_ver: "0.12.0"
   GITOPS_FLUX_APP_VERSION: "0.13.0"
   GITOPS_INIT_NAMESPACES: "default,org-org-name"
+  GITOPS_IGNORED_OBJECTS: "default/clusters-mapi-out-of-band-no-flux-direct"
 
 jobs:
   check-pre-commit:
