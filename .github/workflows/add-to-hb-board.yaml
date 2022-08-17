@@ -5,17 +5,14 @@ on:
     types: [opened]
   pull_request:
     types: [opened]
-env:
-  MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
 jobs:
-  assign_one_project:
+  add-to-project:
+    name: Add issue to project
     runs-on: ubuntu-latest
-    name: Assign to Honeybadger Project
     steps:
-    - name: Assign NEW issues and NEW pull requests to honeybadger board
-      uses: srggrs/assign-one-project-github-action@1.3.1
-      if: github.event.action == 'opened'
-      with:
-        project: 'https://github.com/orgs/giantswarm/projects/233'
-        column_name: 'Inbox'
+      - uses: actions/add-to-project@v0.3.0
+        if: github.event.action == 'opened'
+        with:
+          project-url: https://github.com/orgs/giantswarm/projects/320
+          github-token: ${{ secrets.MY_GITHUB_TOKEN }}
