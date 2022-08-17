@@ -27,7 +27,7 @@ In general, we have to complete 3 major steps to provide the necessary structure
 it is by exporting it as an environment variable:
 
 ```sh
-export MC_NAME=CODENAME
+export MC_NAME=YOUR_CODENAME
 ```
 
 ## Flux GPG master key pair
@@ -204,11 +204,11 @@ in the `default` namespace.
     apiVersion: source.toolkit.fluxcd.io/v1beta2
     kind: GitRepository
     metadata:
-      name: GITOPS_REPO
+      name: GITOPS_REPO  # TODO: set as needed
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/GITOPS_REPO
+      url: https://github.com/GITOPS_REPO  # TODO: set as needed
       secretRef:
         name: github-https-credentials
       ref:

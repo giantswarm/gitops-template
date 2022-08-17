@@ -125,7 +125,7 @@ configMapGenerator:
   - behavior: create
     files:
       - values=hello_world_app_user_config.yaml
-    name: ${WC_NAME}-hello-world-user-config
+    name: \${cluster_name}-hello-world-user-config
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -192,8 +192,8 @@ cat <<EOF > automatic_updates/imageupdate.yaml
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageUpdateAutomation
 metadata:
-  name: ${cluster_id}-image-updates
-  namespace: org-${ORG_NAME}
+  name: \${cluster_name}-image-updates
+  namespace: org-\${organization}
 spec:
   git:
     checkout:
@@ -237,7 +237,8 @@ cat <<EOF > imagerepositories.yaml
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageRepository
 metadata:
-  name: ${WC_NAME}-hello-app
+  name: \${cluster_name}-hello-app
+  namespace: org-\${organization}
 spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
   interval: 10m0s
@@ -245,7 +246,8 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageRepository
 metadata:
-  name: ${WC_NAME}-simple-db-app
+  name: \${cluster_name}-simple-db-app
+  namespace: org-\${organization}
 spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app
   interval: 10m0s
@@ -264,12 +266,13 @@ cat <<EOF > imagepolicies.yaml
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${WC_NAME}-hello-app
+  name: \${cluster_name}-hello-app
+  namespace: org-\${organization}
 spec:
   filterTags:
     pattern: '.*-dev.*'
   imageRepositoryRef:
-    name: ${WC_NAME}-hello-app
+    name: \${cluster_name}-hello-app
   policy:
     semver:
       range: '>=0.1.0'
@@ -277,10 +280,11 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${WC_NAME}-simple-db-app
+  name: \${cluster_name}-simple-db-app
+  namespace: org-\${organization}
 spec:
   imageRepositoryRef:
-    name: ${WC_NAME}-simple-db
+    name: \${cluster_name}-simple-db
   policy:
     semver:
       range: '>=0.1.0 <0.2.0'
@@ -298,14 +302,14 @@ patches:
         value: '0.1.8
     target:
       kind: App
-      name: ${WC_NAME}-hello-world
+      name: \\\${cluster_name}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
         value: '0.1.0'
     target:
       kind: App
-      name: ${WC_NAME}-simple-db
+      name: \\\${cluster_name}-simple-db
 EOF
 ```
 
@@ -352,10 +356,11 @@ cat <<EOF > imagepolicies.yaml
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${WC_NAME}-hello-app
+  name: \${cluster_name}-hello-app
+  namespace: org-\${organization}
 spec:
   imageRepositoryRef:
-    name: ${WC_NAME}-hello-app
+    name: \${cluster_name}-hello-app
   policy:
     semver:
       range: '>=0.1.0 <1.0.0'
@@ -363,10 +368,11 @@ spec:
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImagePolicy
 metadata:
-  name: ${WC_NAME}-simple-db-app
+  name: \${cluster_name}-simple-db-app
+  namespace: org-\${organization}
 spec:
   imageRepositoryRef:
-    name: ${WC_NAME}-simple-db
+    name: \${cluster_name}-simple-db
   policy:
     semver:
       range: '>=0.1.0 <0.2.0'
@@ -397,12 +403,12 @@ configMapGenerator:
   - behavior: create
     files:
       - values=hello_world_app_user_config.yaml
-    name: ${WC_NAME}-hello-world-user-config
+    name: \${cluster_name}-hello-world-user-config
   - behavior: replace
     files:
       - values=cluster_user_config.yaml
-    name: ${WC_NAME}-user-config
-    namespace: org-${ORG_NAME}
+    name: \${cluster_name}-user-config
+    namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -458,14 +464,14 @@ patches:
         value: 0.1.8
     target:
       kind: App
-      name: ${WC_NAME}-hello-world
+      name: \\\${cluster_name}-hello-world
   - patch: |-
       - op: replace
         path: /spec/version
         value: 0.1.0
     target:
       kind: App
-      name: ${WC_NAME}-simple-db
+      name: \\\${cluster_name}-simple-db
 EOF
 ```
 
@@ -493,7 +499,7 @@ cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: clusters-${WC_NAME}
+  name: clusters-\${cluster_name}
   namespace: default
 spec:
   interval: 1m
@@ -501,7 +507,6 @@ spec:
   postBuild:
     substitute:
       cluster_domain: "MY_DOMAIN"
-      cluster_id: "HELLO_APP_DEV_1"
       cluster_name: "HELLO_APP_DEV_1"
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"

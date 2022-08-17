@@ -43,8 +43,8 @@ An example of a WC cluster instance created using the CAPI is available in [CAPI
     $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
     kind: ConfigMap
     metadata:
-      name: ${WC_NAME}-userconfig
-      namespace: org-${ORG_NAME}
+      name: \${cluster_name}-userconfig
+      namespace: org-\${organization}
     EOF
     ```
 

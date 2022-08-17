@@ -196,15 +196,15 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     spec:
       config:
         configMap:
-          name: ${cluster_id}-cluster-values
-          namespace: ${cluster_id}
+          name: ${cluster_name}-cluster-values
+          namespace: ${cluster_name}
       kubeConfig:
         context:
-          name: giantswarm-${cluster_id}-context
+          name: giantswarm-${cluster_name}-context
         inCluster: false
         secret:
-          name: ${cluster_id}-kubeconfig
-          namespace: ${cluster_id}
+          name: ${cluster_name}-kubeconfig
+          namespace: ${cluster_name}
     EOF
     ```
 
@@ -267,7 +267,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}${IN_BOUND}"
         postBuild:
           substitute:
-            cluster_id: "${WC_NAME}"
+            cluster_name: "${WC_NAME}"
         prune: false
         serviceAccountName: automation
         sourceRef:
@@ -296,7 +296,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}${IN_BOUND}"
         postBuild:
           substitute:
-            cluster_id: "${WC_NAME}"
+            cluster_name: "${WC_NAME}"
         prune: false
         serviceAccountName: automation
         sourceRef:

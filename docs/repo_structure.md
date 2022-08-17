@@ -1,19 +1,18 @@
 # Repository Structure
 
-- [Repository Structure](#repository-structure)
-  - [General Remarks](#general-remarks)
-  - [Security Architecture](#security-architecture)
-    - [Overview](#overview)
-    - [Multiple GPG Keys](#multiple-gpg-keys)
-  - [Rules for Naming Resources](#rules-for-naming-resources)
-  - [Rules for Optional Components](#rules-for-optional-components)
-    - [`[OTHER_RESOURCES]`](#other_resources)
-    - [`[kustomization.yaml]`](#kustomizationyaml)
-    - [`[organizations]`](#organizations)
-    - [`[workload-clusters]`](#workload-clusters)
-    - [`[mapi]` and `[out-of-band]`](#mapi-and-out-of-band)
-  - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
-    - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
+- [General Remarks](#general-remarks)
+- [Security Architecture](#security-architecture)
+  - [Overview](#overview)
+  - [Multiple GPG Keys](#multiple-gpg-keys)
+- [Rules for Naming Resources](#rules-for-naming-resources)
+- [Rules for Optional Components](#rules-for-optional-components)
+  - [`[OTHER_RESOURCES]`](#other_resources)
+  - [`[kustomization.yaml]`](#kustomizationyaml)
+  - [`[organizations]`](#organizations)
+  - [`[workload-clusters]`](#workload-clusters)
+  - [`[mapi] and [out-of-band]`](#mapi-and-out-of-band)
+- [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
+  - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
 ## General Remarks
 
@@ -42,8 +41,8 @@ management-clusters
             ├── ORG_NAME.yaml
             └── [workload-clusters]
                 ├── kustomization.yaml
-                ├── WC_NAME.yaml
-                └── WC_NAME                             managed from MC_NAME.yaml
+                ├── CAPI_WC_NAME.yaml
+                └── CAPI_WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
                     ├── [out-of-band]                  WC_NAME.yaml responsibility
                     |   ├── [kustomization.yaml]
@@ -69,7 +68,7 @@ RECOMMENDED to stay compliant with the [Rules for Optional Components](#rules-fo
 This is to offer flexibility and allow different environments and use-cases.
 
 The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
-the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
+the `CAPI_MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
 [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
 The security of resources is provided by GPG encryption. The repository provides a way to manage
@@ -111,7 +110,7 @@ The relation between Kustomization CRs and Kubernetes Secrets is depicted in the
                  (creates) <---(decrypts with)--- MC_NAME.gpgkey.enc.yaml
                      |
                      |
-  OTHER_RESOURCES <--+--> WC_NAME.yaml
+  OTHER_RESOURCES <--+--> CAPI_WC_NAME.yaml
                                |
                                |
                            (creates) <---(decrypts with)--- WC_NAME.gpgkey.enc.yaml
