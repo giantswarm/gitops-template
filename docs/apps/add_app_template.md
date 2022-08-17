@@ -1,10 +1,9 @@
 # Add a new App Template to the repository
 
-- [Add a new App Template to the repository](#add-a-new-app-template-to-the-repository)
-  - [Example](#example)
-  - [Export environment variables](#export-environment-variables)
-  - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
-  - [Recommended next steps](#recommended-next-steps)
+- [Example](#example)
+- [Export environment variables](#export-environment-variables)
+- [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
+- [Recommended next steps](#recommended-next-steps)
 
 In order to avoid adding the same application from scratch across all your clusters, you can prepare App Templates that provide
 a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is
@@ -21,7 +20,7 @@ in multiple places across this instruction, the least error prone way of providi
 
 ```sh
 export WC_NAME=CLUSTER_NAME
-export APP_NAME="\${cluster_id}-APP_NAME"
+export APP_NAME="\${cluster_name}-APP_NAME"
 export APP_VERSION=APP_VERSION
 export APP_CATALOG=APP_CATALOG
 export APP_NAMESPACE=APP_NAMESPACE
@@ -59,7 +58,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-secret ${APP_USER_VALUES}
     ```
 
-    **Note**, We're including `${cluster_id}` in the app name to avoid a problem when two
+    **Note**, We're including `${cluster_name}` in the app name to avoid a problem when two
     or more clusters in the same organization want to deploy the same app with its
     default name.
 
@@ -82,7 +81,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     configMapGenerator:
       - files:
         - values=default_config.yaml
-        name: ${cluster_id}-nginx-ingress-controller-values
+        name: ${cluster_name}-nginx-ingress-controller-values
     generatorOptions:
       disableNameSuffixHash: true
     # default config block end

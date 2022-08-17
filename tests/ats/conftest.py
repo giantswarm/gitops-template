@@ -86,7 +86,7 @@ class GitOpsTestConfig:
 
         ignored_objects = os.environ[self._IGNORED_OBJECTS]
         if ignored_objects:
-            self.ignored_objects = ignored_objects.split(";")
+            self.ignored_objects = ignored_objects.split(",")
 
 
 @pytest.fixture(scope="module")

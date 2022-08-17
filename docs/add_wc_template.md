@@ -1,12 +1,11 @@
 # Add a CAPx (CAPI) Workload Cluster template (cluster App based)
 
-- [Add a CAPx (CAPI) Workload Cluster template (cluster App based)](#add-a-capx-capi-workload-cluster-template-cluster-app-based)
-  - [Example](#example)
-  - [Export environment variables](#export-environment-variables)
-  - [Choose bases](#choose-bases)
-  - [Create shared cluster template base (optional)](#create-shared-cluster-template-base-optional)
-  - [Create versioned base (optional)](#create-versioned-base-optional)
-  - [Recommended next steps](#recommended-next-steps)
+- [Example](#example)
+- [Export environment variables](#export-environment-variables)
+- [Choose bases](#choose-bases)
+- [Create shared cluster template base (optional)](#create-shared-cluster-template-base-optional)
+- [Create versioned base (optional)](#create-versioned-base-optional)
+- [Recommended next steps](#recommended-next-steps)
 
 Our CAPx (CAPI provider-specific clusters) are delivered by Giant Swarm as a set of two applications. First one
 is an App with Cluster instance definition, second one is an App with all the default applications a new cluster
@@ -262,7 +261,7 @@ will configure them later in our process:
 
     ```sh
     sed -i "s/myorg/${organization}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
-    sed -i "s/mywcl/${cluster_id}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
+    sed -i "s/mywcl/${cluster_name}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
     ```
 
 1. Compare `cluster_config.yaml` against the version-specific `values.yaml`, and tweak it if necessary to match the
