@@ -75,7 +75,7 @@ spec:
     inCluster: false
   name: hello-world-app
   namespace: org-org-name
-  version: '0.1.8 # {"$imagepolicy": "org-org-name:hello-app-staging-1-hello-app"}'
+  version: '0.1.8' # {"$imagepolicy": "org-org-name:hello-app-staging-1-hello-app"}
 ---
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
@@ -99,4 +99,4 @@ spec:
     inCluster: false
   name: simple-db-app
   namespace: org-org-name
-  version: '0.1.0 # {"$imagepolicy": "org-org-name:hello-app-staging-1-simple-db-app"}'
+  version: '0.1.0' # {"$imagepolicy": "org-org-name:hello-app-staging-1-simple-db-app"}
