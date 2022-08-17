@@ -195,5 +195,5 @@ jobs:
           GITOPS_FLUX_APP_VERSION: "${{ env.GITOPS_FLUX_APP_VERSION }}"
           GITOPS_INIT_NAMESPACES: "${{ env.GITOPS_INIT_NAMESPACES }}"
           GITOPS_REPO_BRANCH: "${{ github.head_ref }}"
-          GITOPS_REPO_URL: "{{ github.server_url }}/{{ github.repository }}"
+          GITOPS_REPO_URL: "${{ github.server_url }}/${{ github.repository }}"
           GITOPS_MASTER_GPG_KEY: "${{ secrets.GITOPS_MASTER_GPG_KEY }}"
