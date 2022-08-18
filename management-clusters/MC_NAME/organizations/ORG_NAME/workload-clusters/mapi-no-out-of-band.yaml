@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: clusters-mapi-out-of-band-flux-app  # TODO: change to your cluster name; must be a correct k8s resource name (DNS-like)
+  name: clusters-mapi-no-out-of-band  # TODO: change to your cluster name; must be a correct k8s resource name (DNS-like)
   namespace: default
 spec:
   decryption:
@@ -9,11 +9,11 @@ spec:
     secretRef:
       name: sops-gpg-wc-name
   interval: 1m
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi"
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/mapi-no-out-of-band/mapi"
   postBuild:
     substitute:
       cluster_domain: "your-cluster-domain-name"  # TODO: change 'your-cluster-domain-name' to real domain name
-      cluster_name: "mapi-out-of-band-flux-app"
+      cluster_name: "mapi-no-out-of-band"
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "org-name"  # TODO: change 'org-name' to your organization name
