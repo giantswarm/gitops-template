@@ -1,13 +1,12 @@
 # Add a new App to a Workload Cluster
 
-- [Add a new App to a Workload Cluster](#add-a-new-app-to-a-workload-cluster)
-  - [Examples](#examples)
-  - [Common steps](#common-steps)
-    - [Export environment variables](#export-environment-variables)
-    - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
-  - [Adding App directly](#adding-app-directly)
-  - [Adding App using App Template](#adding-app-using-app-template)
-  - [Recommended next steps](#recommended-next-steps)
+- [Examples](#examples)
+- [Common steps](#common-steps)
+  - [Export environment variables](#export-environment-variables)
+  - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
+- [Adding App directly](#adding-app-directly)
+- [Adding App using App Template](#adding-app-using-app-template)
+- [Recommended next steps](#recommended-next-steps)
 
 Follow the instructions below to add a new App to a cluster managed in this repository.
 You can add an App directly (without any intermediate step) or use an [App Template](add_app_template.md).
@@ -69,7 +68,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     ```sh
     cd ${APP_NAME}/
     kubectl gs template app \
-    --app-name "\${cluster_id}-${APP_NAME}" \
+    --app-name "\${cluster_name}-${APP_NAME}" \
     --catalog ${APP_CATALOG} \
     --cluster ${WC_NAME} \
     --name ${APP_NAME} \
@@ -84,7 +83,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --user-secret ${APP_USER_VALUES}
     ```
 
-    **Note**, We're including `${cluster_id}` in the app name to avoid a problem when two
+    **Note**, We're including `${cluster_name}` in the app name to avoid a problem when two
     or more clusters in the same organization want to deploy the same app with its
     default name.
 
@@ -152,7 +151,7 @@ path to the directory in an env variable:
     configMapGenerator:
       - files:
           - values=override_config.yaml
-        name: \${cluster_id}-${APP_NAME}-user-values
+        name: \${cluster_name}-${APP_NAME}-user-values
     generatorOptions:
       disableNameSuffixHash: true
     ## CONFIGURATION OVERRIDE BLOCK END
@@ -179,13 +178,13 @@ path to the directory in an env variable:
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
-      name: \${cluster_id}-${APP_NAME}
+      name: \${cluster_name}-${APP_NAME}
     spec:
       userConfig:
         configMap: # include if you override the config from Template
-          name: \${cluster_id}-${APP_NAME}-user-values
+          name: \${cluster_name}-${APP_NAME}-user-values
         secret: # include if you override the secret from Template
-          name: \${cluster_id}-${APP_NAME}-user-secret
+          name: \${cluster_name}-${APP_NAME}-user-secret
     EOF
     ```
 

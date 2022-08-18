@@ -1,15 +1,16 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: ${cluster_id}-simple-db
+  name: ${cluster_name}-simple-db
+  namespace: org-${organization}
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: ${cluster_id}-simple-db-values
-      namespace: simple-db-app
+      name: ${cluster_name}-simple-db-values
+      namespace: org-${organization}
   kubeConfig:
     inCluster: false
   name: simple-db-app
-  namespace: simple-db-app
+  namespace: org-${organization}
   version: 0.1.0

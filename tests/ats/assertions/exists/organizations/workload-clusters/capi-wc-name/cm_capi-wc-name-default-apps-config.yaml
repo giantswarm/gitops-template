@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  values: |
+    clusterName: capi-wc-name
+    organization: org-name
+kind: ConfigMap
+metadata:
+  name: capi-wc-name-default-apps-config
+  namespace: org-org-name

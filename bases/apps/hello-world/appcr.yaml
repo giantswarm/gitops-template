@@ -1,15 +1,16 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: ${cluster_id}-hello-world
+  name: ${cluster_name}-hello-world
+  namespace: org-${organization}
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: ${cluster_id}-hello-world-values
-      namespace: hello-world-app
+      name: ${cluster_name}-hello-world-values
+      namespace: org-${organization}
   kubeConfig:
     inCluster: false
   name: hello-world-app
-  namespace: hello-world-app
-  version: 0.2.1
+  namespace: org-${organization}
+  version: 0.2.0

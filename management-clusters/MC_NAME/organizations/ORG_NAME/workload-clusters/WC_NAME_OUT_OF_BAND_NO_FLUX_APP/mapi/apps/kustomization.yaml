@@ -4,10 +4,10 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
-- hello-world/appcr.yaml
-- hello-world-automatic-updates/appcr.yaml
-- hello-world-automatic-updates/imagepolicy.yaml
-- hello-world-automatic-updates/imagerepository.yaml
-- nginx-from-template/
-- nginx-ingress-controller/appcr.yaml
-- nginx-ingress-controller/configmap.yaml
+  - hello-world/appcr.yaml
+  - hello-world-automatic-updates/appcr.yaml
+  - hello-world-automatic-updates/imagepolicy.yaml
+  - hello-world-automatic-updates/imagerepository.yaml
+  - nginx-from-template/
+  - nginx-ingress-controller/appcr.yaml
+  - nginx-ingress-controller/configmap.yaml

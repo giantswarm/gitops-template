@@ -13,9 +13,10 @@ data:
     kustomizations:
     - name: my-kustomizations
       interval: 1m
-      path: "./management-clusters/MC_NAME/organizations/${organization}/workload-clusters/${cluster_id}/WC_NAME[_oob_flux_app]/out-of-band"
+      path: "./management-clusters/MC_NAME/organizations/${organization}/workload-clusters/${cluster_name}/WC_NAME[_oob_flux_app]/out-of-band"
       prune: false
       source_name: my-repository
 kind: ConfigMap
 metadata:
-  name: ${cluster_id}-flux-app-user-values
+  name: ${cluster_name}-flux-app-user-values
+  namespace: org-${organization}

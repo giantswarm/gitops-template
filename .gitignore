@@ -1,0 +1,4 @@
+kube.config
+tests/ats/.idea/
+tests/ats/test_results*.xml
+tests/ats/__pycache__/
