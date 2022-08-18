@@ -1,0 +1,28 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: hello-app-staging-1-image-updates
+  namespace: org-org-name
+spec:
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.github.com
+        name: fluxcdbot
+      messageTemplate: |
+        automated app upgrades:
+        {{ range $image, $_ := .Updated.Images -}}
+        - {{ $image.Repository }} to {{ $image.Identifier }}
+        {{ end -}}
+    push:
+      branch: main
+  interval: 1m0s
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+  update:
+    path: ./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters
+    strategy: Setters

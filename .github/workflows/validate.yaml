@@ -5,8 +5,18 @@ on:
   push:
     branches: [HEAD_BRANCH, main]
 
+env:
+  kubeconform_ver: "0.4.13"
+  dyff_ver: "1.5.4"
+  clusterctl_ver: "1.1.5"
+  apptestctl_ver: "0.14.5"
+  kind_ver: "0.12.0"
+  GITOPS_FLUX_APP_VERSION: "0.13.0"
+  GITOPS_INIT_NAMESPACES: "default,org-org-name"
+  GITOPS_IGNORED_OBJECTS: "default/clusters-mapi-out-of-band-no-flux-direct"
+
 jobs:
-  pre-commit:
+  check-pre-commit:
     runs-on: ubuntu-latest
     steps:
       - run: sudo snap install shfmt
@@ -18,11 +28,9 @@ jobs:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-gitops-validate-${{ hashFiles('.pre-commit-config.yaml') }}
       - uses: pre-commit/action@v2.0.3
-  test:
-    needs: pre-commit
+  validate:
+    needs: check-pre-commit
     runs-on: ubuntu-latest
-    env:
-      kubeconform_ver: 0.4.13
     steps:
       - run: sudo apt-get install -y yamllint
       - uses: giantswarm/install-binary-action@v1
@@ -82,3 +90,110 @@ jobs:
 
             </details>
             <!-- mandatory empty line -->
+  get-diff:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'pull_request'
+    steps:
+      - run: sudo apt-get install -y yamllint
+      - name: install dyff
+        uses: giantswarm/install-binary-action@v1
+        with:
+          binary: dyff
+          download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
+          smoke_test: "${binary} version"
+          tarball_binary_path: "${binary}"
+          version: ${{ env.dyff_ver }}
+      - run: which dyff
+      - uses: giantswarm/install-binary-action@v1
+        with:
+          binary: kubeconform
+          download_url: "https://github.com/yannh/kubeconform/releases/download/v${version}/kubeconform-linux-amd64.tar.gz"
+          smoke_test: "${binary} -v"
+          tarball_binary_path: "${binary}"
+          version: ${{ env.kubeconform_ver }}
+      - run: which kubeconform
+      - run: ls -la /opt/hostedtoolcache
+      - uses: actions/checkout@v3
+      - name: template all for the new branch
+        run: ./tools/test-all-ffb template > /tmp/new.yaml
+      - uses: actions/checkout@v3
+        with:
+          ref: 'main'
+          path: 'old'
+      - name: template all for the old branch
+        run: cd old/ && ../tools/test-all-ffb template > /tmp/old.yaml && cd ..
+      - name: save the diff
+        uses: mathiasvr/command-output@v1
+        id: diff
+        with:
+          run: 'dyff between -s -i -b -g /tmp/old.yaml /tmp/new.yaml && echo "No diff detected" || if [[ $? -eq 255 ]]; then echo "Diff error"; fi;'
+      - name: Find diff comment
+        uses: peter-evans/find-comment@v2
+        continue-on-error: true
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Rendered manifest diff output log
+      - name: Delete old comment
+        uses: jungwinter/comment@v1
+        continue-on-error: true
+        with:
+          type: delete
+          comment_id: ${{ steps.fc.outputs.comment-id }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create or update validation comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            <details>
+            <summary> Rendered manifest diff output log </summary>
+            <!-- mandatory empty line -->
+
+            ```
+            ${{ steps.diff.outputs.stdout }}
+            ```
+
+            </details>
+            <!-- mandatory empty line -->
+  test_on_kind:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v3
+      - name: install apptestctl
+        uses: giantswarm/install-binary-action@v1
+        with:
+          binary: apptestctl
+          download_url: "https://github.com/giantswarm/apptestctl/releases/download/v${version}/apptestctl-v${version}-linux-amd64.tar.gz"
+          smoke_test: "${binary} version"
+          tarball_binary_path: "apptestctl-v${version}-linux-amd64/${binary}"
+          version: ${{ env.apptestctl_ver }}
+      - name: install clusterctl
+        run: curl -sSL https://github.com/kubernetes-sigs/cluster-api/releases/download/v${{ env.clusterctl_ver }}/clusterctl-linux-amd64 -o /usr/local/bin/clusterctl && chmod +x /usr/local/bin/clusterctl && clusterctl version
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          version: "v${{ env.kind_ver }}"
+      - name: extract kind kube.config
+        run: kind get kubeconfig --name 'chart-testing' > /tmp/kube.config
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install pipenv
+        run: |
+          python -m pip install --upgrade pipenv
+      - name: install pipenv environment
+        run: cd tests/ats && pipenv install --deploy
+      - name: run tests
+        run: cd tests/ats && pipenv run pytest .
+        env:
+          KUBECONFIG: /tmp/kube.config
+          GITOPS_FLUX_APP_VERSION: "${{ env.GITOPS_FLUX_APP_VERSION }}"
+          GITOPS_INIT_NAMESPACES: "${{ env.GITOPS_INIT_NAMESPACES }}"
+          GITOPS_REPO_BRANCH: "${{ github.head_ref }}"
+          GITOPS_REPO_URL: "${{ github.server_url }}/${{ github.repository }}"
+          GITOPS_MASTER_GPG_KEY: "${{ secrets.GITOPS_MASTER_GPG_KEY }}"

@@ -4,7 +4,7 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 patchesStrategicMerge:
-- patch_awscluster.yaml
+  - patch_user_config.yaml
 resources:
-- ../../../../../../../../bases/clusters/aws/v1alpha3
-#- ../../../../../../../../bases/nodepools/aws/v1alpha3
+  - ../../../../../../../../bases/clusters/capo/>=v0.6.0
+  - cluster_user_config.yaml

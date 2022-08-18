@@ -6,5 +6,6 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 - Added
-  - Description and examples for environment management
-  - Initail release with basic fnunctionality and docs in place
+  - ability to test on `kind` cluster and evaluate expectations
+  - description and examples for environment management
+  - initial release with basic functionality and docs in place

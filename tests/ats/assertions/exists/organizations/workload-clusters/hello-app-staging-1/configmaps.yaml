@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+data:
+  values: |
+    bastion:
+      bootFromVolume: true
+      diskSize: 10
+      flavor: n1.tiny
+      image: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+    cloudConfig: cloud-config
+    cloudName: openstack
+    clusterName: hello-app-staging-1
+    controlPlane:
+      availabilityZones:
+      - demo_az_1
+      - demo_az_2
+      - demo_az_3
+      bootFromVolume: true
+      diskSize: 50
+      flavor: n1.small
+      image: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+      replicas: 3
+    externalNetworkID: cccccccc-cccc-cccc-cccc-cccccccccccc
+    kubernetesVersion: v1.20.9
+    nodeCIDR: 10.6.0.0/24
+    nodeClasses:
+    - bootFromVolume: true
+      diskSize: 50
+      flavor: n1.small
+      image: dddddddd-dddd-dddd-dddd-dddddddddddd
+      name: default
+    nodePools:
+    - class: default
+      failureDomain: demo_az_1
+      name: demo_az_1
+      replicas: 1
+    - class: default
+      failureDomain: demo_az_2
+      name: demo_az_2
+      replicas: 1
+    - class: default
+      failureDomain: demo_az_3
+      name: demo_az_3
+      replicas: 1
+    organization: org-name
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    clusterName: hello-app-staging-1
+    organization: org-name
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-default-apps-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    thread_pool_size: 64
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-hello-world-user-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    admin_login: hello-admin-in-cluster-template
+    db_config:
+      db_port: 5433 # has to be in sync with config in default_config_simple_db.yaml
+      db_user: hello-web-app # has to be in sync with config in default_config_simple_db.yaml
+      host: simple-db.simple-web.svc # has to be in sync with 'namespace:' set in kustomization.yaml
+    thread_pool_size: 64
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-hello-world-values
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    port: 5433 # has to be in sync with config in default_config_hello_world.yaml
+    user: hello-web-app # has to be in sync with config in default_config_hello_world.yaml
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-simple-db-values
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    cloudConfig: cloud-config-giantswarm-2
+    cloudName: openstack
+    externalNetworkID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-user-config
+  namespace: org-org-name
