@@ -1,0 +1,5 @@
+controlPlane:
+  availabilityZones:
+    - us-west-1
+    - us-west-2
+nodeCIDR: "10.64.0.0/24"

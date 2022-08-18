@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+patchesStrategicMerge:
+  - patch_cluster_config.yaml
+resources:
+  - ../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../bases/environments/data_centers/us_west
