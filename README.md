@@ -45,6 +45,8 @@ jobs:
   and additionally if all the statements present in `tests/ats/assertions` are also available in objects in the
   cluster.
 
+You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
+
 ### `test-on-kind` validation step - additional information
 
 This validation step offers some broader possibilities for validation, but also requires extra configuration.
