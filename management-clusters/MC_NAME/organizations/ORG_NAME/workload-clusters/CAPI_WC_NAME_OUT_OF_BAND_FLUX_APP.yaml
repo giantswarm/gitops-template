@@ -9,7 +9,7 @@ spec:
     secretRef:
       name: sops-gpg-wc-name
   interval: 1m
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/mapi-out-of-band-flux-app/mapi"
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME_OUT_OF_BAND_FLUX_APP/mapi"
   postBuild:
     substitute:
       cluster_domain: "your-cluster-domain-name"  # TODO: change 'your-cluster-domain-name' to real domain name

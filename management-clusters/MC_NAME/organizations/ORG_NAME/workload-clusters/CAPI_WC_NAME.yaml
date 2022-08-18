@@ -1,19 +1,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: clusters-mapi-no-out-of-band  # TODO: change to your cluster name; must be a correct k8s resource name (DNS-like)
+  name: clusters-capi-wc-name  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
   namespace: default
 spec:
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-gpg-wc-name
   interval: 1m
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/mapi-no-out-of-band/mapi"
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/mapi"
   postBuild:
     substitute:
       cluster_domain: "your-cluster-domain-name"  # TODO: change 'your-cluster-domain-name' to real domain name
-      cluster_name: "mapi-no-out-of-band"
+      cluster_name: "capi-wc-name"  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "org-name"  # TODO: change 'org-name' to your organization name
