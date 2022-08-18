@@ -28,7 +28,7 @@ otherwise this process will result in setting meaningless version in the `.spec.
 
 ## Example
 
-An example of an App automated updates is available in [WC_NAME/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world-automatic-updates/).
+An example of an App automated updates is available in [CAPI_WC_NAME/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/mapi/apps/hello-world-automatic-updates/).
 
 ## Export environment variables
 
@@ -48,7 +48,7 @@ export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY
 1. Go to the Workload Cluster directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi
     ```
 
 1. Create the `automatic-updates` directory there and enter it:
@@ -179,7 +179,7 @@ or one of your organization namespaces:
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
 2. Mark the `.spec.version` field for update in the App CR:
@@ -240,7 +240,7 @@ or one of your organization namespaces:
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
 1. Edit the `imagerepository.yaml` file and reference the newly created secrets there:

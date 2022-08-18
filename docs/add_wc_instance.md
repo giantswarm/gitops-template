@@ -9,14 +9,14 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 
 ## Example
 
-An example of a WC cluster instance created using the CAPI is available in [CAPI_WC_NAME/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/cluster/).
+An example of a WC cluster instance created using the CAPI is available in [CAPI_WC_NAME/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/mapi/cluster/).
 
 ## Creating cluster based on existing bases
 
 1. Go to the Workload Cluster definition directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/cluster
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/cluster
     ```
 
 1. If you need to customize cluster configuration, prepare the values overrides and export its path. Find example below:
@@ -76,7 +76,7 @@ An example of a WC cluster instance created using the CAPI is available in [CAPI
     patchesStrategicMerge:
       - patch_userconfig.yaml
     resources:
-    - ../../../../../../../${CLUSTER_PATH}
+    - ../../../../../../../../${CLUSTER_PATH}
     - cluster_userconfig.yaml
     EOF
     ```
@@ -87,7 +87,7 @@ An example of a WC cluster instance created using the CAPI is available in [CAPI
 
     ```sh
     # cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    cd ../../
+    cd ../../../
     ```
 
 1. Edit the Kustomization CR for the workload cluster and assign values to the variables from bases, see example below:

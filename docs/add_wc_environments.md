@@ -503,7 +503,7 @@ metadata:
   namespace: default
 spec:
   interval: 1m
-  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1"
+  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi"
   postBuild:
     substitute:
       cluster_domain: "MY_DOMAIN"
@@ -524,11 +524,11 @@ EOF
 In our example we create one instance from each cluster environment base:
 
 - from the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
-/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/kustomization.yaml)
+/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml)
 - from the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/mapi/cluster/kustomization.yaml)
 - from the dev environment we create [HELLO_APP_PROD_CLUSTER_1](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_1/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_1/mapi/cluster/kustomization.yaml)
 
 All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
 
@@ -540,7 +540,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 resources:
-  - ../../../../../../bases/environments/stages/dev/hello_app_cluster
+  - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
 EOF
 ```
 
@@ -557,8 +557,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 resources:
-  - ../../../../../../bases/environments/stages/dev/hello_app_cluster
-  - ../../../../../../bases/environments/regions/[[ REGION_NAME ]]
+  - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
+  - ../../../../../../../../bases/environments/regions/[[ REGION_NAME ]]
 ```
 
 ## Tips for developing environments
