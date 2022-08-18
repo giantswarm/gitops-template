@@ -32,7 +32,7 @@ management-clusters
     ├── secrets
     |   ├── MC_NAME.gpgkey.enc.yaml
     |   ├── [CAPI_WC_NAME.gpgkey.enc.yaml]
-    |   └── [CAPI_WC_NAME-oob.gpgkey.enc.yaml]
+    |   └── [CAPI_WC_NAME-direct.gpgkey.enc.yaml]
     ├── MC_NAME.yaml
     └── [organizations]
         ├── [kustomization.yaml]
@@ -43,7 +43,7 @@ management-clusters
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── CAPI_WC_NAME.yaml
-                ├── [CAPI_WC_NAME-oob.yaml]
+                ├── [CAPI_WC_NAME-direct.yaml]
                 └── CAPI_WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
                     ├── [out-of-band]                     CAPI_WC_NAME.yaml responsibility
