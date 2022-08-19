@@ -54,10 +54,12 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
     gpg --batch --full-generate-key <<EOF
     %no-protection
-    Key-Type: 1
-    Key-Length: 4096
-    Subkey-Type: 1
-    Subkey-Length: 4096
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
     Expire-Date: 0
     Name-Comment: ${KEY_COMMENT}
     Name-Real: ${KEY_NAME}
@@ -73,8 +75,10 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     The command above should produce the output like:
 
     ```text
-    sec   rsa4096 2021-11-25 [SC]
+    pub   ed25519 2021-11-25 [SC]
           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    uid   ...
+    sub   cv25519 2021-11-25 [E]
     ```
 
     Now, export the fingerprint:
@@ -134,7 +138,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     ```sh
     cat <<EOF >> .sops.yaml
       - encrypted_regex: ^(data|stringData)$
-        path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/.*\.enc\.yaml
+        path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/.*\.enc\.yaml
         pgp: ${KEY_FP}
     EOF
     ```
@@ -153,15 +157,13 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     mkdir ${WC_NAME}
     ```
 
-1. Go to the newly created directory and if you need out-of-band method of delivering resources
-   to the Workload Cluster create 2 sub-directories there. If you not sure you need it now, but want
-   to be prepared for it, also create them. Otherwise skip this step.
+1. Go to the newly created directory and create `mapi` directory. If you need out-of-band
+   delivery method create also `out-of-band` directory. Next go to the `mapi` directory:
 
     ```sh
-    mkdir mapi              # resources managed with Management API
-    mkdir out-of-band       # resources managed outside Management API, created directly in WC
+    mkdir mapi                # resources managed with Management API
+    # mkdir out-of-band       # resources managed outside Management API, created directly in WC
     cd mapi
-    export IN_BOUND="/mapi"
     ```
 
 1. Create 2 sub-directories:
@@ -255,7 +257,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-      cd ../../
+      cd ../../../
       cat <<EOF > ${WC_NAME}.yaml
       apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
       kind: Kustomization
@@ -264,7 +266,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         namespace: default
       spec:
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}${IN_BOUND}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
@@ -280,7 +282,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-      cd ../../
+      cd ../../../
       cat <<EOF > ${WC_NAME}.yaml
       apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
       kind: Kustomization
@@ -293,7 +295,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           secretRef:
             name: sops-gpg-${WC_NAME}
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}${IN_BOUND}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
@@ -305,16 +307,16 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         timeout: 2m
       ```
 
-1. If you use the `out-of-band` delivery method, enrich the file created in the previous step with another
-   Kustomization CR pointing to `out-of-band` directory and referencing the right `kubeconfig` file:
+1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
+   directory and referencing the right `kubeconfig` file:
 
    ```sh
-   cat <<EOF >> ${WC_NAME}.yaml
+   cat <<EOF >> ${WC_NAME}-direct.yaml
    ---
    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
    kind: Kustomization
    metadata:
-     name: ${MC_NAME}-clusters-${WC_NAME}
+     name: ${MC_NAME}-clusters-${WC_NAME}-direct
      namespace: ${WC_NAME}
    spec:
      interval: 1m
@@ -343,10 +345,12 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
     ```
 
-1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource:
+1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource. Uncomment second
+   line if have created the out-of-band Kustomization CR as well:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
+    # yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" kustomization.yaml
     ```
 
     The resulting file should look like this:
@@ -356,6 +360,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     kind: Kustomization
     resources:
     - ${WC_NAME}.yaml
+    - ${WC_NAME}-direct.yaml
     ```
 
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should be ready to reconcile

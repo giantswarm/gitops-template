@@ -23,24 +23,3 @@ spec:
     kind: GitRepository
     name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo
   timeout: 2m
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-kind: Kustomization
-metadata:
-  name: clusters-mapi-out-of-band-no-flux-direct  # TODO: change to your cluster name; must be a correct k8s resource name (DNS-like)
-  namespace: default # Change to the `WC_NAME` for the legacy clusters. The rule of thumb: follow the `kubeconfig` namespace.
-spec:
-  interval: 1m
-  kubeConfig:
-    secretRef:
-      name: mapi-out-of-band-no-flux-kubeconfig  # TODO: make sure to change it to a name of a secret with a kubeconfig to connect to the target cluster
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band"
-  postBuild:
-    substitute:
-      cluster_name: "mapi-out-of-band-no-flux"
-      organization: "org-name"
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo for this cluster (might be the same or different than the one used for the MC)
-  timeout: 2m

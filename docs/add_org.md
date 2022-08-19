@@ -91,10 +91,12 @@ new GPG key-pair dedicated for an organization.
 
     gpg --batch --full-generate-key <<EOF
     %no-protection
-    Key-Type: 1
-    Key-Length: 4096
-    Subkey-Type: 1
-    Subkey-Length: 4096
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
     Expire-Date: 0
     Name-Comment: ${KEY_COMMENT}
     Name-Real: ${KEY_NAME}
@@ -110,8 +112,10 @@ new GPG key-pair dedicated for an organization.
     The command above should produce the output like:
 
     ```text
-    sec   rsa4096 2021-11-25 [SC]
+    pub   ed25519 2021-11-25 [SC]
           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    uid   ...
+    sub   cv25519 2021-11-25 [E]
     ```
 
     Now, export the fingerprint:

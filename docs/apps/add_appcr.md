@@ -41,7 +41,7 @@ export APP_NAME="${WC_NAME}-APP_NAME"
 1. Go to the `apps` directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps
     ```
 
 1. Create new directory with a name corresponding to the App name:
@@ -140,7 +140,7 @@ path to the directory in an env variable:
     pointing to.
 
 1. In the current directory
-    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}`)
+    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}`)
     create a new `kustomization.yaml` with the following content:
 
     ```sh
@@ -159,7 +159,7 @@ path to the directory in an env variable:
     patchesStrategicMerge:
       - config_patch.yaml
     resources:
-      - ../../../../../../../../${APP_TEMPLATE_PATH}
+      - ../../../../../../../../../${APP_TEMPLATE_PATH}
       - secret.enc.yaml ## ONLY IF INCLUDING SECRET
     EOF
     ```
