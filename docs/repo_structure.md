@@ -31,8 +31,8 @@ management-clusters
     ├── [OTHER_RESOURCES]
     ├── secrets
     |   ├── MC_NAME.gpgkey.enc.yaml
-    |   ├── [CAPI_WC_NAME.gpgkey.enc.yaml]
-    |   └── [CAPI_WC_NAME-direct.gpgkey.enc.yaml]
+    |   ├── [WC_NAME.gpgkey.enc.yaml]
+    |   └── [WC_NAME-direct.gpgkey.enc.yaml]
     ├── MC_NAME.yaml
     └── [organizations]
         ├── [kustomization.yaml]
@@ -42,11 +42,11 @@ management-clusters
             ├── ORG_NAME.yaml
             └── [workload-clusters]
                 ├── kustomization.yaml
-                ├── CAPI_WC_NAME.yaml
-                ├── [CAPI_WC_NAME-direct.yaml]
-                └── CAPI_WC_NAME                             managed from MC_NAME.yaml
+                ├── WC_NAME.yaml
+                ├── [WC_NAME-direct.yaml]
+                └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
-                    ├── [out-of-band]                     CAPI_WC_NAME.yaml responsibility
+                    ├── [out-of-band]                     WC_NAME.yaml responsibility
                     |   ├── [kustomization.yaml]
                     |   └── [OTHER_RESOURCES]
                     └── mapi
@@ -70,7 +70,7 @@ RECOMMENDED to stay compliant with the [Rules for Optional Components](#rules-fo
 This is to offer flexibility and allow different environments and use-cases.
 
 The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
-the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `CAPI_WC_NAME.yaml`,
+the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`,
 see the [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
 The security of resources is provided by GPG encryption. The repository provides a way to manage
@@ -94,16 +94,16 @@ The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered b
 (see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence MAY be used for decrypting
 everything up to the `[workload-clusters]` directory (inclusive).
 
-Enabling encryption for the workload cluster resources REQUIRES creating the `CAPI_WC_NAME.gpgkey.enc.yaml`
+Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml`
 Kubernetes
 Secret, which is otherwise optional, and at minimum needs to contain a single GPG key-pair.
 The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
-key of the key-pair MUST be wrapped into the `CAPI_WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the
+key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the
 master
 GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a
 GitOps process.
-The `CAPI_WC_NAME.gpgkey.enc.yaml` is to be referenced by the `CAPI_WC_NAME.yaml` Kustomization CR, and hence
-MAY be used for decrypting everything from the `CAPI_WC_NAME` directory (inclusive).
+The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence
+MAY be used for decrypting everything from the `WC_NAME` directory (inclusive).
 
 The relation between Kustomization CRs and Kubernetes Secrets is depicted in the figure below.
 
@@ -114,7 +114,7 @@ The relation between Kustomization CRs and Kubernetes Secrets is depicted in the
                  (creates) <---(decrypts with)--- MC_NAME.gpgkey.enc.yaml
                      |
                      |
-  OTHER_RESOURCES <--+--> CAPI_WC_NAME.yaml
+  OTHER_RESOURCES <--+--> WC_NAME.yaml
                                |
                                |
                            (creates) <---(decrypts with)--- WC_NAME.gpgkey.enc.yaml
@@ -126,7 +126,7 @@ The relation between Kustomization CRs and Kubernetes Secrets is depicted in the
 
 ### Multiple GPG Keys
 
-In their most basic forms, both the `MC_NAME.gpgkey.enc.yaml` and the `CAPI_WC_NAME.gpgkey.enc.yaml` secrets contain
+In their most basic forms, both the `MC_NAME.gpgkey.enc.yaml` and the `WC_NAME.gpgkey.enc.yaml` secrets contain
 only a single private GPG key each: the master and workload cluster' key-pair, respectively. Each key is being
 prescribed a basic encryption rule in the `.sops.yaml`, see example below:
 
@@ -193,7 +193,7 @@ Naming recommendations are in the table below.
 | :--: | :--: |
 | `MC_NAME`   | User is REQUIRED to use the Management Cluster codename for clarity |
 | `ORG_NAME`  | Organization name, it is RECOMMENDED to not use capital letters and omit the `org-` prefix |
-| `CAPI_WC_NAME`   | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster id |
+| `WC_NAME`   | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster id |
 
 ## Rules for Optional Components
 
@@ -367,7 +367,7 @@ management-clusters
 
 ### `[mapi] and [out-of-band]`
 
-The `CAPI_WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, with the latter being optional.
+The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, with the latter being optional.
 The `mapi` MUST hold resources orchestrated by the means of Management API, so for example App CRs,
 configuration for these App CRs, etc., basically any resources that configure Workload Cluster from the
 Management Cluster. The `out-of-band`, when used, MUST hold the manifests that are meant to be reconciled
@@ -386,7 +386,7 @@ remotely create resources from the `out-of-band` directory.
 
 ## Flux Kustomization CRs Involved
 
-Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `CAPI_WC_NAME.yaml`,
+Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`,
 see the shortened version of the structure below.
 
 ```text
@@ -397,31 +397,31 @@ management-clusters
         └── ORG_NAME
             └── workload-clusters
                 ├── kustomization.yaml
-                ├── CAPI_WC_NAME.yaml            # Second Kustomization CR
-                └── CAPI_WC_NAME
+                ├── WC_NAME.yaml            # Second Kustomization CR
+                └── WC_NAME
                     └── mapi
                         ├── apps
                         └── cluster
 ```
 
-The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `CAPI_WC_NAME.yaml`, but
+The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `WC_NAME.yaml`, but
 not any
-resource under the `CAPI_WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that
+resource under the `WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that
 includes, and
-hence tells Flux to create, only the `CAPI_WC_NAME.yaml` from the `workload-clusters` directory, see example below:
+hence tells Flux to create, only the `WC_NAME.yaml` from the `workload-clusters` directory, see example below:
 
 ```text
 resources:
-- CAPI_WC_NAME.yaml
+- WC_NAME.yaml
 ```
 
-The `WC_NAME.yaml` Kustomization CR, when created, points to the respective `CAPI_WC_NAME/` directory and reconciles
+The `WC_NAME.yaml` Kustomization CR, when created, points to the respective `WC_NAME/` directory and reconciles
 everything there and hence takes over the reconciliation from where the `MC_NAME.yaml` leaves it.
 
 ### Two Kustomization CRs motivation
 
 But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious as without it there is no
-reconciliation at all. The `CAPI_WC_NAME.yaml` has been introduced in order to use the
+reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
 [variable substitution feature of Flux](https://fluxcd.io/docs/components/kustomize/kustomization/#variable-substitution)
 for configuring widely repeatable fields, that could otherwise be hard to configure. These fields are workload cluster ID,
 control plane ID, release, etc., virtually any field that must be repeated for different CRs, like `Cluster`,

@@ -28,7 +28,7 @@ otherwise this process will result in setting meaningless version in the `.spec.
 
 ## Example
 
-An example of an App automated updates is available in [CAPI_WC_NAME/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/mapi/apps/hello-world-automatic-updates/).
+An example of an App automated updates is available in [WC_NAME/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/apps/hello-world-automatic-updates/).
 
 ## Export environment variables
 

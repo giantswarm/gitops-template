@@ -21,7 +21,7 @@ This includes:
 
 ## Example
 
-An example of a WC cluster directory structure is available in [WC_NAME/](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/CAPI_WC_NAME/).
+An example of a WC cluster directory structure is available in [WC_NAME/](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
 
 ## Export environment variables
 
