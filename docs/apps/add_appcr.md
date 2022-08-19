@@ -33,7 +33,7 @@ in multiple places across this instruction, the least error prone way of providi
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export APP_NAME=APP_NAME
+export APP_NAME="${WC_NAME}-APP_NAME"
 ```
 
 ### Setting up directory tree structure for managing apps
@@ -41,7 +41,7 @@ export APP_NAME=APP_NAME
 1. Go to the `apps` directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps
     ```
 
 1. Create new directory with a name corresponding to the App name:
@@ -73,7 +73,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --cluster ${WC_NAME} \
     --name ${APP_NAME} \
     --namespace ${APP_NAMESPACE} \
-    --version {$APP_VERSION} > appcr.yaml
+    --version ${APP_VERSION} > appcr.yaml
     ```
 
     **Note**, you can optionally configure App with the user-provided values by adding below flags to the previous command:
@@ -140,7 +140,7 @@ path to the directory in an env variable:
     pointing to.
 
 1. In the current directory
-    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}`)
+    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}`)
     create a new `kustomization.yaml` with the following content:
 
     ```sh
@@ -159,7 +159,7 @@ path to the directory in an env variable:
     patchesStrategicMerge:
       - config_patch.yaml
     resources:
-      - ../../../../../../../../${APP_TEMPLATE_PATH}
+      - ../../../../../../../../../${APP_TEMPLATE_PATH}
       - secret.enc.yaml ## ONLY IF INCLUDING SECRET
     EOF
     ```

@@ -135,7 +135,7 @@ namespace: hello-web-team1
 patchesStrategicMerge:
   - config_patch.yaml
 resources:
-  - ../../../../../../../../bases/app_sets/hello-web-app
+  - ../../../../../../../../../bases/app_sets/hello-web-app
 ```
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set

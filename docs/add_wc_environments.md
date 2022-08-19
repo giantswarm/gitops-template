@@ -509,7 +509,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=cluster_config.yaml
-    name: ${cluster_name}-data-center-config
+    name: ${cluster_name}-region-config
     namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
@@ -534,7 +534,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=cluster_config.yaml
-    name: ${cluster_name}-data-center-config
+    name: ${cluster_name}-region-config
     namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
@@ -567,7 +567,7 @@ metadata:
   namespace: default
 spec:
   interval: 1m
-  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1"
+  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi"
   postBuild:
     substitute:
       cluster_domain: "MY_DOMAIN"
@@ -588,16 +588,16 @@ EOF
 In our example we create one instance from each cluster environment base:
 
 - for the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
-/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/kustomization.yaml)
+/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml)
 - for the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/mapi/cluster/kustomization.yaml)
 
 And for production we will take it one step further by splitting it into multiple data regions using multiple bases.
 
 - for the production environment we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml)
 - and another one in a different region with some different configuration for the cluster App CR [HELLO_APP_PROD_CLUSTER_US_WEST](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml)
 
 All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
 
@@ -609,7 +609,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 resources:
-  - ../../../../../../bases/environments/stages/dev/hello_app_cluster
+  - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
 EOF
 ```
 
@@ -629,7 +629,7 @@ metadata:
   namespace: org-${organization}
 spec:
   extraConfigs:
-    - name: ${cluster_name}-data-center-config
+    - name: ${cluster_name}-region-config
       namespace: org-${organization}
 EOF
 ```
@@ -647,6 +647,7 @@ kind: Kustomization
 patchesStrategicMerge:
   - patch_cluster_config.yaml
 resources:
+<<<<<<< HEAD
   - ../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../bases/environments/regions/eu_central
 ```
@@ -662,7 +663,7 @@ metadata:
   namespace: org-${organization}
 spec:
   extraConfigs:
-    - name: ${cluster_name}-data-center-config
+    - name: ${cluster_name}-region-config
       namespace: org-${organization}
 EOF
 ```
@@ -679,6 +680,10 @@ patchesStrategicMerge:
 resources:
   - ../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../bases/environments/regions/us_west
+=======
+  - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
+  - ../../../../../../../../bases/environments/regions/[[ REGION_NAME ]]
+>>>>>>> main
 ```
 
 ## Tips for developing environments

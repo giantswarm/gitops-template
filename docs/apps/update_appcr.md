@@ -32,7 +32,7 @@ export APP_NAME=APP_NAME
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
 1. Edit the `appcr.yaml` if you want to update the App CR fields, like version, catalog, etc. For all the supported
@@ -43,7 +43,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
 1. Edit the `configmap.yaml` if you want to update a non-secret user configuration
@@ -53,7 +53,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
 1. Import the WC's regular GPG private key from your safe storage into your keychain. In our example, we're gonna

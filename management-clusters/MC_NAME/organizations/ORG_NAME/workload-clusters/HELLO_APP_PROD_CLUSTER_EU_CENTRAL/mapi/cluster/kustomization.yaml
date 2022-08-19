@@ -4,5 +4,5 @@ kind: Kustomization
 patchesStrategicMerge:
   - patch_cluster_config.yaml
 resources:
-  - ../../../../../../bases/environments/stages/prod/hello_app_cluster
-  - ../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../../bases/environments/regions/eu_central

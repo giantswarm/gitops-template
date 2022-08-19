@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   interval: 1m
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL"
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi"
   postBuild:
     substitute:
       cluster_domain: "env-prod-your-cluster-domain-name"  # TODO: change 'env-prod-your-cluster-domain-name' to real domain name

@@ -6,5 +6,5 @@ metadata:
 spec:
   # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
   extraConfigs:
-    - name: ${cluster_name}-data-center-config
+    - name: ${cluster_name}-region-config
       namespace: org-${organization}
