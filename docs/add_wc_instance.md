@@ -13,6 +13,19 @@ An example of a WC cluster instance created using the CAPI is available in [CAPI
 
 ## Creating cluster based on existing bases
 
+1. Export environment variables
+
+**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
+this instruction, the least error prone way of providing them is by exporting as environment variables. `CLUSTER_PATH`
+is a variable pointing to a directory with a cluster template base.
+
+```sh
+export MC_NAME=CODENAME
+export ORG_NAME=ORGANIZATION
+export WC_NAME=CLUSTER_NAME
+export CLUSTER_PATH=bases/cluster_templates/XYZ
+```
+
 1. Go to the Workload Cluster definition directory:
 
     ```sh

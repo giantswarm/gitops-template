@@ -33,7 +33,7 @@ in multiple places across this instruction, the least error prone way of providi
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export APP_NAME=APP_NAME
+export APP_NAME="${WC_NAME}-APP_NAME"
 ```
 
 ### Setting up directory tree structure for managing apps
@@ -73,7 +73,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     --cluster ${WC_NAME} \
     --name ${APP_NAME} \
     --namespace ${APP_NAMESPACE} \
-    --version {$APP_VERSION} > appcr.yaml
+    --version ${APP_VERSION} > appcr.yaml
     ```
 
     **Note**, you can optionally configure App with the user-provided values by adding below flags to the previous command:
