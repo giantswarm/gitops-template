@@ -404,8 +404,10 @@ management-clusters
                         └── cluster
 ```
 
-The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `CAPI_WC_NAME.yaml`, but not any
-resource under the `CAPI_WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that includes, and
+The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `CAPI_WC_NAME.yaml`, but
+not any
+resource under the `CAPI_WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that
+includes, and
 hence tells Flux to create, only the `CAPI_WC_NAME.yaml` from the `workload-clusters` directory, see example below:
 
 ```text
