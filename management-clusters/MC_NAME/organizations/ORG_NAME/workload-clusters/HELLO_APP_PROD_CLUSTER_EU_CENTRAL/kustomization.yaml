@@ -5,4 +5,4 @@ patchesStrategicMerge:
   - patch_cluster_config.yaml
 resources:
   - ../../../../../../bases/environments/stages/prod/hello_app_cluster
-  - ../../../../../../bases/environments/data_centers/eu_central
+  - ../../../../../../bases/environments/regions/eu_central
