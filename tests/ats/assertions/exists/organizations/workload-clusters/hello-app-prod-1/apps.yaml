@@ -4,7 +4,7 @@ kind: App
 metadata:
   annotations:
     config.kubernetes.io/origin: |
-      path: ../../../../../../../bases/clusters/capo/template/cluster.yaml
+      path: ../../../../../../../../bases/clusters/capo/template/cluster.yaml
   labels:
     app-operator.giantswarm.io/version: 0.0.0
     giantswarm.io/managed-by: flux
@@ -33,7 +33,7 @@ kind: App
 metadata:
   annotations:
     config.kubernetes.io/origin: |
-      path: ../../../../../../../bases/clusters/capo/template/default_apps.yaml
+      path: ../../../../../../../../bases/clusters/capo/template/default_apps.yaml
   labels:
     app-operator.giantswarm.io/version: 0.0.0
     giantswarm.io/managed-by: flux
@@ -58,7 +58,7 @@ kind: App
 metadata:
   annotations:
     config.kubernetes.io/origin: |
-      path: ../../../../../../../bases/apps/hello-world/appcr.yaml
+      path: ../../../../../../../../bases/apps/hello-world/appcr.yaml
   labels:
     gitops.giantswarm.io/appSet: hello-web-app
     kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-1
@@ -82,7 +82,7 @@ kind: App
 metadata:
   annotations:
     config.kubernetes.io/origin: |
-      path: ../../../../../../../bases/apps/simple-db/appcr.yaml
+      path: ../../../../../../../../bases/apps/simple-db/appcr.yaml
   labels:
     gitops.giantswarm.io/appSet: hello-web-app
     kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-1
