@@ -9,7 +9,7 @@ data:
       image: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
     cloudConfig: cloud-config
     cloudName: openstack
-    clusterName: hello-app-prod-1
+    clusterName: hello-app-prod-eu-central
     controlPlane:
       availabilityZones:
       - demo_az_1
@@ -45,17 +45,31 @@ data:
     organization: org-name
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-1-config
+  name: hello-app-prod-eu-central-config
   namespace: org-org-name
 ---
 apiVersion: v1
 data:
   values: |
-    clusterName: hello-app-prod-1
+    controlPlane:
+      availabilityZones:
+        - eu-central-1
+        - eu-central-2
+        - eu-central-3
+    nodeCIDR: "10.32.0.0/24"
+kind: ConfigMap
+metadata:
+  name: hello-app-prod-eu-central-region-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    clusterName: hello-app-prod-eu-central
     organization: org-name
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-1-default-apps-config
+  name: hello-app-prod-eu-central-default-apps-config
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -64,7 +78,7 @@ data:
     thread_pool_size: 256
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-1-hello-world-user-config
+  name: hello-app-prod-eu-central-hello-world-user-config
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -78,7 +92,7 @@ data:
     thread_pool_size: 64
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-1-hello-world-values
+  name: hello-app-prod-eu-central-hello-world-values
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -88,7 +102,7 @@ data:
     user: hello-web-app # has to be in sync with config in default_config_hello_world.yaml
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-1-simple-db-values
+  name: hello-app-prod-eu-central-simple-db-values
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -106,5 +120,5 @@ data:
           name: default
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-1-user-config
+  name: hello-app-prod-eu-central-user-config
   namespace: org-org-name
