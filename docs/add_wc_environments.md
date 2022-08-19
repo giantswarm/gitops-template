@@ -33,7 +33,7 @@ best solution for access control, template versioning and also easy comparing of
 The `stages` folder is how we propose to group environment specifications.
 There is a good reason for this additional layer of grouping. You can use this approach to have multiple
 different clusters - like the dev, staging, production - but also to have multiple different
-regions or data centers where you want to spin these clusters up.
+regions where you want to spin these clusters up.
 
 ```sh
 mkdir -p bases/environments/stages
@@ -41,13 +41,13 @@ mkdir -p bases/environments/stages
 
 We're assuming that all the clusters using this environments pattern should in many regards look the same
 across all the environments. Still, each environment layer introduces some key differences, like app version being deployed
-for `dev/staging/prod` environments or a specific IP range, certificate or ingresses config for data center related environments
-like `us-east-1/us-west-2`.
+for `dev/staging/prod` environments or a specific IP range, availability zones, certificates or ingresses config
+for regions like `eu-central/us-west`.
 
 To create an environment template, you need to make a  directory in `environments` that describes the best the
 differentiating factor for that kind of environment, then you should create sub folder there for different possible values.
-For example, for multiple data centers, we recommend putting region specific configuration into
-`/bases/environments/regions` folder and under there create `ap-east-1`, `eu-central-1` and `us-west-2` folders.
+For example, for multiple regions, we recommend putting region specific configuration into
+`/bases/environments/regions` folder and under there create e.g. `eu_central`, `us_west` folders.
 
 Once your environment templates are ready, you can use them to create new clusters by placing cluster definitions
 in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
@@ -480,6 +480,70 @@ We tell Flux to use version `0.1.8` of `hello-world-app` and version `0.1.0` of 
 In this example when we sufficiently validated our released changes in the staging environment we update the versions
 in the `Kustomization`, merge the change and let Flux do the work.
 
+#### Region specific settings for the production cluster
+
+Let's create some bases for our region setup. Relative to root of the repository let's execute the following commands.
+
+```bash
+mkdir -p bases/environments/regions/eu_central
+mkdir -p bases/environments/regions/us_west
+
+cd bases/environments/regions
+```
+
+For the `eu-central` region.
+
+```bash
+cat <<EOF >> eu_central/cluster_config.yaml
+controlPlane:
+  availabilityZones:
+    - eu-central-1
+    - eu-central-2
+    - eu-central-3
+nodeCIDR: "10.32.0.0/24"
+EOF
+
+cat <<EOF >> eu_central/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+    - values=cluster_config.yaml
+    name: ${cluster_name}-data-center-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+EOF
+```
+
+And for the `us-west` region.
+
+```bash
+cat <<EOF >> us_west/cluster_config.yaml
+controlPlane:
+  availabilityZones:
+    - us-west-1
+    - us-west-2
+nodeCIDR: "10.64.0.0/24"
+EOF
+
+cat <<EOF >> us_west/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+    - values=cluster_config.yaml
+    name: ${cluster_name}-data-center-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+EOF
+```
+
+We will use these as a second base for our production clusters.
+
 ## Add Workload Clusters based on the environment cluster templates
 
 Just as any other Workload Clusters we define them in
@@ -523,12 +587,17 @@ EOF
 
 In our example we create one instance from each cluster environment base:
 
-- from the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
+- for the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/kustomization.yaml)
-- from the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
+- for the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/kustomization.yaml)
-- from the dev environment we create [HELLO_APP_PROD_CLUSTER_1](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_1/kustomization.yaml)
+
+And for production we will take it one step further by splitting it into multiple data regions using multiple bases.
+
+- for the production environment we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/kustomization.yaml)
+- and another one in a different region with some different configuration for the cluster App CR [HELLO_APP_PROD_CLUSTER_US_WEST](
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/kustomization.yaml)
 
 All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
 
@@ -546,19 +615,70 @@ EOF
 
 It basically just references our environment base. But in more complex examples it could do more.
 
-Think back on the example of having multiple regions or data centers where you need to set specific
-configurations. In such a case you would end upt with something like the below setup.
+Think back on the example of having multiple regions where you need to set specific configurations.
+In such a case you would end up with the below setup.
 
-You have workload cluster for each of them as `HELLO_APP_DEV_CLUSTER_AP_EAST_1`, `HELLO_APP_DEV_CLUSTER_EU_CENTRAL_1`
-and `HELLO_APP_DEV_CLUSTER_US_WEST_2`. Their `kustomization.yaml` would look something like this.
+Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
 
-```yaml
+```bash
+cat <<EOF >> HELLO_APP_PROD_CLUSTER_EU_CENTRAL/patch_cluster_config.yaml
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  extraConfigs:
+    - name: ${cluster_name}-data-center-config
+      namespace: org-${organization}
+EOF
+```
+
+Note that we use the extra configs feature of App CR to patch in additional layers of configurations for out Application.
+You can read more about this feature [here](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
+
+And the kustomization for this cluster looks like.
+
+```bash
+cat <<EOF >> HELLO_APP_PROD_CLUSTER_EU_CENTRAL/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
+patchesStrategicMerge:
+  - patch_cluster_config.yaml
 resources:
-  - ../../../../../../bases/environments/stages/dev/hello_app_cluster
-  - ../../../../../../bases/environments/regions/[[ REGION_NAME ]]
+  - ../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../bases/environments/regions/eu_central
+```
+
+For the `us-west` region version of the production cluster we need to create the same patch for the cluster App CR.
+
+```bash
+cat <<EOF >> HELLO_APP_PROD_CLUSTER_US_WEST/patch_cluster_config.yaml
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  extraConfigs:
+    - name: ${cluster_name}-data-center-config
+      namespace: org-${organization}
+EOF
+```
+
+But in the `kustomization.yaml` we reference the `us_west` environment base.
+
+```bash
+cat <<EOF >> HELLO_APP_PROD_CLUSTER_US_WEST/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+patchesStrategicMerge:
+  - patch_cluster_config.yaml
+resources:
+  - ../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../bases/environments/regions/us_west
 ```
 
 ## Tips for developing environments
