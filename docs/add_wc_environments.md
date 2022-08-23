@@ -647,7 +647,6 @@ kind: Kustomization
 patchesStrategicMerge:
   - patch_cluster_config.yaml
 resources:
-<<<<<<< HEAD
   - ../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../bases/environments/regions/eu_central
 ```
@@ -680,10 +679,6 @@ patchesStrategicMerge:
 resources:
   - ../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../bases/environments/regions/us_west
-=======
-  - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
-  - ../../../../../../../../bases/environments/regions/[[ REGION_NAME ]]
->>>>>>> main
 ```
 
 ## Tips for developing environments
