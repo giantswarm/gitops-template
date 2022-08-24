@@ -27,7 +27,7 @@ In general, we have to complete 3 major steps to provide the necessary structure
 it is by exporting it as an environment variable:
 
 ```sh
-export MC_NAME=CODENAME
+export MC_NAME=YOUR_CODENAME
 ```
 
 ## Flux GPG master key pair
@@ -45,10 +45,12 @@ en- and decrypt real user-related data.
 
     gpg --batch --full-generate-key <<EOF
     %no-protection
-    Key-Type: 1
-    Key-Length: 4096
-    Subkey-Type: 1
-    Subkey-Length: 4096
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
     Expire-Date: 0
     Name-Comment: ${KEY_COMMENT}
     Name-Real: ${KEY_NAME}
@@ -64,8 +66,10 @@ en- and decrypt real user-related data.
     The command above should produce the output like:
 
     ```text
-    sec   rsa4096 2021-11-25 [SC]
+    pub   ed25519 2021-11-25 [SC]
           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    uid   ...
+    sub   cv25519 2021-11-25 [E]
     ```
 
     Now, export the fingerprint:
@@ -201,14 +205,14 @@ in the `default` namespace.
 
     ```sh
     cat <<EOF | kubectl apply -f -
-    apiVersion: source.toolkit.fluxcd.io/v1beta1
+    apiVersion: source.toolkit.fluxcd.io/v1beta2
     kind: GitRepository
     metadata:
-      name: GITOPS_REPO
+      name: GITOPS_REPO  # TODO: set as needed
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/GITOPS_REPO
+      url: https://github.com/GITOPS_REPO  # TODO: set as needed
       secretRef:
         name: github-https-credentials
       ref:

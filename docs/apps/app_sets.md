@@ -1,12 +1,11 @@
 # Creating and using App Sets
 
-- [Creating and using App Sets](#creating-and-using-app-sets)
-  - [Limitations](#limitations)
-  - [Example](#example)
-    - [App Set Template](#app-set-template)
-    - [Using App Set](#using-app-set)
-  - [Creating an App Set Template](#creating-an-app-set-template)
-  - [Using an App Set](#using-an-app-set)
+- [Limitations](#limitations)
+- [Example](#example)
+  - [App Set Template](#app-set-template)
+  - [Using App Set](#using-app-set)
+- [Creating an App Set Template](#creating-an-app-set-template)
+- [Using an App Set](#using-an-app-set)
 
 It is often desireable to deploy a group of apps together, as a single deployment step. We call such groups "App Sets".
 There's nothing special about App Sets: they are not a separate API entity, rather just a configuration pattern
@@ -68,11 +67,11 @@ configMapGenerator:
   - behavior: replace
     files:
     - values=default_config_simple_db.yaml
-    name: ${cluster_id}-simple-db-values # has to be in sync with the name used by included app
+    name: ${cluster_name}-simple-db-values # has to be in sync with the name used by included app
   - behavior: replace
     files:
     - values=default_config_hello_world.yaml
-    name: ${cluster_id}-hello-world-values # has to be in sync with the name used by included app
+    name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
 namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
@@ -128,7 +127,7 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
       - values=override_config_hello_world.yaml
-    name: ${cluster_id}-hello-world-user-values
+    name: ${cluster_name}-hello-world-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -136,7 +135,7 @@ namespace: hello-web-team1
 patchesStrategicMerge:
   - config_patch.yaml
 resources:
-  - ../../../../../../../../bases/app_sets/hello-web-app
+  - ../../../../../../../../../bases/app_sets/hello-web-app
 ```
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set

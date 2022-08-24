@@ -1,7 +1,7 @@
 apiVersion: image.toolkit.fluxcd.io/v1beta1
 kind: ImageUpdateAutomation
 metadata:
-  name: MC_NAME-updates
+  name: ${cluster_name}-updates
   namespace: default
 spec:
   git:
@@ -22,7 +22,7 @@ spec:
   interval: 1m0s
   sourceRef:
     kind: GitRepository
-    name: https://github.com/GITOPS_REPO
+    name: your-repo
   update:
     path: ./management-clusters/MC_NAME
     strategy: Setters

@@ -1,19 +1,18 @@
 # Repository Structure
 
-- [Repository Structure](#repository-structure)
-  - [General Remarks](#general-remarks)
-  - [Security Architecture](#security-architecture)
-    - [Overview](#overview)
-    - [Multiple GPG Keys](#multiple-gpg-keys)
-  - [Rules for Naming Resources](#rules-for-naming-resources)
-  - [Rules for Optional Components](#rules-for-optional-components)
-    - [`[OTHER_RESOURCES]`](#other_resources)
-    - [`[kustomization.yaml]`](#kustomizationyaml)
-    - [`[organizations]`](#organizations)
-    - [`[workload-clusters]`](#workload-clusters)
-    - [`[mapi]` and `[out-of-band]`](#mapi-and-out-of-band)
-  - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
-    - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
+- [General Remarks](#general-remarks)
+- [Security Architecture](#security-architecture)
+  - [Overview](#overview)
+  - [Multiple GPG Keys](#multiple-gpg-keys)
+- [Rules for Naming Resources](#rules-for-naming-resources)
+- [Rules for Optional Components](#rules-for-optional-components)
+  - [`[OTHER_RESOURCES]`](#other_resources)
+  - [`[kustomization.yaml]`](#kustomizationyaml)
+  - [`[organizations]`](#organizations)
+  - [`[workload-clusters]`](#workload-clusters)
+  - [`[mapi] and [out-of-band]`](#mapi-and-out-of-band)
+- [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
+  - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
 ## General Remarks
 
@@ -32,7 +31,8 @@ management-clusters
     ├── [OTHER_RESOURCES]
     ├── secrets
     |   ├── MC_NAME.gpgkey.enc.yaml
-    |   └── [WC_NAME.gpgkey.enc.yaml]
+    |   ├── [WC_NAME.gpgkey.enc.yaml]
+    |   └── [WC_NAME-direct.gpgkey.enc.yaml]
     ├── MC_NAME.yaml
     └── [organizations]
         ├── [kustomization.yaml]
@@ -43,12 +43,13 @@ management-clusters
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
+                ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
-                    ├── [out-of-band]                  WC_NAME.yaml responsibility
+                    ├── [out-of-band]                     WC_NAME.yaml responsibility
                     |   ├── [kustomization.yaml]
                     |   └── [OTHER_RESOURCES]
-                    └── [mapi]
+                    └── mapi
                         ├── [kustomization.yaml]
                         ├── apps
                         ├── cluster
@@ -69,8 +70,8 @@ RECOMMENDED to stay compliant with the [Rules for Optional Components](#rules-fo
 This is to offer flexibility and allow different environments and use-cases.
 
 The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
-the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
-[Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
+the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`,
+see the [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
 The security of resources is provided by GPG encryption. The repository provides a way to manage
 all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
@@ -93,14 +94,16 @@ The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered b
 (see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence MAY be used for decrypting
 everything up to the `[workload-clusters]` directory (inclusive).
 
-Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml` Kubernetes
+Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml`
+Kubernetes
 Secret, which is otherwise optional, and at minimum needs to contain a single GPG key-pair.
 The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
-key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
+key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the
+master
 GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a
 GitOps process.
-The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence MAY be used for
-decrypting everything from the `WC_NAME` directory (inclusive).
+The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence
+MAY be used for decrypting everything from the `WC_NAME` directory (inclusive).
 
 The relation between Kustomization CRs and Kubernetes Secrets is depicted in the figure below.
 
@@ -133,7 +136,7 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
 ```
 
@@ -364,8 +367,8 @@ management-clusters
 
 ### `[mapi] and [out-of-band]`
 
-The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, both optional by default.
-The `mapi`, when used, MUST hold resources orchestrated by the means of Management API, so for example App CRs,
+The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, with the latter being optional.
+The `mapi` MUST hold resources orchestrated by the means of Management API, so for example App CRs,
 configuration for these App CRs, etc., basically any resources that configure Workload Cluster from the
 Management Cluster. The `out-of-band`, when used, MUST hold the manifests that are meant to be reconciled
 directly in the Workload Cluster, without ever referring to the Management API, so additional ConfigMaps, Secret,
@@ -373,14 +376,9 @@ Deployments, etc., or basically everything that iss not supported by the App CRs
 
 The rules of governing these directories are:
 
-1. If out of band method of delivering resources directly to the Workload Cluster is needed, both `mapi` and
-`out-of-band` directories MUST be created.
-1. If out of band method of delivering resources is not needed, user MAY skip creating the directories and
-instead put all the manifests directly under the `WC_NAME` directory. User MAY however choose to create both
-directories anyway.
-1. If user has not been using `mapi` and `out-of-band` directories so far, but now wants to switch, they MUST
-create them, and then they MUST move all the resources kept under the `WC_NAME` directory into the `mapi`
-directory.
+1. The `mapi` directory MUST always be created.
+1. If out of band method of delivering resources directly to the Workload Cluster is needed, the `out-of-band`
+directory MUST be created in addition.
 1. User MAY choose between two out-of-band delivery methods. The first one involves creating Flux app in the
 Workload Cluster and configure it to reconcile `out-of-band` directory. The other method involves creating
 additional Kustomization CR in the Management Cluster that uses `kubeconfig` for the Workload Cluster to
@@ -388,8 +386,8 @@ remotely create resources from the `out-of-band` directory.
 
 ## Flux Kustomization CRs Involved
 
-Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`, see the
-shortened version of the structure below.
+Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`,
+see the shortened version of the structure below.
 
 ```text
 management-clusters
@@ -401,12 +399,15 @@ management-clusters
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml            # Second Kustomization CR
                 └── WC_NAME
-                    ├── apps
-                    └── cluster
+                    └── mapi
+                        ├── apps
+                        └── cluster
 ```
 
-The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `WC_NAME.yaml`, but not any
-resource under the `WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that includes, and
+The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `WC_NAME.yaml`, but
+not any
+resource under the `WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that
+includes, and
 hence tells Flux to create, only the `WC_NAME.yaml` from the `workload-clusters` directory, see example below:
 
 ```text

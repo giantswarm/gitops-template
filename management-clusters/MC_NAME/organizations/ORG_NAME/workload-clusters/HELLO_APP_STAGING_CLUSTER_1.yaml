@@ -1,0 +1,21 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: clusters-hello-app-staging-1  # TODO: change 'hello-app-staging-1' to your cluster name; must be a correct k8s resource name (DNS-like)
+  namespace: default
+spec:
+  interval: 1m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/mapi"
+  postBuild:
+    substitute:
+      cluster_domain: "env-staging-your-cluster-domain-name"  # TODO: change 'env-staging-your-cluster-domain-name' to real domain name
+      cluster_name: "hello-app-staging-1"  # TODO: change 'hello-app-staging-1' to your cluster name; must be a correct k8s resource name (DNS-like)
+      cluster_release: "0.8.1"
+      default_apps_release: "0.2.0"
+      organization: "org-name"  # TODO: change 'org-name' to your organization name
+  prune: false
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo
+  timeout: 2m

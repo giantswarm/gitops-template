@@ -28,6 +28,7 @@ test() {
 	has_validation_errors=0
 
 	mc_dir="management-clusters"
+	tmp_dir=$(mktemp -d)
 	for mc in $(find ${mc_dir}/ -maxdepth 1 -type d ! -path ${mc_dir}/); do
 		mc_name=${mc##*/}
 		org_dir="${mc}/organizations"
@@ -48,9 +49,11 @@ test() {
 					fi
 					if [[ "$mode" == "validate" ]]; then
 						echo "Testing: $mc_name $org_name $wc_name $dir_name"
+						tmp_file="${tmp_dir}/manifest.yaml"
+						./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" >"$tmp_file"
 
 						echo -n "yamllint: "
-						if ! (./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" | yamllint -); then
+						if ! (yamllint "$tmp_file"); then
 							has_validation_errors=1
 						else
 							echo "OK"
@@ -58,8 +61,7 @@ test() {
 
 						echo -n "kubeconform: "
 						if ! (
-							./tools/fake-flux-build build "$mc_name" "$org_name" "$wc_name" "$dir_name" |
-								kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text
+							kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
 						); then
 							has_validation_errors=1
 						else

@@ -3,9 +3,10 @@ data:
   values: |-
     Test ConfigMap.
     Variable substitution still possible here.
-    I am the ${cluster_id} cluster!
+    I am the ${cluster_name} cluster!
     I belong to the ${organization} org!
     Encryption is possible here as well, but I am not encrypted atm.
 kind: ConfigMap
 metadata:
-  name: secret-to-be-created-directly-in-WC
+  name: secret-to-be-created-directly-in-wc
+  namespace: default
