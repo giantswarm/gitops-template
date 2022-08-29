@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+    - values=cluster_config.yaml
+    name: ${cluster_name}-region-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization

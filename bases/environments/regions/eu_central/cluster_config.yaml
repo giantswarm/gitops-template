@@ -1,0 +1,6 @@
+controlPlane:
+  availabilityZones:
+    - eu-central-1
+    - eu-central-2
+    - eu-central-3
+nodeCIDR: "10.32.0.0/24"

@@ -5,15 +5,18 @@ metadata:
   labels:
     app-operator.giantswarm.io/version: 0.0.0
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-1
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-1
+  name: hello-app-prod-eu-central
   namespace: org-org-name
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: hello-app-prod-1-config
+      name: hello-app-prod-eu-central-config
+      namespace: org-org-name
+  extraConfigs:
+    - name: hello-app-prod-eu-central-region-config
       namespace: org-org-name
   kubeConfig:
     inCluster: true
@@ -21,7 +24,7 @@ spec:
   namespace: org-org-name
   userConfig:
     configMap:
-      name: hello-app-prod-1-user-config
+      name: hello-app-prod-eu-central-user-config
       namespace: org-org-name
   version: 0.8.1
 ---
@@ -31,15 +34,15 @@ metadata:
   labels:
     app-operator.giantswarm.io/version: 0.0.0
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-1
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-1-default-apps
+  name: hello-app-prod-eu-central-default-apps
   namespace: org-org-name
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: hello-app-prod-1-default-apps-config
+      name: hello-app-prod-eu-central-default-apps-config
       namespace: org-org-name
   kubeConfig:
     inCluster: true
@@ -52,15 +55,15 @@ kind: App
 metadata:
   labels:
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-1
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-1-hello-world
+  name: hello-app-prod-eu-central-hello-world
   namespace: org-org-name
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: hello-app-prod-1-hello-world-values
+      name: hello-app-prod-eu-central-hello-world-values
       namespace: org-org-name
   kubeConfig:
     inCluster: false
@@ -73,15 +76,15 @@ kind: App
 metadata:
   labels:
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-1
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-1-simple-db
+  name: hello-app-prod-eu-central-simple-db
   namespace: org-org-name
 spec:
   catalog: giantswarm
   config:
     configMap:
-      name: hello-app-prod-1-simple-db-values
+      name: hello-app-prod-eu-central-simple-db-values
       namespace: org-org-name
   kubeConfig:
     inCluster: false
