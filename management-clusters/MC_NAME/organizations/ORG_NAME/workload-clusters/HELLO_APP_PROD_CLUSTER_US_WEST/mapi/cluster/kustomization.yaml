@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+patches:
+  - patch: |
+      - op: add
+        path: /spec/extraConfigs
+        value:
+          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
+          - name: "${cluster_name}-region-config"
+            namespace: org-${organization}
+    target:
+      group: application.giantswarm.io
+      kind: App
+      name: \${cluster_name}
+      namespace: org-\${organization}
+      version: v1alpha1
+resources:
+  - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../../bases/environments/regions/us_west
