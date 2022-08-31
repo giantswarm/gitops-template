@@ -41,7 +41,7 @@ Examples:
 
   # Build flux01 workload cluster Cluster and App CRs
   build gamma multi-project flux01 /
-"
+" 1>&2
 	exit 1
 }
 
@@ -72,7 +72,7 @@ build() {
 	done
 
 	if ! [ -e "${match}"/"${wcluster}"/"${subpath}" ]; then
-		echo -e "No resources found at ${match}/${wcluster}/${subpath} path."
+		echo -e "No resources found at ${match}/${wcluster}/${subpath} path." 1>&2
 		build_help
 	fi
 
