@@ -5,6 +5,8 @@ commonLabels:
 kind: Kustomization
 patchesStrategicMerge:
   - patch_user_config.yaml
+  - patch_user_config_default_apps.yaml
 resources:
   - ../../../../../../../../bases/clusters/capo/>=v0.6.0
   - cluster_user_config.yaml
+  - default_apps_user_config.yaml
