@@ -14,7 +14,7 @@ data:
                   loop
                   reload
                   loadbalance
-                }      
+                }
 kind: ConfigMap
 metadata:
   name: ${cluster_name}-default-apps-userconfig
