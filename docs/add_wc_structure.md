@@ -368,6 +368,7 @@ and patching the CR for the App.
    kind: ConfigMap
    metadata:
    name: ${cluster_name}-default-apps-userconfig
+   namespace: org-${organization}
    EOF
    ```
 

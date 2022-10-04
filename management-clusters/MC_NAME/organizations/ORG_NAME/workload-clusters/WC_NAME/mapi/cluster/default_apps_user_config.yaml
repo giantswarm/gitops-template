@@ -18,3 +18,4 @@ data:
 kind: ConfigMap
 metadata:
   name: ${cluster_name}-default-apps-userconfig
+  namespace: org-${organization}
