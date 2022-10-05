@@ -25,9 +25,9 @@ An example of a WC cluster directory structure is available in [WC_NAME/](/manag
 
 ## Export environment variables
 
-**Note** In order to ensure consistency in the execution of this instruction, consider exporting the following environment variables
-for easy reference. These represent common names used throughout these commands such as Management Cluster codename,
-Organization name and Workload cluster name.
+**Note** In order to ensure consistency in the execution of this instruction, consider exporting the following
+environment variables for easy reference. These represent common names used throughout these commands such as
+Management Cluster codename, Organization name and Workload cluster name.
 
 ```sh
 export MC_NAME=CODENAME
