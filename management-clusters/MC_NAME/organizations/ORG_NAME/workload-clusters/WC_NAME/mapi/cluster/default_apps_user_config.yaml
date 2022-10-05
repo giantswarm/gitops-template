@@ -1,0 +1,21 @@
+apiVersion: v1
+data:
+  values: |
+    userConfig:
+      coreDNS:
+        configMap:
+          values: |
+            configmap:
+              custom:
+                my-domain.local {
+                  log
+                  errors
+                  cache 30
+                  loop
+                  reload
+                  loadbalance
+                }
+kind: ConfigMap
+metadata:
+  name: ${cluster_name}-default-apps-userconfig
+  namespace: org-${organization}

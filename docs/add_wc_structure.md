@@ -25,8 +25,9 @@ An example of a WC cluster directory structure is available in [WC_NAME/](/manag
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
-this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note** In order to ensure consistency in the execution of this instruction, consider exporting the following
+environment variables for easy reference. These represent common names used throughout these commands such as
+Management Cluster codename, Organization name and Workload cluster name.
 
 ```sh
 export MC_NAME=CODENAME
@@ -215,7 +216,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     to avoid race conditions, where Flux creates first the App CR and only later a referenced ConfigMap or Secret.
 
 1. Create the `kustomization.yaml` file, with empty resources (for now) but applying our patch created above to any
-   objects we add here in future:
+   objects we add here in the future:
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -337,6 +338,65 @@ Kubernetes Secret, you MUST not create multiple Secrets.
    **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
    in the above command to tell Flux where to look for the `kubeconfig`.
 
+### Configuring default-apps
+
+You can also kustomize the `default-apps` for your cluster by creating a [user config map](https://docs.giantswarm.io/app-platform/app-configuration/)
+and patching the CR for the App.
+
+1. Create the user config map in the workload cluster's `cluster` directory. For example, let's configure CoreDNS:
+
+   ```sh
+   # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/cluster
+   cd ${WC_NAME}/mapi/cluster
+   echo <<EOF >> default_apps_user_config.yaml
+   apiVersion: v1
+   data:
+     values: |
+       userConfig:
+         coreDNS:
+           configMap:
+              values: |
+                configmap:
+                  custom:
+                    my-domain.local {
+                      log
+                      errors
+                      cache 30
+                      loop
+                      reload
+                      loadbalance
+                  }
+   kind: ConfigMap
+   metadata:
+   name: ${cluster_name}-default-apps-userconfig
+   namespace: org-${organization}
+   EOF
+   ```
+
+1. Create the patch for the `default-apps` CR:
+
+    ```sh
+    echo <<EOF >> patch_user_config_default_apps.yaml
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      name: ${cluster_name}-default-apps
+      namespace: org-${organization}
+    spec:
+      userConfig:
+        configMap:
+          name: ${cluster_name}-default-apps-userconfig
+          namespace: org-${organization}
+    EOF
+    ```
+
+1. Finally, add the user config map and the patch to the `${WC_NAME}/mapi/cluster/kustomization.yaml`
+
+   ```sh
+   yq -i eval ".patchesStrategicMerge += \"default_apps_user_config.yaml\" | .patchesStrategicMerge style=\"\"" kustomization.yaml
+   yq -i eval ".resources += \"patch_user_config_default_apps.yaml\" | .resources style=\"\"" kustomization.yaml
+   ```
+
 ## MC configuration
 
 1. Go to the `workload-clusters` directory:
@@ -346,7 +406,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     ```
 
 1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource. Uncomment second
-   line if have created the out-of-band Kustomization CR as well:
+   line if you have created the out-of-band Kustomization CR as well:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
