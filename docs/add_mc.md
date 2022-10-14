@@ -177,6 +177,10 @@ en- and decrypt real user-related data.
       name: ${MC_NAME}-gitops
       namespace: default
     spec:
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-gpg-master
       serviceAccountName: automation
       prune: true
       interval: 1m
