@@ -145,12 +145,8 @@ en- and decrypt real user-related data.
 1. Save the `sops-gpg-master` Secret from the [previous section](#flux-gpg-master-key-pair) to the `secrets` directory:
 
    ```sh
-   gpg --export-secret-keys --armor "${KEY_FP}" |
-   kubectl create secret generic sops-gpg-master \
-   --dry-run=client \
-   --namespace=default \
-   --from-file=${MC_NAME}.master.asc=/dev/stdin \
-   -o yaml > secrets/${MC_NAME}.gpgkey.enc.yaml
+   kubectl get secret sops-gpg-master \
+   --namespace=default -o yaml > secrets/${MC_NAME}.gpgkey.enc.yaml
    ```
 
 1. Encrypt `sops-gpg-master` Secret with a GPG master public key:
