@@ -55,7 +55,7 @@ data:
     organization: org-name
 kind: ConfigMap
 metadata:
-  name: hello-app-dev-1-default-apps-config
+  name: hello-app-dev-1-cluster-values
   namespace: org-org-name
 ---
 apiVersion: v1

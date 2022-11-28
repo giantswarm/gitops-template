@@ -120,7 +120,7 @@ as this can strongly depend on resources involved, how much of them you would li
       catalog: giantswarm
       config:
         configMap:
-          name: \${cluster_name}-default-apps-config
+          name: \${cluster_name}-cluster-values
           namespace: org-\${organization}
       kubeConfig:
         inCluster: true
@@ -150,7 +150,7 @@ for turning config from the previous step into a ConfigMap and placing it under 
     configMapGenerator:
       - files:
         - values=default_apps_config.yaml
-        name:  \${cluster_name}-default-apps-config
+        name:  \${cluster_name}-cluster-values
         namespace: org-\${organization}
     generatorOptions:
       disableNameSuffixHash: true

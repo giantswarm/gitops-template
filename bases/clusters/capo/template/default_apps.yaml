@@ -9,7 +9,7 @@ spec:
   catalog: giantswarm
   config:
     configMap:
-      name: ${cluster_name}-default-apps-config
+      name: ${cluster_name}-cluster-values
       namespace: org-${organization}
   kubeConfig:
     inCluster: true

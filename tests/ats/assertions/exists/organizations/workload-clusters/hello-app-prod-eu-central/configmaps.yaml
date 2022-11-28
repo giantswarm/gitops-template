@@ -69,7 +69,7 @@ data:
     organization: org-name
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-eu-central-default-apps-config
+  name: hello-app-prod-eu-central-cluster-values
   namespace: org-org-name
 ---
 apiVersion: v1

@@ -39,7 +39,7 @@ spec:
   catalog: giantswarm
   config:
     configMap:
-      name: hello-app-staging-1-default-apps-config
+      name: hello-app-staging-1-cluster-values
       namespace: org-org-name
   kubeConfig:
     inCluster: true

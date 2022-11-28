@@ -5,5 +5,5 @@ data:
     organization: org-name
 kind: ConfigMap
 metadata:
-  name: capi-wc-name-default-apps-config
+  name: capi-wc-name-cluster-values
   namespace: org-org-name
