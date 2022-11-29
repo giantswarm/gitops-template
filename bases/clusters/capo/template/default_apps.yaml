@@ -7,10 +7,11 @@ metadata:
   namespace: org-${organization}
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: ${cluster_name}-default-apps-config
       namespace: org-${organization}
+      priority: 1
   kubeConfig:
     inCluster: true
   name: default-apps-openstack

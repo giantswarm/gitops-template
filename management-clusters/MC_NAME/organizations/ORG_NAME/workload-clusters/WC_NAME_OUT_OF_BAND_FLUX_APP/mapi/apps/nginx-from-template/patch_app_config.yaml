@@ -4,9 +4,6 @@ metadata:
   name: ${cluster_name}-nginx-ingress-controller
   namespace: kube-system
 spec:
-  config:
-    configMap:
-      name: ${cluster_name}-tmpl-nginx-ingress-controller-values
   userConfig:
     configMap:
       name: ${cluster_name}-tmpl-nginx-ingress-controller-user-values

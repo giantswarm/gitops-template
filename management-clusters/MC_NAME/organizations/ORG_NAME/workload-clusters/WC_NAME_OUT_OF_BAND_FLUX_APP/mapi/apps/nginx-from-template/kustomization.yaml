@@ -13,6 +13,16 @@ namespace: kube-system
 patches:
   - patch: |-
       - op: replace
+        path: "/spec/extraConfigs/0/name"
+        value: ${cluster_name}-tmpl-nginx-ingress-controller-values
+    target:
+      group: application.giantswarm.io
+      kind: "App"
+      name: \${cluster_name}-nginx-ingress-controller
+      namespace: kube-system
+      version: v1alpha1
+  - patch: |-
+      - op: replace
         path: "/metadata/name"
         value: ${cluster_name}-tmpl-nginx-ingress-controller
     target:
