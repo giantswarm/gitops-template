@@ -11,11 +11,11 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: hello-app-prod-eu-central-config
       namespace: org-org-name
-  extraConfigs:
+      priority: 1
     - name: hello-app-prod-eu-central-region-config
       namespace: org-org-name
   kubeConfig:
@@ -40,10 +40,11 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: hello-app-prod-eu-central-default-apps-config
       namespace: org-org-name
+      priority: 1
   kubeConfig:
     inCluster: true
   name: default-apps-openstack
@@ -61,10 +62,11 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: hello-app-prod-eu-central-hello-world-values
       namespace: org-org-name
+      priority: 1
   kubeConfig:
     inCluster: false
   name: hello-world-app
@@ -82,10 +84,11 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: hello-app-prod-eu-central-simple-db-values
       namespace: org-org-name
+      priority: 1
   kubeConfig:
     inCluster: false
   name: simple-db-app
