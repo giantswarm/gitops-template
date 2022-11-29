@@ -4,10 +4,10 @@ kind: Kustomization
 patches:
   - patch: |
       - op: add
-        path: /spec/extraConfigs
+        path: /spec/extraConfigs/-
         value:
           # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-          - name: "${cluster_name}-region-config"
+            name: "${cluster_name}-region-config"
             namespace: org-${organization}
     target:
       group: application.giantswarm.io
