@@ -8,6 +8,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - migrated `.spec.config` to `.spec.extraConfigs`
+
 ## [0.1.0] Initial release
 
 - Added
