@@ -12,7 +12,7 @@ metadata:
 spec:
   catalog: giantswarm
   extraConfigs:
-    - kind: configMaps:
+    - kind: configMaps
       name: hello-app-staging-1-config
       namespace: org-org-name
       priority: 1
