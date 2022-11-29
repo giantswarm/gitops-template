@@ -11,7 +11,7 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  extraConfig:
+  extraConfigs:
     - kind: configMap
       name: hello-app-dev-1-config
       namespace: org-org-name
@@ -38,7 +38,7 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  extraConfig:
+  extraConfigs:
     - kind: configMap
       name: hello-app-dev-1-default-apps-config
       namespace: org-org-name
@@ -60,7 +60,7 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  extraConfig:
+  extraConfigs:
     - kind: configMap
       name: hello-app-dev-1-hello-world-values
       namespace: org-org-name
@@ -82,7 +82,7 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  extraConfig:
+  extraConfigs:
     - kind: configMap
       name: hello-app-dev-1-simple-db-values
       namespace: org-org-name
