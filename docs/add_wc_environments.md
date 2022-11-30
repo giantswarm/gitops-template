@@ -53,12 +53,6 @@ Once your environment templates are ready, you can use them to create new cluste
 in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
 
-> :construction: Please note that if you want to use multiple environment templates to create a single cluster
-that uses `App CR`s for deployments, like you would like to use `dev` out of `staging` layout to set app configuration
-and then use `east` from the `data-centers` to set the IP ranges, you will run into issues around merging
-configurations, as currently one configuration source (i.e. `ConfigMap` in `spec.config.configMap`) completely
-overrides the whole value of the same attribute coming from the other base. We're working to remove this limitation.
-
 ### Stages
 
 We have 3 example clusters under [/bases/environments/stages](/bases/environments/stages):
