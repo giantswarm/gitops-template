@@ -118,10 +118,11 @@ as this can strongly depend on resources involved, how much of them you would li
       namespace: org-\${organization}
     spec:
       catalog: giantswarm
-      config:
-        configMap:
+      extraConfig
+        - kind: configMap
           name: \${cluster_name}-default-apps-config
           namespace: org-\${organization}
+          priority: 1
       kubeConfig:
         inCluster: true
       name: default-apps-${PROVIDER}
@@ -284,10 +285,11 @@ pools, etc.:
       name: \${cluster_name}
       namespace: org-\${organization}
     spec:
-      config:
-        configMap:
+      extraConfigs:
+        - kind: configMap
           name: \${cluster_name}-config
           namespace: org-\${organization}
+          priority: 1
     EOF
     ```
 
