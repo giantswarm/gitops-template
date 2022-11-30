@@ -53,12 +53,6 @@ Once your environment templates are ready, you can use them to create new cluste
 in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters)
 
-> :construction: Please note that if you want to use multiple environment templates to create a single cluster
-that uses `App CR`s for deployments, like you would like to use `dev` out of `staging` layout to set app configuration
-and then use `east` from the `data-centers` to set the IP ranges, you will run into issues around merging
-configurations, as currently one configuration source (i.e. `ConfigMap` in `spec.config.configMap`) completely
-overrides the whole value of the same attribute coming from the other base. We're working to remove this limitation.
-
 ### Stages
 
 We have 3 example clusters under [/bases/environments/stages](/bases/environments/stages):
@@ -604,7 +598,7 @@ All of their `kustomization.yaml` look very similar. Let's take a look at the de
 ```sh
 mkdir HELLO_APP_DEV_CLUSTER_1
 
-cat <<EOF > HELLO_APP_DEV_CLUSTER_1/kustomization.yaml
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
@@ -620,65 +614,60 @@ In such a case you would end up with the below setup.
 
 Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
 
-```bash
-cat <<EOF >> HELLO_APP_PROD_CLUSTER_EU_CENTRAL/patch_cluster_config.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: ${cluster_name}
-  namespace: org-${organization}
-spec:
-  extraConfigs:
-    - name: ${cluster_name}-region-config
-      namespace: org-${organization}
-EOF
-```
-
 Note that we use the extra configs feature of App CR to patch in additional layers of configurations for out Application.
 You can read more about this feature [here](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
 
 And the kustomization for this cluster looks like.
 
 ```bash
-cat <<EOF >> HELLO_APP_PROD_CLUSTER_EU_CENTRAL/kustomization.yaml
+cat <<EOF >> HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
-patchesStrategicMerge:
-  - patch_cluster_config.yaml
+patches:
+  - patch: |
+      - op: add
+        path: /spec/extraConfigs/-
+        value:
+          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
+            name: "${cluster_name}-region-config"
+            namespace: org-${organization}
+    target:
+      group: application.giantswarm.io
+      kind: App
+      name: \${cluster_name}
+      namespace: org-\${organization}
+      version: v1alpha1
 resources:
-  - ../../../../../../bases/environments/stages/prod/hello_app_cluster
-  - ../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../../bases/environments/regions/eu_central
 ```
 
 For the `us-west` region version of the production cluster we need to create the same patch for the cluster App CR.
+The resultant `kustomization.yaml` looks like the one below.
 
 ```bash
-cat <<EOF >> HELLO_APP_PROD_CLUSTER_US_WEST/patch_cluster_config.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  name: ${cluster_name}
-  namespace: org-${organization}
-spec:
-  extraConfigs:
-    - name: ${cluster_name}-region-config
-      namespace: org-${organization}
-EOF
-```
-
-But in the `kustomization.yaml` we reference the `us_west` environment base.
-
-```bash
-cat <<EOF >> HELLO_APP_PROD_CLUSTER_US_WEST/kustomization.yaml
+cat <<EOF >> HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
-patchesStrategicMerge:
-  - patch_cluster_config.yaml
+patches:
+  - patch: |
+      - op: add
+        path: /spec/extraConfigs/-
+        value:
+          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
+            name: "${cluster_name}-region-config"
+            namespace: org-${organization}
+    target:
+      group: application.giantswarm.io
+      kind: App
+      name: \${cluster_name}
+      namespace: org-\${organization}
+      version: v1alpha1
 resources:
-  - ../../../../../../bases/environments/stages/prod/hello_app_cluster
-  - ../../../../../../bases/environments/regions/us_west
+  - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../../bases/environments/regions/us_west
 ```
 
 ## Tips for developing environments

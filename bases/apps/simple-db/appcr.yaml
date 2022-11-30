@@ -5,10 +5,11 @@ metadata:
   namespace: org-${organization}
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: ${cluster_name}-simple-db-values
       namespace: org-${organization}
+      priority: 1
   kubeConfig:
     inCluster: false
   name: simple-db-app

@@ -5,10 +5,11 @@ metadata:
   namespace: kube-system
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: ${cluster_name}-nginx-ingress-controller-values
       namespace: kube-system
+      priority: 1
   kubeConfig:
     inCluster: false
   name: nginx-ingress-controller-app

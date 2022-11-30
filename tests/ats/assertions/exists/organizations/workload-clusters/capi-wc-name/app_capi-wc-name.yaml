@@ -5,10 +5,11 @@ metadata:
   namespace: org-org-name
 spec:
   catalog: giantswarm
-  config:
-    configMap:
+  extraConfigs:
+    - kind: configMap
       name: capi-wc-name-config
       namespace: org-org-name
+      priority: 1
   kubeConfig:
     inCluster: true
   name: cluster-openstack
