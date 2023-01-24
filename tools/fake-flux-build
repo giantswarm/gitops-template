@@ -105,16 +105,18 @@ EOF
 
 findres() {
 	if ! [ -e "$1"/kustomization.yaml ]; then
-		for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/||g"); do
-			resources+=("$f")
+		for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/*||g"); do
+			# shellcheck disable=SC2086
+			resources+=("$(tr -s '/' <<<$f)")
 		done
 
 		for d in $(find "$1" -maxdepth 1 -type d ! -path "$1"); do
 			findres "$d" "$2"
 		done
 	else
-		r=$(echo "$1" | sed "s|$2/||g")
-		resources+=("$r")
+		r=$(echo "$1" | sed "s|$2/*||g")
+		# shellcheck disable=SC2086
+		resources+=("$(tr -s '/' <<<$r)")
 	fi
 }
 

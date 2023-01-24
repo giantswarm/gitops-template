@@ -36,6 +36,17 @@ fake-flux-build build gollum giantswarm c68pn apps/docs
 fake-flux-build build gamma multi-project flux01 /
 ```
 
+#### Using `fake-flux-build` to show a single resource set
+
+You can use a combination of `fake-flux-build` and `yq` to show specific resources under a given path which can be
+useful for troubleshooting issues with that resources deployment.
+
+This is achieved by using `yq` selectors to match the reource(s) in question
+
+```bash
+fake-flux-build build gorilla giantswarm-production rfjh2 / | yq 'select(.kind == "App" and .metadata.name == "ailefroide*")'
+```
+
 ## Test All FFB
 
 You can use this bash tool under a repository based on this template to get verify the syntax of your manifests.
