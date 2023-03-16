@@ -1,0 +1,198 @@
+#!/bin/bash
+# shellcheck disable=SC2086,2207
+
+KUSTOMIZATIONS=()
+
+##
+# Usage
+#
+function usage() {
+	if [ ${#KUSTOMIZATIONS[@]} -eq 0 ]; then
+		KUSTOMIZATIONS+=(
+			"./management-clusters/example/organizations/dev/workload-clusters/dev.yaml,dev,default,./management-clusters/example/organizations/dev/workload-clusters/dev/mapi"
+		)
+	fi
+	cat <<EOF
+Usage:
+    - $(basename $0) list | list available kustomizations
+    - $(basename $0) build <kustomization> [path] [query]
+
+---
+If kustomization is a number, selects that kustomization from a list
+  of all kustomizations found in the repository.
+
+If kustomization is a name, tries to find a kustomization matching that name.
+  When name is specified, there can be only one kustomization with that name. does not work across namespace.
+
+for a list of valid names and numbers, use '$(basename $0) list'
+
+Optional Arguments
+    path:  The path element is a subpath matching below the path defined in the kustomization you are parsing.
+           For example, if the kustomization 'spec.path' is '$(cut -d, -f4 <<<${KUSTOMIZATIONS[0]})'
+           then 'path' must be a relative path below this, e.g. 'apps/athena'
+    query: This must be a valid 'yq' query and can be used to filter for specific resources.
+EOF
+}
+
+[ ! -d .git ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
+
+export KUSTOMIZATIONS=(
+	$(
+		for f in $(find . -name '*.yaml' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
+		done
+	)
+)
+
+function _find_resources() {
+	if ! [ -e "$1"/kustomization.yaml ]; then
+		for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/*||g"); do
+			resources+=("$(tr -s '/' <<<$f)")
+		done
+
+		for d in $(find "$1" -maxdepth 1 -type d ! -path "$1"); do
+			_find_resources "$d" "$2"
+		done
+	else
+		r=$(echo "$1" | sed "s|$2/*||g")
+		resources+=("$(tr -s '/' <<<$r)")
+	fi
+}
+
+function _longest {
+	local position=$1
+	local l=0
+	local n=0
+	for k in "${KUSTOMIZATIONS[@]}"; do
+		n=$(cut -d, -f${position} <<<$k)
+		if [ ${#n} -gt $l ]; then
+			l=${#n}
+		fi
+	done
+	echo $l
+}
+
+function _fill() {
+	FILL="${2:- }"
+	for ((c = 0; c <= $1; c += ${#FILL})); do
+		echo -n "${FILL:0:$1-$c}"
+	done
+}
+
+##
+# Lists all flux kustomizations and the path they will build
+#
+function list() {
+	local n=0
+	local spacer=5
+
+	# Print the header row
+	local header="  NAME"
+	n=$((($(_longest 2) - 4) + spacer))
+	header=${header}$(_fill $n)NAMESPACE
+
+	n=$(($(_longest 3) - spacer))
+	header=${header}$(_fill $n)PATH
+
+	echo "${header}"
+
+	local i=0
+	for k in "${KUSTOMIZATIONS[@]}"; do
+		name=$(cut -d, -f2 <<<${k})
+		na=$((($(_longest 2) - ${#name}) + spacer))
+
+		namespace="$(cut -d, -f3 <<<$k)"
+		ns=$(($(_longest 3) - ${#namespace}))
+		path=$(_fill $n)$(cut -d, -f4 <<<$k)
+		echo "$i ${name}$(_fill ${na})${namespace}$(_fill ${ns})${path}"
+		i=$((i + 1))
+	done
+}
+
+##
+# Build the kustomization
+#
+function _find_kustomization() {
+	local kustomization=""
+	case $1 in
+	"")
+		echo "Please select a kustomization from the list" >&2
+		list
+		;;
+	[0-9])
+		kustomization=${KUSTOMIZATIONS[$1]}
+		echo ${kustomization}
+		;;
+	*)
+		local matches=()
+		for k in "${KUSTOMIZATIONS[@]}"; do
+			if [ "$(cut -d, -f2 <<<$k)" == "$1" ]; then
+				matches+=("$k")
+			fi
+		done
+		if [ ${#matches[@]} -eq 0 ]; then
+			echo "No kustomization found. Valid kustomizations are:" >&2
+			list
+			exit 1
+		elif [ ${#matches[@]} -gt 1 ]; then
+			echo "Too many matches to build. Please select a number to build from" >&2
+			list
+			exit 1
+		fi
+		echo ${matches[0]}
+		;;
+	esac
+}
+
+function build() {
+	local kustomization=""
+	path=""
+
+	kustomization=$(_find_kustomization $1)
+	path="$(cut -d, -f4 <<<${kustomization})"
+
+	cleanup() {
+		rm "${path}"/kustomization.yaml
+	}
+
+	if [ -n "$2" ] && [ -e "$(realpath $path/$2)" ]; then
+		path="${path}/$2"
+		shift
+	fi
+	shift
+
+	if ! [ -e "${path}/kustomization.yaml" ]; then
+		declare -a resources=()
+		_find_resources "${path}" "${path}"
+
+		trap cleanup EXIT SIGINT
+		cat <<-EOF >"${path}/kustomization.yaml"
+			apiVersion: kustomize.config.k8s.io/v1beta1
+			kind: Kustomization
+			buildMetadata: [originAnnotations]
+			resources:
+			$(for f in "${resources[@]}"; do echo "- $f"; done)
+		EOF
+	fi
+
+	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "$(cut -d, -f1 <<<$kustomization)")
+	for v in $toexport; do
+		export "${v?}"
+	done
+	kustomize build --load-restrictor=LoadRestrictionsNone $path | envsubst | yq "$*"
+}
+
+function=$1
+shift
+
+case $function in
+"list")
+	list
+	;;
+"build")
+	build "$@"
+	;;
+*)
+	usage
+	;;
+esac
