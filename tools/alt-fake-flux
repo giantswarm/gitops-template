@@ -9,7 +9,7 @@
 # parsed manifests using envsubst.
 #
 # All manifests are then provided to `yq` for optional filtering.
-
+shopt -s extglob
 KUSTOMIZATIONS=()
 
 ##
@@ -23,21 +23,25 @@ function usage() {
 	cat <<EOF
 Usage:
     - $(basename $0) list | list available kustomizations
-    - $(basename $0) build <kustomization> [path] [[yqflags] [query]]
+    - $(basename $0) build <kustomization> [path] [yqflags] [query]
 
 ---
 If kustomization is a number, selects that kustomization from a list
   of all kustomizations found in the repository.
 
 If kustomization is a name, tries to find a kustomization matching that name.
-  When name is specified, there can be only one kustomization with that name. does not work across namespace.
+To specify a namespace for the kustomization, use name:namespace (see examples)
 
 for a list of valid names and numbers, use '$(basename $0) list'
 
+Argument order is important. The script will fail if the arguments are not given in the
+order specified above.
+
 Optional Arguments
-    path:  The path element is a subpath matching below the path defined in the kustomization you are parsing.
-           For example, if the kustomization 'spec.path' is '$(cut -d, -f4 <<<${KUSTOMIZATIONS[0]})'
-           then 'path' must be a relative path below this, e.g. 'apps/athena'
+    path:   The path element is a subpath matching below the path defined in the kustomization you are parsing.
+            For example, if the kustomization 'spec.path' is '$(cut -d, -f4 <<<${KUSTOMIZATIONS[0]})'
+            then 'path' must be a relative path below this, e.g. 'apps/athena'
+    yqflags: Optional flags to pass to 'yq'. Use -M to turn off output coloring.
     query: This must be a valid 'yq' query and can be used to filter for specific resources.
            output coloring can be turned off using -M before the query
 
@@ -46,10 +50,12 @@ Examples:
     $(basename $0) build 1
   - Build all resources for kustomization by kustomization name
     $(basename $0) build prod-cluster
+  - Build the kustomization "prod" in the "org-example" namespace
+    $(basename $0) build prod:org-example
   - Build all by index but target the apps/athena subpath
     $(basename $0) build 1 apps/athena
   - Build all by name and select all apps with the name athena
-    $(basename $0) build prod-cluster 'select(.kind == "App" and metadata.name == "athena")'
+    $(basename $0) build prod-cluster 'select(.kind == "App" and .metadata.name == "athena")'
   - Build only the athena app and select the App CR
     $(basename $0) build 1 apps/athena 'select(.kind == "App")'
   - Build only the athena app and select the App CR, turning off output coloring
@@ -150,15 +156,23 @@ function _find_kustomization() {
 		echo "Please select a kustomization from the list" >&2
 		list
 		;;
-	[0-9])
+	+([0-9]))
 		kustomization=${KUSTOMIZATIONS[$1]}
 		echo ${kustomization}
 		;;
 	*)
 		local matches=()
+		local name="$1"
+		local namespace=""
+		if grep -q ':' <<<${name}; then
+			namespace=$(cut -d: -f2 <<<${name})
+			name=$(cut -d: -f1 <<<${name})
+		fi
 		for k in "${KUSTOMIZATIONS[@]}"; do
-			if [ "$(cut -d, -f2 <<<$k)" == "$1" ]; then
-				matches+=("$k")
+			if [ "$(cut -d, -f2 <<<$k)" == "${name}" ]; then
+				if [ "${namespace}" == "" ] || [ "$(cut -d, -f3 <<<$k)" == "${namespace}" ]; then
+					matches+=("$k")
+				fi
 			fi
 		done
 		if [ ${#matches[@]} -eq 0 ]; then
