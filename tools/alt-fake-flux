@@ -1,11 +1,19 @@
 #!/bin/bash
 # shellcheck disable=SC2086,2207
+#
+# This script can be used to simulate the build capability of flux, print the generated manifests and
+# optionally filter those manifests to ensure the generated resources are what is expected to be delivered
+# to the cluster.
+#
+# As part of the build, it will extract any substitutions found in `spec.postBuild` and apply these to the
+# parsed manifests using envsubst.
+#
+# All manifests are then provided to `yq` for optional filtering.
 
 KUSTOMIZATIONS=()
 
 ##
-# Usage
-#
+# Print how to use this script
 function usage() {
 	if [ ${#KUSTOMIZATIONS[@]} -eq 0 ]; then
 		KUSTOMIZATIONS+=(
@@ -15,7 +23,7 @@ function usage() {
 	cat <<EOF
 Usage:
     - $(basename $0) list | list available kustomizations
-    - $(basename $0) build <kustomization> [path] [query]
+    - $(basename $0) build <kustomization> [path] [[yqflags] [query]]
 
 ---
 If kustomization is a number, selects that kustomization from a list
@@ -31,11 +39,30 @@ Optional Arguments
            For example, if the kustomization 'spec.path' is '$(cut -d, -f4 <<<${KUSTOMIZATIONS[0]})'
            then 'path' must be a relative path below this, e.g. 'apps/athena'
     query: This must be a valid 'yq' query and can be used to filter for specific resources.
+           output coloring can be turned off using -M before the query
+
+Examples:
+  - Build all resources for kustomization by numeric index
+    $(basename $0) build 1
+  - Build all resources for kustomization by kustomization name
+    $(basename $0) build prod-cluster
+  - Build all by index but target the apps/athena subpath
+    $(basename $0) build 1 apps/athena
+  - Build all by name and select all apps with the name athena
+    $(basename $0) build prod-cluster 'select(.kind == "App" and metadata.name == "athena")'
+  - Build only the athena app and select the App CR
+    $(basename $0) build 1 apps/athena 'select(.kind == "App")'
+  - Build only the athena app and select the App CR, turning off output coloring
+    $(basename $0) build 1 apps/athena -M 'select(.kind == "App")'
 EOF
 }
 
+##
+# We want to be running this script from git root to have widest possible discovery
 [ ! -d .git ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
 
+##
+# Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
 export KUSTOMIZATIONS=(
 	$(
 		for f in $(find . -name '*.yaml' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
@@ -44,6 +71,8 @@ export KUSTOMIZATIONS=(
 	)
 )
 
+##
+# find all resources for a given kustomization by traversing `path`
 function _find_resources() {
 	if ! [ -e "$1"/kustomization.yaml ]; then
 		for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/*||g"); do
@@ -59,6 +88,8 @@ function _find_resources() {
 	fi
 }
 
+##
+# finds the length of the longest element in a column inside KUSTOMIZATIONS list
 function _longest {
 	local position=$1
 	local l=0
@@ -72,6 +103,8 @@ function _longest {
 	echo $l
 }
 
+##
+# Create spaces. Useful to pad a line
 function _fill() {
 	FILL="${2:- }"
 	for ((c = 0; c <= $1; c += ${#FILL})); do
@@ -81,7 +114,6 @@ function _fill() {
 
 ##
 # Lists all flux kustomizations and the path they will build
-#
 function list() {
 	local n=0
 	local spacer=5
@@ -110,8 +142,7 @@ function list() {
 }
 
 ##
-# Build the kustomization
-#
+# finds the kustomization the user wants to build in the array
 function _find_kustomization() {
 	local kustomization=""
 	case $1 in
@@ -144,6 +175,8 @@ function _find_kustomization() {
 	esac
 }
 
+##
+# Build the given kustomization and applies any optional filtering
 function build() {
 	local kustomization=""
 	path=""
@@ -160,6 +193,12 @@ function build() {
 		shift
 	fi
 	shift
+
+	local yqflags=""
+	if [[ "$1" =~ ^-.* ]]; then
+		yqflags=$1
+		shift
+	fi
 
 	if ! [ -e "${path}/kustomization.yaml" ]; then
 		declare -a resources=()
@@ -179,7 +218,7 @@ function build() {
 	for v in $toexport; do
 		export "${v?}"
 	done
-	kustomize build --load-restrictor=LoadRestrictionsNone $path | envsubst | yq "$*"
+	kustomize build --load-restrictor=LoadRestrictionsNone $path | envsubst | yq $yqflags "$*"
 }
 
 function=$1
