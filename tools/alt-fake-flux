@@ -135,14 +135,20 @@ function list() {
 	echo "${header}"
 
 	local i=0
+
+	local kustomizationsSize=${#KUSTOMIZATIONS[@]}
+	local kustomizationsScale=${#kustomizationsSize}
+
 	for k in "${KUSTOMIZATIONS[@]}"; do
+		spacedSerial=$(printf "%-${kustomizationsScale}s" ${i})
+
 		name=$(cut -d, -f2 <<<${k})
 		na=$((($(_longest 2) - ${#name}) + spacer))
 
 		namespace="$(cut -d, -f3 <<<$k)"
 		ns=$(($(_longest 3) - ${#namespace}))
 		path=$(_fill $n)$(cut -d, -f4 <<<$k)
-		echo "$i ${name}$(_fill ${na})${namespace}$(_fill ${ns})${path}"
+		echo "$spacedSerial ${name}$(_fill ${na})${namespace}$(_fill ${ns})${path}"
 		i=$((i + 1))
 	done
 }
