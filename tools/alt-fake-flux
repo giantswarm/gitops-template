@@ -72,6 +72,8 @@ Examples:
     $(basename $0) build 1 apps/athena 'select(.kind == "App")'
   - Build only the athena app and select the App CR, turning off output coloring
     $(basename $0) build 1 apps/athena -M 'select(.kind == "App")'
+  - Build only the athena app and select the App CR, turning off output coloring. Use kustomize for rendering, not flux
+    $(basename $0) build 1 apps/athena --use-kustomize -M 'select(.kind == "App")'
 EOF
 }
 
