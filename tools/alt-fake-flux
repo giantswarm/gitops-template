@@ -23,25 +23,37 @@ function usage() {
 	cat <<EOF
 Usage:
     - $(basename $0) list | list available kustomizations
-    - $(basename $0) build <kustomization> [path] [yqflags] [query]
+    - $(basename $0) build <kustomization> [path] [--use-kustomize] [yqflags] [query]
 
 ---
-If kustomization is a number, selects that kustomization from a list
-  of all kustomizations found in the repository.
+If kustomization is a number, selects that kustomization from a list of all kustomizations
+found in the repository.
 
 If kustomization is a name, tries to find a kustomization matching that name.
+
 To specify a namespace for the kustomization, use name:namespace (see examples)
 
-for a list of valid names and numbers, use '$(basename $0) list'
+For a list of valid names and numbers, use '$(basename $0) list'
 
 Argument order is important. The script will fail if the arguments are not given in the
 order specified above.
+
+By default, the script will build with 'flux build kustomization' which does not show all
+resources that will be applied to the cluster.
+
+Use '--use-kustomize' to mimic the behaviour of flux including all secrets that will be
+applied. Does not decrypt secrets.
+
 
 Optional Arguments
     path:   The path element is a subpath matching below the path defined in the kustomization you are parsing.
             For example, if the kustomization 'spec.path' is '$(cut -d, -f4 <<<${KUSTOMIZATIONS[0]})'
             then 'path' must be a relative path below this, e.g. 'apps/athena'
+
+    --use-kustomize: Use kustomize to build the kustomization and not 'flux build'
+
     yqflags: Optional flags to pass to 'yq'. Use -M to turn off output coloring.
+
     query: This must be a valid 'yq' query and can be used to filter for specific resources.
            output coloring can be turned off using -M before the query
 
@@ -199,10 +211,15 @@ function _find_kustomization() {
 # Build the given kustomization and applies any optional filtering
 function build() {
 	local kustomization=""
+    local use_kustomize=1
 	path=""
 
 	kustomization=$(_find_kustomization $1)
+
+    name="$(cut -d, -f2 <<< ${kustomization})"
+    namespace="$(cut -d, -f3 <<< ${kustomization})"
 	path="$(cut -d, -f4 <<<${kustomization})"
+    kustomization="$(cut -d, -f1 <<< ${kustomization})"
 
 	cleanup() {
 		rm "${path}"/kustomization.yaml
@@ -213,6 +230,11 @@ function build() {
 		shift
 	fi
 	shift
+
+    if [ "$1" == "--use-kustomize" ]; then
+        use_kustomize=0
+        shift
+    fi
 
 	local yqflags=""
 	if [[ "$1" =~ ^-.* ]]; then
@@ -233,6 +255,12 @@ function build() {
 			$(for f in "${resources[@]}"; do echo "- $f"; done)
 		EOF
 	fi
+
+    if [ $use_kustomize -eq 1 ]; then
+        echo "Using flux to build"
+        flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run | yq $yqflags "$*"
+        return $?
+    fi
 
 	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "$(cut -d, -f1 <<<$kustomization)")
 	for v in $toexport; do
