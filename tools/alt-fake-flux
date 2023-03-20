@@ -213,15 +213,15 @@ function _find_kustomization() {
 # Build the given kustomization and applies any optional filtering
 function build() {
 	local kustomization=""
-    local use_kustomize=1
+	local use_kustomize=1
 	path=""
 
 	kustomization=$(_find_kustomization $1)
 
-    name="$(cut -d, -f2 <<< ${kustomization})"
-    namespace="$(cut -d, -f3 <<< ${kustomization})"
+	name="$(cut -d, -f2 <<<${kustomization})"
+	namespace="$(cut -d, -f3 <<<${kustomization})"
 	path="$(cut -d, -f4 <<<${kustomization})"
-    kustomization="$(cut -d, -f1 <<< ${kustomization})"
+	kustomization="$(cut -d, -f1 <<<${kustomization})"
 
 	cleanup() {
 		rm "${path}"/kustomization.yaml
@@ -233,10 +233,10 @@ function build() {
 	fi
 	shift
 
-    if [ "$1" == "--use-kustomize" ]; then
-        use_kustomize=0
-        shift
-    fi
+	if [ "$1" == "--use-kustomize" ]; then
+		use_kustomize=0
+		shift
+	fi
 
 	local yqflags=""
 	if [[ "$1" =~ ^-.* ]]; then
@@ -258,11 +258,11 @@ function build() {
 		EOF
 	fi
 
-    if [ $use_kustomize -eq 1 ]; then
-        echo "Using flux to build"
-        flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run | yq $yqflags "$*"
-        return $?
-    fi
+	if [ $use_kustomize -eq 1 ]; then
+		echo "Using flux to build"
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run | yq $yqflags "$*"
+		return $?
+	fi
 
 	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "$(cut -d, -f1 <<<$kustomization)")
 	for v in $toexport; do
