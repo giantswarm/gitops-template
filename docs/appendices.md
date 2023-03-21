@@ -19,7 +19,7 @@ For `yq` the [github.com/mikefarah/yq](https://github.com/mikefarah/yq/) version
 
 ### Validating yaml files in the repository
 
-You need the following tools installed to use [test-all-ffb](/tools/test-all-ffb) script.
+You need the following tools installed to use [test-all-ffb](/tools/test-all-ff) script.
 
 - `yamllint` of [github.com/adrienverge/yamllint](https://github.com/adrienverge/yamllint)
 - `kubeconform` of [github.com/yannh/kubeconform](https://github.com/yannh/kubeconform)
