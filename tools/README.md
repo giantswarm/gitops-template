@@ -1,8 +1,36 @@
 # Tools
 
-## `test-all-fb`
+## Requirements
+
+The tools provided here may require the following external tools
+
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [yq](https://github.com/mikefarah/yq)
+- [yamllint](https://github.com/adrienverge/yamllint)
+- [kubeconform](https://github.com/yannh/kubeconform)
+- [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli)
+- [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/)
+
+## Provides
+
+This directory provides the following tools
+
+- [test-all-ff](https://github.com/giantswarm/gitops-template/blob/main/tools/test-all-ff)
+- [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
+
+## `test-all-ff`
 
 You can use this bash tool under a repository based on this template to verify the syntax of your manifests.
+
+This tool will run through `yamllint` and `kubeconform` to verify your manifests pass all checks and is likely to
+succeed in the cluster.
+
+It runs `fake-flux` under the hood for each kustomization it finds
+
+### Usage
+
+- `validate` Tests all found flux kustomizations with `yamllint` and `kubeconform`
+- `template` Prints the entire repo manifest
 
 ## `fake-flux`
 
@@ -13,12 +41,6 @@ issues caused by incompatibilities with the flux ecosystem.
 
 For a detailed description of what this tool can do, please see `fake-flux usage` which includes a comprehensive set of
 examples.
-
-### Requirements
-
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- [yq](https://github.com/mikefarah/yq)
-- [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
 
 ### Usage
 
