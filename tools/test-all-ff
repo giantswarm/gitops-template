@@ -1,0 +1,92 @@
+#!/bin/bash
+# shellcheck disable=SC2086,2207
+set -e -o pipefail
+
+##
+# We want to be running this script from git root to have widest possible discovery
+[ ! -d .git ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
+
+function help() {
+	echo -e "
+Test syntax using fake-flux-build helper. Must be run from repo root dir (a dir that contains
+'management-clusters' dir).
+
+Usage: $0 [validate|template]
+
+"
+	exit 1
+}
+
+KUBERNETES_VERSION="master"
+
+KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/${KUBERNETES_VERSION}/"
+GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/main/master"
+
+GS_SCHEMA_REPOSITORY_CACHE="/tmp/gs-schema-repository-cache"
+mkdir -p "${GS_SCHEMA_REPOSITORY_CACHE}"
+
+fakeflux="$(dirname $0)/fake-flux"
+
+##
+# Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
+export KUSTOMIZATIONS=(
+	$(
+		for f in $(find . -name '*.yaml' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
+		done
+	)
+)
+
+function test() {
+	local mode="$1"
+	local has_validation_errors=false
+	tmp_dir=$(mktemp -d)
+
+	for kustomization in "${KUSTOMIZATIONS[@]}"; do
+		name=$(cut -d, -f2 <<<${kustomization})
+		namespace=$(cut -d, -f3 <<<${kustomization})
+		if [ "${mode}" == "validate" ]; then
+			echo "Testing kustomization ${name} from namespace ${namespace}" >&2
+			tmp_file="${tmp_dir}/manifest.yaml"
+			${fakeflux} build ${name}:${namespace} -M >"${tmp_file}"
+
+			echo -n "yamllint: "
+			if ! (yamllint "$tmp_file"); then
+				has_validation_errors=1
+			else
+				echo "OK"
+			fi
+
+			echo -n "kubeconform: "
+			if ! (
+				kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
+			); then
+				has_validation_errors=true
+			else
+				echo "OK"
+			fi
+			echo ""
+		else
+			echo "---"
+			${fakeflux} build ${name}:${namespace} -M
+		fi
+	done
+
+	if [[ ${has_validation_errors} -ne 0 ]]; then
+		echo "There are validation errors, please check the above output!"
+		exit 2
+	fi
+}
+
+if [ $# -gt 1 ]; then
+	help
+fi
+
+case "$1" in
+validate | template)
+	test "$1"
+	;;
+*)
+	help
+	;;
+esac
