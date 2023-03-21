@@ -27,7 +27,7 @@ succeed in the cluster.
 
 It runs `fake-flux` under the hood for each kustomization it finds
 
-### Usage
+### test-all-ff usage
 
 - `validate` Tests all found flux kustomizations with `yamllint` and `kubeconform`
 - `template` Prints the entire repo manifest
@@ -42,7 +42,7 @@ issues caused by incompatibilities with the flux ecosystem.
 For a detailed description of what this tool can do, please see `fake-flux usage` which includes a comprehensive set of
 examples.
 
-### Usage
+### fake-flux usage
 
 - `list` Lists all fluxcd kustomizations found in the current repository
 - `build <kustomization> [path] [--use-kustomize] [yqflags] [query]` Build the given kustomization and optionally filter
