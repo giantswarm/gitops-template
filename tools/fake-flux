@@ -1,0 +1,282 @@
+#!/bin/bash
+# shellcheck disable=SC2086,2207
+#
+# This script can be used to simulate the build capability of flux, print the generated manifests and
+# optionally filter those manifests to ensure the generated resources are what is expected to be delivered
+# to the cluster.
+#
+# As part of the build, it will extract any substitutions found in `spec.postBuild` and apply these to the
+# parsed manifests using envsubst.
+#
+# All manifests are then provided to `yq` for optional filtering.
+set -e -o pipefail
+shopt -s extglob
+KUSTOMIZATIONS=()
+
+##
+# Print how to use this script
+function usage() {
+	if [ ${#KUSTOMIZATIONS[@]} -eq 0 ]; then
+		KUSTOMIZATIONS+=(
+			"./management-clusters/example/organizations/dev/workload-clusters/dev.yaml,dev,default,./management-clusters/example/organizations/dev/workload-clusters/dev/mapi"
+		)
+	fi
+	cat <<EOF
+Usage:
+    - $(basename $0) list | list available kustomizations
+    - $(basename $0) build <kustomization> [path] [--use-kustomize] [yqflags] [query]
+
+---
+If kustomization is a number, selects that kustomization from a list of all kustomizations
+found in the repository.
+
+If kustomization is a name, tries to find a kustomization matching that name.
+
+To specify a namespace for the kustomization, use name:namespace (see examples)
+
+For a list of valid names and numbers, use '$(basename $0) list'
+
+Argument order is important. The script will fail if the arguments are not given in the
+order specified above.
+
+Optional Arguments
+    path:   The path element is a subpath matching below the path defined in the kustomization you are parsing.
+            For example, if the kustomization 'spec.path' is '$(cut -d, -f4 <<<${KUSTOMIZATIONS[0]})'
+            then 'path' must be a relative path below this, e.g. 'apps/athena'
+
+    --use-kustomize: Use kustomize to build the kustomization and not 'flux build'
+
+    yqflags: Optional flags to pass to 'yq'. Use -M to turn off output coloring.
+
+    query: This must be a valid 'yq' query and can be used to filter for specific resources.
+           output coloring can be turned off using -M before the query
+
+Examples:
+  - Build all resources for kustomization by numeric index
+    $(basename $0) build 1
+  - Build all resources for kustomization by kustomization name
+    $(basename $0) build prod-cluster
+  - Build the kustomization "prod" in the "org-example" namespace
+    $(basename $0) build prod:org-example
+  - Build all by index but target the apps/athena subpath
+    $(basename $0) build 1 apps/athena
+  - Build all by name and select all apps with the name athena
+    $(basename $0) build prod-cluster 'select(.kind == "App" and .metadata.name == "athena")'
+  - Build only the athena app and select the App CR
+    $(basename $0) build 1 apps/athena 'select(.kind == "App")'
+  - Build only the athena app and select the App CR, turning off output coloring
+    $(basename $0) build 1 apps/athena -M 'select(.kind == "App")'
+  - Build only the athena app and select the App CR, turning off output coloring. Use kustomize for rendering, not flux
+    $(basename $0) build 1 apps/athena --use-kustomize -M 'select(.kind == "App")'
+EOF
+}
+
+##
+# We want to be running this script from git root to have widest possible discovery
+[ ! -d .git ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
+
+##
+# Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
+export KUSTOMIZATIONS=(
+	$(
+		for f in $(find . -name '*.yaml' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
+		done
+	)
+)
+
+##
+# find all resources for a given kustomization by traversing `path`
+function _find_resources() {
+	if ! [ -e "$1"/kustomization.yaml ]; then
+		for f in $(find "$1" -maxdepth 1 -type f -name "*.yaml" | sed "s|$2/*||g"); do
+			resources+=("$(tr -s '/' <<<$f)")
+		done
+
+		for d in $(find "$1" -maxdepth 1 -type d ! -path "$1"); do
+			_find_resources "$d" "$2"
+		done
+	else
+		r=$(echo "$1" | sed "s|$2/*||g")
+		resources+=("$(tr -s '/' <<<$r)")
+	fi
+}
+
+##
+# finds the length of the longest element in a column inside KUSTOMIZATIONS list
+function _longest {
+	local position=$1
+	local l=0
+	local n=0
+	for k in "${KUSTOMIZATIONS[@]}"; do
+		n=$(cut -d, -f${position} <<<$k)
+		if [ ${#n} -gt $l ]; then
+			l=${#n}
+		fi
+	done
+	echo $l
+}
+
+##
+# Create spaces. Useful to pad a line
+function _fill() {
+	FILL="${2:- }"
+	for ((c = 0; c <= $1; c += ${#FILL})); do
+		echo -n "${FILL:0:$1-$c}"
+	done
+}
+
+##
+# Lists all flux kustomizations and the path they will build
+function list() {
+	local n=0
+	local spacer=5
+
+	# Print the header row
+	local header="  NAME"
+	n=$((($(_longest 2) - 4) + spacer))
+	header=${header}$(_fill $n)NAMESPACE
+
+	n=$(($(_longest 3) - spacer))
+	header=${header}$(_fill $n)PATH
+
+	echo "${header}"
+
+	local i=0
+
+	local kustomizationsSize=${#KUSTOMIZATIONS[@]}
+	local kustomizationsScale=${#kustomizationsSize}
+
+	for k in "${KUSTOMIZATIONS[@]}"; do
+		spacedSerial=$(printf "%-${kustomizationsScale}s" ${i})
+
+		name=$(cut -d, -f2 <<<${k})
+		na=$((($(_longest 2) - ${#name}) + spacer))
+
+		namespace="$(cut -d, -f3 <<<$k)"
+		ns=$(($(_longest 3) - ${#namespace}))
+		path=$(_fill $n)$(cut -d, -f4 <<<$k)
+		echo "$spacedSerial ${name}$(_fill ${na})${namespace}$(_fill ${ns})${path}"
+		i=$((i + 1))
+	done
+}
+
+##
+# finds the kustomization the user wants to build in the array
+function _find_kustomization() {
+	local kustomization=""
+	case $1 in
+	"")
+		echo "Please select a kustomization from the list" >&2
+		list
+		;;
+	+([0-9]))
+		kustomization=${KUSTOMIZATIONS[$1]}
+		echo ${kustomization}
+		;;
+	*)
+		local matches=()
+		local name="$1"
+		local namespace=""
+		if grep -q ':' <<<${name}; then
+			namespace=$(cut -d: -f2 <<<${name})
+			name=$(cut -d: -f1 <<<${name})
+		fi
+		for k in "${KUSTOMIZATIONS[@]}"; do
+			if [ "$(cut -d, -f2 <<<$k)" == "${name}" ]; then
+				if [ "${namespace}" == "" ] || [ "$(cut -d, -f3 <<<$k)" == "${namespace}" ]; then
+					matches+=("$k")
+				fi
+			fi
+		done
+		if [ ${#matches[@]} -eq 0 ]; then
+			echo "No kustomization found. Valid kustomizations are:" >&2
+			list
+			exit 1
+		elif [ ${#matches[@]} -gt 1 ]; then
+			echo "Too many matches to build. Please select a kustomization to build" >&2
+			list
+			exit 1
+		fi
+		echo ${matches[0]}
+		;;
+	esac
+}
+
+##
+# Build the given kustomization and applies any optional filtering
+function build() {
+	local kustomization=""
+	local use_kustomize=false
+	path=""
+
+	kustomization=$(_find_kustomization $1)
+
+	name="$(cut -d, -f2 <<<${kustomization})"
+	namespace="$(cut -d, -f3 <<<${kustomization})"
+	path="$(cut -d, -f4 <<<${kustomization})"
+	kustomization="$(cut -d, -f1 <<<${kustomization})"
+
+	cleanup() {
+		rm "${path}"/kustomization.yaml
+	}
+
+	if [ -n "$2" ] && [ -e "$(realpath $path/$2)" ]; then
+		path="${path}/$2"
+		shift
+	fi
+	shift
+
+	if [ "$1" == "--use-kustomize" ]; then
+		use_kustomize=true
+		shift
+	fi
+
+	local yqflags=""
+	if [[ "$1" =~ ^-.* ]]; then
+		yqflags=$1
+		shift
+	fi
+
+	if ! $use_kustomize; then
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run | yq $yqflags "$*"
+		return $?
+	fi
+
+	# If we want to use kustomize to build instead of flux, the following does this.
+
+	if ! [ -e "${path}/kustomization.yaml" ]; then
+		declare -a resources=()
+		_find_resources "${path}" "${path}"
+
+		trap cleanup EXIT SIGINT
+		cat <<-EOF >"${path}/kustomization.yaml"
+			apiVersion: kustomize.config.k8s.io/v1beta1
+			kind: Kustomization
+			buildMetadata: [originAnnotations]
+			resources:
+			$(for f in "${resources[@]}"; do echo "- $f"; done)
+		EOF
+	fi
+
+	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "$(cut -d, -f1 <<<$kustomization)")
+	for v in $toexport; do
+		export "${v?}"
+	done
+	kustomize build --load-restrictor=LoadRestrictionsNone $path | envsubst | yq $yqflags "$*"
+}
+
+function=$1
+shift
+
+case $function in
+"list")
+	list
+	;;
+"build")
+	build "$@"
+	;;
+*)
+	usage
+	;;
+esac

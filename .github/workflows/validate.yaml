@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get install -y yamllint
+      - run: curl -s https://fluxcd.io/install.sh | sudo bash
       - uses: giantswarm/install-binary-action@v1
         with:
           binary: kubeconform
@@ -50,7 +51,7 @@ jobs:
         uses: mathiasvr/command-output@v1
         id: validate
         with:
-          run: "./tools/test-all-ffb validate"
+          run: "./tools/test-all-ff validate"
       - name: Find validation comment
         uses: peter-evans/find-comment@v2
         # We always want to look up the comment for the result of the previous `validation` step result message (whether current validation failed or not)
@@ -96,6 +97,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - run: sudo apt-get install -y yamllint
+      - run: curl -s https://fluxcd.io/install.sh | sudo bash
       - name: install dyff
         uses: giantswarm/install-binary-action@v1
         with:
@@ -116,13 +118,13 @@ jobs:
       - run: ls -la /opt/hostedtoolcache
       - uses: actions/checkout@v3
       - name: template all for the new branch
-        run: ./tools/test-all-ffb template > /tmp/new.yaml
+        run: ./tools/test-all-ff template > /tmp/new.yaml
       - uses: actions/checkout@v3
         with:
           ref: 'main'
           path: 'old'
       - name: template all for the old branch
-        run: cd old/ && ../tools/test-all-ffb template > /tmp/old.yaml && cd ..
+        run: cd old/ && ../tools/test-all-ff template > /tmp/old.yaml && cd ..
       - name: save the diff
         uses: mathiasvr/command-output@v1
         id: diff
