@@ -111,7 +111,7 @@ examples.
 - Build only the athena app and select the App CR
 
   ```bash
-  fak-flux build 1 apps/athena 'select(.kind == "App")'
+  fake-flux build 1 apps/athena 'select(.kind == "App")'
   ```
 
 - Build only the athena app and select the App CR, turning off output coloring
