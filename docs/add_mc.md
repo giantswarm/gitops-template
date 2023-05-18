@@ -182,7 +182,7 @@ en- and decrypt real user-related data.
       namespace: default
     spec:
       serviceAccountName: automation
-      prune: true
+      prune: false
       interval: 1m
       path: "./management-clusters/${MC_NAME}"
       sourceRef:

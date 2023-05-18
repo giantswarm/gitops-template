@@ -109,7 +109,7 @@ Change our working directory to the `hello_app_cluster` development cluster envi
 cd bases/environments/stages/dev/hello_app_cluster
 ```
 
-Let's crete the `kustomization.yaml` file for the development cluster.
+Let's create the `kustomization.yaml` file for the development cluster.
 
 ```sh
 cat <<EOF > kustomization.yaml
@@ -578,6 +578,22 @@ spec:
 
 EOF
 ```
+
+> **Note**
+>
+> In this example, we specifically set the `prune` value to `false`.
+>
+> This is to ensure that in the event of accidental deletion or modification of
+> the Kustomiation resource, clusters are not automatically deleted as part of
+> the cleanup action carried out by Flux.
+>
+> It is recommended, and considered good practice that this remains `false`
+> until such time that a cluster is specifically being deleted.
+>
+> In this instance, two commits should be made.
+>
+> 1. To explicitly set `prune: true` along with a commit message detailing why.
+> 1. To delete the Kustomization controlling this cluster.
 
 In our example we create one instance from each cluster environment base:
 
