@@ -10,7 +10,11 @@ spec:
       name: sops-gpg-master
   interval: 1m0s
   path: ./management-clusters/MC_NAME
-  prune: true
+  # Top level kustomizations may have prune set to `true`
+  # only if they do not handle cluster creation.
+  #
+  # Where cluster creation is being handled, this should default to false
+  prune: false
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
