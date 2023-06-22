@@ -8,6 +8,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - migrated `.spec.config` to `.spec.extraConfigs`
+- Templates: Rename `nginx-ingress-controller` to `ingress-nginx`. ([#85](https://github.com/giantswarm/gitops-template/pull/85))
 
 ## [0.1.0] Initial release
 

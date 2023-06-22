@@ -11,7 +11,7 @@ not yet installed in any cluster.
 
 ## Example
 
-An example of an App Template is available in [bases/apps/nginx-ingress-controller](/bases/apps/nginx-ingress-controller).
+An example of an App Template is available in [bases/apps/ingress-nginx](/bases/apps/ingress-nginx).
 
 ## Export environment variables
 
@@ -81,7 +81,7 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     configMapGenerator:
       - files:
         - values=default_config.yaml
-        name: ${cluster_name}-nginx-ingress-controller-values
+        name: ${cluster_name}-ingress-nginx-values
     generatorOptions:
       disableNameSuffixHash: true
     # default config block end

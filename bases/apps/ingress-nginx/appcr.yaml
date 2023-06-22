@@ -1,17 +1,17 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
-  name: ${cluster_name}-nginx-ingress-controller
+  name: ${cluster_name}-ingress-nginx
   namespace: kube-system
 spec:
   catalog: giantswarm
   extraConfigs:
     - kind: configMap
-      name: ${cluster_name}-nginx-ingress-controller-values
+      name: ${cluster_name}-ingress-nginx-values
       namespace: kube-system
       priority: 1
   kubeConfig:
     inCluster: false
-  name: nginx-ingress-controller-app
+  name: ingress-nginx
   namespace: kube-system
-  version: 2.8.0
+  version: 3.0.0
