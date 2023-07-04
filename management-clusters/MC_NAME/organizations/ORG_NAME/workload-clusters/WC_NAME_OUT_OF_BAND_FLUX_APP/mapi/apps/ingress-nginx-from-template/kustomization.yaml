@@ -3,46 +3,46 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
       - values=override_config.yaml
-    name: ${cluster_name}-tmpl-nginx-ingress-controller-user-values
+    name: ${cluster_name}-tmpl-ingress-nginx-user-values
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 namespace: kube-system
-# patches block: needed only because we already install nginx in `nginx-ingress-controller` app
+# patches block: needed only because we already install ingress-nginx in `ingress-nginx` app
 #  and we would have name conflicts. Normally not needed.
 patches:
   - patch: |-
       - op: replace
         path: "/spec/extraConfigs/0/name"
-        value: ${cluster_name}-tmpl-nginx-ingress-controller-values
+        value: ${cluster_name}-tmpl-ingress-nginx-values
     target:
       group: application.giantswarm.io
       kind: "App"
-      name: \${cluster_name}-nginx-ingress-controller
+      name: \${cluster_name}-ingress-nginx
       namespace: kube-system
       version: v1alpha1
   - patch: |-
       - op: replace
         path: "/metadata/name"
-        value: ${cluster_name}-tmpl-nginx-ingress-controller
+        value: ${cluster_name}-tmpl-ingress-nginx
     target:
       group: application.giantswarm.io
       kind: "App"
-      name: \${cluster_name}-nginx-ingress-controller
+      name: \${cluster_name}-ingress-nginx
       namespace: kube-system
       version: v1alpha1
   - patch: |-
       - op: replace
         path: "/metadata/name"
-        value: ${cluster_name}-tmpl-nginx-ingress-controller-values
+        value: ${cluster_name}-tmpl-ingress-nginx-values
     target:
       group: ""
       kind: "ConfigMap"
-      name: \${cluster_name}-nginx-ingress-controller-values
+      name: \${cluster_name}-ingress-nginx-values
       version: v1
 # block end
 patchesStrategicMerge:
   - patch_app_config.yaml
 resources:
   - secret.enc.yaml
-  - ../../../../../../../../../bases/apps/nginx-ingress-controller
+  - ../../../../../../../../../bases/apps/ingress-nginx
