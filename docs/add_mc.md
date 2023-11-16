@@ -187,7 +187,7 @@ en- and decrypt real user-related data.
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
         kind: GitRepository
-        name: YOUR_REPO
+        name: $(basename `git rev-parse --show-toplevel`)
       timeout: 2m
     EOF
     ```
