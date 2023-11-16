@@ -208,11 +208,11 @@ in the `default` namespace.
     apiVersion: source.toolkit.fluxcd.io/v1beta2
     kind: GitRepository
     metadata:
-      name: GITOPS_REPO  # TODO: set as needed
+      name: $(basename `git rev-parse --show-toplevel`)  # TODO: set as needed
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/GITOPS_REPO  # TODO: set as needed
+      url: https://github.com/$(basename `git rev-parse --show-toplevel`)  # TODO: set as needed
       secretRef:
         name: github-https-credentials
       ref:
