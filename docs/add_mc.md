@@ -187,7 +187,7 @@ en- and decrypt real user-related data.
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
         kind: GitRepository
-        name: $(basename `git rev-parse --show-toplevel`)
+        name: YOUR_REPO
       timeout: 2m
     EOF
     ```
@@ -208,11 +208,11 @@ in the `default` namespace.
     apiVersion: source.toolkit.fluxcd.io/v1beta2
     kind: GitRepository
     metadata:
-      name: $(basename `git rev-parse --show-toplevel`)  # TODO: set as needed
+      name: GITOPS_REPO  # TODO: set as needed
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/$(basename `git rev-parse --show-toplevel`)  # TODO: set as needed
+      url: https://github.com/GITOPS_REPO  # TODO: set as needed
       secretRef:
         name: github-https-credentials
       ref:
