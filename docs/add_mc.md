@@ -106,9 +106,9 @@ en- and decrypt real user-related data.
 
     ```sh
     cat <<EOF >> .sops.yaml
-      - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
-        encrypted_regex: ^(data|stringData)$
-        pgp: ${KEY_FP}
+    - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
+      encrypted_regex: ^(data|stringData)$
+      pgp: ${KEY_FP}
     EOF
     ```
 
