@@ -11,7 +11,7 @@ env:
   clusterctl_ver: "1.1.5"
   apptestctl_ver: "0.14.5"
   kind_ver: "0.12.0"
-  GITOPS_FLUX_APP_VERSION: "0.13.0"
+  GITOPS_FLUX_APP_VERSION: "1.4.0"
   GITOPS_INIT_NAMESPACES: "default,org-org-name"
   GITOPS_IGNORED_OBJECTS: "org-org-name/clusters-mapi-out-of-band-no-flux-direct"
 
