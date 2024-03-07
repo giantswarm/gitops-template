@@ -1,4 +1,4 @@
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: clusters-hello-app-dev-1  # TODO: change 'hello-app-dev-1' to your cluster name; must be a correct k8s resource name (DNS-like)
