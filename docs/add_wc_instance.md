@@ -107,7 +107,7 @@ export CLUSTER_PATH=bases/cluster_templates/XYZ
 
     ```yaml
     # cat ${WC_NAME}.yaml
-    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
     kind: Kustomization
     ...
     spec:

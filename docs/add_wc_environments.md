@@ -554,7 +554,7 @@ Then let's tell Flux to manage our cluster instance.
 
 ```sh
 cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: clusters-\${cluster_name}

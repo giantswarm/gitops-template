@@ -1,4 +1,4 @@
-apiVersion: kustomize.toolkit.fluxcd.io/v1
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   name: "hello-app-prod-eu-central"  # TODO: change 'hello-app-prod-eu-central' to your cluster name; must be a correct k8s resource name (DNS-like)

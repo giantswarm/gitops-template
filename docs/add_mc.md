@@ -175,7 +175,7 @@ en- and decrypt real user-related data.
 
     ```sh
     cat <<EOF > ${MC_NAME}.yaml
-    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
     kind: Kustomization
     metadata:
       name: ${MC_NAME}-gitops
@@ -205,7 +205,7 @@ in the `default` namespace.
 
     ```sh
     cat <<EOF | kubectl apply -f -
-    apiVersion: source.toolkit.fluxcd.io/v1
+    apiVersion: source.toolkit.fluxcd.io/v1beta2
     kind: GitRepository
     metadata:
       name: GITOPS_REPO  # TODO: set as needed
