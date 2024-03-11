@@ -1,5 +1,7 @@
 # GitOps Template
 
+testing...
+
 This repository presents structure, ideas and best practices for managing clusters and apps
 using Flux available by default on Giant Swarm Management Clusters.
 
