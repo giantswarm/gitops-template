@@ -8,7 +8,7 @@ on:
 env:
   kubeconform_ver: "0.4.13"
   dyff_ver: "1.5.4"
-  clusterctl_ver: "1.1.5"
+  clusterctl_ver: "1.2.0"
   apptestctl_ver: "0.18.0"
   kind_ver: "0.12.0"
   GITOPS_FLUX_APP_VERSION: "1.4.0"
