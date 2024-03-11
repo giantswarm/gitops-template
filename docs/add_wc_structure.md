@@ -260,7 +260,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
       cd ../../../
       cat <<EOF > ${WC_NAME}.yaml
-      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
@@ -285,7 +285,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
       cd ../../../
       cat <<EOF > ${WC_NAME}.yaml
-      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
@@ -314,7 +314,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
    ```sh
    cat <<EOF >> ${WC_NAME}-direct.yaml
    ---
-   apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+   apiVersion: kustomize.toolkit.fluxcd.io/v1
    kind: Kustomization
    metadata:
      name: ${MC_NAME}-clusters-${WC_NAME}-direct

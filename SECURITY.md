@@ -2,4 +2,5 @@
 
 ## Reporting a Vulnerability
 
-Please visit https://www.giantswarm.io/responsible-disclosure for information on reporting security issues.
+Please visit [https://www.giantswarm.io/responsible-disclosure](https://www.giantswarm.io/responsible-disclosure)
+for information on reporting security issues.
