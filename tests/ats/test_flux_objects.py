@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 def check_flux_objects_successful(
-    kube_cluster: Cluster, obj_type: Type[TFNS], ignored_objects: list[str] = None
+    kube_cluster: Cluster,
+    obj_type: Type[TFNS],
+    ignored_objects: Union[list[str], None] = None,
 ) -> None:
     namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
     for ns in namespaces:

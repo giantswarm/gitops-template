@@ -320,7 +320,7 @@ def gitops_deployment(
     )
     applied_manifests: list[str] = []
     for dir_entry in os.scandir(GITOPS_TOP_DIR):
-        if dir_entry.is_dir:
+        if dir_entry.is_dir():
             manifest_path = os.path.join(
                 GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml"
             )
