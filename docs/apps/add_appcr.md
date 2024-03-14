@@ -70,9 +70,9 @@ generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/
     kubectl gs template app \
     --app-name "\${cluster_name}-${APP_NAME}" \
     --catalog ${APP_CATALOG} \
-    --cluster ${WC_NAME} \
+    --cluster-name ${WC_NAME} \
     --name ${APP_NAME} \
-    --namespace ${APP_NAMESPACE} \
+    --target-namespace ${APP_NAMESPACE} \
     --version ${APP_VERSION} > appcr.yaml
     ```
 
