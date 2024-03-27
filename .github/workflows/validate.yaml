@@ -64,7 +64,7 @@ jobs:
           comment-author: "github-actions[bot]"
           body-includes: Validation output log
       - name: Delete old comment
-        uses: jungwinter/comment@v1
+        uses: winterjung/comment@fda92dbcb5e7e79cccd55ecb107a8a3d7802a469  # v1.1.0
         # We always want to delete the comment for the result of the previous `validation` step result message (whether current validation failed or not)
         # See: https://docs.github.com/en/actions/learn-github-actions/expressions#always
         if: always() && github.ref_name != 'main'
@@ -139,7 +139,7 @@ jobs:
           comment-author: 'github-actions[bot]'
           body-includes: Rendered manifest diff output log
       - name: Delete old comment
-        uses: jungwinter/comment@v1
+        uses: winterjung/comment@fda92dbcb5e7e79cccd55ecb107a8a3d7802a469  # v1.1.0
         continue-on-error: true
         with:
           type: delete
