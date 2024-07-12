@@ -9,7 +9,7 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 
 ## Example
 
-An example of a WC cluster instance created using the CAPI is available in [WC_NAME/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/).
+An example of a workload cluster instance created using the CAPI is available in [WC_NAME/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/).
 
 ## Creating cluster based on existing bases
 

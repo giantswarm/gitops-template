@@ -33,7 +33,7 @@ See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/
 
 ## Example
 
-An example of a WC cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](/bases/clusters/capo/).
+An example of a workload cluster template created using the CAPx/CAPI is available in [bases/clusters/capo](/bases/clusters/capo/).
 
 ## Export environment variables
 
