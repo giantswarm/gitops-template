@@ -16,5 +16,5 @@ spec:
   prune: false
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo for this cluster (might be the same or different than the one used for the MC)
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo for this cluster (might be the same or different than the one used for the MC)
   timeout: 2m

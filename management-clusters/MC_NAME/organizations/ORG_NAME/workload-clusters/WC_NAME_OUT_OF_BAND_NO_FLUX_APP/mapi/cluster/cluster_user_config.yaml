@@ -1,9 +1,10 @@
 apiVersion: v1
 data:
   values: |
-    cloudConfig: cloud-config-giantswarm-2
-    cloudName: openstack
-    externalNetworkID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+    global:
+      nodePools:
+        nodepool0:
+          instanceType: m6.xlarge
 kind: ConfigMap
 metadata:
   name: ${cluster_name}-user-config

@@ -3,12 +3,16 @@ kind: App
 metadata:
   labels:
     app-operator.giantswarm.io/version: 0.0.0
+    giantswarm.io/managed-by: flux
   name: ${cluster_name}
   namespace: org-${organization}
 spec:
-  catalog: giantswarm
+  catalog: cluster
+  config:
+    configMap:
+      name: ${cluster_name}-config
+      namespace: org-${organization}
   kubeConfig:
     inCluster: true
-  name: cluster-openstack
+  name: cluster-aws
   namespace: org-${organization}
-  version: ${cluster_release}

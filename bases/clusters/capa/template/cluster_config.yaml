@@ -1,0 +1,19 @@
+global:
+  connectivity:
+    availabilityZoneUsageLimit: 3
+    network: {}
+    topology: {}
+  controlPlane: {}
+  metadata:
+    description: ${cluster_description}
+    name: ${cluster_name}
+    organization: ${organization}
+  nodePools:
+    nodepool0:
+      instanceType: m5.xlarge
+      maxSize: 10
+      minSize: 1
+      rootVolumeSizeGB: 50
+  providerSpecific: {}
+  release:
+    version: ${cluster_release}

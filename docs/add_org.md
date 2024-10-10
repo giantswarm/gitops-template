@@ -12,8 +12,8 @@ Follow the below instructions to add a new Organization to this repository. Orga
 
 ## Export environment variables
 
-**Note**, MC codename and organization name are needed in multiple places across this instruction, the least error prone
-way of providing them is by exporting as environment variables:
+**Note**, management cluster codename and organization name are needed in multiple places across this instruction, the
+least error prone way of providing them is by exporting as environment variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -22,7 +22,7 @@ export ORG_NAME=ORGANIZATION
 
 ## Directory tree
 
-1. Go to the MC's `organizations` directory:
+1. Go to the management cluster's `organizations` directory:
 
     ```sh
     cd management-clusters/${MC_NAME}/organizations
@@ -73,10 +73,10 @@ export ORG_NAME=ORGANIZATION
     kubectl gs template organization --name ${ORG_NAME} > ${ORG_NAME}.yaml
     ```
 
-After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should automatically
+After completing all the steps, you can open a pull request with the changes. Once it is merged, `Flux` should automatically
 reconcile your new organization.
 
-## Create a regular GPG key pair for encrypting Organization' secrets (optional step)
+## Create a regular GPG key pair for encrypting organization' secrets (optional step)
 
 Each management cluster comes with a master GPG key-pair that is always available to encrypt your organization's
 data. However, in case you wish to increase security by cryptographic splitting, and hence encrypting different data
@@ -141,8 +141,8 @@ new GPG key-pair dedicated for an organization.
     EOF
     ```
 
-1. Import the MC's master GPG private key from your safe storage into your keychain. In our example, we're gonna
-   use `LastPass` for that:
+1. Import the management cluster's master GPG private key from your safe storage into your keychain. In our example, we're
+gonna use `LastPass` for that:
 
     ```sh
     gpg --import \
@@ -183,10 +183,10 @@ new GPG key-pair dedicated for an organization.
     sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Push changes to the repository and wait for Flux to reconcile the secret. After that,
-Flux should be ready to decrypt and reconcile the organization's secrets.
+1. Push changes to the repository and wait for `Flux` to reconcile the secret. After that,
+`Flux` should be ready to decrypt and reconcile the organization's secrets.
 
-1. Go to the Organization's directory:
+1. Go to the organization's directory:
 
     ```sh
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}

@@ -12,10 +12,10 @@ spec:
       priority: 1
   kubeConfig:
     inCluster: true
-  name: cluster-openstack
+  name: cluster-aws
   namespace: org-org-name
   userConfig:
     configMap:
       name: capi-wc-name-user-config
       namespace: org-org-name
-  version: 0.8.1
+  version: 2.2.0

@@ -2,47 +2,13 @@
 apiVersion: v1
 data:
   values: |
-    bastion:
-      bootFromVolume: true
-      diskSize: 10
-      flavor: n1.tiny
-      image: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
-    cloudConfig: cloud-config
-    cloudName: openstack
-    clusterName: hello-app-prod-eu-central
-    controlPlane:
-      availabilityZones:
-      - demo_az_1
-      - demo_az_2
-      - demo_az_3
-      bootFromVolume: true
-      diskSize: 50
-      flavor: n1.small
-      image: bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
-      replicas: 3
-    externalNetworkID: cccccccc-cccc-cccc-cccc-cccccccccccc
-    kubernetesVersion: v1.20.9
-    nodeCIDR: 10.6.0.0/24
-    nodeClasses:
-    - bootFromVolume: true
-      diskSize: 50
-      flavor: n1.small
-      image: dddddddd-dddd-dddd-dddd-dddddddddddd
-      name: default
-    nodePools:
-    - class: default
-      failureDomain: demo_az_1
-      name: demo_az_1
-      replicas: 1
-    - class: default
-      failureDomain: demo_az_2
-      name: demo_az_2
-      replicas: 1
-    - class: default
-      failureDomain: demo_az_3
-      name: demo_az_3
-      replicas: 1
-    organization: org-name
+    global:
+      nodePools:
+        nodepool0:
+          instanceType: m3.xlarge
+          maxSize: 8
+          minSize: 2
+          rootVolumeSizeGB: 10
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-config
@@ -51,25 +17,18 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    controlPlane:
-      availabilityZones:
-        - eu-central-1
-        - eu-central-2
-        - eu-central-3
-    nodeCIDR: "10.32.0.0/24"
+    global:
+      connectivity:
+        availabilityZoneUsageLimit: 1
+      nodePools:
+        nodepool0:
+          instanceType: m6i.xlarge
+          maxSize: 10
+          minSize: 1
+          rootVolumeSizeGB: 100
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-region-config
-  namespace: org-org-name
----
-apiVersion: v1
-data:
-  values: |
-    clusterName: hello-app-prod-eu-central
-    organization: org-name
-kind: ConfigMap
-metadata:
-  name: hello-app-prod-eu-central-default-apps-config
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -108,16 +67,10 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    values: |
-      cloudConfig: cloud-config-giantswarm-2
-      cloudName: openstack
-      externalNetworkID: prod-bbbb-cccc-dddd-eeeeeeeeeeee
-      nodeClasses:
-        - bootFromVolume: true
-          diskSize: 150
-          flavor: n1.large
-          image: dddddddd-dddd-dddd-dddd-dddddddddddd
-          name: default
+    global:
+      nodePools:
+        nodepool0:
+          instanceType: m6.xlarge
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-user-config

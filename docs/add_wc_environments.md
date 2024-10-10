@@ -421,15 +421,15 @@ that contains some extra settings for our cluster.
 ```sh
 cat <<EOF > cluster_user_config.yaml
 values: |
-  cloudConfig: cloud-config-giantswarm-2
-  cloudName: openstack
-  externalNetworkID: prod-bbbb-cccc-dddd-eeeeeeeeeeee
-  nodeClasses:
-    - bootFromVolume: true
-      diskSize: 150
-      flavor: n1.large
-      image: dddddddd-dddd-dddd-dddd-dddddddddddd
-      name: default
+  global:
+    connectivity:
+      availabilityZoneUsageLimit: 3
+    nodePools:
+      nodepool0:
+        instanceType: m6i.xlarge
+        maxSize: 10
+        minSize: 2
+        rootVolumeSizeGB: 10
 EOF
 ```
 

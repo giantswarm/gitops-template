@@ -12,12 +12,12 @@ Follow the instructions below to add a new management cluster to this repository
 In general, we have to complete 3 major steps to provide the necessary structure for a new MC:
 
 1. [Preparing master GPG key pair](#flux-gpg-master-key-pair) to encrypt individual encryption keys of Workload Clusters
-   you'll be [creating](add_wc.md) later. These keys are needed to put Secret objects in a secure manner into the gitops
+   you'll be [creating](add_wc.md) later. These keys are needed to put Secret objects in a secure manner into the GitOps
    repository itself.
 1. [Preparing directory tree](#directory-tree) - which shows files, directories and their layout that are needed to complete
    our configuration.
 1. [Initial configuration](#initial-cluster-configuration) that shows what objects do we have to create on the Management
-   Cluster to bootstrap our gitops management process.
+   Cluster to bootstrap our GitOps management process.
 
 *Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
@@ -78,9 +78,10 @@ en- and decrypt real user-related data.
     export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
-1. Create Kubernetes Secret with the private key:
+1. Create and apply Kubernetes `Secret` to the management cluster API using the private key:
 
     ```sh
+    kubectl config set-context gs-$MC_NAME
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-master \
     --namespace=default \
@@ -142,7 +143,7 @@ en- and decrypt real user-related data.
     > .sops.keys/.sops.master.asc
     ```
 
-1. Save the `sops-gpg-master` Secret from the [previous section](#flux-gpg-master-key-pair) to the `secrets` directory:
+1. Save the `sops-gpg-master` `Secret` from the [previous section](#flux-gpg-master-key-pair) to the `secrets` directory:
 
    ```sh
    gpg --export-secret-keys --armor "${KEY_FP}" |
@@ -153,7 +154,7 @@ en- and decrypt real user-related data.
    -o yaml > secrets/${MC_NAME}.gpgkey.enc.yaml
    ```
 
-1. Encrypt `sops-gpg-master` Secret with a GPG master public key:
+1. Encrypt `sops-gpg-master` `Secret` with a GPG master public key:
 
     ```sh
     gpg --import .sops.keys/.sops.master.asc
@@ -171,14 +172,14 @@ en- and decrypt real user-related data.
     EOF
     ```
 
-1. Create the main Kustomization CR for the cluster:
+1. Create the main `Kustomization` custom resource for the cluster:
 
     ```sh
     cat <<EOF > ${MC_NAME}.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
-      name: ${MC_NAME}-gitops
+      name: ${MC_NAME}-GitOps
       namespace: default
     spec:
       serviceAccountName: automation
@@ -194,10 +195,11 @@ en- and decrypt real user-related data.
 
 ## Initial cluster configuration
 
-Once all the above steps are completed, the MC's Flux can be initially configured to work against this repository.
+Once all the above steps are completed, the management cluster's `Flux` can be initially configured to work against this
+repository.
 
-Bear in mind Flux needs GitHub credentials since the repository is private. This instruction assumes such credentials are
-available in the `github-https-credentials` Kubernetes Secret, created according to the
+Bear in mind `Flux` needs GitHub credentials since the repository is private. This instruction assumes such credentials are
+available in the `github-https-credentials` Kubernetes `Secret`, created according to the
 [FluxCD installation intranet page](https://intranet.giantswarm.io/docs/support-and-ops/installation-setup-guide/fluxcd-installation/#create-a-secret-for-private-repository-access)
 in the `default` namespace.
 
@@ -225,13 +227,13 @@ in the `default` namespace.
     EOF
     ```
 
-1. Apply the cluster's Kustomization CR:
+1. Apply the cluster's `Kustomization` custom resource (CR):
 
     ```sh
     kubectl apply -f management-clusters/${MC_NAME}/${MC_NAME}.yaml
     ```
 
-After completing these steps, you are no longer required to interact with Flux directly. Further configuration,
+After completing these steps, you are no longer required to interact with `Flux` directly. Further configuration,
 e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
 
 ## Recommended next steps
