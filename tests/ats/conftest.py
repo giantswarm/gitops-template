@@ -53,29 +53,29 @@ class GitOpsTestConfig:
         self.master_private_key = os.environ[self._GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME]
         if not self.master_private_key:
             logger.error(
-                f"In order to bootstrap the repository, armor-encoded master private GPG key for the GitOps"
+                f"In order to bootstrap the repository, armor-encoded master private GPG key for the gitops"
                 f" repo has to be set in '{self._GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' environment variable"
                 f" (base64 encoded)."
             )
             raise Exception("master gpg key missing")
 
-        self.GitOps_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
-        if not validators.url(self.GitOps_repo_url):
+        self.gitops_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
+        if not validators.url(self.gitops_repo_url):
             logger.error(
-                f"The '{self._GITOPS_REPO_URL_ENV_VAR_NAME}' environment variable must point to the GitOps "
+                f"The '{self._GITOPS_REPO_URL_ENV_VAR_NAME}' environment variable must point to the gitops "
                 f"repository you want to run tests for (malformed URL)"
-                f" [current value: '{self.GitOps_repo_url}']."
+                f" [current value: '{self.gitops_repo_url}']."
             )
-            raise Exception("malformed GitOps repo URL")
+            raise Exception("malformed gitops repo URL")
 
-        self.GitOps_repo_branch = os.environ[self._GITOPS_REPO_BRANCH_ENV_VAR_NAME]
-        if not self.GitOps_repo_branch:
+        self.gitops_repo_branch = os.environ[self._GITOPS_REPO_BRANCH_ENV_VAR_NAME]
+        if not self.gitops_repo_branch:
             logger.error(
                 f"The '{self._GITOPS_REPO_BRANCH_ENV_VAR_NAME}' environment variable must point to a branch "
-                f"in the GitOps repository configured by '{self.GitOps_repo_url}'"
-                f" [current value: '{self.GitOps_repo_branch}']."
+                f"in the gitops repository configured by '{self.gitops_repo_url}'"
+                f" [current value: '{self.gitops_repo_branch}']."
             )
-            raise Exception("GitOps repo branch name missing")
+            raise Exception("gitops repo branch name missing")
 
         self.flux_app_version = os.environ[self._FLUX_APP_VERSION]
         if not self.flux_app_version:
@@ -90,7 +90,7 @@ class GitOpsTestConfig:
 
 
 @pytest.fixture(scope="module")
-def GitOps_test_config() -> GitOpsTestConfig:
+def gitops_test_config() -> GitOpsTestConfig:
     return GitOpsTestConfig()
 
 
@@ -98,14 +98,14 @@ def GitOps_test_config() -> GitOpsTestConfig:
 def flux_app_deployment(
     kube_cluster: Cluster,
     app_factory: AppFactoryFunc,
-    GitOps_test_config: GitOpsTestConfig,
+    gitops_test_config: GitOpsTestConfig,
 ) -> ConfiguredApp:
     logger.debug(
-        f"Deploying 'flux-app' in version '{GitOps_test_config.flux_app_version}'."
+        f"Deploying 'flux-app' in version '{gitops_test_config.flux_app_version}'."
     )
     return app_factory(
         "flux-app",
-        GitOps_test_config.flux_app_version,
+        gitops_test_config.flux_app_version,
         "giantswarm",
         FLUX_OBJECTS_NAMESPACE,
         "https://giantswarm.github.io/giantswarm-catalog/",
@@ -202,13 +202,13 @@ def app_platform_controllers(kube_config: str) -> None:
 
 @pytest.fixture(scope="module")
 def init_namespaces(
-    kube_cluster: Cluster, GitOps_test_config: GitOpsTestConfig
+    kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Any]:
     created_namespaces: list[pykube.Namespace] = []
     created_cluster_role_bindings: list[pykube.ClusterRoleBinding] = []
     created_service_accounts: list[pykube.ServiceAccount] = []
 
-    for ns in GitOps_test_config.init_namespaces:
+    for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(
             name=ns
         )
@@ -268,7 +268,7 @@ def init_namespaces(
 
 @pytest.fixture(scope="module")
 def gpg_master_key(
-    kube_cluster: Cluster, GitOps_test_config: GitOpsTestConfig
+    kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Secret]:
     # create the master gpg secret used to unlock all encrypted values
     gpg_master_key = pykube.Secret(
@@ -280,7 +280,7 @@ def gpg_master_key(
             },
             "type": "Opaque",
             "data": {
-                "mc-name.master.asc": GitOps_test_config.master_private_key,
+                "mc-name.master.asc": gitops_test_config.master_private_key,
             },
         },
     )
@@ -292,7 +292,7 @@ def gpg_master_key(
 
 
 @pytest.fixture(scope="module")
-def GitOps_environment(
+def gitops_environment(
     gs_crds: None,
     capi_controllers: None,
     app_platform_controllers: None,
@@ -305,18 +305,18 @@ def GitOps_environment(
 
 
 @pytest.fixture(scope="module")
-def GitOps_deployment(
+def gitops_deployment(
     kube_cluster: Cluster,
-    GitOps_environment: ConfiguredApp,
+    gitops_environment: ConfiguredApp,
     git_repository_factory: GitRepositoryFactoryFunc,
-    GitOps_test_config: GitOpsTestConfig,
+    gitops_test_config: GitOpsTestConfig,
 ) -> Iterable[Any]:
     git_repository_factory(
         FLUX_GIT_REPO_NAME,
         FLUX_OBJECTS_NAMESPACE,
         "60s",
-        GitOps_test_config.GitOps_repo_url,
-        GitOps_test_config.GitOps_repo_branch,
+        gitops_test_config.gitops_repo_url,
+        gitops_test_config.gitops_repo_branch,
     )
     applied_manifests: list[str] = []
     for dir_entry in os.scandir(GITOPS_TOP_DIR):
