@@ -61,7 +61,7 @@ def check_flux_objects_successful(
 
 @pytest.fixture(scope="module")
 def check_kustomizations_successful(
-    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
+    kube_cluster: Cluster, GitOps_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> None:
     check_flux_objects_successful(
         kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
@@ -75,7 +75,7 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
 
 @pytest.fixture(scope="module")
 def check_helm_release_successful(
-    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
+    kube_cluster: Cluster, GitOps_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> None:
     check_flux_objects_successful(
         kube_cluster, HelmReleaseCR, gitops_test_config.ignored_objects
@@ -89,7 +89,7 @@ def test_helm_release_successful(check_helm_release_successful: None) -> None:
 
 def test_positive_assertions(
     kube_cluster: Cluster,
-    gitops_deployment: None,
+    GitOps_deployment: None,
     check_helm_release_successful: None,
     check_kustomizations_successful: None,
 ) -> None:
