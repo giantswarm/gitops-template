@@ -179,7 +179,7 @@ en- and decrypt real user-related data.
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
-      name: ${MC_NAME}-GitOps
+      name: ${MC_NAME}-gitops
       namespace: default
     spec:
       serviceAccountName: automation
