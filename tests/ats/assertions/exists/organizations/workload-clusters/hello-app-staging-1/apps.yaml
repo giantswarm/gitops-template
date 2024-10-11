@@ -24,7 +24,7 @@ spec:
     configMap:
       name: hello-app-staging-1-user-config
       namespace: org-org-name
-  version: 2.2.0
+  version: ""
 ---
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App

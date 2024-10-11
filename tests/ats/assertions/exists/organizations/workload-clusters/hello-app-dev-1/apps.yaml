@@ -24,7 +24,7 @@ spec:
     configMap:
       name: hello-app-dev-1-user-config
       namespace: org-org-name
-  version: 0.8.1
+  version: ""
 ---
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App

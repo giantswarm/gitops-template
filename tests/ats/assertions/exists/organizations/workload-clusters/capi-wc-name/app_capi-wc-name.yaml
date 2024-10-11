@@ -18,4 +18,4 @@ spec:
     configMap:
       name: capi-wc-name-user-config
       namespace: org-org-name
-  version: 2.2.0
+  version: ""
