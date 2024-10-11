@@ -12,7 +12,9 @@ spec:
     configMap:
       name: ${cluster_name}-config
       namespace: org-${organization}
+  extraConfigs: []
   kubeConfig:
     inCluster: true
   name: cluster-aws
   namespace: org-${organization}
+  version: ${cluster_release}
