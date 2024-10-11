@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: mc-name-GitOps  # TODO: change "mc-name" to your Management Cluster name
+  name: mc-name-gitops  # TODO: change "mc-name" to your Management Cluster name
   namespace: default
 spec:
   decryption:

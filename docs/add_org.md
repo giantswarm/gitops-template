@@ -142,7 +142,7 @@ new GPG key-pair dedicated for an organization.
     ```
 
 1. Import the management cluster's master GPG private key from your safe storage into your keychain. In our example, we're
-gonna use `LastPass` for that:
+going to use `LastPass` for that:
 
     ```sh
     gpg --import \
