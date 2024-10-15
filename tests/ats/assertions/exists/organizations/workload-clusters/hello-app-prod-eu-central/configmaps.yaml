@@ -17,15 +17,12 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    global:
-      connectivity:
-        availabilityZoneUsageLimit: 1
-      nodePools:
-        nodepool0:
-          instanceType: m6i.xlarge
-          maxSize: 10
-          minSize: 1
-          rootVolumeSizeGB: 100
+    controlPlane:
+      availabilityZones:
+        - eu-central-1
+        - eu-central-2
+        - eu-central-3
+    nodeCIDR: "10.32.0.0/24"
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-region-config
