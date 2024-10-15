@@ -10,7 +10,7 @@ metadata:
   name: hello-app-prod-eu-central
   namespace: org-org-name
 spec:
-  catalog: giantswarm
+  catalog: cluster
   extraConfigs:
     - kind: configMap
       name: hello-app-prod-eu-central-config
