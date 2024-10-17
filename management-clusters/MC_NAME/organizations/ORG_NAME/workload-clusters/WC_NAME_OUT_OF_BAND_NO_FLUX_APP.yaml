@@ -12,6 +12,7 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/mapi"
   postBuild:
     substitute:
+      cluster_description: "description"
       cluster_domain: "your-cluster-domain-name"  # TODO: change 'your-cluster-domain-name' to real domain name
       cluster_name: "mapi-out-of-band-no-flux"
       cluster_release: "0.8.1"

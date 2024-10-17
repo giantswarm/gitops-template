@@ -34,7 +34,7 @@ data:
             issuerUrl: https://sts.windows.net/my-id
             usernameClaim: upn
       metadata:
-        description:
+        description: description
         name: hello-app-prod-eu-central
         organization: org-name
       nodePools:
