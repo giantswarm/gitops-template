@@ -6,5 +6,5 @@ global:
       availabilityZones:
         - eu-central-1a
       instanceType: m6a.2xlarge
-      minSize: 1
       maxSize: 10
+      minSize: 1

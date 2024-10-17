@@ -4,5 +4,5 @@ global:
       additionalSecurityGroups:
         - id: sg-1xxxxxxxxxxxxxx3f
       instanceType: m6a.8xlarge
-      minSize: 10
       maxSize: 50
+      minSize: 10
