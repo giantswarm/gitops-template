@@ -12,11 +12,14 @@ metadata:
 spec:
   catalog: cluster
   extraConfigs:
-    - name: hello-app-prod-eu-central-config
+    - kind: configMap
+      name: hello-app-prod-eu-central-config
       namespace: org-org-name
       priority: 1
-    - name: hello-app-prod-eu-central-region-config
+    - kind: configMap
+      name: hello-app-prod-eu-central-region-config
       namespace: org-org-name
+      priority: 25
   kubeConfig:
     inCluster: true
   name: cluster-aws
