@@ -61,8 +61,8 @@ data:
       nodePools:
         xxxxx:
           instanceType: m6a.2xlarge
-          minSize: 1
           maxSize: 5
+          minSize: 1
 kind: ConfigMap
 metadata:
   name: hello-app-dev-1-hello-world-user-config
