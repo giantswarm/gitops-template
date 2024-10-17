@@ -1,10 +1,8 @@
-values: |
-  cloudConfig: cloud-config-giantswarm-2
-  cloudName: openstack
-  externalNetworkID: prod-bbbb-cccc-dddd-eeeeeeeeeeee
-  nodeClasses:
-    - bootFromVolume: true
-      diskSize: 150
-      flavor: n1.large
-      image: dddddddd-dddd-dddd-dddd-dddddddddddd
-      name: default
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-1xxxxxxxxxxxxxx3f
+      instanceType: m6a.8xlarge
+      maxSize: 50
+      minSize: 10

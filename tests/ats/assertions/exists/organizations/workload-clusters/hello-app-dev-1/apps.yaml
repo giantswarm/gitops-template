@@ -10,44 +10,21 @@ metadata:
   name: hello-app-dev-1
   namespace: org-org-name
 spec:
-  catalog: giantswarm
-  extraConfigs:
-    - kind: configMap
+  catalog: cluster
+  config:
+    configMap:
       name: hello-app-dev-1-config
       namespace: org-org-name
-      priority: 1
+  extraConfigs: []
   kubeConfig:
     inCluster: true
-  name: cluster-openstack
+  name: cluster-aws
   namespace: org-org-name
   userConfig:
     configMap:
       name: hello-app-dev-1-user-config
       namespace: org-org-name
-  version: 0.8.1
----
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  labels:
-    app-operator.giantswarm.io/version: 0.0.0
-    giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-default-apps
-  namespace: org-org-name
-spec:
-  catalog: giantswarm
-  extraConfigs:
-    - kind: configMap
-      name: hello-app-dev-1-default-apps-config
-      namespace: org-org-name
-      priority: 1
-  kubeConfig:
-    inCluster: true
-  name: default-apps-openstack
-  namespace: org-org-name
-  version: 0.2.0
+  version: ""
 ---
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
