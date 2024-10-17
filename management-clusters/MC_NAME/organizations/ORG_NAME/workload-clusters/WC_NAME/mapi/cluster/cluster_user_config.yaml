@@ -3,8 +3,8 @@ data:
   values: |
     global:
       nodePools:
-        nodepool0:
-          instanceType: m6.xlarge
+        xxxxx:
+          instanceType: m6i.4xlarge
 kind: ConfigMap
 metadata:
   name: ${cluster_name}-user-config

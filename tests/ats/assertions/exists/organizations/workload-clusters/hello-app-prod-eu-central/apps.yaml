@@ -12,8 +12,7 @@ metadata:
 spec:
   catalog: cluster
   extraConfigs:
-    - kind: configMap
-      name: hello-app-prod-eu-central-config
+    - name: hello-app-prod-eu-central-config
       namespace: org-org-name
       priority: 1
     - name: hello-app-prod-eu-central-region-config

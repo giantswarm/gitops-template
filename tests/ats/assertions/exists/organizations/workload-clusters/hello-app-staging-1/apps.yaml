@@ -10,12 +10,12 @@ metadata:
   name: hello-app-staging-1
   namespace: org-org-name
 spec:
-  catalog: giantswarm
-  extraConfigs:
-    - kind: configMap
+  catalog: cluster
+  config:
+    configMap:
       name: hello-app-staging-1-config
       namespace: org-org-name
-      priority: 1
+  extraConfigs: []
   kubeConfig:
     inCluster: true
   name: cluster-aws

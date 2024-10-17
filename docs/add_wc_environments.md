@@ -422,14 +422,9 @@ that contains some extra settings for our cluster.
 cat <<EOF > cluster_user_config.yaml
 values: |
   global:
-    connectivity:
-      availabilityZoneUsageLimit: 3
     nodePools:
-      nodepool0:
-        instanceType: m6i.xlarge
-        maxSize: 10
-        minSize: 2
-        rootVolumeSizeGB: 10
+      xxxxx:
+        instanceType: m6i.4xlarge
 EOF
 ```
 

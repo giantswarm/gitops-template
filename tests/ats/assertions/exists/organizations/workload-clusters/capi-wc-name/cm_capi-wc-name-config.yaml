@@ -2,12 +2,53 @@ apiVersion: v1
 data:
   values: |
     global:
+      metadata:
+        name: capi-wc-name
+        description:
+        organization: org-name
+      apps:
+        cilium:
+          extraConfigs:
+            - name: capi-wc-name-cilium-bpf-values
+              kind: ConfigMap
+      controlPlane:
+          additionalSecurityGroups:
+            - id: sg-0xxxxxxxxxxxxxx3f
+          instanceType: r5.8xlarge
+          oidc:
+            clientId: spn:my-id
+            groupsClaim: groups
+            issuerUrl: https://sts.windows.net/my-id
+            usernameClaim: upn
+      connectivity:
+        network:
+          pods:
+            cidrBlocks:
+              - 10.0.0.0/16
+          services:
+            cidrBlocks:
+              - 172.18.192.0/20
+          vpcId: vpc-0xxxxxxxxxxxxxb
       nodePools:
-        nodepool0:
-          instanceType: m3.xlarge
+        xxxxx:
+          additionalSecurityGroups:
+            - id: sg-0xxxxxxxxxxxxxx3f
+          availabilityZones:
+            - eu-west-1a
+          instanceType: m6a.xlarge
+          minSize: 1
           maxSize: 10
-          minSize: 2
-          rootVolumeSizeGB: 10
+      providerSpecific:
+        awsClusterRoleIdentityName: capi-wc-name-aws-cluster-role-identity
+        region: eu-west-1
+      cluster:
+        internal:
+          advancedConfiguration:
+            controlPlane:
+              apiServer:
+                bindPort: 443
+                etcdPrefix: giantswarm.io
+
 kind: ConfigMap
 metadata:
   name: capi-wc-name-config

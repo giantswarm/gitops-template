@@ -1,5 +1,10 @@
-controlPlane:
-  availabilityZones:
-    - us-west-1
-    - us-west-2
-nodeCIDR: "10.64.0.0/24"
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-0xxxxxxxxxxxxxx3f
+      availabilityZones:
+        - eu-west-1a
+      instanceType: m6a.4xlarge
+      minSize: 1
+      maxSize: 10
