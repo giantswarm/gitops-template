@@ -2,4 +2,4 @@ global:
   nodePools:
     xxxxx:
       additionalSecurityGroups:
-        - id: sg-2xxxxxxxxxxxxxx3f
+        - id: "sg-2xxxxxxxxxxxxxx3f"
