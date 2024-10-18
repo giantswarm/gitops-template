@@ -61,7 +61,8 @@ data:
       nodePools:
         xxxxx:
           additionalSecurityGroups:
-            - id: "sg-2xxxxxxxxxxxxxx3f\n"
+            - id: "sg-2xxxxxxxxxxxxxx3f"
+    
 kind: ConfigMap
 metadata:
   name: hello-app-staging-1-hello-world-user-config
