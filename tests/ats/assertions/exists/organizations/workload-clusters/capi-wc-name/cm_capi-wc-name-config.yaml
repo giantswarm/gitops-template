@@ -6,7 +6,7 @@ data:
         cilium:
           extraConfigs:
             - kind: ConfigMap
-              name: hello-app-prod-eu-central-cilium-bpf-values
+              name: capi-wc-name-cilium-bpf-values
       cluster:
         internal:
           advancedConfiguration:
@@ -34,7 +34,7 @@ data:
             usernameClaim: upn
       metadata:
         description: description
-        name: hello-app-prod-eu-central
+        name: capi-wc-name
         organization: org-name
       nodePools:
         xxxxx:
@@ -46,7 +46,7 @@ data:
           maxSize: 10
           minSize: 1
       providerSpecific:
-        awsClusterRoleIdentityName: hello-app-prod-eu-central-aws-cluster-role-identity
+        awsClusterRoleIdentityName: capi-wc-name-aws-cluster-role-identity
         region: eu-west-1
 kind: ConfigMap
 metadata:
