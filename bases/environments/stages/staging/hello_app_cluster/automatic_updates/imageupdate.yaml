@@ -22,7 +22,7 @@ spec:
   interval: 1m0s
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your gitops repo
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
   update:
     path: ./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters
     strategy: Setters

@@ -1,0 +1,47 @@
+global:
+  apps:
+    cilium:
+      extraConfigs:
+        - kind: ConfigMap
+          name: ${cluster_name}-cilium-bpf-values
+  cluster:
+    internal:
+      advancedConfiguration:
+        controlPlane:
+          apiServer:
+            bindPort: 443
+            etcdPrefix: giantswarm.io
+  connectivity:
+    network:
+      pods:
+        cidrBlocks:
+          - 10.0.0.0/16
+      services:
+        cidrBlocks:
+          - 172.18.192.0/20
+      vpcId: vpc-0xxxxxxxxxxxxxb
+  controlPlane:
+      additionalSecurityGroups:
+        - id: sg-0xxxxxxxxxxxxxx3f
+      instanceType: r5.8xlarge
+      oidc:
+        clientId: spn:my-id
+        groupsClaim: groups
+        issuerUrl: https://sts.windows.net/my-id
+        usernameClaim: upn
+  metadata:
+    description: ${cluster_description}
+    name: ${cluster_name}
+    organization: ${organization}
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-0xxxxxxxxxxxxxx3f
+      availabilityZones:
+        - eu-west-1a
+      instanceType: m6a.xlarge
+      maxSize: 10
+      minSize: 1
+  providerSpecific:
+    awsClusterRoleIdentityName: ${cluster_name}-aws-cluster-role-identity
+    region: eu-west-1

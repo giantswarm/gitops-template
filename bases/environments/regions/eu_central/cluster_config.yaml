@@ -1,6 +1,10 @@
-controlPlane:
-  availabilityZones:
-    - eu-central-1
-    - eu-central-2
-    - eu-central-3
-nodeCIDR: "10.32.0.0/24"
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-0xxxxxxxxxxxxxx3f
+      availabilityZones:
+        - eu-central-1a
+      instanceType: m6a.2xlarge
+      maxSize: 10
+      minSize: 1

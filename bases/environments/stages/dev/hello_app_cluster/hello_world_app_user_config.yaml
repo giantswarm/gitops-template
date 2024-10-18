@@ -1,1 +1,6 @@
-thread_pool_size: 16
+global:
+  nodePools:
+    xxxxx:
+      instanceType: m6a.2xlarge
+      maxSize: 5
+      minSize: 1
