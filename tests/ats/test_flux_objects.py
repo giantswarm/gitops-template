@@ -183,12 +183,14 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
     for key in top_level_keys:
         if key not in ass:
             continue
-        diff = DeepDiff(
-            ass[key].rstrip(), cluster_obj.obj[key].rstrip(), ignore_order=True
-        )
+        diff = DeepDiff(ass[key], cluster_obj.obj[key], ignore_order=True)
         # we have no difference between the expectation and the real object
         if len(diff) == 0:
             continue
+        # Check if 'diff' exists in the values_changed otherwise it is an empty space of extraline
+        if "values_changed" in diff and "root['values']" in diff["values_changed"]:
+            if "diff" not in diff["values_changed"]["root['values']"]:
+                continue
         # The only difference that we allow for is when the real object has some attributes that the
         #  expectation doesn't have. This means that if a diff of a kind different from 'dictionary_item_added'
         #  is detected, it's an error.
