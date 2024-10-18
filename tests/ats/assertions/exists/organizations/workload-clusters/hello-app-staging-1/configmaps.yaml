@@ -7,7 +7,7 @@ data:
         cilium:
           extraConfigs:
             - kind: ConfigMap
-              name: hello-app-prod-eu-central-cilium-bpf-values
+              name: hello-app-staging-1-cilium-bpf-values
       cluster:
         internal:
           advancedConfiguration:
@@ -35,7 +35,7 @@ data:
             usernameClaim: upn
       metadata:
         description: description
-        name: hello-app-prod-eu-central
+        name: hello-app-staging-1
         organization: org-name
       nodePools:
         xxxxx:
@@ -47,7 +47,7 @@ data:
           maxSize: 10
           minSize: 1
       providerSpecific:
-        awsClusterRoleIdentityName: hello-app-prod-eu-central-aws-cluster-role-identity
+        awsClusterRoleIdentityName: hello-app-staging-1-aws-cluster-role-identity
         region: eu-west-1
 kind: ConfigMap
 metadata:
