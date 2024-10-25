@@ -187,6 +187,13 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
         # we have no difference between the expectation and the real object
         if len(diff) == 0:
             continue
+        # Check if 'diff' exists in the values_changed otherwise it is an empty space
+        if "values_changed" in diff:
+            vc = diff["values_changed"]
+            if "root['values']" in vc:
+                rv = vc["root['values']"]
+                if "diff" not in rv:
+                    continue
         # The only difference that we allow for is when the real object has some attributes that the
         #  expectation doesn't have. This means that if a diff of a kind different from 'dictionary_item_added'
         #  is detected, it's an error.

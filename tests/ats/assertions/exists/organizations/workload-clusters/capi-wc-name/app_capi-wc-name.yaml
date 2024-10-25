@@ -4,18 +4,17 @@ metadata:
   name: capi-wc-name
   namespace: org-org-name
 spec:
-  catalog: giantswarm
-  extraConfigs:
-    - kind: configMap
+  catalog: cluster
+  config:
+    configMap:
       name: capi-wc-name-config
       namespace: org-org-name
-      priority: 1
+  extraConfigs: []
   kubeConfig:
     inCluster: true
-  name: cluster-openstack
+  name: cluster-aws
   namespace: org-org-name
   userConfig:
     configMap:
       name: capi-wc-name-user-config
       namespace: org-org-name
-  version: 0.8.1

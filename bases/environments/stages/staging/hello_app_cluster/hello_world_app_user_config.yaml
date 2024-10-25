@@ -1,1 +1,5 @@
-thread_pool_size: 64
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: "sg-2xxxxxxxxxxxxxx3f"

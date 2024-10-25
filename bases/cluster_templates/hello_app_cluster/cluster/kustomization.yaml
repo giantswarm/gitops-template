@@ -6,5 +6,5 @@ kind: Kustomization
 patchesStrategicMerge:
   - patch_user_config.yaml
 resources:
-  - ../../../clusters/capo/>=v0.6.0
+  - ../../../clusters/capa/template
   - cluster_user_config.yaml
