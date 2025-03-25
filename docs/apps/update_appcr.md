@@ -57,11 +57,12 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
     ```
 
 1. Import the WC's regular GPG private key from your safe storage into your keychain. In our example, we're gonna
-   use `LastPass` for that:
+   use 1Password's CLI `op` for that:
 
     ```sh
+    eval $(op signin)
     gpg --import \
-    <(lpass show --notes "Shared-Dev Common/GPG private key (${MC_NAME}, ${WC_NAME}, Flux)")
+    <(op item get --vault 'Dev Common' "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --reveal --fields notesPlain)
     ```
 
 1. Decrypt the `secret.enc.yaml` file with SOPS:

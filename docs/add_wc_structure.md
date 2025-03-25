@@ -114,11 +114,13 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     ```
 
 1. As a backup, save the private key to an external encrypted storage. As an example, you can add the private key
-   to LastPass as a secure note:
+   to 1Password (`op` CLI tool) as a secure note:
 
     ```sh
+    eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    lpass add --notes --non-interactive "Shared-Dev Common/GPG private key (${MC_NAME}, ${WC_NAME}, Flux)"
+    jq -snR '{"fields": [{"value": inputs }]}' |
+    op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --format json -
     ```
 
 1. Delete the private key from the keychain:

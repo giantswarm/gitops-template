@@ -88,12 +88,14 @@ en- and decrypt real user-related data.
     --from-file=${MC_NAME}.master.asc=/dev/stdin
     ```
 
-1. Add the private to a safe encrypted storage of your choice. For example, to export the key to `LastPass`
+1. Add the private to a safe encrypted storage of your choice. For example, to export the key to 1Password
    as a secure note, you can run:
 
     ```sh
+    eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    lpass add --notes --non-interactive "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)"
+    jq -snR '{"fields": [{"value": inputs  }]}' |
+    op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, master, Flux)" --format json -
     ```
 
 1. Delete the private key from the keychain (make sure you don't leave any unencrypted or local copies of the private
