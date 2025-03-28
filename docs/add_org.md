@@ -142,11 +142,12 @@ new GPG key-pair dedicated for an organization.
     ```
 
 1. Import the management cluster's master GPG private key from your safe storage into your keychain. In our example, we're
-going to use `LastPass` for that:
+going to use 1Password (`op` CLI tool) for that:
 
     ```sh
+    eval $(op signin)
     gpg --import \
-    <(lpass show --notes "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)")
+    <(op read "Dev Common/GPG private key (${MC_NAME}, master, Flux)/notesPlain")
     ```
 
 1. Decrypt the `${MC_NAME}.gpgkey.enc.yaml` file with SOPS:
