@@ -62,7 +62,7 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
     ```sh
     eval $(op signin)
     gpg --import \
-    <(op item get --vault 'Dev Common' "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --reveal --fields notesPlain)
+    <(op read "Dev Common/GPG private key (${MC_NAME}, ${WC_NAME}, Flux)/notesPlain")
     ```
 
 1. Decrypt the `secret.enc.yaml` file with SOPS:

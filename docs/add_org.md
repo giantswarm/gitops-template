@@ -147,7 +147,7 @@ going to use 1Password (`op` CLI tool) for that:
     ```sh
     eval $(op signin)
     gpg --import \
-    <(op item get --vault 'Dev Common' "GPG private key (${MC_NAME}, master, Flux)" --reveal --fields notesPlain)
+    <(op read "Dev Common/GPG private key (${MC_NAME}, master, Flux)/notesPlain")
     ```
 
 1. Decrypt the `${MC_NAME}.gpgkey.enc.yaml` file with SOPS:
