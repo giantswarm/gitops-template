@@ -7,8 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: YAMLLint
-        uses: docker://quay.io/giantswarm/yamllint:1.9
+        uses: docker://gsoci.azurecr.io/giantswarm/yamllint:1.37.1
         with:
           args: .
