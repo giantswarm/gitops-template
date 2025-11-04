@@ -1,17 +1,9 @@
 minimum_pre_commit_version: 2.17.0
 repos:
 
-#    - repo: meta
-#      hooks:
-#          - id: check-useless-excludes
-
-    # format Python code with black
-    - repo: https://github.com/psf/black
-      rev: 22.6.0
+    - repo: meta
       hooks:
-          - id: black
-            language_version: python3
-            exclude: ^/opt
+          - id: check-useless-excludes
 
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks
