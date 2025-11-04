@@ -5,6 +5,14 @@ repos:
       hooks:
           - id: check-useless-excludes
 
+    # format Python code with black
+    - repo: https://github.com/psf/black
+      rev: 22.6.0
+      hooks:
+          - id: black
+            language_version: python3
+            files: ^tests/ats
+
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks
       rev: v1.9.0  # Use the ref you want to point at
