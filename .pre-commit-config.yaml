@@ -7,11 +7,12 @@ repos:
 
     # format Python code with black
     - repo: https://github.com/psf/black
-      rev: 22.6.0
+      rev: 24.10.0
       hooks:
           - id: black
             language_version: python3
-            files: ^tests/ats
+            files: ^tests/ats/.*\.py$
+            exclude: ''
 
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks
