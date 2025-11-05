@@ -7,10 +7,12 @@ repos:
 
     # format Python code with black
     - repo: https://github.com/psf/black
-      rev: 22.6.0
+      rev: 24.10.0
       hooks:
           - id: black
             language_version: python3
+            files: ^tests/ats/.*\.py$
+            exclude: ''
 
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks
@@ -20,7 +22,7 @@ repos:
           - id: python-check-blanket-noqa
     # bandit
     - repo: https://github.com/PyCQA/bandit
-      rev: '1.7.4'
+      rev: '1.8.6'
       hooks:
           - id: bandit
             args: [ "-c", ".bandit" ]
