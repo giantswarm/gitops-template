@@ -34,7 +34,7 @@ jobs:
     steps:
       - run: sudo apt-get install -y yamllint
       - run: curl -s https://fluxcd.io/install.sh | sudo bash
-      - uses: giantswarm/install-binary-action@v1
+      - uses: giantswarm/install-binary-action@6bf58e5afe7e9cb950088ac2aee9cbd9b7889dc6 # v1.1.0
         with:
           binary: kubeconform
           download_url: "https://github.com/yannh/kubeconform/releases/download/v${version}/kubeconform-linux-amd64.tar.gz"
@@ -99,7 +99,7 @@ jobs:
       - run: sudo apt-get install -y yamllint
       - run: curl -s https://fluxcd.io/install.sh | sudo bash
       - name: install dyff
-        uses: giantswarm/install-binary-action@v1
+        uses: giantswarm/install-binary-action@6bf58e5afe7e9cb950088ac2aee9cbd9b7889dc6 # v1.1.0
         with:
           binary: dyff
           download_url: "https://github.com/homeport/dyff/releases/download/v${version}/dyff_${version}_linux_amd64.tar.gz"
@@ -107,7 +107,7 @@ jobs:
           tarball_binary_path: "${binary}"
           version: ${{ env.dyff_ver }}
       - run: which dyff
-      - uses: giantswarm/install-binary-action@v1
+      - uses: giantswarm/install-binary-action@6bf58e5afe7e9cb950088ac2aee9cbd9b7889dc6 # v1.1.0
         with:
           binary: kubeconform
           download_url: "https://github.com/yannh/kubeconform/releases/download/v${version}/kubeconform-linux-amd64.tar.gz"
@@ -166,7 +166,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: install apptestctl
-        uses: giantswarm/install-binary-action@v1
+        uses: giantswarm/install-binary-action@6bf58e5afe7e9cb950088ac2aee9cbd9b7889dc6 # v1.1.0
         with:
           binary: apptestctl
           download_url: "https://github.com/giantswarm/apptestctl/releases/download/v${version}/apptestctl-v${version}-linux-amd64.tar.gz"
