@@ -1,5 +1,5 @@
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
 metadata:
   name: hello-app-staging-1-hello-app
@@ -8,7 +8,7 @@ spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
   interval: 10m0s
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
 metadata:
   name: hello-app-staging-1-simple-db-app
