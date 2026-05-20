@@ -62,7 +62,7 @@ export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY
 
     ```sh
     cat <<EOF > imageupdate.yaml
-    apiVersion: image.toolkit.fluxcd.io/v1
+    apiVersion: image.toolkit.fluxcd.io/v1beta2
     kind: ImageUpdateAutomation
     metadata:
       name: ${WC_NAME}-updates
@@ -100,7 +100,7 @@ scan for new tags:
 
     ```sh
     cat <<EOF > imagerepository.yaml
-    apiVersion: image.toolkit.fluxcd.io/v1
+    apiVersion: image.toolkit.fluxcd.io/v1beta2
     kind: ImageRepository
     metadata:
       name: ${APP_NAME}
@@ -115,7 +115,7 @@ scan for new tags:
 
     ```sh
     cat <<EOF > imagepolicy.yaml
-    apiVersion: image.toolkit.fluxcd.io/v1
+    apiVersion: image.toolkit.fluxcd.io/v1beta2
     kind: ImagePolicy
     metadata:
       name: ${APP_NAME}

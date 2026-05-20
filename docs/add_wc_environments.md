@@ -183,7 +183,7 @@ EOF
 
 # Let' create the image update automation for Flux
 cat <<EOF > automatic_updates/imageupdate.yaml
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageUpdateAutomation
 metadata:
   name: \${cluster_name}-image-updates
@@ -228,7 +228,7 @@ in the `giantswarmpublic.azurecr.io/giantswarm-catalog` registry every 10 minute
 ```sh
 cat <<EOF > imagerepositories.yaml
 ---
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
 metadata:
   name: \${cluster_name}-hello-app
@@ -237,7 +237,7 @@ spec:
   image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
   interval: 10m0s
 ---
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
 metadata:
   name: \${cluster_name}-simple-db-app
@@ -257,7 +257,7 @@ Let's have Flux automatically roll out all `-dev` releases that are of at least 
 ```sh
 cat <<EOF > imagepolicies.yaml
 ---
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImagePolicy
 metadata:
   name: \${cluster_name}-hello-app
@@ -271,7 +271,7 @@ spec:
     semver:
       range: '>=0.1.0'
 ---
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImagePolicy
 metadata:
   name: \${cluster_name}-simple-db-app
@@ -347,7 +347,7 @@ to automatically introduce possibly breaking changes in major version bump, so l
 ```sh
 cat <<EOF > imagepolicies.yaml
 ---
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImagePolicy
 metadata:
   name: \${cluster_name}-hello-app
@@ -359,7 +359,7 @@ spec:
     semver:
       range: '>=0.1.0 <1.0.0'
 ---
-apiVersion: image.toolkit.fluxcd.io/v1
+apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImagePolicy
 metadata:
   name: \${cluster_name}-simple-db-app
