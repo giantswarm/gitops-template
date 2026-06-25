@@ -4,5 +4,5 @@ metadata:
   name: ${cluster_name}-hello-world
   namespace: org-${organization}
 spec:
-  image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
+  image: gsoci.azurecr.io/charts/giantswarm/hello-world
   interval: 30m0s
