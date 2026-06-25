@@ -176,7 +176,7 @@ spec:
   description: giantswarm-catalog-oci
   logoURL: "https://avatars.githubusercontent.com/u/7556340?s=60&v=4"
   storage:
-    URL: oci://giantswarmpublic.azurecr.io/giantswarm-catalog/
+    URL: oci://gsoci.azurecr.io/charts/giantswarm/
     type: helm
   title: giantswarm-catalog-oci
 EOF
@@ -223,7 +223,7 @@ where to look for updates stored in: [imagerepositories.yaml](
 /bases/environments/stages/dev/hello_app_cluster/imagerepositories.yaml).
 
 Let's tell Flux to look for available images for the `hello-world-app`
-in the `giantswarmpublic.azurecr.io/giantswarm-catalog` registry every 10 minutes.
+in the `gsoci.azurecr.io/charts/giantswarm` registry every 10 minutes.
 
 ```sh
 cat <<EOF > imagerepositories.yaml
@@ -234,7 +234,7 @@ metadata:
   name: \${cluster_name}-hello-app
   namespace: org-\${organization}
 spec:
-  image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
+  image: gsoci.azurecr.io/charts/giantswarm/hello-world
   interval: 10m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2
