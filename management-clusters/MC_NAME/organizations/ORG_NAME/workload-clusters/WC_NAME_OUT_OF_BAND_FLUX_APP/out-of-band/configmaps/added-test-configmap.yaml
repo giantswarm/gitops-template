@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  note: |-
+    Brand-new file added to exercise the yaml-diff bot's "added file" path.
+kind: ConfigMap
+metadata:
+  name: yaml-diff-added-file-test
+  namespace: default
