@@ -1,4 +1,8 @@
+kind: ConfigMap
 apiVersion: v1
+metadata:
+  name: secret-to-be-created-directly-in-WC
+  namespace: default
 data:
   values: |-
     Test ConfigMap.
@@ -6,7 +10,3 @@ data:
     I am the ${cluster_name} cluster!
     I belong to the ${organization} org!
     Encryption is possible here as well, but I am not encrypted atm.
-kind: ConfigMap
-metadata:
-  name: secret-to-be-created-directly-in-WC
-  namespace: default
