@@ -12,6 +12,6 @@ spec:
     - URL: https://giantswarm.github.io/giantswarm-catalog/
       type: helm
   storage:
-    URL: oci://giantswarmpublic.azurecr.io/giantswarm-catalog/
+    URL: oci://gsoci.azurecr.io/charts/giantswarm/
     type: helm
   title: giantswarm-catalog-oci
