@@ -7,7 +7,7 @@ on:
 
 env:
   kubeconform_ver: "0.4.13"
-  dyff_ver: "1.5.4"
+  dyff_ver: "1.7.1"
   clusterctl_ver: "1.2.0"
   apptestctl_ver: "0.18.0"
   kind_ver: "0.12.0"
