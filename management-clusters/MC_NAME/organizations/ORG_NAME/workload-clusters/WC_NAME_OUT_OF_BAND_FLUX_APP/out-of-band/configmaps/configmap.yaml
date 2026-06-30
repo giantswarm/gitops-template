@@ -5,8 +5,8 @@ data:
     Variable substitution still possible here.
     I am the ${cluster_name} cluster!
     I belong to the ${organization} org!
-    Encryption is possible here as well, but I am not encrypted atm.
+    Encryption is possible here as well, but I am opted out of diffs.
 kind: ConfigMap
 metadata:
   name: secret-to-be-created-directly-in-WC
-  namespace: monitoring
+  namespace: default
