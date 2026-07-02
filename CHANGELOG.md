@@ -17,7 +17,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin caller to the new reusable `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour is unchanged (pre-commit, `./tools/test-all-ff validate`, rendered-manifest diff, and the `tests/ats` kind e2e); the GitHub Actions pins are now maintained centrally and on current releases, clearing the Node 20 / `set-output` deprecation warnings.
+- CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
+  caller to the new reusable
+  `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour
+  is unchanged (pre-commit, `./tools/test-all-ff validate`, rendered-manifest diff,
+  and the `tests/ats` kind e2e); the GitHub Actions pins are now maintained
+  centrally and on current releases, clearing the Node 20 / `set-output`
+  deprecation warnings.
 - Bump `dyff_ver` from `1.5.4` to `1.7.1` in the existing rendered-manifest
   diff job (`validate.yaml`), to standardize on the version used by the new
   `yaml-diff` workflow.
