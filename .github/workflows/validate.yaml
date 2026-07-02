@@ -11,6 +11,6 @@ permissions:
 
 jobs:
   validate:
-    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@feat/gitops-validate
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@main
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
