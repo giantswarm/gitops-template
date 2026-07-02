@@ -30,6 +30,14 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - migrated `.spec.config` to `.spec.extraConfigs`
 - Templates: Rename `nginx-ingress-controller` to `ingress-nginx`. ([#85](https://github.com/giantswarm/gitops-template/pull/85))
 
+### Removed
+
+- Dropped the alphabetical `key-ordering` rule from `.yamllint`. It only
+  existed to keep PR diffs readable; the `yaml-diff` bot now provides clean
+  semantic diffs (ignoring key reordering), so the restriction is no longer
+  needed. Closes
+  [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
+
 ## [0.1.0] Initial release
 
 - Added
