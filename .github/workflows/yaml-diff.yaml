@@ -9,4 +9,4 @@ permissions:
 
 jobs:
   yaml-diff:
-    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@main
+    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@feat/yaml-diff-color
