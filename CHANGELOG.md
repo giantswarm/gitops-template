@@ -5,10 +5,38 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- Semantic YAML diff PR comments via the new `yaml-diff` workflow
+  (calls `giantswarm/github-workflows/.github/workflows/yaml-diff.yaml`).
+  Key reordering without value changes no longer shows up as noise in PR
+  reviews. Alphabetical key-ordering enforcement in `.yamllint` is
+  unchanged in this release; it will be dropped in a follow-up once the
+  bot has run on real PRs.
+  See [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
+
 ### Changed
 
+- CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
+  caller to the new reusable
+  `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour
+  is unchanged (pre-commit, `./tools/test-all-ff validate`, rendered-manifest diff,
+  and the `tests/ats` kind e2e); the GitHub Actions pins are now maintained
+  centrally and on current releases, clearing the Node 20 / `set-output`
+  deprecation warnings.
+- Bump `dyff_ver` from `1.5.4` to `1.7.1` in the existing rendered-manifest
+  diff job (`validate.yaml`), to standardize on the version used by the new
+  `yaml-diff` workflow.
 - migrated `.spec.config` to `.spec.extraConfigs`
 - Templates: Rename `nginx-ingress-controller` to `ingress-nginx`. ([#85](https://github.com/giantswarm/gitops-template/pull/85))
+
+### Removed
+
+- Dropped the alphabetical `key-ordering` rule from `.yamllint`. It only
+  existed to keep PR diffs readable; the `yaml-diff` bot now provides clean
+  semantic diffs (ignoring key reordering), so the restriction is no longer
+  needed. Closes
+  [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
 
 ## [0.1.0] Initial release
 

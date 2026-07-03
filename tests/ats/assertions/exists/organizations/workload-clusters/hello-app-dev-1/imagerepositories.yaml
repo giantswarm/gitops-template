@@ -5,7 +5,7 @@ metadata:
   name: hello-app-dev-1-hello-app
   namespace: org-org-name
 spec:
-  image: giantswarmpublic.azurecr.io/giantswarm-catalog/hello-world-app
+  image: gsoci.azurecr.io/charts/giantswarm/hello-world
   interval: 10m0s
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2
