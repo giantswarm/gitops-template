@@ -1,0 +1,15 @@
+---
+# Pins this repository, and anything forked from it, to a version of the
+# repository structure described in docs/repo_structure.md.
+#
+# `kubectl gs gitops` maintains this file: `gitops init` creates it and every
+# `gitops add ...` records the layer it generated under `layers`. It is listed
+# empty here because the trees under `management-clusters/` and `bases/` in
+# this repository are examples rather than generated layers. In a fork, run
+# `kubectl gs gitops check --adopt` once to record what is actually there, and
+# `kubectl gs gitops check` afterwards to find out when the fork has fallen
+# behind this structure.
+apiVersion: gitops.giantswarm.io/v1alpha1
+kind: RepositoryMetadata
+structureVersion: 1
+layers: []
