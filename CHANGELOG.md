@@ -29,6 +29,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `yaml-diff` workflow.
 - migrated `.spec.config` to `.spec.extraConfigs`
 - Templates: Rename `nginx-ingress-controller` to `ingress-nginx`. ([#85](https://github.com/giantswarm/gitops-template/pull/85))
+- Example `simple-db-app` `ImageRepository` now points at the current registry
+  `gsoci.azurecr.io/charts/giantswarm/simple-db-app` instead of the
+  decommissioned `giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app`
+  (bases, `add_wc_environments.md` docs, and `tests/ats` fixtures), matching the
+  sibling `hello-world` example. See
+  [giantswarm/giantswarm#35783](https://github.com/giantswarm/giantswarm/issues/35783).
 
 ### Removed
 

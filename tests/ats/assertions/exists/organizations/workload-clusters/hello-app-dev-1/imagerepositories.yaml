@@ -14,5 +14,5 @@ metadata:
   name: hello-app-dev-1-simple-db-app
   namespace: org-org-name
 spec:
-  image: giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app
+  image: gsoci.azurecr.io/charts/giantswarm/simple-db-app
   interval: 10m0s
