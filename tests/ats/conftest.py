@@ -141,6 +141,13 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
         "AZURE_CLIENT_SECRET_B64": fake_secret,
         "EXP_MACHINE_POOL": "true",
     }
+    # `clusterctl init` resolves the core cluster-api provider version through
+    # the GitHub releases API of kubernetes-sigs/cluster-api. The workflow's
+    # Actions token is scoped to this repository, so GitHub rejects it for that
+    # lookup and clusterctl reports the empty result as the misleading "failed
+    # to find releases tagged with a valid semantic version number". Query
+    # anonymously instead, which is what this did before the token was added.
+    env_vars.pop("GITHUB_TOKEN", None)
     run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
         [
             cluster_ctl_path,
