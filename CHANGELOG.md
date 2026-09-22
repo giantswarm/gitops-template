@@ -64,9 +64,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
   The pins cover the providers `clusterctl init` installs implicitly too -- the
   core provider and the kubeadm bootstrap/control-plane pair -- since those
-  carried the `latest` URLs. This keeps the suite on the 2022-era CAPI stack it
-  was written against; moving to current versions also means moving the example
-  manifests off the `v1beta1` contract.
+  carried the `latest` URLs. The core provider is pinned to `v1.10.10`, the
+  newest release of the series the resolution was selecting until it broke, so
+  the suite keeps testing against the CAPI version it already was. Going past
+  the `v1beta1` contract needs a newer `clusterctl` than the `1.2.0` the
+  workflow installs, plus newer infrastructure providers.
 
 ## [0.1.0] Initial release
 

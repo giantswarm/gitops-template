@@ -39,10 +39,14 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 # misleading "failed to find releases tagged with a valid semantic version
 # number". A pinned URL skips the resolution entirely.
 #
-# These pins are what keeps this suite working against a 2022-era CAPI stack.
-# Moving to a current clusterctl and current providers is the durable fix, but
-# it means moving the example manifests off the v1beta1 contract as well.
-CLUSTER_CTL_CORE_VERSION = "v1.2.0"
+# v1.10.10 is the newest release of the 1.10 series, which is what the "latest"
+# resolution above was picking until 2026-08-11 -- GetReleaseSeriesForContract
+# returns the newest series serving v1beta1, and 1.10 is it. Pinning it keeps
+# this suite on the CAPI version it was already exercising, rather than dropping
+# back to the vintage of the clusterctl binary itself. Going past the v1beta1
+# contract needs a newer clusterctl (the workflow pins 1.2.0) and new enough
+# infrastructure providers, which is a bigger change than this fix.
+CLUSTER_CTL_CORE_VERSION = "v1.10.10"
 CLUSTER_CTL_RELEASE_URL = "https://github.com/kubernetes-sigs/{repo}/releases/{version}/{components}"
 CLUSTER_CTL_PROVIDER_REPOS = {"aws": "cluster-api-provider-aws", "azure": "cluster-api-provider-azure"}
 
