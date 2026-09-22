@@ -44,6 +44,18 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   needed. Closes
   [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
 
+### Fixed
+
+- `tests/ats`: the CAPI bootstrap now queries the GitHub releases API anonymously
+  again. `clusterctl init` does not pin the core cluster-api provider, so it
+  resolves "latest" through that API, and the Actions token the workflow has
+  passed to the test step since
+  [giantswarm/github-workflows#270](https://github.com/giantswarm/github-workflows/pull/270)
+  is scoped to this repository, so GitHub rejects it for `kubernetes-sigs/cluster-api`.
+  `clusterctl` reports the empty result as "failed to find releases tagged with a
+  valid semantic version number" and the suite fails as "Cannot bootstrap CAPI".
+  Every run since that merge failed this way, on `main` and on every branch.
+
 ## [0.1.0] Initial release
 
 - Added
