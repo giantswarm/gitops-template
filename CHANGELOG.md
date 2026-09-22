@@ -46,15 +46,17 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `tests/ats`: the CAPI bootstrap now queries the GitHub releases API anonymously
-  again. `clusterctl init` does not pin the core cluster-api provider, so it
-  resolves "latest" through that API, and the Actions token the workflow has
-  passed to the test step since
-  [giantswarm/github-workflows#270](https://github.com/giantswarm/github-workflows/pull/270)
-  is scoped to this repository, so GitHub rejects it for `kubernetes-sigs/cluster-api`.
-  `clusterctl` reports the empty result as "failed to find releases tagged with a
-  valid semantic version number" and the suite fails as "Cannot bootstrap CAPI".
-  Every run since that merge failed this way, on `main` and on every branch.
+- `tests/ats`: pin the core `cluster-api` provider for `clusterctl init`, which
+  has failed as "Cannot bootstrap CAPI" on every run since 2026-08-19. Left
+  unset, `clusterctl` resolves "latest": it takes the newest `cluster-api`
+  release, reads its `metadata.yaml`, finds the release series serving the
+  `v1beta1` contract that `clusterctl` v1.2.0 speaks (1.10), and then looks for a
+  1.10.x tag in the release list. It requests that list with no paging options,
+  so it only ever sees the 30 newest releases. `cluster-api` published its 30th
+  release since v1.10.10 on 2026-08-11, 1.10.x dropped out of that window, and
+  the lookup has returned nothing since -- surfaced as the misleading "failed to
+  find releases tagged with a valid semantic version number". An explicit version
+  skips the resolution and fetches the tag directly.
 
 ## [0.1.0] Initial release
 

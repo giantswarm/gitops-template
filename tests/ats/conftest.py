@@ -20,6 +20,16 @@ FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secre
 FLUX_IMPERSONATION_SA_NAME = "automation"
 
 CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
+# Pin the core provider too. Left unset, `clusterctl init` resolves "latest",
+# which means: take the newest cluster-api release, read its metadata.yaml, find
+# the release series serving the v1beta1 contract this clusterctl speaks (1.10),
+# then look for a 1.10.x tag. That last step only searches the 30 newest releases
+# -- clusterctl asks the GitHub API for the release list with no paging options.
+# cluster-api published its 30th release since v1.10.10 on 2026-08-11, so 1.10.x
+# fell off that window and the lookup has returned nothing ever since, reported
+# as "failed to find releases tagged with a valid semantic version number".
+# An explicit version skips the whole resolution and fetches the tag directly.
+CLUSTER_CTL_CORE_PROVIDER = "cluster-api:v1.2.0"
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
@@ -141,19 +151,13 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
         "AZURE_CLIENT_SECRET_B64": fake_secret,
         "EXP_MACHINE_POOL": "true",
     }
-    # `clusterctl init` resolves the core cluster-api provider version through
-    # the GitHub releases API of kubernetes-sigs/cluster-api. The workflow's
-    # Actions token is scoped to this repository, so GitHub rejects it for that
-    # lookup and clusterctl reports the empty result as the misleading "failed
-    # to find releases tagged with a valid semantic version number". Query
-    # anonymously instead, which is what this did before the token was added.
-    env_vars.pop("GITHUB_TOKEN", None)
     run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
         [
             cluster_ctl_path,
             "init",
             "--kubeconfig",
             kube_config,
+            f"--core={CLUSTER_CTL_CORE_PROVIDER}",
             f"--infrastructure={infra_providers}",
         ],
         capture_output=True,
