@@ -46,17 +46,27 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `tests/ats`: pin the core `cluster-api` provider for `clusterctl init`, which
-  has failed as "Cannot bootstrap CAPI" on every run since 2026-08-19. Left
-  unset, `clusterctl` resolves "latest": it takes the newest `cluster-api`
-  release, reads its `metadata.yaml`, finds the release series serving the
-  `v1beta1` contract that `clusterctl` v1.2.0 speaks (1.10), and then looks for a
-  1.10.x tag in the release list. It requests that list with no paging options,
-  so it only ever sees the 30 newest releases. `cluster-api` published its 30th
-  release since v1.10.10 on 2026-08-11, 1.10.x dropped out of that window, and
-  the lookup has returned nothing since -- surfaced as the misleading "failed to
-  find releases tagged with a valid semantic version number". An explicit version
-  skips the resolution and fetches the tag directly.
+- `tests/ats`: pin every CAPI provider to an explicit release URL, via a
+  generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
+  on every run since 2026-08-19.
+
+  The stock provider URLs end in `/releases/latest/`, and `clusterctl` reads the
+  version straight out of that path when it builds its repository client, before
+  it considers what `--core`/`--infrastructure` asked for. Resolving "latest"
+  means reading the newest `cluster-api` release's `metadata.yaml`, finding the
+  release series that serves the `v1beta1` contract `clusterctl` v1.2.0 speaks
+  (1.10), then searching for a 1.10.x tag -- a search that only covers the 30
+  newest releases, because `clusterctl` requests the release list with no paging
+  options. `cluster-api` published its 30th release since v1.10.10 on
+  2026-08-11, so 1.10.x dropped out of that window and the lookup has returned
+  nothing since, surfaced as the misleading "failed to find releases tagged with
+  a valid semantic version number".
+
+  The pins cover the providers `clusterctl init` installs implicitly too -- the
+  core provider and the kubeadm bootstrap/control-plane pair -- since those
+  carried the `latest` URLs. This keeps the suite on the 2022-era CAPI stack it
+  was written against; moving to current versions also means moving the example
+  manifests off the `v1beta1` contract.
 
 ## [0.1.0] Initial release
 

@@ -3,11 +3,13 @@ import logging
 import os
 import shutil
 import subprocess  # nosec B404 - we need to invoke processes
+import tempfile
 from typing import Iterable, Any
 
 import pykube
 import pytest
 import validators
+import yaml
 from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
@@ -20,16 +22,29 @@ FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secre
 FLUX_IMPERSONATION_SA_NAME = "automation"
 
 CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
-# Pin the core provider too. Left unset, `clusterctl init` resolves "latest",
-# which means: take the newest cluster-api release, read its metadata.yaml, find
-# the release series serving the v1beta1 contract this clusterctl speaks (1.10),
-# then look for a 1.10.x tag. That last step only searches the 30 newest releases
-# -- clusterctl asks the GitHub API for the release list with no paging options.
-# cluster-api published its 30th release since v1.10.10 on 2026-08-11, so 1.10.x
-# fell off that window and the lookup has returned nothing ever since, reported
-# as "failed to find releases tagged with a valid semantic version number".
-# An explicit version skips the whole resolution and fetches the tag directly.
-CLUSTER_CTL_CORE_PROVIDER = "cluster-api:v1.2.0"
+
+# Every provider is pinned to an explicit release URL, including the ones
+# `clusterctl init` installs implicitly (the core provider and the kubeadm
+# bootstrap/control-plane pair).
+#
+# The stock URLs end in `/releases/latest/`, and clusterctl takes the version
+# straight out of that path when it builds the repository client -- before it
+# ever looks at what `--core`/`--infrastructure` asked for. Resolving "latest"
+# means: read the newest cluster-api release's metadata.yaml, find the release
+# series serving the v1beta1 contract this clusterctl speaks (1.10), then search
+# for a 1.10.x tag. That search only covers the 30 newest releases, because
+# clusterctl requests the release list with no paging options. cluster-api
+# published its 30th release since v1.10.10 on 2026-08-11, so 1.10.x dropped out
+# of the window and the lookup has returned nothing since, reported as the
+# misleading "failed to find releases tagged with a valid semantic version
+# number". A pinned URL skips the resolution entirely.
+#
+# These pins are what keeps this suite working against a 2022-era CAPI stack.
+# Moving to a current clusterctl and current providers is the durable fix, but
+# it means moving the example manifests off the v1beta1 contract as well.
+CLUSTER_CTL_CORE_VERSION = "v1.2.0"
+CLUSTER_CTL_RELEASE_URL = "https://github.com/kubernetes-sigs/{repo}/releases/{version}/{components}"
+CLUSTER_CTL_PROVIDER_REPOS = {"aws": "cluster-api-provider-aws", "azure": "cluster-api-provider-azure"}
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
@@ -129,6 +144,49 @@ def gs_crds(kube_cluster: Cluster) -> None:
         kube_cluster.kubectl(f"apply -f {crd}")
 
 
+def write_clusterctl_config() -> str:
+    """Write a clusterctl config pinning every provider to an explicit release URL.
+
+    Returns the path of the generated file. See CLUSTER_CTL_CORE_VERSION for why
+    the stock "latest" URLs cannot be used any more.
+    """
+    core = [
+        ("cluster-api", "CoreProvider", "core-components.yaml"),
+        ("kubeadm", "BootstrapProvider", "bootstrap-components.yaml"),
+        ("kubeadm", "ControlPlaneProvider", "control-plane-components.yaml"),
+    ]
+    providers = [
+        {
+            "name": name,
+            "type": provider_type,
+            "url": CLUSTER_CTL_RELEASE_URL.format(
+                repo="cluster-api",
+                version=CLUSTER_CTL_CORE_VERSION,
+                components=components,
+            ),
+        }
+        for name, provider_type, components in core
+    ]
+    providers += [
+        {
+            "name": name,
+            "type": "InfrastructureProvider",
+            "url": CLUSTER_CTL_RELEASE_URL.format(
+                repo=CLUSTER_CTL_PROVIDER_REPOS[name],
+                version=version,
+                components="infrastructure-components.yaml",
+            ),
+        }
+        for name, version in CLUSTER_CTL_PROVIDERS_MAP.items()
+    ]
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="clusterctl-", delete=False
+    ) as config_file:
+        yaml.safe_dump({"providers": providers}, config_file)
+        return config_file.name
+
+
 @pytest.fixture(scope="module")
 def capi_controllers(kube_config: str) -> Iterable[Any]:
     cluster_ctl_path = shutil.which("clusterctl")
@@ -141,6 +199,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
         raise Exception("`clusterctl` not found")
 
     logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
+    clusterctl_config = write_clusterctl_config()
     infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
     fake_secret = base64.b64encode(b"something")
     env_vars = os.environ | {
@@ -157,8 +216,9 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
             "init",
             "--kubeconfig",
             kube_config,
-            f"--core={CLUSTER_CTL_CORE_PROVIDER}",
             f"--infrastructure={infra_providers}",
+            "--config",
+            clusterctl_config,
         ],
         capture_output=True,
         env=env_vars,  # type: ignore # for some reason mypy thinks the type here is 'Dict[str, Sequence[object]]'
