@@ -6,32 +6,20 @@ commonLabels:
 configMapGenerator:
   - behavior: replace
     files:
-    - values=default_config_simple_db.yaml
-    name: ${cluster_name}-simple-db-values # has to be in sync with the name used by included app
-  - behavior: replace
-    files:
     - values=default_config_hello_world.yaml
     name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
 namespace: org-${organization} # (optional) enforce the same namespace for all the apps in the set
-# (optional) here we can enforce versions for both apps that we know work well together
+# (optional) here we can enforce versions of all apps in the set that we know work well together
 patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: 0.1.9
+        value: 3.2.2
     target:
       kind: App
       name: \${cluster_name}-hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: 0.1.1
-    target:
-      kind: App
-      name: \${cluster_name}-simple-db
 # block end
 resources:
   - ../../apps/hello-world
-  - ../../apps/simple-db

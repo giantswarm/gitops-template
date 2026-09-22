@@ -6,4 +6,4 @@ spec:
   catalog: giantswarm
   name: cert-manager-app
   namespace: org-${organization}
-  version: 2.12.0
+  version: 4.1.1

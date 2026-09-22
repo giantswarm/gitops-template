@@ -29,15 +29,36 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `yaml-diff` workflow.
 - migrated `.spec.config` to `.spec.extraConfigs`
 - Templates: Rename `nginx-ingress-controller` to `ingress-nginx`. ([#85](https://github.com/giantswarm/gitops-template/pull/85))
-- Example `simple-db-app` `ImageRepository` now points at the current registry
-  `gsoci.azurecr.io/charts/giantswarm/simple-db-app` instead of the
-  decommissioned `giantswarmpublic.azurecr.io/giantswarm-catalog/simple-db-app`
-  (bases, `add_wc_environments.md` docs, and `tests/ats` fixtures), matching the
-  sibling `hello-world` example. See
+- Corrects an earlier entry in this section: the `simple-db-app` `ImageRepository`
+  was repointed at `gsoci.azurecr.io/charts/giantswarm/simple-db-app`, but that
+  repository does not exist -- the chart was never published to `gsoci` and
+  `simple-db-app` is not in the `giantswarm` catalog. The example is removed
+  instead, see the Removed section below. See
   [giantswarm/giantswarm#35783](https://github.com/giantswarm/giantswarm/issues/35783).
+- Example app versions now match what the `giantswarm` catalog actually serves:
+  `hello-world` `0.2.0` -> `3.2.2`, `ingress-nginx` `3.0.0` -> `4.3.5`,
+  `cert-manager-app` `2.12.0` -> `4.1.1`, `flux-app` `0.11.0` -> `1.9.1`.
+  The `hello-world` `App` CRs also referenced a non-existent catalog entry
+  `hello-world-app`; the entry is called `hello-world`.
+- Example `hello-world` and `ingress-nginx` values now use the keys their charts
+  actually accept. The previous `admin_login` / `db_config` / `thread_pool_size`
+  values were invented for the removed `simple-db` demo, and `ingress-nginx`
+  moved `configmap:` under `controller.config:`.
+- `ImagePolicy` semver ranges follow the new major: `>=3.0.0-0` for the `-dev`
+  stage (the `-0` is required, or the range excludes every pre-release tag) and
+  `>=3.0.0 <4.0.0` for staging.
+- The `$imagepolicy` setter marker on the automatic-updates example named
+  namespace `default`, but the `ImagePolicy` it refers to lives in
+  `org-${organization}`.
 
 ### Removed
 
+- The `simple-db-app` demo app (`bases/apps/simple-db`, its `App`,
+  `ImageRepository` and `ImagePolicy` entries in the environment stages, its
+  app-set config and its `tests/ats` assertions). The source repository is gone
+  and the chart is published nowhere, so there is no version of it that works.
+  The `hello-web-app` app set now bundles `hello-world` alone. Closes
+  [#131](https://github.com/giantswarm/gitops-template/issues/131).
 - Dropped the alphabetical `key-ordering` rule from `.yamllint`. It only
   existed to keep PR diffs readable; the `yaml-diff` bot now provides clean
   semantic diffs (ignoring key reordering), so the restriction is no longer

@@ -9,4 +9,4 @@ spec:
     namespace: org-${organization}
   policy:
     semver:
-      range: '>=0.0.0'
+      range: '>=3.0.0-0'

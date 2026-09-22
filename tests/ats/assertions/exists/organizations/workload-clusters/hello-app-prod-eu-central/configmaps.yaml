@@ -75,7 +75,7 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    thread_pool_size: 256
+    replicaCount: 6
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-hello-world-user-config
@@ -84,25 +84,17 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    admin_login: hello-admin-in-cluster-template
-    db_config:
-      db_port: 5433 # has to be in sync with config in default_config_simple_db.yaml
-      db_user: hello-web-app # has to be in sync with config in default_config_simple_db.yaml
-      host: simple-db.simple-web.svc # has to be in sync with 'namespace:' set in kustomization.yaml
-    thread_pool_size: 64
+    replicaCount: 3
+    ingress:
+      className: nginx # has to be in sync with the ingress class served by the cluster's ingress controller
+      hosts:
+        - host: hello.cluster-template.example.com
+          paths:
+            - path: /
+              pathType: Prefix
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-hello-world-values
-  namespace: org-org-name
----
-apiVersion: v1
-data:
-  values: |
-    port: 5433 # has to be in sync with config in default_config_hello_world.yaml
-    user: hello-web-app # has to be in sync with config in default_config_hello_world.yaml
-kind: ConfigMap
-metadata:
-  name: hello-app-prod-eu-central-simple-db-values
   namespace: org-org-name
 ---
 apiVersion: v1

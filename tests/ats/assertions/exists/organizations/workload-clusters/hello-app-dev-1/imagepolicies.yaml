@@ -11,16 +11,4 @@ spec:
     name: hello-app-dev-1-hello-app
   policy:
     semver:
-      range: '>=0.1.0'
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImagePolicy
-metadata:
-  name: hello-app-dev-1-simple-db-app
-  namespace: org-org-name
-spec:
-  imageRepositoryRef:
-    name: hello-app-dev-1-simple-db
-  policy:
-    semver:
-      range: '>=0.1.0 <0.2.0'
+      range: '>=3.0.0-0'

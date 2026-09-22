@@ -44,28 +44,6 @@ spec:
       priority: 1
   kubeConfig:
     inCluster: false
-  name: hello-world-app
+  name: hello-world
   namespace: org-org-name
-  version: '0.1.8' # {"$imagepolicy": "org-org-name:hello-app-dev-1-hello-app"}
----
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  labels:
-    gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-simple-db
-  namespace: org-org-name
-spec:
-  catalog: giantswarm
-  extraConfigs:
-    - kind: configMap
-      name: hello-app-dev-1-simple-db-values
-      namespace: org-org-name
-      priority: 1
-  kubeConfig:
-    inCluster: false
-  name: simple-db-app
-  namespace: org-org-name
-  version: '0.1.0' # {"$imagepolicy": "org-org-name:hello-app-dev-1-simple-db-app"}
+  version: '3.2.2' # {"$imagepolicy": "org-org-name:hello-app-dev-1-hello-app"}
