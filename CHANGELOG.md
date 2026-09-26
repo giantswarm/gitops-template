@@ -65,6 +65,32 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   needed. Closes
   [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
 
+### Fixed
+
+- `tests/ats`: pin every CAPI provider to an explicit release URL, via a
+  generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
+  on every run since 2026-08-19.
+
+  The stock provider URLs end in `/releases/latest/`, and `clusterctl` reads the
+  version straight out of that path when it builds its repository client, before
+  it considers what `--core`/`--infrastructure` asked for. Resolving "latest"
+  means reading the newest `cluster-api` release's `metadata.yaml`, finding the
+  release series that serves the `v1beta1` contract `clusterctl` v1.2.0 speaks
+  (1.10), then searching for a 1.10.x tag -- a search that only covers the 30
+  newest releases, because `clusterctl` requests the release list with no paging
+  options. `cluster-api` published its 30th release since v1.10.10 on
+  2026-08-11, so 1.10.x dropped out of that window and the lookup has returned
+  nothing since, surfaced as the misleading "failed to find releases tagged with
+  a valid semantic version number".
+
+  The pins cover the providers `clusterctl init` installs implicitly too -- the
+  core provider and the kubeadm bootstrap/control-plane pair -- since those
+  carried the `latest` URLs. The core provider is pinned to `v1.10.10`, the
+  newest release of the series the resolution was selecting until it broke, so
+  the suite keeps testing against the CAPI version it already was. Going past
+  the `v1beta1` contract needs a newer `clusterctl` than the `1.2.0` the
+  workflow installs, plus newer infrastructure providers.
+
 ## [0.1.0] Initial release
 
 - Added
