@@ -13,4 +13,4 @@ spec:
     configMap:
       name: ${cluster_name}-ingress-nginx-user-values
       namespace: org-multi-project
-  version: 3.0.0
+  version: 4.3.5

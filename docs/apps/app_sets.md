@@ -44,6 +44,9 @@ An example of an App Set Template is available in [bases/app_sets/hello-web-app]
 This App Set assumes, that it's impossible to build a shared ConfigMap for both Apps and as such does full config
 override on App Set template level and override using `userConfig:` field in App Set instance.
 
+The shipped example currently bundles a single app, `hello-world`. The mechanics below are identical for any number
+of apps - the `kustomization.yaml` further down shows a set with two.
+
 ### Using App Set
 
 An example showing how to use an App Set is available in
@@ -66,8 +69,8 @@ commonLabels:
 configMapGenerator:
   - behavior: replace
     files:
-    - values=default_config_simple_db.yaml
-    name: ${cluster_name}-simple-db-values # has to be in sync with the name used by included app
+    - values=default_config_ingress_nginx.yaml
+    name: ${cluster_name}-ingress-nginx-values # has to be in sync with the name used by included app
   - behavior: replace
     files:
     - values=default_config_hello_world.yaml
@@ -80,21 +83,21 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: 0.1.9
+        value: 3.2.2
     target:
       kind: App
       name: hello-world
   - patch: |-
       - op: replace
         path: /spec/version
-        value: 0.1.1
+        value: 4.3.5
     target:
       kind: App
-      name: simple-db
+      name: ingress-nginx
 # block end
 resources:
   - ../../apps/hello-world
-  - ../../apps/simple-db
+  - ../../apps/ingress-nginx
 ```
 
 Please note the following in the example above:

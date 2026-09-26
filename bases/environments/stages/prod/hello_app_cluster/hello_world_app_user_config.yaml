@@ -1,1 +1,1 @@
-thread_pool_size: 256
+replicaCount: 6

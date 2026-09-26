@@ -7,6 +7,6 @@ spec:
   catalog: giantswarm
   kubeConfig:
     inCluster: false
-  name: hello-world-app
+  name: hello-world
   namespace: hello-world
-  version: 0.2.0
+  version: 3.2.2
