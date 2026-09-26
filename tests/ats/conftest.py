@@ -214,19 +214,23 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
         "AZURE_CLIENT_SECRET_B64": fake_secret,
         "EXP_MACHINE_POOL": "true",
     }
-    run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
-        [
-            cluster_ctl_path,
-            "init",
-            "--kubeconfig",
-            kube_config,
-            f"--infrastructure={infra_providers}",
-            "--config",
-            clusterctl_config,
-        ],
-        capture_output=True,
-        env=env_vars,  # type: ignore # for some reason mypy thinks the type here is 'Dict[str, Sequence[object]]'
-    )
+    try:
+        run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
+            [
+                cluster_ctl_path,
+                "init",
+                "--kubeconfig",
+                kube_config,
+                f"--infrastructure={infra_providers}",
+                "--config",
+                clusterctl_config,
+            ],
+            capture_output=True,
+            env=env_vars,  # type: ignore # for some reason mypy thinks the type here is 'Dict[str, Sequence[object]]'
+        )
+    finally:
+        # Only `init` reads the provider URLs; `delete` works from the cluster's inventory.
+        os.remove(clusterctl_config)
     if run_res.returncode != 0:
         logger.error(
             f"Error bootstrapping CAPI on test cluster: '{run_res.stderr}'"  # type: ignore
