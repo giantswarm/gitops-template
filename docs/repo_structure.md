@@ -1,6 +1,7 @@
 # Repository Structure
 
 - [General Remarks](#general-remarks)
+- [Structure Version](#structure-version)
 - [Security Architecture](#security-architecture)
   - [Overview](#overview)
   - [Multiple GPG Keys](#multiple-gpg-keys)
@@ -75,6 +76,51 @@ see the [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
 The security of resources is provided by GPG encryption. The repository provides a way to manage
 all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
+
+## Structure Version
+
+The structure described in this document is versioned, so that a repository built on it can tell when it
+has fallen behind. **The current structure version is `1`.**
+
+The version is a plain integer, incremented whenever this document prescribes a change that an existing
+repository would have to follow: a directory that moves, a file that is added to every layer, a naming rule
+that changes. Purely additive documentation, new examples, and changes to the contents of the app manifests
+under `bases/` do not bump it.
+
+`kubectl gs gitops` records the version in a `.gitops-metadata.yaml` file at the root of the repository it
+generates, together with an entry for every management cluster, organization, workload cluster, app and
+cluster base it created:
+
+```yaml
+apiVersion: gitops.giantswarm.io/v1alpha1
+kind: RepositoryMetadata
+structureVersion: 1
+generatedWith: kubectl-gs/5.7.3
+layers:
+  - kind: management-cluster
+    path: management-clusters/MC_NAME
+    structureVersion: 1
+    generatedWith: kubectl-gs/5.7.3
+```
+
+That file is deliberately at the repository root, outside the scope the `MC_NAME.yaml` Kustomization CR
+reconciles, so it is never applied to a cluster. It is managed by the tooling and SHOULD NOT be edited
+by hand.
+
+Run `kubectl gs gitops check` against a clone to see which parts of it were generated with an older
+structure version. The command exits non-zero when anything is behind, so it can be wired into the
+repository's own CI. A repository created before the metadata file existed holds none; run
+`kubectl gs gitops check --adopt` once to record what is already there. Note that adoption assumes the
+existing layers are current, so it cannot recover drift from before it ran.
+
+The `check` command requires a `kubectl-gs` release that ships it; older versions have no
+`gitops check` subcommand. Run `kubectl gs gitops check --help` to confirm yours does, and
+`kubectl gs selfupdate` if it does not.
+
+When bumping the version, record what changed under the corresponding entry in this repository's
+[CHANGELOG](../CHANGELOG.md), and bump `StructureVersion` in
+[kubectl-gs](https://github.com/giantswarm/kubectl-gs/blob/main/internal/gitops/metadata/types.go) to match.
+The two are kept in lockstep by hand; nothing enforces it.
 
 ## Security Architecture
 
