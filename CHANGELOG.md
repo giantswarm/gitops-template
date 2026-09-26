@@ -7,6 +7,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `renovate.json5` extending the shared
+  [giantswarm/renovate-presets](https://github.com/giantswarm/renovate-presets)
+  default, so dependency updates are managed here the same way as in every other
+  Giant Swarm repository. The opt-in `pre-commit` manager is enabled on top: the
+  hooks in `.pre-commit-config.yaml` are the only dependencies here that have
+  actually gone stale. Closes
+  [giantswarm/roadmap#3943](https://github.com/giantswarm/roadmap/issues/3943).
 - Semantic YAML diff PR comments via the new `yaml-diff` workflow
   (calls `giantswarm/github-workflows/.github/workflows/yaml-diff.yaml`).
   Key reordering without value changes no longer shows up as noise in PR
