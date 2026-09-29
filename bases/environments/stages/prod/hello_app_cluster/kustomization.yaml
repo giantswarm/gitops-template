@@ -14,22 +14,15 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce versions for both component of the app that we want in prod
+# (optional) here we can enforce the app versions that we want in prod
 patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: 0.1.8
+        value: 3.2.2
     target:
       kind: App
       name: \${cluster_name}-hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: 0.1.0
-    target:
-      kind: App
-      name: \${cluster_name}-simple-db
 # block end
 resources:
   - ../../../../cluster_templates/hello_app_cluster

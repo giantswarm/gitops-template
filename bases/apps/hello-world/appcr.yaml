@@ -12,6 +12,6 @@ spec:
       priority: 1
   kubeConfig:
     inCluster: false
-  name: hello-world-app
+  name: hello-world
   namespace: org-${organization}
-  version: 0.2.0
+  version: 3.2.2
