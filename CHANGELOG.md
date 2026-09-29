@@ -7,6 +7,16 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The repository structure is now versioned. The layout described in
+  `docs/repo_structure.md` is **structure version 1**, and a new
+  [Structure Version](docs/repo_structure.md#structure-version) section
+  defines what does and does not warrant a bump. `kubectl gs gitops` records
+  the version in a `.gitops-metadata.yaml` file at the root of the
+  repositories it generates, and `kubectl gs gitops check` reports the parts
+  of a repository that were generated with an older one.
+  Bumping the version here requires bumping `StructureVersion` in
+  `kubectl-gs` to match; the two are kept in lockstep by hand.
+  See [giantswarm/giantswarm#23540](https://github.com/giantswarm/giantswarm/issues/23540).
 - Semantic YAML diff PR comments via the new `yaml-diff` workflow
   (calls `giantswarm/github-workflows/.github/workflows/yaml-diff.yaml`).
   Key reordering without value changes no longer shows up as noise in PR
