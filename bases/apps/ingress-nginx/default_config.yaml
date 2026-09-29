@@ -1,6 +1,11 @@
-configmap:
-  use-forwarded-headers: "false"
 controller:
+  # the ingress class served by this controller. Apps that want to be exposed
+  # through it have to set the same value, see `ingress.className` of the
+  # hello-world app
+  ingressClassResource:
+    name: nginx
+  config:
+    use-forwarded-headers: "false"
   resources:
     requests:
       cpu: 250m

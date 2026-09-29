@@ -135,11 +135,16 @@ In [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster 
 [hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters.
 We can  provide overrides to the settings via the [hello_world_app_user_config.yaml](
 /bases/environments/stages/dev/hello_app_cluster/hello_world_app_user_config.yaml) file, for example
-setting a lower thread pool size.
+giving the cluster a smaller node pool.
 
 ```sh
 cat <<EOF > hello_world_app_user_config.yaml
-thread_pool_size: 16
+global:
+  nodePools:
+    xxxxx:
+      instanceType: m6a.2xlarge
+      maxSize: 5
+      minSize: 1
 EOF
 ```
 
@@ -222,7 +227,7 @@ The [ImageRepository](https://fluxcd.io/docs/components/image/imagerepositories/
 where to look for updates stored in: [imagerepositories.yaml](
 /bases/environments/stages/dev/hello_app_cluster/imagerepositories.yaml).
 
-Let's tell Flux to look for available images for the `hello-world-app`
+Let's tell Flux to look for available images for the `hello-world` app
 in the `gsoci.azurecr.io/charts/giantswarm` registry every 10 minutes.
 
 ```sh
@@ -236,15 +241,6 @@ metadata:
 spec:
   image: gsoci.azurecr.io/charts/giantswarm/hello-world
   interval: 10m0s
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImageRepository
-metadata:
-  name: \${cluster_name}-simple-db-app
-  namespace: org-\${organization}
-spec:
-  image: gsoci.azurecr.io/charts/giantswarm/simple-db-app
-  interval: 10m0s
 EOF
 ```
 
@@ -252,7 +248,8 @@ The second half are the [ImagePolicy](https://fluxcd.io/docs/components/image/im
 which versions it should automatically apply stored in: [imagepolicies.yaml](
 /bases/environments/stages/dev/hello_app_cluster/imagepolicies.yaml).
 
-Let's have Flux automatically roll out all `-dev` releases that are of at least version `0.1.0` or above.
+Let's have Flux automatically roll out all `-dev` releases that are of at least version `3.0.0` or above.
+Note the `-0` suffix on the range: without it a semver range excludes pre-releases, and every `-dev` tag is one.
 
 ```sh
 cat <<EOF > imagepolicies.yaml
@@ -269,19 +266,7 @@ spec:
     name: \${cluster_name}-hello-app
   policy:
     semver:
-      range: '>=0.1.0'
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImagePolicy
-metadata:
-  name: \${cluster_name}-simple-db-app
-  namespace: org-\${organization}
-spec:
-  imageRepositoryRef:
-    name: \${cluster_name}-simple-db
-  policy:
-    semver:
-      range: '>=0.1.0 <0.2.0'
+      range: '>=3.0.0-0'
 EOF
 ```
 
@@ -293,17 +278,10 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: '0.1.8
+        value: '3.2.2'
     target:
       kind: App
       name: \\\${cluster_name}-hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: '0.1.0'
-    target:
-      kind: App
-      name: \\\${cluster_name}-simple-db
 EOF
 ```
 
@@ -328,11 +306,15 @@ It is similar to the development cluster in the following manners:
 It also provides overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
 [hello_world_app_user_config.yaml](
 /bases/environments/stages/staging/hello_app_cluster/hello_world_app_user_config.yaml).
-We want this environment to be closer to production so let's say we set a larger thread pool size.
+We want this environment to be closer to production, so let's say we give its node pool a dedicated security group.
 
 ```sh
 cat <<EOF > hello_world_app_user_config.yaml
-thread_pool_size: 64
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: "sg-2xxxxxxxxxxxxxx3f"
 EOF
 ```
 
@@ -341,8 +323,8 @@ as we did above for the development cluster.
 
 We also want the images automatically rolled out here to be more stable, so we have a slightly different
 [imagepolicies.yaml](/bases/environments/stages/staging/hello_app_cluster/imagepolicies.yaml) here where
-we tell Flux to automatically install all stable versions that are at least version `0.1.0` but we do not want
-to automatically introduce possibly breaking changes in major version bump, so let's stay below `1.0.0`.
+we tell Flux to automatically install all stable versions that are at least version `3.0.0` but we do not want
+to automatically introduce possibly breaking changes in major version bump, so let's stay below `4.0.0`.
 
 ```sh
 cat <<EOF > imagepolicies.yaml
@@ -357,19 +339,7 @@ spec:
     name: \${cluster_name}-hello-app
   policy:
     semver:
-      range: '>=0.1.0 <1.0.0'
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImagePolicy
-metadata:
-  name: \${cluster_name}-simple-db-app
-  namespace: org-\${organization}
-spec:
-  imageRepositoryRef:
-    name: \${cluster_name}-simple-db
-  policy:
-    semver:
-      range: '>=0.1.0 <0.2.0'
+      range: '>=3.0.0 <4.0.0'
 EOF
 ```
 
@@ -434,7 +404,7 @@ Then we provide some overrides to the [hello-web-app app set](/bases/app_sets/he
 
 ```yaml
 cat <<EOF > hello_world_app_user_config.yaml
-thread_pool_size: 256
+replicaCount: 6
 EOF
 ```
 
@@ -450,21 +420,14 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: 0.1.8
+        value: 3.2.2
     target:
       kind: App
       name: \\\${cluster_name}-hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: 0.1.0
-    target:
-      kind: App
-      name: \\\${cluster_name}-simple-db
 EOF
 ```
 
-We tell Flux to use version `0.1.8` of `hello-world-app` and version `0.1.0` of `simple-db-app`.
+We tell Flux to use version `3.2.2` of the `hello-world` app.
 
 In this example when we sufficiently validated our released changes in the staging environment we update the versions
 in the `Kustomization`, merge the change and let Flux do the work.

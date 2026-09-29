@@ -1,7 +1,11 @@
-admin_login: root
-db_config:
-  db_port: 5432
-  # parameters below have to be set for the app to work
-  # host: FILL_IN
-  # db_user: FILL_IN
-thread_pool_size: 16
+replicaCount: 1
+ingress:
+  # has to match the ingress class the cluster's ingress controller serves,
+  # see `controller.ingressClassResource.name` of the ingress-nginx app
+  className: nginx
+  # the hostname below has to be set for the app to be reachable
+  # hosts:
+  #   - host: FILL_IN
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
