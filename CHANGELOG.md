@@ -7,6 +7,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `renovate.json5` extending the shared
+  [giantswarm/renovate-presets](https://github.com/giantswarm/renovate-presets)
+  default, so dependency updates are managed here the same way as in every other
+  Giant Swarm repository. The opt-in `pre-commit` manager is enabled on top: the
+  hooks in `.pre-commit-config.yaml` are the only dependencies here that have
+  actually gone stale. Closes
+  [giantswarm/roadmap#3943](https://github.com/giantswarm/roadmap/issues/3943).
 - The repository structure is now versioned. The layout described in
   `docs/repo_structure.md` is **structure version 1**, and a new
   [Structure Version](docs/repo_structure.md#structure-version) section
