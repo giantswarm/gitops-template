@@ -1,0 +1,152 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-gateway-api-crds
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-dev-1-gateway-api-crds
+  install:
+    remediation:
+      retries: -1
+  kubeConfig:
+    secretRef:
+      key: value
+      name: hello-app-dev-1-kubeconfig
+  releaseName: gateway-api-crds
+  storageNamespace: kube-system
+  targetNamespace: kube-system
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-dev-1-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-gateway-api-crds-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-gateway-api-crds-template-values
+      optional: true
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-gateway-api-crds-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-dev-1-gateway-api-crds-user-secrets
+      optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-envoy-gateway
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-dev-1-envoy-gateway
+  dependsOn:
+    - name: hello-app-dev-1-gateway-api-crds
+  install:
+    createNamespace: true
+    remediation:
+      retries: -1
+  kubeConfig:
+    secretRef:
+      key: value
+      name: hello-app-dev-1-kubeconfig
+  releaseName: envoy-gateway
+  storageNamespace: envoy-gateway-system
+  targetNamespace: envoy-gateway-system
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-dev-1-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-envoy-gateway-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-envoy-gateway-template-values
+      optional: true
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-envoy-gateway-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-dev-1-envoy-gateway-user-secrets
+      optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-gateway-api-config
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-dev-1-gateway-api-config
+  dependsOn:
+    - name: hello-app-dev-1-envoy-gateway
+  install:
+    remediation:
+      retries: -1
+  kubeConfig:
+    secretRef:
+      key: value
+      name: hello-app-dev-1-kubeconfig
+  releaseName: gateway-api-config
+  storageNamespace: envoy-gateway-system
+  targetNamespace: envoy-gateway-system
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-dev-1-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-gateway-api-config-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-gateway-api-config-template-values
+      optional: true
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-dev-1-gateway-api-config-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-dev-1-gateway-api-config-user-secrets
+      optional: true
+      valuesKey: values

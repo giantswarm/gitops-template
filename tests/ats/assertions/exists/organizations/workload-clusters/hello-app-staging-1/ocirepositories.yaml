@@ -1,0 +1,54 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-staging-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-gateway-api-crds
+  namespace: org-org-name
+spec:
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    semver: "~1.9.1"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-crds
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-staging-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-envoy-gateway
+  namespace: org-org-name
+spec:
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    semver: "~1.10.3"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-staging-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-gateway-api-config
+  namespace: org-org-name
+spec:
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    semver: "~1.11.3"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config

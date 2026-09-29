@@ -69,16 +69,12 @@ commonLabels:
 configMapGenerator:
   - behavior: replace
     files:
-    - values=default_config_ingress_nginx.yaml
-    name: ${cluster_name}-ingress-nginx-values # has to be in sync with the name used by included app
-  - behavior: replace
-    files:
     - values=default_config_hello_world.yaml
     name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
 namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
-# (optional) here we can enforce versions for both apps that we know work well together
+# (optional) here we can enforce versions of the apps that we know work well together
 patches:
   - patch: |-
       - op: replace
@@ -87,17 +83,9 @@ patches:
     target:
       kind: App
       name: hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: 4.3.5
-    target:
-      kind: App
-      name: ingress-nginx
 # block end
 resources:
   - ../../apps/hello-world
-  - ../../apps/ingress-nginx
 ```
 
 Please note the following in the example above:

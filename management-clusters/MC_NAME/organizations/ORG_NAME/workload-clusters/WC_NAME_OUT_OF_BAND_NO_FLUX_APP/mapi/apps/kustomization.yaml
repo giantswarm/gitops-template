@@ -8,6 +8,4 @@ resources:
   - hello-world-automatic-updates/appcr.yaml
   - hello-world-automatic-updates/imagepolicy.yaml
   - hello-world-automatic-updates/imagerepository.yaml
-  - ingress-nginx-from-template/
-  - ingress-nginx/appcr.yaml
-  - ingress-nginx/configmap.yaml
+  - envoy-gateway-from-template/

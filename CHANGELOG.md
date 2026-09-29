@@ -34,6 +34,41 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Envoy Gateway replaces ingress-nginx as the example edge. The new
+  `bases/apps/envoy-gateway` App Template installs `gateway-api-crds`,
+  `envoy-gateway` and `gateway-api-config` into the workload cluster as three
+  chained `HelmRelease`s. Each chart comes from an `OCIRepository` that follows a
+  semver range. It is the first HelmRelease-based App Template here, and sets the
+  pattern for the rest:
+  - values layered through `valuesFrom`, in this order: the cluster values
+    ConfigMap, the template defaults, then optional `-template-values` (cluster
+    template), `-user-values` (ConfigMap) and `-user-secrets` (SOPS-encrypted
+    Secret)
+  - endless install/upgrade remediation with a 10m timeout
+  - `giantswarm.io/cluster` labels
+
+  `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`
+  Gateway as `hello.<cluster base domain>`, instead of an Ingress. The
+  `hello_app_cluster` template adds the `hello` subdomain to the Gateway's DNS
+  record and certificate. hello-world and the out-of-band example App CRs now
+  carry the `giantswarm.io/cluster` label. App Platform needs it to add the
+  cluster values and find the kubeconfig. The automatic-updates example set it
+  from `${workload_cluster_name}`, which is never substituted. The kind test
+  now checks that OCIRepositories are ready. It skips HelmReleases that deploy
+  to a workload cluster, since the test has none. Part of
+  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
+
+  **Prerequisites on the workload cluster:** the Giant Swarm default apps
+  (cert-manager, external-dns, Kyverno, Cilium, the monitoring CRDs), plus:
+  - Gateway API support enabled in cert-manager
+  - on AWS, aws-load-balancer-controller
+
+  **Migrating a fork:**
+  - The per-cluster Kustomizations use `prune: false`, so the existing
+    ingress-nginx App CRs stay after the update. Delete them by hand once traffic
+    runs through the Gateway.
+  - Remove any `gateway-api-bundle` app installed on the cluster first. It
+    installs the same charts under other release names.
 - CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
   caller to the new reusable
   `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour
