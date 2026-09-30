@@ -115,7 +115,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Flux `Kustomization`. The same label on the `hello-world-automatic-updates`
   `App` in the two out-of-band examples used `${workload_cluster_name}`, which
   no `Kustomization` substitutes, so it rendered empty; it is now
-  `${cluster_name}` too.
+  `${cluster_name}` too. The other `App`s in the out-of-band examples had no
+  `giantswarm.io/cluster` label at all; their `apps` and `hello-web-app-1`
+  kustomizations now add it. `tests/ats` asserts the label and the
+  `hello-web-app-1` `userConfig` namespace for both out-of-band clusters.
 - The `hello-web-app-1` app set in the two out-of-band examples pointed the
   `App`'s `userConfig` at a ConfigMap in namespace `hello-world-app`, but the
   ConfigMap is generated in `org-${organization}`. It now points there.
