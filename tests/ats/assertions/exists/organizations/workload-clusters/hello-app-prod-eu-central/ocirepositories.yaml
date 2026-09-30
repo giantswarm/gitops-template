@@ -5,7 +5,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-gateway-api-crds
   namespace: org-org-name
@@ -23,7 +23,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-envoy-gateway
   namespace: org-org-name
@@ -41,7 +41,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-gateway-api-config
   namespace: org-org-name
