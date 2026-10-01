@@ -13,12 +13,13 @@ spec:
   chartRef:
     kind: OCIRepository
     name: hello-app-staging-1-gateway-api-crds
+    namespace: org-org-name
   install:
     remediation:
-      retries: -1
+      remediateLastFailure: false
+      retries: 10
   kubeConfig:
     secretRef:
-      key: value
       name: hello-app-staging-1-kubeconfig
   releaseName: gateway-api-crds
   storageNamespace: kube-system
@@ -26,8 +27,9 @@ spec:
   timeout: 10m
   upgrade:
     remediation:
-      remediateLastFailure: false
-      retries: -1
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: hello-app-staging-1-cluster-values
@@ -62,15 +64,16 @@ spec:
   chartRef:
     kind: OCIRepository
     name: hello-app-staging-1-envoy-gateway
+    namespace: org-org-name
   dependsOn:
     - name: hello-app-staging-1-gateway-api-crds
   install:
     createNamespace: true
     remediation:
-      retries: -1
+      remediateLastFailure: false
+      retries: 10
   kubeConfig:
     secretRef:
-      key: value
       name: hello-app-staging-1-kubeconfig
   releaseName: envoy-gateway
   storageNamespace: envoy-gateway-system
@@ -78,8 +81,9 @@ spec:
   timeout: 10m
   upgrade:
     remediation:
-      remediateLastFailure: false
-      retries: -1
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: hello-app-staging-1-cluster-values
@@ -114,14 +118,15 @@ spec:
   chartRef:
     kind: OCIRepository
     name: hello-app-staging-1-gateway-api-config
+    namespace: org-org-name
   dependsOn:
     - name: hello-app-staging-1-envoy-gateway
   install:
     remediation:
-      retries: -1
+      remediateLastFailure: false
+      retries: 10
   kubeConfig:
     secretRef:
-      key: value
       name: hello-app-staging-1-kubeconfig
   releaseName: gateway-api-config
   storageNamespace: envoy-gateway-system
@@ -129,8 +134,9 @@ spec:
   timeout: 10m
   upgrade:
     remediation:
-      remediateLastFailure: false
-      retries: -1
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: hello-app-staging-1-cluster-values

@@ -3,7 +3,8 @@
 #   envoy-gateway      -> the Envoy Gateway controller
 #   gateway-api-config -> the `giantswarm-default` GatewayClass and Gateway
 # The HelmReleases run on the management cluster and install into the workload
-# cluster through its kubeconfig secret.
+# cluster through its kubeconfig secret. Remediation, timeout and interval follow
+# what giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR.
 #
 # Values are merged in `valuesFrom` order, later entries win (maps are merged,
 # lists are replaced):
@@ -13,10 +14,6 @@
 #   3. ${cluster_name}-<chart>-template-values  (optional) cluster template overrides
 #   4. ${cluster_name}-<chart>-user-values      (optional) overrides for one cluster
 #   5. ${cluster_name}-<chart>-user-secrets     (optional) the same, as an encrypted Secret
-#
-# A fresh cluster can take longer than one attempt to get the Gateway's load
-# balancer, DNS record and certificate ready, so installs and upgrades retry
-# until they succeed instead of staying failed.
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -29,13 +26,14 @@ spec:
   chartRef:
     kind: OCIRepository
     name: ${cluster_name}-gateway-api-crds
+    namespace: org-${organization}
   install:
     remediation:
-      retries: -1
-  interval: 10m
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
   kubeConfig:
     secretRef:
-      key: value
       name: ${cluster_name}-kubeconfig
   releaseName: gateway-api-crds
   storageNamespace: kube-system
@@ -43,8 +41,9 @@ spec:
   timeout: 10m
   upgrade:
     remediation:
-      remediateLastFailure: false
-      retries: -1
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-cluster-values
@@ -76,16 +75,19 @@ spec:
   chartRef:
     kind: OCIRepository
     name: ${cluster_name}-envoy-gateway
+    namespace: org-${organization}
   dependsOn:
     - name: ${cluster_name}-gateway-api-crds
   install:
+    # envoy-gateway-system does not exist yet; gateway-api-config installs into it
+    # after this release (dependsOn). Not part of the converter's output.
     createNamespace: true
     remediation:
-      retries: -1
-  interval: 10m
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
   kubeConfig:
     secretRef:
-      key: value
       name: ${cluster_name}-kubeconfig
   releaseName: envoy-gateway
   storageNamespace: envoy-gateway-system
@@ -93,8 +95,9 @@ spec:
   timeout: 10m
   upgrade:
     remediation:
-      remediateLastFailure: false
-      retries: -1
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-cluster-values
@@ -126,15 +129,16 @@ spec:
   chartRef:
     kind: OCIRepository
     name: ${cluster_name}-gateway-api-config
+    namespace: org-${organization}
   dependsOn:
     - name: ${cluster_name}-envoy-gateway
   install:
     remediation:
-      retries: -1
-  interval: 10m
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
   kubeConfig:
     secretRef:
-      key: value
       name: ${cluster_name}-kubeconfig
   releaseName: gateway-api-config
   storageNamespace: envoy-gateway-system
@@ -142,8 +146,9 @@ spec:
   timeout: 10m
   upgrade:
     remediation:
-      remediateLastFailure: false
-      retries: -1
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-cluster-values
