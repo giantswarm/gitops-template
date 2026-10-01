@@ -137,10 +137,6 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `${workload_cluster_name}`, used for the `giantswarm.io/cluster` label on the
-  automatic-updates example, was never defined in any `postBuild.substitute`
-  block, so the label rendered as the literal `"null"`. It is now defined on the
-  two out-of-band workload cluster Kustomization CRs that reconcile that example.
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.
@@ -164,6 +160,21 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the suite keeps testing against the CAPI version it already was. Going past
   the `v1beta1` contract needs a newer `clusterctl` than the `1.2.0` the
   workflow installs, plus newer infrastructure providers.
+- The `WC_NAME` example labelled its `App` CRs `giantswarm.io/cluster: WC_NAME`
+  instead of the cluster name. App Platform uses this label to find the
+  cluster's `<cluster>-cluster-values` ConfigMap and `<cluster>-kubeconfig`
+  Secret, and app-operator uses it to select the `App`, so the literal
+  placeholder broke both. The label is now `${cluster_name}`, substituted by the
+  Flux `Kustomization`. The same label on the `hello-world-automatic-updates`
+  `App` in the two out-of-band examples used `${workload_cluster_name}`, which
+  no `Kustomization` substitutes, so it rendered empty; it is now
+  `${cluster_name}` too. The other `App`s in the out-of-band examples had no
+  `giantswarm.io/cluster` label at all; their `apps` and `hello-web-app-1`
+  kustomizations now add it. `tests/ats` asserts the label and the
+  `hello-web-app-1` `userConfig` namespace for both out-of-band clusters.
+- The `hello-web-app-1` app set in the two out-of-band examples pointed the
+  `App`'s `userConfig` at a ConfigMap in namespace `hello-world-app`, but the
+  ConfigMap is generated in `org-${organization}`. It now points there.
 
 ## [0.1.0] Initial release
 

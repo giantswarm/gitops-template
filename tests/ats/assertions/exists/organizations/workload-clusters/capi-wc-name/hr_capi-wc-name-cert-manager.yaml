@@ -2,7 +2,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: WC_NAME
+    giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
