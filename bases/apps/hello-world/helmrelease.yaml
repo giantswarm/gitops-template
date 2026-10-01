@@ -1,0 +1,24 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${cluster_name}-hello-world
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-hello-world
+  install:
+    createNamespace: true
+  interval: 10m
+  # the workload cluster this release is installed into; drop this block to
+  # install into the cluster Flux itself runs in
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: ${cluster_name}-hello-world
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-hello-world-values
+      valuesKey: values

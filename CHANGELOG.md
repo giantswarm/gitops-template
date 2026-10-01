@@ -34,6 +34,38 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Every workload app in the template is now a Flux `HelmRelease` paired with an
+  `OCIRepository`, replacing the 20 App CRs that used to render from `bases/` and
+  `management-clusters/`. The App Platform `catalog` + `name` + `version` triple
+  becomes an `OCIRepository` pointing straight at
+  `oci://gsoci.azurecr.io/charts/giantswarm/<chart>` with the version as
+  `spec.ref.tag`, and the App CR's `config`/`extraConfigs`/`userConfig` become
+  `spec.valuesFrom` entries on the `HelmRelease`. Where an App CR had
+  `kubeConfig.inCluster: false`, the `HelmRelease` names the workload cluster's
+  `<cluster>-kubeconfig` secret explicitly. First step of
+  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
+  Notable consequences:
+  - Kustomize patches that pinned a version through `/spec/version` on an `App`
+    now target `/spec/ref/tag` on the `OCIRepository`. This includes the
+    `$imagepolicy` setter markers used by the automatic-updates example, so image
+    automation keeps working against the chart tag.
+  - `spec.valuesFrom` is a list and `kustomize` has no merge strategy for
+    `HelmRelease`, so a strategic-merge patch replaces it rather than appending.
+    The app-set and app-template overlays therefore restate the entry they
+    inherit alongside the one they add.
+  - App CRs could reference a ConfigMap or Secret in another namespace;
+    `spec.valuesFrom` cannot. Two example references that pointed at namespaces
+    with nothing in them (`org-multi-project`, `hello-world-app`) now resolve
+    against the namespace the `HelmRelease` lives in, which is where the
+    ConfigMaps were generated all along.
+  - The cluster App CRs (`cluster-aws`, from `bases/clusters/capa/template`) are
+    deliberately **not** converted here and still use App Platform.
+- CI: the kind-based e2e suite waits for every `HelmRelease` to go ready, and
+  none of the ones in this template can -- they all target a workload cluster
+  that does not exist in the test environment. They are listed in the
+  `gitops_ignored_objects` input in `.github/workflows/validate.yaml`, next to
+  the Kustomization that was already ignored for the same reason. Their rendered
+  manifests are still asserted through `tests/ats/assertions`.
 - CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
   caller to the new reusable
   `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour
@@ -70,6 +102,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- The `giantswarm-catalog-oci` `Catalog` CRs under the two out-of-band workload
+  clusters' `mapi/automatic-updates/`. They existed only so the automatic-updates
+  App CR had a catalog to resolve its chart from; an `OCIRepository` addresses the
+  registry directly, so nothing referenced them any more.
 - The `simple-db-app` demo app (`bases/apps/simple-db`, its `App`,
   `ImageRepository` and `ImagePolicy` entries in the environment stages, its
   app-set config and its `tests/ats` assertions). The source repository is gone

@@ -1,0 +1,16 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: WC_NAME
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: capi-wc-name-cert-manager
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 4.1.1
+  url: oci://gsoci.azurecr.io/charts/giantswarm/cert-manager-app

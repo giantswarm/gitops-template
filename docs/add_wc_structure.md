@@ -185,37 +185,29 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     cd apps
     ```
 
-1. Create the `patch_cluster_config.yaml` file to provide common configuration for all the Apps that are going to be
-   installed to the new cluster. We're basically ensuring 2 things here: first, that there's a shared Config Map that we
-   will use for common values (like cluster's domain name), and second that all the apps know how to configure a
-   `kubeConfig` secret that will be used to connect to the new cluster.
+1. Create the `patch_cluster_config.yaml` file to provide common configuration for all the apps that are going to be
+   installed to the new cluster. Here we make sure that every `HelmRelease` knows about the `kubeConfig` secret used to
+   connect to the new cluster, so each app only has to describe its own chart and values.
 
     ```sh
     cat <<EOF > patch_cluster_config.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
+    apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
     metadata:
       labels:
         giantswarm.io/managed-by: flux
       name: ignored
     spec:
-      config:
-        configMap:
-          name: ${cluster_name}-cluster-values
-          namespace: ${cluster_name}
       kubeConfig:
-        context:
-          name: giantswarm-${cluster_name}-context
-        inCluster: false
-        secret:
+        secretRef:
           name: ${cluster_name}-kubeconfig
-          namespace: ${cluster_name}
     EOF
     ```
 
-    **Note**, the `giantswarm.io/managed-by: flux` label is very important here, it tells the `app-admission-controller`
-    of App Platform to ignore any missing ConfigMaps and Secrets set in `spec.userConfig` of the App CRs. This is needed
-    to avoid race conditions, where Flux creates first the App CR and only later a referenced ConfigMap or Secret.
+    **Note**, per-app values stay on each `HelmRelease` in its own `spec.valuesFrom`. A patch cannot add a shared entry
+    to that list: `kustomize` has no merge strategy for `HelmRelease`, so it falls back to a JSON merge patch, which
+    replaces a list rather than appending to it. A `HelmRelease` that references a ConfigMap or Secret which does not
+    exist yet simply stays not-ready and is retried, so there is no race with the order Flux creates objects in.
 
 1. Create the `kustomization.yaml` file, with empty resources (for now) but applying our patch created above to any
    objects we add here in the future:
@@ -227,7 +219,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     patches:
     - path: patch_cluster_config.yaml
       target:
-        kind: App
+        kind: HelmRelease
     - patch: |-
         - op: replace
           path: "/metadata/namespace"

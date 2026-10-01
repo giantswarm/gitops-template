@@ -277,10 +277,10 @@ cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: '3.2.2'
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}-hello-world
 EOF
 ```
@@ -412,17 +412,17 @@ Notice however that we decided not to set up `Automatic Updates` for this cluste
 
 Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
-in out App CRs.
+in our `OCIRepository` resources.
 
 ```sh
 cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: 3.2.2
+        path: /spec/ref/tag
+        value: "3.2.2"
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}-hello-world
 EOF
 ```

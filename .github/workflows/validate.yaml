@@ -12,5 +12,34 @@ permissions:
 jobs:
   validate:
     uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@main
+    with:
+      # Objects the kind-based e2e suite cannot wait on. Besides the
+      # Kustomization that reconciles straight into a workload cluster, this is
+      # every HelmRelease in the template: they all carry a `spec.kubeConfig`
+      # pointing at a `<cluster>-kubeconfig` secret for a workload cluster that
+      # does not exist in the test environment, so none of them can ever install.
+      # Their manifests are still asserted through tests/ats/assertions.
+      gitops_ignored_objects: >-
+        org-org-name/clusters-mapi-out-of-band-no-flux-direct,
+        kube-system/mapi-out-of-band-flux-app-tmpl-ingress-nginx,
+        kube-system/mapi-out-of-band-no-flux-tmpl-ingress-nginx,
+        org-org-name/capi-wc-name-cert-manager,
+        org-org-name/hello-app-dev-1-hello-world,
+        org-org-name/hello-app-dev-1-ingress-nginx,
+        org-org-name/hello-app-prod-eu-central-hello-world,
+        org-org-name/hello-app-prod-eu-central-ingress-nginx,
+        org-org-name/hello-app-prod-us-west-hello-world,
+        org-org-name/hello-app-prod-us-west-ingress-nginx,
+        org-org-name/hello-app-staging-1-hello-world,
+        org-org-name/hello-app-staging-1-ingress-nginx,
+        org-org-name/mapi-out-of-band-flux-app-flux,
+        org-org-name/mapi-out-of-band-flux-app-hello-world,
+        org-org-name/mapi-out-of-band-flux-app-hello-world-app-auto,
+        org-org-name/mapi-out-of-band-flux-app-hello-world-standalone,
+        org-org-name/mapi-out-of-band-flux-app-ingress-nginx,
+        org-org-name/mapi-out-of-band-no-flux-hello-world,
+        org-org-name/mapi-out-of-band-no-flux-hello-world-app-auto,
+        org-org-name/mapi-out-of-band-no-flux-hello-world-standalone,
+        org-org-name/mapi-out-of-band-no-flux-ingress-nginx
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

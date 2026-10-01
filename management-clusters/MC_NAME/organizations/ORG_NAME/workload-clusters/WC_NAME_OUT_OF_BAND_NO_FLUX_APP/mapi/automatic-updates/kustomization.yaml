@@ -4,5 +4,4 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
-- catalog.yaml
 - imageupdate.yaml

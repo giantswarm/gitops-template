@@ -13,10 +13,10 @@ kind: Kustomization
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: '3.2.2' # {"$imagepolicy": "org-${organization}:${cluster_name}-hello-app"}
     target:
-      kind: App
+      kind: OCIRepository
       name: \${cluster_name}-hello-world
 # block end
 resources:

@@ -1,0 +1,14 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${cluster_name}-cert-manager
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-cert-manager
+  install:
+    createNamespace: true
+  interval: 10m
+  releaseName: ${cluster_name}-cert-manager
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}

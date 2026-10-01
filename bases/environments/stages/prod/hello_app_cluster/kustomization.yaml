@@ -18,10 +18,10 @@ kind: Kustomization
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: 3.2.2
+        path: /spec/ref/tag
+        value: "3.2.2"
     target:
-      kind: App
+      kind: OCIRepository
       name: \${cluster_name}-hello-world
 # block end
 resources:

@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${cluster_name}-flux
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-flux
+  install:
+    createNamespace: true
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: ${cluster_name}-flux
+  storageNamespace: flux-app
+  targetNamespace: flux-app
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-flux-app-user-values
+      valuesKey: values
