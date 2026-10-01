@@ -41,17 +41,14 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   first HelmRelease-based App Template here. The resources follow the shape
   [giantswarm/appcr-to-helmrelease-converter](https://github.com/giantswarm/appcr-to-helmrelease-converter)
   emits for a migrated App CR, so converted and new apps look alike:
-  - the chart version pinned in `spec.ref.tag`, with a `repo:` comment Renovate
-    uses to propose upgrades; `renovate.json5` gains the regex manager for it, as
-    the preset's `repo:` patterns don't cover `tag:`
-  - values layered through `valuesFrom`, in this order: the cluster values
-    ConfigMap, the template defaults, then optional `-template-values` (cluster
-    template), `-user-values` (ConfigMap) and `-user-secrets` (SOPS-encrypted
-    Secret)
+  - the chart version pinned in `spec.ref.tag`
+  - values layered through `valuesFrom` like an App CR's: the cluster values
+    ConfigMap, the template defaults, then optional `-user-values` (ConfigMap)
+    and `-user-secrets` (SOPS-encrypted Secret)
   - upgrades retry 10 times and roll back on failure, 10m timeout; installs
-    retry until they succeed instead of the converter's 10, as on a new cluster
-    the first attempts fail until the default apps' CRDs exist (the cluster
-    chart's default apps do the same)
+    retry until they succeed, as the cluster chart's default apps do, since
+    envoy-gateway and gateway-api-config need CRDs a new cluster only gets with
+    its default apps
   - `giantswarm.io/cluster` labels
 
   `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`

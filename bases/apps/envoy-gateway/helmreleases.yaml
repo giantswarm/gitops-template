@@ -3,17 +3,17 @@
 #   envoy-gateway      -> the Envoy Gateway controller
 #   gateway-api-config -> the `giantswarm-default` GatewayClass and Gateway
 # The HelmReleases run on the management cluster and install into the workload
-# cluster through its kubeconfig secret. Upgrade remediation, timeout and interval
-# follow what giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR.
+# cluster through its kubeconfig secret. The fields follow what
+# giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR, except
+# install retries (see below) and `createNamespace`.
 #
 # Values are merged in `valuesFrom` order, later entries win (maps are merged,
 # lists are replaced):
-#   1. ${cluster_name}-cluster-values           cluster values (baseDomain, provider, ...),
-#                                               created for every workload cluster
-#   2. ${cluster_name}-<chart>-values           this App Template's defaults
-#   3. ${cluster_name}-<chart>-template-values  (optional) cluster template overrides
-#   4. ${cluster_name}-<chart>-user-values      (optional) overrides for one cluster
-#   5. ${cluster_name}-<chart>-user-secrets     (optional) the same, as an encrypted Secret
+#   1. ${cluster_name}-cluster-values        cluster values (baseDomain, provider, ...),
+#                                            created for every workload cluster
+#   2. ${cluster_name}-<chart>-values        this App Template's defaults
+#   3. ${cluster_name}-<chart>-user-values   (optional) overrides, like an App CR's userConfig
+#   4. ${cluster_name}-<chart>-user-secrets  (optional) the same, as an encrypted Secret
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -30,9 +30,7 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      # retry until it succeeds: on a new cluster the first installs fail until
-      # the default apps' CRDs exist. Same as the cluster chart's default apps;
-      # the converter's 10 is meant for migrating releases that already exist
+      # retry until it succeeds, as the cluster chart does for its default apps
       retries: -1
   interval: 5m
   kubeConfig:
@@ -53,10 +51,6 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: ${cluster_name}-gateway-api-crds-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: ${cluster_name}-gateway-api-crds-template-values
-      optional: true
       valuesKey: values
     - kind: ConfigMap
       name: ${cluster_name}-gateway-api-crds-user-values
@@ -83,13 +77,13 @@ spec:
     - name: ${cluster_name}-gateway-api-crds
   install:
     # envoy-gateway-system does not exist yet; gateway-api-config installs into it
-    # after this release (dependsOn). Not part of the converter's output.
+    # after this release (dependsOn)
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      # retry until it succeeds: on a new cluster the first installs fail until
-      # the default apps' CRDs exist. Same as the cluster chart's default apps;
-      # the converter's 10 is meant for migrating releases that already exist
+      # retry until it succeeds, as the cluster chart does for its default apps:
+      # this chart renders Kyverno, cert-manager or monitoring resources, whose
+      # CRDs a new cluster only gets once its default apps are installed
       retries: -1
   interval: 5m
   kubeConfig:
@@ -110,10 +104,6 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: ${cluster_name}-envoy-gateway-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: ${cluster_name}-envoy-gateway-template-values
-      optional: true
       valuesKey: values
     - kind: ConfigMap
       name: ${cluster_name}-envoy-gateway-user-values
@@ -141,9 +131,9 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      # retry until it succeeds: on a new cluster the first installs fail until
-      # the default apps' CRDs exist. Same as the cluster chart's default apps;
-      # the converter's 10 is meant for migrating releases that already exist
+      # retry until it succeeds, as the cluster chart does for its default apps:
+      # this chart renders Kyverno, cert-manager or monitoring resources, whose
+      # CRDs a new cluster only gets once its default apps are installed
       retries: -1
   interval: 5m
   kubeConfig:
@@ -164,10 +154,6 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: ${cluster_name}-gateway-api-config-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: ${cluster_name}-gateway-api-config-template-values
-      optional: true
       valuesKey: values
     - kind: ConfigMap
       name: ${cluster_name}-gateway-api-config-user-values

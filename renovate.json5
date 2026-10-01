@@ -18,31 +18,4 @@
   "pre-commit": {
     "enabled": true,
   },
-  // OCIRepositories pin their chart in `spec.ref.tag` with a `repo:` comment
-  // above it, the shape giantswarm/appcr-to-helmrelease-converter emits. The
-  // preset's `repo:` patterns cover `version:` and friends but not `tag:`, and
-  // Renovate's flux manager only scans gotk-components.yaml by default.
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["/^(bases|management-clusters)/.+\\.ya?ml$/"],
-      "matchStrings": [
-        "#\\s*repo: (?<depName>\\S+)\\n\\s*tag: \"?v?(?<currentValue>[^\"\\s]+)\"?",
-      ],
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v?(?<version>.*)$",
-    },
-  ],
-  "packageRules": [
-    {
-      // the Envoy Gateway charts are released as a compatible set (see the
-      // gateway-api-bundle compatibility table), so move them together
-      "groupName": "Envoy Gateway charts",
-      "matchPackageNames": [
-        "giantswarm/gateway-api-crds-app",
-        "giantswarm/envoy-gateway-app",
-        "giantswarm/gateway-api-config-app",
-      ],
-    },
-  ],
 }

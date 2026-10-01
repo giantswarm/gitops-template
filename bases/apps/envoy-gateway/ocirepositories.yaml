@@ -1,6 +1,5 @@
 # One OCIRepository per chart, in the shape giantswarm/appcr-to-helmrelease-converter
-# emits for a migrated App CR: the chart version is pinned in `spec.ref.tag`, and
-# Renovate proposes upgrades through the `repo:` comment above it.
+# emits for a migrated App CR, with the chart version pinned in `spec.ref.tag`.
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -13,8 +12,6 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    # used by renovate
-    # repo: giantswarm/gateway-api-crds-app
     tag: 1.9.1
   url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-crds
 ---
@@ -29,8 +26,6 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    # used by renovate
-    # repo: giantswarm/envoy-gateway-app
     tag: 1.10.3
   url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
 ---
@@ -45,7 +40,5 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    # used by renovate
-    # repo: giantswarm/gateway-api-config-app
     tag: 1.11.3
   url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config

@@ -38,10 +38,6 @@ spec:
       name: hello-app-dev-1-gateway-api-crds-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-dev-1-gateway-api-crds-template-values
-      optional: true
-      valuesKey: values
-    - kind: ConfigMap
       name: hello-app-dev-1-gateway-api-crds-user-values
       optional: true
       valuesKey: values
@@ -92,10 +88,6 @@ spec:
       name: hello-app-dev-1-envoy-gateway-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-dev-1-envoy-gateway-template-values
-      optional: true
-      valuesKey: values
-    - kind: ConfigMap
       name: hello-app-dev-1-envoy-gateway-user-values
       optional: true
       valuesKey: values
@@ -143,10 +135,6 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-dev-1-gateway-api-config-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-gateway-api-config-template-values
-      optional: true
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-dev-1-gateway-api-config-user-values

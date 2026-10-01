@@ -108,5 +108,5 @@ data:
               - hello
 kind: ConfigMap
 metadata:
-  name: hello-app-dev-1-gateway-api-config-template-values
+  name: hello-app-dev-1-gateway-api-config-user-values
   namespace: org-org-name
