@@ -1,0 +1,18 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${cluster_name}-hello-world-standalone
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-hello-world-standalone
+  install:
+    createNamespace: true
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: ${cluster_name}-hello-world-standalone
+  storageNamespace: hello-world
+  targetNamespace: hello-world

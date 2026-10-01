@@ -115,13 +115,6 @@ Let's create the `kustomization.yaml` file for the development cluster.
 cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: create
-    files:
-      - values=hello_world_app_user_config.yaml
-    name: \${cluster_name}-hello-world-user-config
-generatorOptions:
-  disableNameSuffixHash: true
 kind: Kustomization
 resources:
   - automatic_updates/
@@ -131,22 +124,11 @@ resources:
 EOF
 ```
 
-In [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
-[hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters.
-We can  provide overrides to the settings via the [hello_world_app_user_config.yaml](
-/bases/environments/stages/dev/hello_app_cluster/hello_world_app_user_config.yaml) file, for example
-giving the cluster a smaller node pool.
-
-```sh
-cat <<EOF > hello_world_app_user_config.yaml
-global:
-  nodePools:
-    xxxxx:
-      instanceType: m6a.2xlarge
-      maxSize: 5
-      minSize: 1
-EOF
-```
+The [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
+[hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters. Values for the
+apps in that set come from the set itself, through [override_config_hello_world.yaml](
+/bases/cluster_templates/hello_app_cluster/app_sets/hello-web-app/override_config_hello_world.yaml) in the cluster
+template; what a stage adds on top is the chart version to run and, below, automatic updates.
 
 It also makes sense to configure `Automatic Updates` for our development cluster. We store these configurations under
 the [/bases/environments/stages/dev/hello_app_cluster/automatic_updates](
@@ -277,10 +259,10 @@ cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: '3.2.2'
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}-hello-world
 EOF
 ```
@@ -302,21 +284,6 @@ It is similar to the development cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 - it has automatic updates set up
-
-It also provides overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
-[hello_world_app_user_config.yaml](
-/bases/environments/stages/staging/hello_app_cluster/hello_world_app_user_config.yaml).
-We want this environment to be closer to production, so let's say we give its node pool a dedicated security group.
-
-```sh
-cat <<EOF > hello_world_app_user_config.yaml
-global:
-  nodePools:
-    xxxxx:
-      additionalSecurityGroups:
-        - id: "sg-2xxxxxxxxxxxxxx3f"
-EOF
-```
 
 Setting up the `automatic_updates` folder and the `imagerepositories.yaml` files requires exactly the same steps
 as we did above for the development cluster.
@@ -364,10 +331,6 @@ cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 configMapGenerator:
-  - behavior: create
-    files:
-      - values=hello_world_app_user_config.yaml
-    name: \${cluster_name}-hello-world-user-config
   - behavior: replace
     files:
       - values=cluster_user_config.yaml
@@ -398,31 +361,21 @@ values: |
 EOF
 ```
 
-Then we provide some overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
-[hello_world_app_user_config.yaml](
-/bases/environments/stages/prod/hello_app_cluster/hello_world_app_user_config.yaml).
-
-```yaml
-cat <<EOF > hello_world_app_user_config.yaml
-replicaCount: 6
-EOF
-```
-
 Notice however that we decided not to set up `Automatic Updates` for this cluster.
 
 Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
-in out App CRs.
+in our `OCIRepository` resources.
 
 ```sh
 cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: 3.2.2
+        path: /spec/ref/tag
+        value: "3.2.2"
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}-hello-world
 EOF
 ```

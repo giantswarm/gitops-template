@@ -1,0 +1,16 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-eu-central-hello-world
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.2
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

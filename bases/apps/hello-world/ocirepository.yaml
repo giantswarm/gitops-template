@@ -1,0 +1,11 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ${cluster_name}-hello-world
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.2
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

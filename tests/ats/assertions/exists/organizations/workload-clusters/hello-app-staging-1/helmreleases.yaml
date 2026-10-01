@@ -1,0 +1,27 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1-hello-world
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-staging-1-hello-world
+  install:
+    createNamespace: true
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: hello-app-staging-1-kubeconfig
+  releaseName: hello-app-staging-1-hello-world
+  storageNamespace: org-org-name
+  targetNamespace: org-org-name
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-staging-1-hello-world-values
+      valuesKey: values

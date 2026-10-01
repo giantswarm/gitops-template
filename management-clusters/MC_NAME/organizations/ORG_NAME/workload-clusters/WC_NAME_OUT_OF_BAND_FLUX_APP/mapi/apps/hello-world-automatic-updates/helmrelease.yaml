@@ -1,0 +1,21 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+    giantswarm.io/managed-by: flux
+  name: ${cluster_name}-hello-world-app-auto
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-hello-world-app-auto
+  install:
+    createNamespace: true
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: ${cluster_name}-hello-world-app-auto
+  storageNamespace: hello-world-auto
+  targetNamespace: hello-world-auto

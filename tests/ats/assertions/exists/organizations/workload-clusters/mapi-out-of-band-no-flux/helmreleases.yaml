@@ -1,27 +1,30 @@
 ---
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/cluster: mapi-out-of-band-no-flux
   name: mapi-out-of-band-no-flux-hello-world
   namespace: org-org-name
 spec:
-  userConfig:
-    configMap:
+  valuesFrom:
+    - kind: ConfigMap
+      name: mapi-out-of-band-no-flux-hello-world-values
+      valuesKey: values
+    - kind: ConfigMap
       name: mapi-out-of-band-no-flux-hello-world-user-values
-      namespace: org-org-name
+      valuesKey: values
 ---
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/cluster: mapi-out-of-band-no-flux
   name: mapi-out-of-band-no-flux-hello-world-app-auto
   namespace: org-org-name
 ---
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/cluster: mapi-out-of-band-no-flux

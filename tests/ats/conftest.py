@@ -115,7 +115,9 @@ class GitOpsTestConfig:
 
         ignored_objects = os.environ[self._IGNORED_OBJECTS]
         if ignored_objects:
-            self.ignored_objects = ignored_objects.split(",")
+            # the list is long enough to be wrapped in the workflow that sets
+            # it, so entries can arrive padded with whitespace
+            self.ignored_objects = [o.strip() for o in ignored_objects.split(",")]
 
 
 @pytest.fixture(scope="module")

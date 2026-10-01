@@ -13,24 +13,33 @@ namespace: kube-system
 patches:
   - patch: |-
       - op: replace
-        path: "/spec/extraConfigs/0/name"
+        path: "/metadata/name"
+        value: ${cluster_name}-tmpl-ingress-nginx
+      - op: replace
+        path: "/spec/chartRef/name"
+        value: ${cluster_name}-tmpl-ingress-nginx
+      - op: replace
+        path: "/spec/releaseName"
+        value: ${cluster_name}-tmpl-ingress-nginx
+      - op: replace
+        path: "/spec/valuesFrom/0/name"
         value: ${cluster_name}-tmpl-ingress-nginx-values
     target:
-      group: application.giantswarm.io
-      kind: "App"
+      group: helm.toolkit.fluxcd.io
+      kind: "HelmRelease"
       name: \${cluster_name}-ingress-nginx
       namespace: kube-system
-      version: v1alpha1
+      version: v2
   - patch: |-
       - op: replace
         path: "/metadata/name"
         value: ${cluster_name}-tmpl-ingress-nginx
     target:
-      group: application.giantswarm.io
-      kind: "App"
+      group: source.toolkit.fluxcd.io
+      kind: "OCIRepository"
       name: \${cluster_name}-ingress-nginx
       namespace: kube-system
-      version: v1alpha1
+      version: v1
   - patch: |-
       - op: replace
         path: "/metadata/name"
