@@ -18,6 +18,7 @@ spec:
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "org-name"  # TODO: change 'org-name' to your organization name
+      workload_cluster_name: "mapi-out-of-band-flux-app"
   prune: false
   serviceAccountName: automation
   sourceRef:

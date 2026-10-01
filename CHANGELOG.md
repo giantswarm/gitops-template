@@ -124,6 +124,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `${workload_cluster_name}`, used for the `giantswarm.io/cluster` label on the
+  automatic-updates example, was never defined in any `postBuild.substitute`
+  block, so the label rendered as the literal `"null"`. It is now defined on the
+  two out-of-band workload cluster Kustomization CRs that reconcile that example.
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.
