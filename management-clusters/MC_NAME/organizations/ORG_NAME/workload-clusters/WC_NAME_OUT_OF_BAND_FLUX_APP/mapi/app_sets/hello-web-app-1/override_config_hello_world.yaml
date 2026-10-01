@@ -1,2 +1,1 @@
-admin_login: hello-admin
-thread_pool_size: 32
+replicaCount: 4

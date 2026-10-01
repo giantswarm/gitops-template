@@ -3,11 +3,13 @@ import logging
 import os
 import shutil
 import subprocess  # nosec B404 - we need to invoke processes
+import tempfile
 from typing import Iterable, Any
 
 import pykube
 import pytest
 import validators
+import yaml
 from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
@@ -20,6 +22,33 @@ FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secre
 FLUX_IMPERSONATION_SA_NAME = "automation"
 
 CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
+
+# Every provider is pinned to an explicit release URL, including the ones
+# `clusterctl init` installs implicitly (the core provider and the kubeadm
+# bootstrap/control-plane pair).
+#
+# The stock URLs end in `/releases/latest/`, and clusterctl takes the version
+# straight out of that path when it builds the repository client -- before it
+# ever looks at what `--core`/`--infrastructure` asked for. Resolving "latest"
+# means: read the newest cluster-api release's metadata.yaml, find the release
+# series serving the v1beta1 contract this clusterctl speaks (1.10), then search
+# for a 1.10.x tag. That search only covers the 30 newest releases, because
+# clusterctl requests the release list with no paging options. cluster-api
+# published its 30th release since v1.10.10 on 2026-08-11, so 1.10.x dropped out
+# of the window and the lookup has returned nothing since, reported as the
+# misleading "failed to find releases tagged with a valid semantic version
+# number". A pinned URL skips the resolution entirely.
+#
+# v1.10.10 is the newest release of the 1.10 series, which is what the "latest"
+# resolution above was picking until 2026-08-11 -- GetReleaseSeriesForContract
+# returns the newest series serving v1beta1, and 1.10 is it. Pinning it keeps
+# this suite on the CAPI version it was already exercising, rather than dropping
+# back to the vintage of the clusterctl binary itself. Going past the v1beta1
+# contract needs a newer clusterctl (the workflow pins 1.2.0) and new enough
+# infrastructure providers, which is a bigger change than this fix.
+CLUSTER_CTL_CORE_VERSION = "v1.10.10"
+CLUSTER_CTL_RELEASE_URL = "https://github.com/kubernetes-sigs/{repo}/releases/{version}/{components}"
+CLUSTER_CTL_PROVIDER_REPOS = {"aws": "cluster-api-provider-aws", "azure": "cluster-api-provider-azure"}
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
@@ -119,6 +148,49 @@ def gs_crds(kube_cluster: Cluster) -> None:
         kube_cluster.kubectl(f"apply -f {crd}")
 
 
+def write_clusterctl_config() -> str:
+    """Write a clusterctl config pinning every provider to an explicit release URL.
+
+    Returns the path of the generated file. See CLUSTER_CTL_CORE_VERSION for why
+    the stock "latest" URLs cannot be used any more.
+    """
+    core = [
+        ("cluster-api", "CoreProvider", "core-components.yaml"),
+        ("kubeadm", "BootstrapProvider", "bootstrap-components.yaml"),
+        ("kubeadm", "ControlPlaneProvider", "control-plane-components.yaml"),
+    ]
+    providers = [
+        {
+            "name": name,
+            "type": provider_type,
+            "url": CLUSTER_CTL_RELEASE_URL.format(
+                repo="cluster-api",
+                version=CLUSTER_CTL_CORE_VERSION,
+                components=components,
+            ),
+        }
+        for name, provider_type, components in core
+    ]
+    providers += [
+        {
+            "name": name,
+            "type": "InfrastructureProvider",
+            "url": CLUSTER_CTL_RELEASE_URL.format(
+                repo=CLUSTER_CTL_PROVIDER_REPOS[name],
+                version=version,
+                components="infrastructure-components.yaml",
+            ),
+        }
+        for name, version in CLUSTER_CTL_PROVIDERS_MAP.items()
+    ]
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="clusterctl-", delete=False
+    ) as config_file:
+        yaml.safe_dump({"providers": providers}, config_file)
+        return config_file.name
+
+
 @pytest.fixture(scope="module")
 def capi_controllers(kube_config: str) -> Iterable[Any]:
     cluster_ctl_path = shutil.which("clusterctl")
@@ -131,6 +203,7 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
         raise Exception("`clusterctl` not found")
 
     logger.debug(f"Using '{cluster_ctl_path}' to bootstrap CAPI controllers")
+    clusterctl_config = write_clusterctl_config()
     infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
     fake_secret = base64.b64encode(b"something")
     env_vars = os.environ | {
@@ -141,17 +214,23 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
         "AZURE_CLIENT_SECRET_B64": fake_secret,
         "EXP_MACHINE_POOL": "true",
     }
-    run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
-        [
-            cluster_ctl_path,
-            "init",
-            "--kubeconfig",
-            kube_config,
-            f"--infrastructure={infra_providers}",
-        ],
-        capture_output=True,
-        env=env_vars,  # type: ignore # for some reason mypy thinks the type here is 'Dict[str, Sequence[object]]'
-    )
+    try:
+        run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
+            [
+                cluster_ctl_path,
+                "init",
+                "--kubeconfig",
+                kube_config,
+                f"--infrastructure={infra_providers}",
+                "--config",
+                clusterctl_config,
+            ],
+            capture_output=True,
+            env=env_vars,  # type: ignore # for some reason mypy thinks the type here is 'Dict[str, Sequence[object]]'
+        )
+    finally:
+        # Only `init` reads the provider URLs; `delete` works from the cluster's inventory.
+        os.remove(clusterctl_config)
     if run_res.returncode != 0:
         logger.error(
             f"Error bootstrapping CAPI on test cluster: '{run_res.stderr}'"  # type: ignore

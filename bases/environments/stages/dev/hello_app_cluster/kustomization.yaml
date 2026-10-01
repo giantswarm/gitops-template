@@ -9,22 +9,15 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce versions for both component of the app that we want in prod
+# (optional) here we can enforce the app versions that we want in this stage
 patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: '0.1.8' # {"$imagepolicy": "org-${organization}:${cluster_name}-hello-app"}
+        value: '3.2.2' # {"$imagepolicy": "org-${organization}:${cluster_name}-hello-app"}
     target:
       kind: App
       name: \${cluster_name}-hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: '0.1.0' # {"$imagepolicy": "org-${organization}:${cluster_name}-simple-db-app"}
-    target:
-      kind: App
-      name: \${cluster_name}-simple-db
 # block end
 resources:
   - automatic_updates/
