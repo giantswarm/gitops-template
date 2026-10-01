@@ -102,6 +102,19 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- The per-stage `hello_world_app_user_config.yaml` files and the
+  `${cluster_name}-hello-world-user-config` ConfigMap the three
+  `bases/environments/stages/*/hello_app_cluster/kustomization.yaml` files
+  generated from them, plus their `tests/ats` assertions and the parts of
+  `docs/add_wc_environments.md` that presented them as the per-stage override
+  mechanism for the `hello-web-app` app set. Nothing ever read that ConfigMap:
+  the app resolves its values from `${cluster_name}-hello-world-values`, so the
+  overrides (`replicaCount: 6` in prod, node pool settings in dev and staging)
+  were silently discarded. Two of the three also held cluster chart values
+  (`global.nodePools`) rather than app values, so they could not have been wired
+  to the app as they stood. Per-app values for the set come from
+  `bases/cluster_templates/hello_app_cluster/app_sets/hello-web-app/override_config_hello_world.yaml`,
+  which is wired up and documented.
 - Every `giantswarm-catalog-oci` `Catalog` CR: the two under the out-of-band
   workload clusters' `mapi/automatic-updates/` and the two under
   `bases/environments/stages/{dev,staging}/hello_app_cluster/automatic_updates/`,
