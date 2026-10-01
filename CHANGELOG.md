@@ -48,7 +48,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     ConfigMap, the template defaults, then optional `-template-values` (cluster
     template), `-user-values` (ConfigMap) and `-user-secrets` (SOPS-encrypted
     Secret)
-  - 10 install and upgrade retries, rollback on a failed upgrade, 10m timeout
+  - upgrades retry 10 times and roll back on failure, 10m timeout; installs
+    retry until they succeed instead of the converter's 10, as on a new cluster
+    the first attempts fail until the default apps' CRDs exist (the cluster
+    chart's default apps do the same)
   - `giantswarm.io/cluster` labels
 
   `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`

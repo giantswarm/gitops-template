@@ -3,8 +3,8 @@
 #   envoy-gateway      -> the Envoy Gateway controller
 #   gateway-api-config -> the `giantswarm-default` GatewayClass and Gateway
 # The HelmReleases run on the management cluster and install into the workload
-# cluster through its kubeconfig secret. Remediation, timeout and interval follow
-# what giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR.
+# cluster through its kubeconfig secret. Upgrade remediation, timeout and interval
+# follow what giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR.
 #
 # Values are merged in `valuesFrom` order, later entries win (maps are merged,
 # lists are replaced):
@@ -30,7 +30,10 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
+      # retry until it succeeds: on a new cluster the first installs fail until
+      # the default apps' CRDs exist. Same as the cluster chart's default apps;
+      # the converter's 10 is meant for migrating releases that already exist
+      retries: -1
   interval: 5m
   kubeConfig:
     secretRef:
@@ -84,7 +87,10 @@ spec:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: 10
+      # retry until it succeeds: on a new cluster the first installs fail until
+      # the default apps' CRDs exist. Same as the cluster chart's default apps;
+      # the converter's 10 is meant for migrating releases that already exist
+      retries: -1
   interval: 5m
   kubeConfig:
     secretRef:
@@ -135,7 +141,10 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
+      # retry until it succeeds: on a new cluster the first installs fail until
+      # the default apps' CRDs exist. Same as the cluster chart's default apps;
+      # the converter's 10 is meant for migrating releases that already exist
+      retries: -1
   interval: 5m
   kubeConfig:
     secretRef:

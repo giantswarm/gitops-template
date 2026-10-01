@@ -17,7 +17,7 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
+      retries: -1
   kubeConfig:
     secretRef:
       name: hello-app-prod-eu-central-kubeconfig
@@ -71,7 +71,7 @@ spec:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: 10
+      retries: -1
   kubeConfig:
     secretRef:
       name: hello-app-prod-eu-central-kubeconfig
@@ -124,7 +124,7 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
+      retries: -1
   kubeConfig:
     secretRef:
       name: hello-app-prod-eu-central-kubeconfig
