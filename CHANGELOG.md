@@ -34,6 +34,44 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Envoy Gateway replaces ingress-nginx as the example edge. The new
+  `bases/apps/envoy-gateway` App Template installs `gateway-api-crds`,
+  `envoy-gateway` and `gateway-api-config` into the workload cluster as three
+  chained `HelmRelease`s, each with its chart from an `OCIRepository`. It is the
+  first HelmRelease-based App Template here. The resources follow the shape
+  [giantswarm/appcr-to-helmrelease-converter](https://github.com/giantswarm/appcr-to-helmrelease-converter)
+  emits for a migrated App CR, so converted and new apps look alike:
+  - the chart version pinned in `spec.ref.tag`
+  - values layered through `valuesFrom` like an App CR's: the cluster values
+    ConfigMap, the template defaults, then optional `-user-values` (ConfigMap)
+    and `-user-secrets` (SOPS-encrypted Secret)
+  - upgrades retry 10 times and roll back on failure, 10m timeout; installs
+    retry until they succeed, as the cluster chart's default apps do, since
+    envoy-gateway and gateway-api-config need CRDs a new cluster only gets with
+    its default apps
+  - `giantswarm.io/cluster` labels
+
+  `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`
+  Gateway as `hello.<cluster base domain>`, instead of an Ingress. The
+  `hello_app_cluster` template adds the `hello` subdomain to the Gateway's DNS
+  record and certificate. The hello-world App CRs now carry the
+  `giantswarm.io/cluster` label. App Platform needs it to add the cluster values
+  that the hostname is built from. The kind test now checks that
+  OCIRepositories are ready. It skips HelmReleases that deploy to a workload
+  cluster, since the test has none. Part of
+  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
+
+  **Prerequisites on the workload cluster:** the Giant Swarm default apps
+  (cert-manager, external-dns, Kyverno, Cilium, the monitoring CRDs), plus:
+  - Gateway API support enabled in cert-manager
+  - on AWS, aws-load-balancer-controller
+
+  **Migrating a fork:**
+  - The per-cluster Kustomizations use `prune: false`, so the existing
+    ingress-nginx App CRs stay after the update. Delete them by hand once traffic
+    runs through the Gateway.
+  - Remove any `gateway-api-bundle` app installed on the cluster first. It
+    installs the same charts under other release names.
 - CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
   caller to the new reusable
   `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour

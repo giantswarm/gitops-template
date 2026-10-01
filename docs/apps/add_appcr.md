@@ -16,9 +16,11 @@ The documentation below shows common steps as well as what is different in both 
 
 Examples of creating apps are available in following locations:
 
-- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/hello-world/)
-- An example of a directly configured App (with configuration): an [app that uses a configuration ConfigMap](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/ingress-nginx/)
-- An example of an App created from App Template is available in [WC_NAME/apps/ingress-nginx-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/ingress-nginx-from-template/).
+- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world/)
+- An example of an app created from an App Template, with plain and SOPS-encrypted (`secret.enc.yaml`) overrides, is
+  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/envoy-gateway-from-template/).
+  It is based on `HelmRelease`s rather than `App` CRs, so the overrides are passed through `valuesFrom` instead of
+  `userConfig`.
 
 ## Common steps
 

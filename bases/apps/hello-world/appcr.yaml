@@ -1,6 +1,10 @@
 apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
+  labels:
+    # the workload cluster this app is for; App Platform uses it to find the
+    # cluster's kubeconfig and to add the cluster values (e.g. `baseDomain`)
+    giantswarm.io/cluster: ${cluster_name}
   name: ${cluster_name}-hello-world
   namespace: org-${organization}
 spec:

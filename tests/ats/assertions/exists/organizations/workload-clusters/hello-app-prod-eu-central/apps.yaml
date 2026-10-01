@@ -34,6 +34,7 @@ apiVersion: application.giantswarm.io/v1alpha1
 kind: App
 metadata:
   labels:
+    giantswarm.io/cluster: hello-app-prod-eu-central
     gitops.giantswarm.io/appSet: hello-web-app
     kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
