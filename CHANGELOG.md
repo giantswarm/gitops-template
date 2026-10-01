@@ -102,10 +102,14 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- The `giantswarm-catalog-oci` `Catalog` CRs under the two out-of-band workload
-  clusters' `mapi/automatic-updates/`. They existed only so the automatic-updates
-  App CR had a catalog to resolve its chart from; an `OCIRepository` addresses the
-  registry directly, so nothing referenced them any more.
+- Every `giantswarm-catalog-oci` `Catalog` CR: the two under the out-of-band
+  workload clusters' `mapi/automatic-updates/` and the two under
+  `bases/environments/stages/{dev,staging}/hello_app_cluster/automatic_updates/`,
+  together with their `tests/ats` assertions. An `OCIRepository` addresses the
+  registry directly, so the first pair had nothing left referencing it; the stage
+  pair was never referenced by anything in the first place, since the apps in
+  those stages resolve from the `giantswarm` catalog. The repository now declares
+  no `Catalog` CRs at all.
 - The `simple-db-app` demo app (`bases/apps/simple-db`, its `App`,
   `ImageRepository` and `ImagePolicy` entries in the environment stages, its
   app-set config and its `tests/ats` assertions). The source repository is gone
