@@ -220,7 +220,9 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
     for key in top_level_keys:
         if key not in ass:
             continue
-        diff = DeepDiff(ass[key], cluster_obj.obj[key], ignore_order=True)
+        diff = DeepDiff(
+            ass[key], cluster_obj.obj[key], ignore_order=True, threshold_to_diff_deeper=0
+        )
         # we have no difference between the expectation and the real object
         if len(diff) == 0:
             continue
