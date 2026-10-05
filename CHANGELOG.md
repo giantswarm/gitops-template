@@ -54,9 +54,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`
   Gateway as `hello.<cluster base domain>`, instead of an Ingress. The
   `hello_app_cluster` template adds the `hello` subdomain to the Gateway's DNS
-  record and certificate. The hello-world App CRs now carry the
-  `giantswarm.io/cluster` label. App Platform needs it to add the cluster values
-  that the hostname is built from. The kind test now checks that
+  record and certificate. The hostname is built from the
+  cluster values, which the hello-world `HelmRelease` lists first in
+  `valuesFrom`. The kind test now checks that
   OCIRepositories are ready. It skips HelmReleases that deploy to a workload
   cluster, since the test has none. Part of
   [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).

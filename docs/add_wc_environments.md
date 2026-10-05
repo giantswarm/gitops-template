@@ -121,9 +121,11 @@ matching tag is published, so `Automatic Updates` need nothing besides the `OCIR
 [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/) for `semver` and
 `semverFilter`.
 
-For our development cluster we want Flux to automatically roll out every dev build of `hello-world` from version
+For our development cluster we want Flux to automatically roll out the dev builds of `hello-world` from version
 `3.0.0` on. Dev builds are pre-releases tagged `X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`. The `-0` suffix on the range
-makes pre-releases eligible at all, `semverFilter` then keeps only dev builds.
+makes pre-releases eligible at all, `semverFilter` then keeps only dev builds. Flux picks the highest matching tag, and
+for builds of the same version semver orders by the branch hash before the timestamp, so if several branches publish dev
+builds, put the CRC32 of the branch to follow into the filter instead of `[0-9a-f]{8}`.
 
 Let's create the `kustomization.yaml` file for the development cluster.
 

@@ -223,12 +223,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     - path: patch_cluster_config.yaml
       target:
         kind: HelmRelease
-    - patch: |-
-        - op: replace
-          path: "/metadata/namespace"
-          value: ${WC_NAME}
-      target:
-        kind: ".*"
+    namespace: org-${ORG_NAME}
     resources: []
     EOF
     ```

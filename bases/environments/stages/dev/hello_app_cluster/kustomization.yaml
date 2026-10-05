@@ -2,9 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 # (optional) here we can enforce the app versions that we want in this stage.
-# The dev stage follows the newest dev build of hello-world: `semver` with the
+# The dev stage follows the highest dev build of hello-world: `semver` with the
 # `-0` suffix makes pre-releases eligible, `semverFilter` keeps only dev builds
-# (`X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`).
+# (`X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`). Builds of the same version are
+# ordered by branch hash before timestamp, so to follow one branch put its
+# CRC32 into the filter instead of `[0-9a-f]{8}`.
 patches:
   - patch: |-
       - op: replace

@@ -73,7 +73,7 @@ configMapGenerator:
     name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
-namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
+namespace: org-${organization} # the org namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
 # (optional) here we can enforce versions of the apps that we know work well together
 patches:
   - patch: |-
@@ -123,7 +123,7 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-namespace: hello-web-team1
+namespace: org-${organization}
 resources:
   - ../../../../../../../../../bases/app_sets/hello-web-app
 ```
@@ -131,6 +131,7 @@ resources:
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set
 Template. The `${cluster_name}-hello-world-user-values` ConfigMap is the optional user layer the app's `HelmRelease`
 already lists in `spec.valuesFrom`, so creating it is enough: no patch is needed, and we don't have to override the
-whole config, but only YAML keys we need to change. One more important fact is that we're setting a custom Namespace
-for the whole deployment of an app. If you want to learn more about how config overrides work, please consult our
-[docs about creating apps](add_appcr.md), as in general App Set is just a bundle of them.
+whole config, but only YAML keys we need to change. The namespace has to stay the organization namespace, as the
+`HelmRelease` finds its kubeconfig Secret, cluster values and `OCIRepository` there; the namespace the app is
+installed into on the workload cluster is its `spec.targetNamespace`. If you want to learn more about how config
+overrides work, please consult our [docs about creating apps](add_appcr.md), as in general App Set is just a bundle of them.

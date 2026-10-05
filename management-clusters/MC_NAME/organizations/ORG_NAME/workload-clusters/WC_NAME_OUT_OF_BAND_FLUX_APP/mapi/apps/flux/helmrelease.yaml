@@ -37,3 +37,7 @@ spec:
     - kind: ConfigMap
       name: ${cluster_name}-flux-app-user-values
       valuesKey: values
+    - kind: Secret
+      name: ${cluster_name}-flux-app-user-secrets
+      optional: true
+      valuesKey: values

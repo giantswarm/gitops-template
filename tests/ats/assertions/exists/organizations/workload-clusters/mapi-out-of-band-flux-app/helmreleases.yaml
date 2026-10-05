@@ -181,3 +181,7 @@ spec:
     - kind: ConfigMap
       name: mapi-out-of-band-flux-app-flux-app-user-values
       valuesKey: values
+    - kind: Secret
+      name: mapi-out-of-band-flux-app-flux-app-user-secrets
+      optional: true
+      valuesKey: values
