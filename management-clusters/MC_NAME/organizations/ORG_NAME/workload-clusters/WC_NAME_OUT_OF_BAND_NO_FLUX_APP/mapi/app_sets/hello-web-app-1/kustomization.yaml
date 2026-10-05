@@ -11,7 +11,5 @@ generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 namespace: org-${organization}
-patchesStrategicMerge:
-  - patch_app_config.yaml
 resources:
   - ../../../../../../../../../bases/app_sets/hello-web-app

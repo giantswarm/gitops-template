@@ -19,7 +19,16 @@ from conftest import GitOpsTestConfig
 
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
 
+
+class OCIRepositoryCR(NamespacedFluxCR):
+    version = "source.toolkit.fluxcd.io/v1"
+    endpoint = "ocirepositories"
+    kind = "OCIRepository"
+
+
 FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
+# OCIRepositories pull charts from a remote registry, give them more time
+OCI_REPOSITORIES_READY_TIMEOUT_SEC = 180
 FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC = 15
 ASSERTIONS_DIR = "assertions"
 EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
@@ -31,6 +40,7 @@ def check_flux_objects_successful(
     kube_cluster: Cluster,
     obj_type: Type[TFNS],
     ignored_objects: Union[list[str], None] = None,
+    timeout_sec: int = FLUX_OBJECTS_READY_TIMEOUT_SEC,
 ) -> None:
     namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
     for ns in namespaces:
@@ -41,11 +51,21 @@ def check_flux_objects_successful(
             continue
         if not ignored_objects:
             ignored_objects = []
-        obj_names = [o.name for o in objects if f"{ns}/{o.name}" not in ignored_objects]
+        # HelmReleases that deploy to a workload cluster through its kubeconfig can't get ready here,
+        #  as the test has no workload clusters. Their existence is still checked by the assertions,
+        #  and their charts by the OCIRepository check.
+        obj_names = [
+            o.name
+            for o in objects
+            if f"{ns}/{o.name}" not in ignored_objects
+            and not (
+                obj_type is HelmReleaseCR and o.obj.get("spec", {}).get("kubeConfig")
+            )
+        ]
         if not obj_names:
             continue
         logger.debug(
-            f"Waiting max {FLUX_OBJECTS_READY_TIMEOUT_SEC} s for the following {obj_type.__name__} objects "
+            f"Waiting max {timeout_sec} s for the following {obj_type.__name__} objects "
             f"to be ready in '{ns.name}' namespace: '{obj_names}'."
         )
         wait_for_objects_condition(
@@ -54,7 +74,7 @@ def check_flux_objects_successful(
             obj_names,
             ns.name,
             flux_cr_ready,
-            FLUX_OBJECTS_READY_TIMEOUT_SEC,
+            timeout_sec,
             missing_ok=False,
         )
 
@@ -83,6 +103,23 @@ def check_helm_release_successful(
 
 
 def test_helm_release_successful(check_helm_release_successful: None) -> None:
+    # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
+    pass
+
+
+@pytest.fixture(scope="module")
+def check_oci_repositories_successful(
+    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
+) -> None:
+    check_flux_objects_successful(
+        kube_cluster,
+        OCIRepositoryCR,
+        gitops_test_config.ignored_objects,
+        OCI_REPOSITORIES_READY_TIMEOUT_SEC,
+    )
+
+
+def test_oci_repositories_successful(check_oci_repositories_successful: None) -> None:
     # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
     pass
 

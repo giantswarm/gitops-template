@@ -1,0 +1,66 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-gateway-api-crds
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "1.9.1"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-crds
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-envoy-gateway
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "1.10.3"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-gateway-api-config
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "1.11.3"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-dev-1
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-dev-1-hello-world
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    semver: '>=3.0.0-0'
+    semverFilter: -r[0-9a-f]{8}t[0-9]{14}h[0-9a-f]{7}
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

@@ -34,6 +34,81 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Envoy Gateway replaces ingress-nginx as the example edge. The new
+  `bases/apps/envoy-gateway` App Template installs `gateway-api-crds`,
+  `envoy-gateway` and `gateway-api-config` into the workload cluster as three
+  chained `HelmRelease`s, each with its chart from an `OCIRepository`. It is the
+  first HelmRelease-based App Template here. The resources follow the shape
+  [giantswarm/appcr-to-helmrelease-converter](https://github.com/giantswarm/appcr-to-helmrelease-converter)
+  emits for a migrated App CR, so converted and new apps look alike:
+  - the chart version pinned in `spec.ref.tag`
+  - values layered through `valuesFrom` like an App CR's: the cluster values
+    ConfigMap, the template defaults, then optional `-user-values` (ConfigMap)
+    and `-user-secrets` (SOPS-encrypted Secret)
+  - upgrades retry 10 times and roll back on failure, 10m timeout; installs
+    retry until they succeed, as the cluster chart's default apps do, since
+    envoy-gateway and gateway-api-config need CRDs a new cluster only gets with
+    its default apps
+  - `giantswarm.io/cluster` labels
+
+  `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`
+  Gateway as `hello.<cluster base domain>`, instead of an Ingress. The
+  `hello_app_cluster` template adds the `hello` subdomain to the Gateway's DNS
+  record and certificate. The hostname is built from the
+  cluster values, which the hello-world `HelmRelease` lists first in
+  `valuesFrom`. The kind test now checks that
+  OCIRepositories are ready. It skips HelmReleases that deploy to a workload
+  cluster, since the test has none. Part of
+  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
+
+  **Prerequisites on the workload cluster:** the Giant Swarm default apps
+  (cert-manager, external-dns, Kyverno, Cilium, the monitoring CRDs), plus:
+  - Gateway API support enabled in cert-manager
+  - on AWS, aws-load-balancer-controller
+
+  **Migrating a fork:**
+  - The per-cluster Kustomizations use `prune: false`, so the existing
+    ingress-nginx App CRs stay after the update. Delete them by hand once traffic
+    runs through the Gateway.
+  - Remove any `gateway-api-bundle` app installed on the cluster first. It
+    installs the same charts under other release names.
+- Every other workload app in the template is now a `HelmRelease` with its
+  chart from an `OCIRepository` as well, in the same shape as the envoy-gateway
+  App Template: `hello-world` (App Template, app set and the out-of-band
+  examples), `cert-manager-app` and `flux-app`. Only the cluster App CRs
+  (`cluster-aws`, from `bases/clusters/capa/template`) still use App Platform.
+  Converted from [#153](https://github.com/giantswarm/gitops-template/pull/153).
+  - Installs of `cert-manager-app` and `flux-app` retry 10 times, as the
+    converter emits for a migrated App CR. `hello-world` retries until it
+    succeeds like envoy-gateway, as its HTTPRoute needs the Gateway API CRDs
+    the envoy-gateway App Template installs.
+  - Values come in the same four `valuesFrom` layers everywhere, the cluster
+    values first. App Platform used to add those to an App CR, a `HelmRelease`
+    has to list them; `hello-world`'s hostname is built from `baseDomain`.
+    Because the user layers are optional, overlays only create the
+    `-user-values` ConfigMap; the `patch_app_config.yaml` files that restated
+    `valuesFrom` are gone (`kustomize` replaces the list, it cannot append).
+  - Release names drop the `<cluster>-` prefix (`hello-world`, `cert-manager`,
+    `flux`), as chart-operator named the releases of the App CRs and as
+    giantswarm/appcr-to-helmrelease-converter emits them, so a migrated release
+    is adopted instead of installed a second time.
+  - Kustomize patches that pinned a version through `/spec/version` on an `App`
+    now target `spec.ref` on the `OCIRepository`.
+  - App CRs could reference a ConfigMap or Secret in another namespace;
+    `spec.valuesFrom` cannot. Two example references that pointed at namespaces
+    with nothing in them (`org-multi-project`, `hello-world-app`) now resolve
+    against the namespace the `HelmRelease` lives in, which is where the
+    ConfigMaps were generated all along.
+
+  **Migrating a fork:** delete the old App CRs by hand once their
+  `HelmRelease` is ready, `prune: false` keeps them otherwise. While both
+  exist, app-operator and helm-controller manage the same release.
+- Automatic updates use a `semver` range on the `OCIRepository` instead of
+  Flux image automation: dev follows dev builds from `3.0.0` on, staging stable
+  releases below `4.0.0`, the out-of-band `hello-world-app-auto` everything from
+  `3.0.0-0`. The `$imagepolicy` setters they replace never fired: the markers
+  held `${...}` variables, which Flux only substitutes in the cluster, and the
+  stage markers sat outside the `ImageUpdateAutomation` update path.
 - CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
   caller to the new reusable
   `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour
@@ -70,6 +145,32 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- The per-stage `hello_world_app_user_config.yaml` files and the
+  `${cluster_name}-hello-world-user-config` ConfigMap the three
+  `bases/environments/stages/*/hello_app_cluster/kustomization.yaml` files
+  generated from them, plus their `tests/ats` assertions and the parts of
+  `docs/add_wc_environments.md` that presented them as the per-stage override
+  mechanism for the `hello-web-app` app set. Nothing ever read that ConfigMap:
+  the app resolves its values from `${cluster_name}-hello-world-values`, so the
+  overrides (`replicaCount: 6` in prod, node pool settings in dev and staging)
+  were silently discarded. Two of the three also held cluster chart values
+  (`global.nodePools`) rather than app values, so they could not have been wired
+  to the app as they stood. Per-app values for the set come from
+  `bases/cluster_templates/hello_app_cluster/app_sets/hello-web-app/override_config_hello_world.yaml`,
+  which is wired up and documented.
+- Every `giantswarm-catalog-oci` `Catalog` CR: the two under the out-of-band
+  workload clusters' `mapi/automatic-updates/` and the two under
+  `bases/environments/stages/{dev,staging}/hello_app_cluster/automatic_updates/`,
+  together with their `tests/ats` assertions. An `OCIRepository` addresses the
+  registry directly, so the first pair had nothing left referencing it; the stage
+  pair was never referenced by anything in the first place, since the apps in
+  those stages resolve from the `giantswarm` catalog. The repository now declares
+  no `Catalog` CRs at all.
+- The `ImageRepository`, `ImagePolicy` and `ImageUpdateAutomation` objects of
+  the dev and staging stages and of the out-of-band `hello-world-app-auto`
+  example, with the `automatic_updates/` and `automatic-updates/` directories
+  and their `tests/ats` assertions. A `semver` range on the `OCIRepository`
+  replaces them, see Changed.
 - The `simple-db-app` demo app (`bases/apps/simple-db`, its `App`,
   `ImageRepository` and `ImagePolicy` entries in the environment stages, its
   app-set config and its `tests/ats` assertions). The source repository is gone

@@ -1,14 +1,10 @@
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/managed-by: flux
   name: ignored
 spec:
   kubeConfig:
-    context:
-      name: ${cluster_name}-admin@${cluster_name}
-    inCluster: false
-    secret:
+    secretRef:
       name: ${cluster_name}-kubeconfig
-      namespace: org-${organization}

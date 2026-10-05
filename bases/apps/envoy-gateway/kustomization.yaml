@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+    - values=default_config_gateway_api_crds.yaml
+    name: ${cluster_name}-gateway-api-crds-values
+  - files:
+    - values=default_config_envoy_gateway.yaml
+    name: ${cluster_name}-envoy-gateway-values
+  - files:
+    - values=default_config_gateway_api_config.yaml
+    name: ${cluster_name}-gateway-api-config-values
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+resources:
+  - ocirepositories.yaml
+  - helmreleases.yaml
