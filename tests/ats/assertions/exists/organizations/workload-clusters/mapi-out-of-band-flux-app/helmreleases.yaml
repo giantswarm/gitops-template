@@ -160,7 +160,7 @@ spec:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: -1
+      retries: 10
   interval: 5m
   kubeConfig:
     secretRef:

@@ -15,8 +15,7 @@ spec:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      # retry until it succeeds, as the cluster chart does for its default apps
-      retries: -1
+      retries: 10
   interval: 5m
   releaseName: cert-manager
   storageNamespace: org-${organization}

@@ -15,7 +15,8 @@ spec:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      # retry until it succeeds, as the cluster chart does for its default apps
+      # retry until it succeeds, as the cluster chart does for its default apps:
+      # the HTTPRoute needs the Gateway API CRDs installed by envoy-gateway
       retries: -1
   interval: 5m
   kubeConfig:
