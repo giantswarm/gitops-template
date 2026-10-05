@@ -1,15 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 commonLabels:
+  giantswarm.io/cluster: ${cluster_name}
   giantswarm.io/managed-by: flux
 kind: Kustomization
 resources:
-  - flux/appcr.yaml
   - flux/configmap.yaml
-  - hello-world/appcr.yaml
-  - hello-world-automatic-updates/appcr.yaml
-  - hello-world-automatic-updates/imagepolicy.yaml
-  - hello-world-automatic-updates/imagerepository.yaml
-  - ingress-nginx-from-template/
-  - ingress-nginx/appcr.yaml
-  - ingress-nginx/configmap.yaml
+  - flux/helmrelease.yaml
+  - flux/ocirepository.yaml
+  - hello-world/helmrelease.yaml
+  - hello-world/ocirepository.yaml
+  - hello-world-automatic-updates/helmrelease.yaml
+  - hello-world-automatic-updates/ocirepository.yaml
+  - envoy-gateway-from-template/

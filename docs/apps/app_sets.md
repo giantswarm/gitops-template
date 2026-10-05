@@ -69,35 +69,23 @@ commonLabels:
 configMapGenerator:
   - behavior: replace
     files:
-    - values=default_config_ingress_nginx.yaml
-    name: ${cluster_name}-ingress-nginx-values # has to be in sync with the name used by included app
-  - behavior: replace
-    files:
     - values=default_config_hello_world.yaml
     name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization
-namespace: hello-web # (optional) enforce the same namespace for all the apps in the set
-# (optional) here we can enforce versions for both apps that we know work well together
+namespace: org-${organization} # the org namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
+# (optional) here we can enforce versions of the apps that we know work well together
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: 3.2.2
+        path: /spec/ref/tag
+        value: "3.2.2"
     target:
-      kind: App
-      name: hello-world
-  - patch: |-
-      - op: replace
-        path: /spec/version
-        value: 4.3.5
-    target:
-      kind: App
-      name: ingress-nginx
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
 # block end
 resources:
   - ../../apps/hello-world
-  - ../../apps/ingress-nginx
 ```
 
 Please note the following in the example above:
@@ -107,9 +95,10 @@ Please note the following in the example above:
 - One of the key benefits of App Sets is to be able to provide a specific set of app versions, that is known to make
   the apps work well together. Over here, we do that as a set of in-line patches, so it is immediately visible
   in the `kustomization.yaml` file which versions are used.
-- When using `App` CRs, we have two configuration slots available: `config` and `userConfig`. Since we always want
-  to leave `userConfig` at the end users disposal, we're left with overriding the whole ConfigMap coming from the
-  base application as the only option.
+- Each `HelmRelease` reads its values in layers: the cluster values, the app's `-values` ConfigMap, then the
+  optional `-user-values` ConfigMap and `-user-secrets` Secret. Since we always want to leave the user layers at the
+  end users disposal, we're left with overriding the whole `-values` ConfigMap coming from the base application as
+  the only option.
 - It is recommended to re-use App Templates to create App Set Templates. That's exactly what we do here: apps defined
   in the `resources:` block are App Templates, that, if needed, can be also used standalone.
 - The example above doesn't cover handling Secrets - we do that for brevity. Secrets can be created the same way as in
@@ -134,15 +123,15 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-namespace: hello-web-team1
-patchesStrategicMerge:
-  - config_patch.yaml
+namespace: org-${organization}
 resources:
   - ../../../../../../../../../bases/app_sets/hello-web-app
 ```
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set
-Template. Since here we're using the `userConfig` property, we don't have to override the whole config, but only YAML
-keys we need to change. One more important fact is that we're setting a custom Namespace for the whole deployment of an
-app. If you want to learn more about how config overrides work, please consult our
-[docs about creating apps](add_appcr.md), as in general App Set is just a bundle of them.
+Template. The `${cluster_name}-hello-world-user-values` ConfigMap is the optional user layer the app's `HelmRelease`
+already lists in `spec.valuesFrom`, so creating it is enough: no patch is needed, and we don't have to override the
+whole config, but only YAML keys we need to change. The namespace has to stay the organization namespace, as the
+`HelmRelease` finds its kubeconfig Secret, cluster values and `OCIRepository` there; the namespace the app is
+installed into on the workload cluster is its `spec.targetNamespace`. If you want to learn more about how config
+overrides work, please consult our [docs about creating apps](add_appcr.md), as in general App Set is just a bundle of them.

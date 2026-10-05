@@ -1,0 +1,42 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-flux
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-flux
+    namespace: org-${organization}
+  install:
+    # the target namespace does not exist in a new workload cluster
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: flux
+  storageNamespace: flux-app
+  targetNamespace: flux-app
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-flux-app-user-values
+      valuesKey: values
+    - kind: Secret
+      name: ${cluster_name}-flux-app-user-secrets
+      optional: true
+      valuesKey: values

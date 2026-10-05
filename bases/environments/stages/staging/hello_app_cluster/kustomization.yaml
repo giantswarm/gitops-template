@@ -1,26 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: create
-    files:
-      - values=hello_world_app_user_config.yaml
-    name: ${cluster_name}-hello-world-user-config
-    namespace: org-${organization}
-generatorOptions:
-  disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce the app versions that we want in this stage
+# (optional) here we can enforce the app versions that we want in this stage.
+# The staging stage follows the newest stable hello-world release below the
+# next major. A range without a pre-release comparator never matches a
+# pre-release tag.
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: '3.2.2' # {"$imagepolicy": "org-${organization}:${cluster_name}-hello-app"}
+        path: /spec/ref
+        value:
+          semver: '>=3.0.0 <4.0.0'
     target:
-      kind: App
+      kind: OCIRepository
       name: \${cluster_name}-hello-world
 # block end
 resources:
-  - automatic_updates/
-  - imagepolicies.yaml
-  - imagerepositories.yaml
   - ../../../../cluster_templates/hello_app_cluster

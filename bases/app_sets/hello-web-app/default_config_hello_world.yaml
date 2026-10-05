@@ -1,8 +1,11 @@
 replicaCount: 2
 ingress:
-  className: nginx # has to be in sync with the ingress class served by the cluster's ingress controller
-  hosts:
-    - host: hello.example.com
-      paths:
-        - path: /
-          pathType: Prefix
+  enabled: false
+route:
+  enabled: true
+  kind: HTTPRoute
+  parentRefs: # has to be in sync with the Gateway served by the cluster's Envoy Gateway
+    - name: giantswarm-default
+      namespace: envoy-gateway-system
+  hostnames: # under the cluster's base domain and in the Gateway's `listeners.https.subdomains`
+    - "hello.{{ .Values.baseDomain }}"

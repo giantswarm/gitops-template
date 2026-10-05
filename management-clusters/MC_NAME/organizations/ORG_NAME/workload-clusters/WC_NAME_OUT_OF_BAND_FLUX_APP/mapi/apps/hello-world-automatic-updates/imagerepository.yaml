@@ -1,8 +1,0 @@
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImageRepository
-metadata:
-  name: ${cluster_name}-hello-world
-  namespace: org-${organization}
-spec:
-  image: gsoci.azurecr.io/charts/giantswarm/hello-world
-  interval: 30m0s
