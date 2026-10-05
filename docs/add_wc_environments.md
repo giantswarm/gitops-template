@@ -109,179 +109,41 @@ Change our working directory to the `hello_app_cluster` development cluster envi
 cd bases/environments/stages/dev/hello_app_cluster
 ```
 
+The [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
+[hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters. Values for the
+apps in that set come from the set itself, through [override_config_hello_world.yaml](
+/bases/cluster_templates/hello_app_cluster/app_sets/hello-web-app/override_config_hello_world.yaml) in the cluster
+template; what a stage adds on top is the chart version to run.
+
+The version of an app lives on its `OCIRepository`, and it can be either a fixed `spec.ref.tag` or a `spec.ref.semver`
+range. With a range, Flux deploys the highest chart tag that satisfies it and upgrades the app as soon as a newer
+matching tag is published, so `Automatic Updates` need nothing besides the `OCIRepository` itself. See the
+[OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/) for `semver` and
+`semverFilter`.
+
+For our development cluster we want Flux to automatically roll out every dev build of `hello-world` from version
+`3.0.0` on. Dev builds are pre-releases tagged `X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`. The `-0` suffix on the range
+makes pre-releases eligible at all, `semverFilter` then keeps only dev builds.
+
 Let's create the `kustomization.yaml` file for the development cluster.
 
 ```sh
 cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: create
-    files:
-      - values=hello_world_app_user_config.yaml
-    name: \${cluster_name}-hello-world-user-config
-generatorOptions:
-  disableNameSuffixHash: true
 kind: Kustomization
-resources:
-  - automatic_updates/
-  - imagepolicies.yaml
-  - imagerepositories.yaml
-  - ../../../../cluster_templates/hello_app_cluster
-EOF
-```
-
-In [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
-[hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters.
-We can  provide overrides to the settings via the [hello_world_app_user_config.yaml](
-/bases/environments/stages/dev/hello_app_cluster/hello_world_app_user_config.yaml) file, for example
-giving the cluster a smaller node pool.
-
-```sh
-cat <<EOF > hello_world_app_user_config.yaml
-global:
-  nodePools:
-    xxxxx:
-      instanceType: m6a.2xlarge
-      maxSize: 5
-      minSize: 1
-EOF
-```
-
-It also makes sense to configure `Automatic Updates` for our development cluster. We store these configurations under
-the [/bases/environments/stages/dev/hello_app_cluster/automatic_updates](
-/bases/environments/stages/dev/hello_app_cluster/automatic_updates) folder. You can read more about how
-`Automatic Updates` work [here](/docs/apps/automatic_updates_appcr.md)
-
-```sh
-mkdir automatic_updates
-
-# Let's create the Kustomization for automatic updates
-cat <<EOF > automatic_updates/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-commonLabels:
-  giantswarm.io/managed-by: flux
-kind: Kustomization
-resources:
-- catalog.yaml
-- imageupdate.yaml
-EOF
-
-# Let's create the catalog
-cat <<EOF > automatic_updates/catalog.yaml
-apiVersion: application.giantswarm.io/v1alpha1
-kind: Catalog
-metadata:
-  labels:
-    application.giantswarm.io/catalog-visibility: internal
-  name: giantswarm-catalog-oci
-  namespace: org-${ORG_NAME}
-spec:
-  description: giantswarm-catalog-oci
-  logoURL: "https://avatars.githubusercontent.com/u/7556340?s=60&v=4"
-  storage:
-    URL: oci://gsoci.azurecr.io/charts/giantswarm/
-    type: helm
-  title: giantswarm-catalog-oci
-EOF
-
-# Let' create the image update automation for Flux
-cat <<EOF > automatic_updates/imageupdate.yaml
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImageUpdateAutomation
-metadata:
-  name: \${cluster_name}-image-updates
-  namespace: org-\${organization}
-spec:
-  git:
-    checkout:
-      ref:
-        branch: main
-    commit:
-      author:
-        email: fluxcdbot@users.noreply.github.com
-        name: fluxcdbot
-      messageTemplate: |
-        automated app upgrades:
-        {{ range $image, $_ := .Updated.Images -}}
-        - {{ $image.Repository }} to {{ $image.Identifier }}
-        {{ end -}}
-    push:
-      branch: main
-  interval: 1m0s
-  sourceRef:
-    kind: GitRepository
-    name: ${GIT_REPOSITORY_NAME}
-  update:
-    path: ./management-clusters/MC_NAME
-    strategy: Setters
-EOF
-```
-
-Now that we have automation set up around `Automatic Updates` we can set up our rules for the development cluster
-on how it should update `Apps`. We need 2 things to achieve that, and we recommend setting up one multi-document YAML
-files to store all these in a single place.
-
-The [ImageRepository](https://fluxcd.io/docs/components/image/imagerepositories/) definitions to tell Flux
-where to look for updates stored in: [imagerepositories.yaml](
-/bases/environments/stages/dev/hello_app_cluster/imagerepositories.yaml).
-
-Let's tell Flux to look for available images for the `hello-world` app
-in the `gsoci.azurecr.io/charts/giantswarm` registry every 10 minutes.
-
-```sh
-cat <<EOF > imagerepositories.yaml
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImageRepository
-metadata:
-  name: \${cluster_name}-hello-app
-  namespace: org-\${organization}
-spec:
-  image: gsoci.azurecr.io/charts/giantswarm/hello-world
-  interval: 10m0s
-EOF
-```
-
-The second half are the [ImagePolicy](https://fluxcd.io/docs/components/image/imagepolicies/) definitions to tell Flux
-which versions it should automatically apply stored in: [imagepolicies.yaml](
-/bases/environments/stages/dev/hello_app_cluster/imagepolicies.yaml).
-
-Let's have Flux automatically roll out all `-dev` releases that are of at least version `3.0.0` or above.
-Note the `-0` suffix on the range: without it a semver range excludes pre-releases, and every `-dev` tag is one.
-
-```sh
-cat <<EOF > imagepolicies.yaml
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImagePolicy
-metadata:
-  name: \${cluster_name}-hello-app
-  namespace: org-\${organization}
-spec:
-  filterTags:
-    pattern: '.*-dev.*'
-  imageRepositoryRef:
-    name: \${cluster_name}-hello-app
-  policy:
-    semver:
-      range: '>=3.0.0-0'
-EOF
-```
-
-We can also use `Kustomization` patches to set exact versions to use in the cluster's `kustomization.yaml` file.
-
-```sh
-cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: '3.2.2'
+        path: /spec/ref
+        value:
+          semver: '>=3.0.0-0'
+          semverFilter: '-r[0-9a-f]{8}t[0-9]{14}h[0-9a-f]{7}'
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}-hello-world
+resources:
+  - ../../../../cluster_templates/hello_app_cluster
 EOF
 ```
 
@@ -295,51 +157,34 @@ Let's change our working directory to the staging cluster.
 cd ../../staging/hello_app_cluster
 ```
 
-We will use the same environment variables and `kustomization.yaml` for this cluster template as we did for the
-development cluster.
+We will use the same environment variables for this cluster template as we did for the development cluster.
 
 It is similar to the development cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 - it has automatic updates set up
 
-It also provides overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
-[hello_world_app_user_config.yaml](
-/bases/environments/stages/staging/hello_app_cluster/hello_world_app_user_config.yaml).
-We want this environment to be closer to production, so let's say we give its node pool a dedicated security group.
+We want the versions automatically rolled out here to be more stable, so we tell Flux to automatically install all
+stable versions that are at least version `3.0.0`, but we do not want to automatically introduce possibly breaking
+changes in a major version bump, so let's stay below `4.0.0`. A range without a pre-release comparator never matches a
+pre-release tag, so no filter is needed.
 
 ```sh
-cat <<EOF > hello_world_app_user_config.yaml
-global:
-  nodePools:
-    xxxxx:
-      additionalSecurityGroups:
-        - id: "sg-2xxxxxxxxxxxxxx3f"
-EOF
-```
-
-Setting up the `automatic_updates` folder and the `imagerepositories.yaml` files requires exactly the same steps
-as we did above for the development cluster.
-
-We also want the images automatically rolled out here to be more stable, so we have a slightly different
-[imagepolicies.yaml](/bases/environments/stages/staging/hello_app_cluster/imagepolicies.yaml) here where
-we tell Flux to automatically install all stable versions that are at least version `3.0.0` but we do not want
-to automatically introduce possibly breaking changes in major version bump, so let's stay below `4.0.0`.
-
-```sh
-cat <<EOF > imagepolicies.yaml
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImagePolicy
-metadata:
-  name: \${cluster_name}-hello-app
-  namespace: org-\${organization}
-spec:
-  imageRepositoryRef:
-    name: \${cluster_name}-hello-app
-  policy:
-    semver:
-      range: '>=3.0.0 <4.0.0'
+cat <<EOF > kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/ref
+        value:
+          semver: '>=3.0.0 <4.0.0'
+    target:
+      kind: OCIRepository
+      name: \\\${cluster_name}-hello-world
+resources:
+  - ../../../../cluster_templates/hello_app_cluster
 EOF
 ```
 
@@ -364,10 +209,6 @@ cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 configMapGenerator:
-  - behavior: create
-    files:
-      - values=hello_world_app_user_config.yaml
-    name: \${cluster_name}-hello-world-user-config
   - behavior: replace
     files:
       - values=cluster_user_config.yaml
@@ -398,31 +239,21 @@ values: |
 EOF
 ```
 
-Then we provide some overrides to the [hello-web-app app set](/bases/app_sets/hello-web-app) via
-[hello_world_app_user_config.yaml](
-/bases/environments/stages/prod/hello_app_cluster/hello_world_app_user_config.yaml).
-
-```yaml
-cat <<EOF > hello_world_app_user_config.yaml
-replicaCount: 6
-EOF
-```
-
 Notice however that we decided not to set up `Automatic Updates` for this cluster.
 
 Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
-in out App CRs.
+in our `OCIRepository` resources.
 
 ```sh
 cat <<EOF >> kustomization.yaml
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: 3.2.2
+        path: /spec/ref/tag
+        value: "3.2.2"
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}-hello-world
 EOF
 ```

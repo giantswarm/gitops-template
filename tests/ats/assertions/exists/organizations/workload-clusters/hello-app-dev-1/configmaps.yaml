@@ -57,20 +57,6 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    global:
-      nodePools:
-        xxxxx:
-          instanceType: m6a.2xlarge
-          maxSize: 5
-          minSize: 1
-kind: ConfigMap
-metadata:
-  name: hello-app-dev-1-hello-world-user-config
-  namespace: org-org-name
----
-apiVersion: v1
-data:
-  values: |
     replicaCount: 3
     ingress:
       enabled: false

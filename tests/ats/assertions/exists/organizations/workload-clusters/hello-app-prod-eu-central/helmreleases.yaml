@@ -144,3 +144,52 @@ spec:
       name: hello-app-prod-eu-central-gateway-api-config-user-secrets
       optional: true
       valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-eu-central
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-eu-central-hello-world
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-prod-eu-central-hello-world
+    namespace: org-org-name
+  install:
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: hello-app-prod-eu-central-kubeconfig
+  releaseName: hello-world
+  storageNamespace: org-org-name
+  targetNamespace: org-org-name
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-prod-eu-central-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-eu-central-hello-world-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-eu-central-hello-world-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-prod-eu-central-hello-world-user-secrets
+      optional: true
+      valuesKey: values

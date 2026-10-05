@@ -1,0 +1,44 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-hello-world-app-auto
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-hello-world-app-auto
+    namespace: org-${organization}
+  install:
+    # the target namespace does not exist in a new workload cluster
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      # retry until it succeeds, as the cluster chart does for its default apps
+      retries: -1
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: hello-world-app-auto
+  storageNamespace: hello-world-auto
+  targetNamespace: hello-world-auto
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-hello-world-app-auto-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: ${cluster_name}-hello-world-app-auto-user-secrets
+      optional: true
+      valuesKey: values

@@ -8,6 +8,7 @@ namespace: org-${organization}
 patches:
   - path: patch_cluster_config.yaml
     target:
-      kind: App
+      kind: HelmRelease
 resources:
-  - cert-manager/appcr.yaml
+  - cert-manager/helmrelease.yaml
+  - cert-manager/ocirepository.yaml

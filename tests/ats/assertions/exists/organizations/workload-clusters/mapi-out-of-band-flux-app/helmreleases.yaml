@@ -3,162 +3,17 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-dev-1
+    giantswarm.io/cluster: mapi-out-of-band-flux-app
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-gateway-api-crds
-  namespace: org-org-name
-spec:
-  chartRef:
-    kind: OCIRepository
-    name: hello-app-dev-1-gateway-api-crds
-    namespace: org-org-name
-  install:
-    remediation:
-      remediateLastFailure: false
-      retries: -1
-  kubeConfig:
-    secretRef:
-      name: hello-app-dev-1-kubeconfig
-  releaseName: gateway-api-crds
-  storageNamespace: kube-system
-  targetNamespace: kube-system
-  timeout: 10m
-  upgrade:
-    remediation:
-      remediateLastFailure: true
-      retries: 10
-      strategy: rollback
-  valuesFrom:
-    - kind: ConfigMap
-      name: hello-app-dev-1-cluster-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-gateway-api-crds-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-gateway-api-crds-user-values
-      optional: true
-      valuesKey: values
-    - kind: Secret
-      name: hello-app-dev-1-gateway-api-crds-user-secrets
-      optional: true
-      valuesKey: values
----
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  labels:
-    giantswarm.io/cluster: hello-app-dev-1
-    giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-envoy-gateway
-  namespace: org-org-name
-spec:
-  chartRef:
-    kind: OCIRepository
-    name: hello-app-dev-1-envoy-gateway
-    namespace: org-org-name
-  dependsOn:
-    - name: hello-app-dev-1-gateway-api-crds
-  install:
-    createNamespace: true
-    remediation:
-      remediateLastFailure: false
-      retries: -1
-  kubeConfig:
-    secretRef:
-      name: hello-app-dev-1-kubeconfig
-  releaseName: envoy-gateway
-  storageNamespace: envoy-gateway-system
-  targetNamespace: envoy-gateway-system
-  timeout: 10m
-  upgrade:
-    remediation:
-      remediateLastFailure: true
-      retries: 10
-      strategy: rollback
-  valuesFrom:
-    - kind: ConfigMap
-      name: hello-app-dev-1-cluster-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-envoy-gateway-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-envoy-gateway-user-values
-      optional: true
-      valuesKey: values
-    - kind: Secret
-      name: hello-app-dev-1-envoy-gateway-user-secrets
-      optional: true
-      valuesKey: values
----
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  labels:
-    giantswarm.io/cluster: hello-app-dev-1
-    giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-gateway-api-config
-  namespace: org-org-name
-spec:
-  chartRef:
-    kind: OCIRepository
-    name: hello-app-dev-1-gateway-api-config
-    namespace: org-org-name
-  dependsOn:
-    - name: hello-app-dev-1-envoy-gateway
-  install:
-    remediation:
-      remediateLastFailure: false
-      retries: -1
-  kubeConfig:
-    secretRef:
-      name: hello-app-dev-1-kubeconfig
-  releaseName: gateway-api-config
-  storageNamespace: envoy-gateway-system
-  targetNamespace: envoy-gateway-system
-  timeout: 10m
-  upgrade:
-    remediation:
-      remediateLastFailure: true
-      retries: 10
-      strategy: rollback
-  valuesFrom:
-    - kind: ConfigMap
-      name: hello-app-dev-1-cluster-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-gateway-api-config-values
-      valuesKey: values
-    - kind: ConfigMap
-      name: hello-app-dev-1-gateway-api-config-user-values
-      optional: true
-      valuesKey: values
-    - kind: Secret
-      name: hello-app-dev-1-gateway-api-config-user-secrets
-      optional: true
-      valuesKey: values
----
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
-metadata:
-  labels:
-    giantswarm.io/cluster: hello-app-dev-1
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-hello-world
+  name: mapi-out-of-band-flux-app-hello-world
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: hello-app-dev-1-hello-world
+    name: mapi-out-of-band-flux-app-hello-world
     namespace: org-org-name
   install:
     createNamespace: true
@@ -168,7 +23,7 @@ spec:
   interval: 5m
   kubeConfig:
     secretRef:
-      name: hello-app-dev-1-kubeconfig
+      name: mapi-out-of-band-flux-app-kubeconfig
   releaseName: hello-world
   storageNamespace: org-org-name
   targetNamespace: org-org-name
@@ -180,16 +35,149 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
-      name: hello-app-dev-1-cluster-values
+      name: mapi-out-of-band-flux-app-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-dev-1-hello-world-values
+      name: mapi-out-of-band-flux-app-hello-world-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-dev-1-hello-world-user-values
+      name: mapi-out-of-band-flux-app-hello-world-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: hello-app-dev-1-hello-world-user-secrets
+      name: mapi-out-of-band-flux-app-hello-world-user-secrets
       optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: mapi-out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: mapi-out-of-band-flux-app-hello-world-standalone
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: mapi-out-of-band-flux-app-hello-world-standalone
+    namespace: org-org-name
+  install:
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: mapi-out-of-band-flux-app-kubeconfig
+  releaseName: hello-world-standalone
+  storageNamespace: hello-world
+  targetNamespace: hello-world
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-hello-world-standalone-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: mapi-out-of-band-flux-app-hello-world-standalone-user-secrets
+      optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: mapi-out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: mapi-out-of-band-flux-app-hello-world-app-auto
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: mapi-out-of-band-flux-app-hello-world-app-auto
+    namespace: org-org-name
+  install:
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: mapi-out-of-band-flux-app-kubeconfig
+  releaseName: hello-world-app-auto
+  storageNamespace: hello-world-auto
+  targetNamespace: hello-world-auto
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-hello-world-app-auto-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: mapi-out-of-band-flux-app-hello-world-app-auto-user-secrets
+      optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: mapi-out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: mapi-out-of-band-flux-app-flux
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: mapi-out-of-band-flux-app-flux
+    namespace: org-org-name
+  install:
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: -1
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: mapi-out-of-band-flux-app-kubeconfig
+  releaseName: flux
+  storageNamespace: flux-app
+  targetNamespace: flux-app
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-flux-app-user-values
       valuesKey: values

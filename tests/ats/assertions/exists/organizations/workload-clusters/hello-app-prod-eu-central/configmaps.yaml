@@ -75,15 +75,6 @@ metadata:
 apiVersion: v1
 data:
   values: |
-    replicaCount: 6
-kind: ConfigMap
-metadata:
-  name: hello-app-prod-eu-central-hello-world-user-config
-  namespace: org-org-name
----
-apiVersion: v1
-data:
-  values: |
     replicaCount: 3
     ingress:
       enabled: false

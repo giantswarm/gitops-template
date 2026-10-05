@@ -25,26 +25,3 @@ spec:
       name: hello-app-dev-1-user-config
       namespace: org-org-name
   version: ""
----
-apiVersion: application.giantswarm.io/v1alpha1
-kind: App
-metadata:
-  labels:
-    giantswarm.io/cluster: hello-app-dev-1
-    gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-dev-1-hello-world
-  namespace: org-org-name
-spec:
-  catalog: giantswarm
-  extraConfigs:
-    - kind: configMap
-      name: hello-app-dev-1-hello-world-values
-      namespace: org-org-name
-      priority: 1
-  kubeConfig:
-    inCluster: false
-  name: hello-world
-  namespace: org-org-name
-  version: '3.2.2' # {"$imagepolicy": "org-org-name:hello-app-dev-1-hello-app"}

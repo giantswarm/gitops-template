@@ -1,0 +1,59 @@
+# Same shape as the envoy-gateway App Template, see bases/apps/envoy-gateway.
+#
+# Values are merged in `valuesFrom` order, later entries win (maps are merged,
+# lists are replaced):
+#   1. ${cluster_name}-cluster-values            cluster values (baseDomain, provider, ...),
+#                                                created for every workload cluster
+#   2. ${cluster_name}-hello-world-values        this App Template's defaults
+#   3. ${cluster_name}-hello-world-user-values   (optional) overrides, like an App CR's userConfig
+#   4. ${cluster_name}-hello-world-user-secrets  (optional) the same, as an encrypted Secret
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-hello-world
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-hello-world
+    namespace: org-${organization}
+  install:
+    # the target namespace does not exist in a new workload cluster
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      # retry until it succeeds, as the cluster chart does for its default apps:
+      # the HTTPRoute needs the Gateway API CRDs installed by envoy-gateway
+      retries: -1
+  interval: 5m
+  # the workload cluster this release is installed into; drop this block to
+  # install into the cluster Flux itself runs in
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  releaseName: hello-world
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-hello-world-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-hello-world-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: ${cluster_name}-hello-world-user-secrets
+      optional: true
+      valuesKey: values
