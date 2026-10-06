@@ -113,14 +113,41 @@ repository's own CI. A repository created before the metadata file existed holds
 `kubectl gs gitops check --adopt` once to record what is already there. Note that adoption assumes the
 existing layers are current, so it cannot recover drift from before it ran.
 
-The `check` command requires a `kubectl-gs` release that ships it; older versions have no
-`gitops check` subcommand. Run `kubectl gs gitops check --help` to confirm yours does, and
-`kubectl gs selfupdate` if it does not.
+To bring a repository that is behind up to date, run `kubectl gs gitops upgrade`. It rewrites each
+layer recorded with an older structure version, one version at a time, and records the new version in
+the metadata file. It changes the files in place rather than regenerating them, so changes made to them
+by hand are kept wherever the structure change allows it. It has no rollback of its own: a failed upgrade
+is undone with git, so the command refuses to run migrations on a repository with uncommitted changes, or
+on one git does not track, such as a directory another repository ignores, unless it is given `--force`.
+Files git ignores, such as decrypted secrets, are not covered by that undo, which is why migrations never
+change, move or delete them. Run it with `--dry-run` first to see which files it would change, and review the result with
+`git diff` before committing it.
 
-When bumping the version, record what changed under the corresponding entry in this repository's
-[CHANGELOG](../CHANGELOG.md), and bump `StructureVersion` in
-[kubectl-gs](https://github.com/giantswarm/kubectl-gs/blob/main/internal/gitops/metadata/types.go) to match.
-The two are kept in lockstep by hand; nothing enforces it.
+Layers recorded without a structure version cannot be upgraded, as there is no telling which migrations
+they need. If you know the version they were generated with, set their `structureVersion` by hand, the one
+case that calls for editing the metadata file. Otherwise remove their entries and run
+`kubectl gs gitops check --adopt` to record them as current.
+
+Migrations work on the layers `kubectl gs gitops` records. A structure change that would also need files
+outside every layer changed, such as those `gitops init` creates at the repository root, or that moves a
+layer to a new path, needs `kubectl gs gitops upgrade` extended first.
+
+The `check` and `upgrade` commands require a `kubectl-gs` release that ships them; older versions have
+no such `gitops` subcommands, and the first release with `check` has no `upgrade` yet. Run
+`kubectl gs gitops upgrade --help` to confirm yours has both, and `kubectl gs selfupdate` if it does not.
+
+When bumping the version:
+
+1. record what changed under the corresponding entry in this repository's [CHANGELOG](../CHANGELOG.md),
+2. bump `StructureVersion` in
+   [kubectl-gs](https://github.com/giantswarm/kubectl-gs/blob/main/internal/gitops/metadata/types.go) to
+   match,
+3. add the migration from the previous version to the new one to
+   [the kubectl-gs migration registry](https://github.com/giantswarm/kubectl-gs/blob/main/internal/gitops/migration/registry.go),
+   so that `kubectl gs gitops upgrade` can bring existing repositories along. A kubectl-gs test fails
+   when a version has no migration.
+
+This repository and kubectl-gs are kept in lockstep by hand; nothing enforces steps 1 and 2 together.
 
 ## Security Architecture
 
