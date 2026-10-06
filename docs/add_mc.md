@@ -32,7 +32,8 @@ export MC_NAME=YOUR_CODENAME
 
 ## Flux GPG master key pair
 
-**Note**, temporarily there is no automation behind creating master keys. This however may be subject to change.
+**Note**, `kubectl gs gitops add management-cluster --gen-master-key` can generate the master key pair together with
+the directory tree, see `kubectl gs gitops add management-cluster --help`. The steps below do it by hand.
 
 A master GPG keypair is used for en- and decryption of other GPG keys kept in this repository, that are in turn used to
 en- and decrypt real user-related data.
@@ -81,7 +82,7 @@ en- and decrypt real user-related data.
 1. Create and apply Kubernetes `Secret` to the management cluster API using the private key:
 
     ```sh
-    kubectl config set-context gs-$MC_NAME
+    kubectl config use-context gs-$MC_NAME
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-master \
     --namespace=default \
@@ -98,20 +99,14 @@ en- and decrypt real user-related data.
     op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, master, Flux)" --format json -
     ```
 
-1. Delete the private key from the keychain (make sure you don't leave any unencrypted or local copies of the private
-   master key! This is *essential* for your GitOps deployment security!):
-
-    ```sh
-    gpg --delete-secret-keys "${KEY_FP}"
-    ```
-
-1. Add the automatic key selection rule to the `creation_rules` section of the [SOPS configuration file](/.sops.yaml):
+1. Add the automatic key selection rule to the end of the `creation_rules` list in the
+   [SOPS configuration file](/.sops.yaml), indented like the rules already there:
 
     ```sh
     cat <<EOF >> .sops.yaml
-    - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
-      encrypted_regex: ^(data|stringData)$
-      pgp: ${KEY_FP}
+      - encrypted_regex: ^(data|stringData)$
+        path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
+        pgp: ${KEY_FP}
     EOF
     ```
 
@@ -124,7 +119,7 @@ en- and decrypt real user-related data.
     mkdir ${MC_NAME}
     ```
 
-1. Go to the newly created directory and create 2 sub-directories there:
+1. Go to the newly created directory and create 3 sub-directories there:
 
     - `.sops.keys` - storage for all GPG public keys,
     - `organizations` - storage for MC organizations,
@@ -170,7 +165,7 @@ en- and decrypt real user-related data.
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
-    - ${MC_NAME}.master.gpgkey.enc.yaml
+    - ${MC_NAME}.gpgkey.enc.yaml
     EOF
     ```
 
@@ -184,15 +179,26 @@ en- and decrypt real user-related data.
       name: ${MC_NAME}-gitops
       namespace: default
     spec:
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-gpg-master
       serviceAccountName: automation
       prune: false
       interval: 1m
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
         kind: GitRepository
-        name: YOUR_REPO
+        name: GITOPS_REPO  # TODO: the name of the GitRepository created in the next section
       timeout: 2m
     EOF
+    ```
+
+1. Delete the private key from the keychain (make sure you don't leave any unencrypted or local copies of the private
+   master key! This is *essential* for your GitOps deployment security!):
+
+    ```sh
+    gpg --delete-secret-keys "${KEY_FP}"
     ```
 
 ## Initial cluster configuration
