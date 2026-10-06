@@ -24,6 +24,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Bumping the version here requires bumping `StructureVersion` in
   `kubectl-gs` to match; the two are kept in lockstep by hand.
   See [giantswarm/giantswarm#23540](https://github.com/giantswarm/giantswarm/issues/23540).
+- The [Structure Version](docs/repo_structure.md#structure-version) section
+  now covers `kubectl gs gitops upgrade`, which brings a repository generated
+  with an older structure version up to date, and requires every version bump
+  to ship with a migration in `kubectl-gs`.
 - Semantic YAML diff PR comments via the new `yaml-diff` workflow
   (calls `giantswarm/github-workflows/.github/workflows/yaml-diff.yaml`).
   Key reordering without value changes no longer shows up as noise in PR
