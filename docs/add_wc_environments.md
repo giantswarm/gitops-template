@@ -367,6 +367,7 @@ spec:
   path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi"
   postBuild:
     substitute:
+      cluster_description: "description"
       cluster_domain: "MY_DOMAIN"
       cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
       cluster_release: "0.8.1"
