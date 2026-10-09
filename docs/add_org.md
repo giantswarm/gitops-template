@@ -83,6 +83,12 @@ data. However, in case you wish to increase security by cryptographic splitting,
 with different keys you can follow the instructions below. It will guide you through creation and configuration of a
 new GPG key-pair dedicated for an organization.
 
+1. Go back to the root of the repository, as the commands below use paths relative to it:
+
+    ```sh
+    cd ../../../..
+    ```
+
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
     ```sh
@@ -162,10 +168,10 @@ going to use 1Password (`op` CLI tool) for that:
     (
     cat <<EOF
     data:
-      ${MC_NAME}.${ORG_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64)
+      ${MC_NAME}.${ORG_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64 | tr -d '\n')
     EOF
     ) | kubectl patch \
-    --dry-run=client \
+    --local \
     -f management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml \
     --patch-file=/dev/stdin \
     -o yaml > management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml.new
@@ -184,6 +190,22 @@ going to use 1Password (`op` CLI tool) for that:
     sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
     ```
 
+1. Add the organization's private key to a safe encrypted storage of your choice, for example 1Password:
+
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}" |
+    jq -snR '{"fields": [{"value": inputs  }]}' |
+    op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${ORG_NAME}, Flux)" --format json -
+    ```
+
+1. Delete the organization's and the master private keys from the keychain:
+
+    ```sh
+    export MASTER_KEY_FP=$(gpg --show-keys --with-colons management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc |
+    awk -F: '/^fpr/{print $10; exit}')
+    gpg --delete-secret-keys "${KEY_FP}" "${MASTER_KEY_FP}"
+    ```
+
 1. Push changes to the repository and wait for `Flux` to reconcile the secret. After that,
 `Flux` should be ready to decrypt and reconcile the organization's secrets.
 
@@ -200,11 +222,21 @@ going to use 1Password (`op` CLI tool) for that:
     cd secrets
     ```
 
-1. Place your Kubernetes Secret into this directory and encrypt it with SOPS.
-SOPS encryption rule configured earlier ensures it will get encrypted with the Organization's key:
+1. Place your Kubernetes Secret into this directory, for example:
 
     ```sh
-    sops --encrypt --in-place management-clusters/${MC_NAME}/organizations/${ORG_NAME}/secrets/secret.enc.yaml
+    kubectl create secret generic my-secret \
+    --namespace=org-${ORG_NAME} \
+    --from-literal=token=CHANGE_ME \
+    --dry-run=client \
+    -o yaml > secret.enc.yaml
+    ```
+
+1. Encrypt it with SOPS. The SOPS encryption rule configured earlier ensures it will get encrypted with the
+Organization's key:
+
+    ```sh
+    sops --encrypt --in-place secret.enc.yaml
     ```
 
 1. Push changes to the repository.

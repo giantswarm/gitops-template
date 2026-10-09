@@ -196,7 +196,7 @@ Now, let's take a look at the production cluster example.
 
 #### The production cluster
 
-Let's change our working directory to the staging cluster.
+Let's change our working directory to the production cluster.
 
 ```sh
 cd ../../prod/hello_app_cluster
@@ -233,11 +233,14 @@ that contains some extra settings for our cluster.
 
 ```sh
 cat <<EOF > cluster_user_config.yaml
-values: |
-  global:
-    nodePools:
-      xxxxx:
-        instanceType: m6i.4xlarge
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-1xxxxxxxxxxxxxx3f
+      instanceType: m6a.8xlarge
+      maxSize: 50
+      minSize: 10
 EOF
 ```
 
@@ -279,23 +282,27 @@ cd bases/environments/regions
 For the `eu-central` region.
 
 ```bash
-cat <<EOF >> eu_central/cluster_config.yaml
-controlPlane:
-  availabilityZones:
-    - eu-central-1
-    - eu-central-2
-    - eu-central-3
-nodeCIDR: "10.32.0.0/24"
+cat <<EOF > eu_central/cluster_config.yaml
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-0xxxxxxxxxxxxxx3f
+      availabilityZones:
+        - eu-central-1a
+      instanceType: m6a.2xlarge
+      maxSize: 10
+      minSize: 1
 EOF
 
-cat <<EOF >> eu_central/kustomization.yaml
+cat <<EOF > eu_central/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=cluster_config.yaml
-    name: ${cluster_name}-region-config
-    namespace: org-${organization}
+    name: \${cluster_name}-region-config
+    namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -305,22 +312,27 @@ EOF
 And for the `us-west` region.
 
 ```bash
-cat <<EOF >> us_west/cluster_config.yaml
-controlPlane:
-  availabilityZones:
-    - us-west-1
-    - us-west-2
-nodeCIDR: "10.64.0.0/24"
+cat <<EOF > us_west/cluster_config.yaml
+global:
+  nodePools:
+    xxxxx:
+      additionalSecurityGroups:
+        - id: sg-0xxxxxxxxxxxxxx3f
+      availabilityZones:
+        - eu-west-1a
+      instanceType: m6a.4xlarge
+      maxSize: 10
+      minSize: 1
 EOF
 
-cat <<EOF >> us_west/kustomization.yaml
+cat <<EOF > us_west/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
     - values=cluster_config.yaml
-    name: ${cluster_name}-region-config
-    namespace: org-${organization}
+    name: \${cluster_name}-region-config
+    namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
@@ -348,15 +360,16 @@ cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: clusters-\${cluster_name}
+  name: clusters-hello-app-dev-1
   namespace: default
 spec:
   interval: 1m
   path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi"
   postBuild:
     substitute:
+      cluster_description: "description"
       cluster_domain: "MY_DOMAIN"
-      cluster_name: "HELLO_APP_DEV_1"
+      cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
       cluster_release: "0.8.1"
       default_apps_release: "0.2.0"
       organization: "${ORG_NAME}"
@@ -366,8 +379,13 @@ spec:
     kind: GitRepository
     name: ${GIT_REPOSITORY_NAME}
   timeout: 2m
-
 EOF
+```
+
+Then add it to the `kustomization.yaml` of the `workload-clusters` directory, so Flux creates it:
+
+```sh
+yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"\"" kustomization.yaml
 ```
 
 > **Note**
@@ -403,7 +421,7 @@ And for production we will take it one step further by splitting it into multipl
 All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
 
 ```sh
-mkdir HELLO_APP_DEV_CLUSTER_1
+mkdir -p HELLO_APP_DEV_CLUSTER_1/mapi/cluster
 
 cat <<EOF > HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -427,7 +445,8 @@ You can read more about this feature [here](https://docs.giantswarm.io/app-platf
 And the kustomization for this cluster looks like.
 
 ```bash
-cat <<EOF >> HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml
+mkdir -p HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster
+cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
@@ -437,24 +456,33 @@ patches:
         path: /spec/extraConfigs/-
         value:
           # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-            name: "${cluster_name}-region-config"
-            namespace: org-${organization}
+            name: "\${cluster_name}-config"
+            namespace: org-\${organization}
+            priority: 1
+      - op: add
+        path: /spec/extraConfigs/-
+        value:
+          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
+            name: "\${cluster_name}-region-config"
+            namespace: org-\${organization}
     target:
       group: application.giantswarm.io
       kind: App
-      name: \${cluster_name}
-      namespace: org-\${organization}
+      name: \\\${cluster_name}
+      namespace: org-\\\${organization}
       version: v1alpha1
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../../../bases/environments/regions/eu_central
+EOF
 ```
 
 For the `us-west` region version of the production cluster we need to create the same patch for the cluster App CR.
 The resultant `kustomization.yaml` looks like the one below.
 
 ```bash
-cat <<EOF >> HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml
+mkdir -p HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster
+cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
@@ -464,21 +492,29 @@ patches:
         path: /spec/extraConfigs/-
         value:
           # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-            name: "${cluster_name}-region-config"
-            namespace: org-${organization}
+            name: "\${cluster_name}-config"
+            namespace: org-\${organization}
+            priority: 1
+      - op: add
+        path: /spec/extraConfigs/-
+        value:
+          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
+            name: "\${cluster_name}-region-config"
+            namespace: org-\${organization}
     target:
       group: application.giantswarm.io
       kind: App
-      name: \${cluster_name}
-      namespace: org-\${organization}
+      name: \\\${cluster_name}
+      namespace: org-\\\${organization}
       version: v1alpha1
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../../../bases/environments/regions/us_west
+EOF
 ```
 
 ## Tips for developing environments
 
 For complex clusters, you can end up merging a lot of layers of templates and configurations.
-Under `tools` folder in this repository you can find the `fake-flux-build` script that helps
+Under `tools` folder in this repository you can find the `fake-flux` script that helps
 you render and inspect the final result. For more information check [tools/README.md](/tools/README.md).

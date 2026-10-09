@@ -23,8 +23,11 @@ building blocks, i.e. organizations, workload clusters, apps, etc., and their re
 ```text
 .sops.yaml
 bases
+├── app_sets
+├── apps
+├── cluster_templates
 ├── clusters
-└── nodepools
+└── environments
 management-clusters
 └── MC_NAME
     ├── .sops.keys
@@ -137,7 +140,7 @@ The public key of the master key-pair MUST be shared in an unencrypted form with
 The private key of the master key-pair MUST be wrapped into the mandatory `MC_NAME.gpgkey.enc.yaml` Kubernetes Secret
 and encrypted with itself.
 The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered by the `MC_NAME.yaml` Kustomization CR
-(see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence MAY be used for decrypting
+(see [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)), and hence MAY be used for decrypting
 everything up to the `[workload-clusters]` directory (inclusive).
 
 Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml`
@@ -280,7 +283,7 @@ a `kustomization.yaml`. Hence, the file **plays a crucial role in the GitOps pro
 User MAY omit it if they do not rely on the
 [kustomize feature](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#kustomize-feature-list)
 and when feeling confident about Flux auto discovering resources. Otherwise it is RECOMMENDED to create it and use it
-to explicitly control resources to be reconciled (with `.bases` and `.resources` fields).
+to explicitly control resources to be reconciled (with the `.resources` field).
 
 Make sure that if you create the `kustomization.yaml` file, it contains the following option, which makes debugging easier:
 
@@ -414,11 +417,12 @@ management-clusters
 ### `[mapi] and [out-of-band]`
 
 The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, with the latter being optional.
-The `mapi` MUST hold resources orchestrated by the means of Management API, so for example App CRs,
-configuration for these App CRs, etc., basically any resources that configure Workload Cluster from the
-Management Cluster. The `out-of-band`, when used, MUST hold the manifests that are meant to be reconciled
-directly in the Workload Cluster, without ever referring to the Management API, so additional ConfigMaps, Secret,
-Deployments, etc., or basically everything that iss not supported by the App CRs.
+The `mapi` MUST hold resources orchestrated by the means of Management API, so for example the cluster App CR,
+the `HelmRelease` and `OCIRepository` CRs of the apps, the ConfigMaps and Secrets with their values, etc., basically
+any resources that configure Workload Cluster from the Management Cluster. The `out-of-band`, when used, MUST hold
+the manifests that are meant to be reconciled directly in the Workload Cluster, without ever referring to the
+Management API, so additional ConfigMaps, Secrets, Deployments, etc., or basically everything that is not delivered
+as an app.
 
 The rules of governing these directories are:
 
@@ -468,10 +472,11 @@ everything there and hence takes over the reconciliation from where the `MC_NAME
 
 But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious as without it there is no
 reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
-[variable substitution feature of Flux](https://fluxcd.io/docs/components/kustomize/kustomization/#variable-substitution)
+[variable substitution feature of Flux](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution)
 for configuring widely repeatable fields, that could otherwise be hard to configure. These fields are workload cluster ID,
 control plane ID, release, etc., virtually any field that must be repeated for different CRs, like `Cluster`,
-`MachineDeployment`, `App`, etc., falls into this category. Let's consider available options together.
+`MachineDeployment`, `App`, `HelmRelease`, `OCIRepository`, etc., falls into this category. Let's consider available
+options together.
 
 Providing values to these fields by means of patches feels cumbersome and error prone, and leaves a decent footprint.
 
