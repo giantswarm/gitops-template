@@ -9,24 +9,28 @@ In order to avoid adding the same application from scratch across all your clust
 a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is
 not yet installed in any cluster.
 
+An app is a Flux `HelmRelease` that installs a Helm chart into the workload cluster, and an `OCIRepository` that
+points at the chart in an OCI registry. Both live in the organization namespace on the management cluster.
+
 ## Example
 
 An example of an App Template is available in [bases/apps/hello-world](/bases/apps/hello-world).
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name, Workload Cluster name and several App-related values are needed
-in multiple places across this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note**, several App-related values are needed in multiple places across this instruction, the least error prone way
+of providing them is by exporting as environment variables:
 
 ```sh
-export WC_NAME=CLUSTER_NAME
-export APP_NAME="\${cluster_name}-APP_NAME"
-export APP_VERSION=APP_VERSION
-export APP_CATALOG=APP_CATALOG
-export APP_NAMESPACE=APP_NAMESPACE
-# OPTIONAL
-export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
+export APP_NAME=APP_NAME            # name of the app, used in resource names and as the Helm release name
+export APP_CHART=APP_CHART          # name of the chart in the registry, for example `hello-world`
+export APP_VERSION=APP_VERSION      # chart version (OCI tag), for example `3.2.2`
+export APP_NAMESPACE=APP_NAMESPACE  # namespace in the workload cluster the app is installed into
 ```
+
+The examples below use the Giant Swarm catalog, whose charts are published under
+`oci://gsoci.azurecr.io/charts/giantswarm`. Change the `url` of the `OCIRepository` to use a chart from another
+registry.
 
 ## Setting up directory tree structure for managing apps
 
@@ -35,59 +39,122 @@ export APP_USER_VALUES=CONFIGMAP_OR_SECRET_PATH
     ```sh
     cd bases/apps/
     mkdir ${APP_NAME}
-    ```
-
-1. Go to the newly created directory and use [the kubectl-gs plugin](https://github.com/giantswarm/kubectl-gs) to
-generate the [App CR](https://docs.giantswarm.io/ui-api/kubectl-gs/template-app/):
-
-    ```sh
     cd ${APP_NAME}/
-    kubectl gs template app \
-    --app-name ${APP_NAME} \
-    --catalog ${APP_CATALOG} \
-    --cluster-name ${WC_NAME} \
-    --name ${APP_NAME} \
-    --target-namespace ${APP_NAMESPACE} \
-    --version {$APP_VERSION} > appcr.yaml
     ```
 
-    **Note**, you most likely want to provide a default configuration, so add any of the below flags to the previous command:
+1. Create the `OCIRepository` that points at the chart:
 
     ```sh
-    --user-configmap ${APP_USER_VALUES}
-    --user-secret ${APP_USER_VALUES}
+    cat <<EOF > ocirepository.yaml
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: OCIRepository
+    metadata:
+      labels:
+        giantswarm.io/cluster: \${cluster_name}
+      name: \${cluster_name}-${APP_NAME}
+      namespace: org-\${organization}
+    spec:
+      interval: 10m
+      provider: generic
+      ref:
+        tag: ${APP_VERSION}
+      url: oci://gsoci.azurecr.io/charts/giantswarm/${APP_CHART}
+    EOF
     ```
 
-    **Note**, We're including `${cluster_name}` in the app name to avoid a problem when two
-    or more clusters in the same organization want to deploy the same app with its
-    default name.
+1. Create the `HelmRelease` that installs the chart into the workload cluster:
 
-    Reference [the App Configuration](https://docs.giantswarm.io/app-platform/app-configuration/) for more details about
-    how to properly create the respective ConfigMaps or Secrets.
+    ```sh
+    cat <<EOF > helmrelease.yaml
+    apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
+    metadata:
+      labels:
+        giantswarm.io/cluster: \${cluster_name}
+      name: \${cluster_name}-${APP_NAME}
+      namespace: org-\${organization}
+    spec:
+      chartRef:
+        kind: OCIRepository
+        name: \${cluster_name}-${APP_NAME}
+        namespace: org-\${organization}
+      install:
+        createNamespace: true
+        remediation:
+          remediateLastFailure: false
+          retries: 10
+      interval: 5m
+      kubeConfig:
+        secretRef:
+          name: \${cluster_name}-kubeconfig
+      releaseName: ${APP_NAME}
+      storageNamespace: ${APP_NAMESPACE}
+      targetNamespace: ${APP_NAMESPACE}
+      timeout: 10m
+      upgrade:
+        remediation:
+          remediateLastFailure: true
+          retries: 10
+          strategy: rollback
+      valuesFrom:
+        - kind: ConfigMap
+          name: \${cluster_name}-cluster-values
+          valuesKey: values
+        - kind: ConfigMap
+          name: \${cluster_name}-${APP_NAME}-values
+          valuesKey: values
+        - kind: ConfigMap
+          name: \${cluster_name}-${APP_NAME}-user-values
+          optional: true
+          valuesKey: values
+        - kind: Secret
+          name: \${cluster_name}-${APP_NAME}-user-secrets
+          optional: true
+          valuesKey: values
+    EOF
+    ```
 
-    If you want to provide a default config, we can use use the ConfigMap generator feature of `kustomize`.
-    This allows us to use a pure YAML file for the configuration, without the wrapping into a ConfigMap. Still, for Secrets
-    we need to encrypt them as a Secret object and the generator approach won't work. Refer our [adding an App](./add_appcr.md)
-    docs to check how to add and encrypt a Secret. For configuration that can be used as a ConfigMap, just add the content
-    to a `default_config.yaml` file.
+    **Note**, we're including `${cluster_name}` in the resource names to avoid a problem when two
+    or more clusters in the same organization want to deploy the same app.
 
-1. Add the `kustomization.yaml` file, adding an optional Secret as a resource and a ConfigMapGenerator for plain text config:
+    The `kubeConfig` points the release at the workload cluster. Flux merges the `valuesFrom` entries in order, later
+    entries win:
 
-    ```yaml
+    1. `${cluster_name}-cluster-values`, created for every workload cluster with values like `baseDomain`,
+    1. `${cluster_name}-${APP_NAME}-values`, the default configuration of this App Template,
+    1. `${cluster_name}-${APP_NAME}-user-values` and `${cluster_name}-${APP_NAME}-user-secrets`, optional
+       overrides for a single cluster, see [adding an App](./add_appcr.md).
+
+1. Put the default configuration of the app, plain Helm values, into the `default_config.yaml` file. We use the
+   ConfigMap generator feature of `kustomize` to turn it into the `${cluster_name}-${APP_NAME}-values` ConfigMap, so the
+   file doesn't need to be wrapped into a ConfigMap:
+
+    ```sh
+    cat <<EOF > default_config.yaml
+    # default values of the ${APP_CHART} chart
+    EOF
+    ```
+
+    Values that have to be kept secret don't belong here: provide them per cluster through the `-user-secrets`
+    Secret, see [adding an App](./add_appcr.md).
+
+1. Add the `kustomization.yaml` file:
+
+    ```sh
+    cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
     buildMetadata: [originAnnotations]
-    # default config block start - include if you provide default config
     configMapGenerator:
       - files:
         - values=default_config.yaml
-        name: ${cluster_name}-hello-world-values
+        name: \${cluster_name}-${APP_NAME}-values
     generatorOptions:
       disableNameSuffixHash: true
-    # default config block end
+    kind: Kustomization
     resources:
-      - appcr.yaml
-      - secret.enc.yaml # only if you provide default Secret
+      - helmrelease.yaml
+      - ocirepository.yaml
+    EOF
     ```
 
 At this point, you should have a ready App Template.
