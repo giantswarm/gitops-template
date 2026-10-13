@@ -89,14 +89,26 @@ en- and decrypt real user-related data.
     --from-file=${MC_NAME}.master.asc=/dev/stdin
     ```
 
-1. Add the private to a safe encrypted storage of your choice. For example, to export the key to 1Password
-   as a secure note, you can run:
+1. Add the private key to a safe encrypted storage of your choice, for example your password manager. You will need
+   it again whenever you change the encrypted keys of this management cluster, see
+   [Add a new Organization](./add_org.md).
+
+    For example, with the 1Password CLI (`op`), store it as the body of a secure note. The `jq` filter wraps the
+    armored key into the item template, in the `notesPlain` field of a secure note:
 
     ```sh
     eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    jq -snR '{"fields": [{"value": inputs  }]}' |
+    jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |
     op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, master, Flux)" --format json -
+    ```
+
+    To import the key back into your keychain later, read the note body:
+
+    ```sh
+    op item get "GPG private key (${MC_NAME}, master, Flux)" --vault 'Dev Common' --format json |
+    jq -j '.fields[] | select(.id == "notesPlain") | .value' |
+    gpg --import
     ```
 
 1. Add the automatic key selection rule to the end of the `creation_rules` list in the
