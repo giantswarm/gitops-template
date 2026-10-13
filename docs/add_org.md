@@ -140,11 +140,12 @@ new GPG key-pair dedicated for an organization.
 1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
-    cat <<EOF >> .sops.yaml
-      - path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/secrets/.*\.enc\.yaml
-        encrypted_regex: ^(data|stringData)$
-        pgp: ${KEY_FP}
-    EOF
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/secrets/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
     ```
 
 1. Import the management cluster's master GPG private key from your safe storage into your keychain. In our example, we're
