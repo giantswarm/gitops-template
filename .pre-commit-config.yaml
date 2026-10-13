@@ -40,7 +40,7 @@ repos:
 
     # shell scripts
     - repo: https://github.com/detailyang/pre-commit-shell
-      rev: 1.0.5
+      rev: v1.0.6
       hooks:
           - id: shell-lint
             args: [ --format=json ]
