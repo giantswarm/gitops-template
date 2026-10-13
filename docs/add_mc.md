@@ -219,10 +219,30 @@ en- and decrypt real user-related data.
 Once all the above steps are completed, the management cluster's `Flux` can be initially configured to work against this
 repository.
 
-Bear in mind `Flux` needs GitHub credentials since the repository is private. This instruction assumes such credentials are
-available in the `github-https-credentials` Kubernetes `Secret`, created according to the
-[FluxCD installation intranet page](https://intranet.giantswarm.io/docs/support-and-ops/installation-setup-guide/fluxcd-installation/#create-a-secret-for-private-repository-access)
-in the `default` namespace.
+Bear in mind `Flux` needs credentials to read the repository when it is private. The steps below keep them in the
+`github-https-credentials` Kubernetes `Secret` in the `default` namespace.
+
+1. Create a GitHub token that can read the repository, for example a
+   [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)
+   limited to this repository with read-only `Contents` permission, and export it:
+
+    ```sh
+    export GITHUB_TOKEN=YOUR_TOKEN
+    ```
+
+1. Create the `Secret` with [flux create secret git](https://fluxcd.io/flux/cmd/flux_create_secret_git/). GitHub
+   accepts the token as the password of any user name:
+
+    ```sh
+    flux create secret git github-https-credentials \
+    --namespace=default \
+    --url=https://github.com/GITOPS_REPO \
+    --username=git \
+    --password="${GITHUB_TOKEN}"
+    ```
+
+    To use an SSH deploy key instead, see the SSH examples on the same page, and use the `ssh://` URL in the
+    `GitRepository` below.
 
 1. Create a GitRepository CR:
 
