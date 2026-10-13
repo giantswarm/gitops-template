@@ -1,10 +1,9 @@
 # Add a new Organization
 
-- [Add a new Organization](#add-a-new-organization)
-  - [Export environment variables](#export-environment-variables)
-  - [Directory tree](#directory-tree)
-  - [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
-  - [Recommended next steps](#recommended-next-steps)
+- [Export environment variables](#export-environment-variables)
+- [Directory tree](#directory-tree)
+- [Create a regular GPG key pair for encrypting Organization' secrets (optional step)](#create-a-regular-gpg-key-pair-for-encrypting-organization-secrets-optional-step)
+- [Recommended next steps](#recommended-next-steps)
 
 Follow the below instructions to add a new Organization to this repository. Organizations are created within the
 [Management Cluster's configuration](./add_mc.md) directory and in turn are meant to include
@@ -13,8 +12,8 @@ Follow the below instructions to add a new Organization to this repository. Orga
 
 ## Export environment variables
 
-**Note**, MC codename and organization name are needed in multiple places across this instruction, the least error prone
-way of providing them is by exporting as environment variables:
+**Note**, management cluster codename and organization name are needed in multiple places across this instruction, the
+least error prone way of providing them is by exporting as environment variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -23,7 +22,7 @@ export ORG_NAME=ORGANIZATION
 
 ## Directory tree
 
-1. Go to the MC's `organizations` directory:
+1. Go to the management cluster's `organizations` directory:
 
     ```sh
     cd management-clusters/${MC_NAME}/organizations
@@ -74,15 +73,21 @@ export ORG_NAME=ORGANIZATION
     kubectl gs template organization --name ${ORG_NAME} > ${ORG_NAME}.yaml
     ```
 
-After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should automatically
+After completing all the steps, you can open a pull request with the changes. Once it is merged, `Flux` should automatically
 reconcile your new organization.
 
-## Create a regular GPG key pair for encrypting Organization' secrets (optional step)
+## Create a regular GPG key pair for encrypting organization' secrets (optional step)
 
 Each management cluster comes with a master GPG key-pair that is always available to encrypt your organization's
 data. However, in case you wish to increase security by cryptographic splitting, and hence encrypting different data
 with different keys you can follow the instructions below. It will guide you through creation and configuration of a
 new GPG key-pair dedicated for an organization.
+
+1. Go back to the root of the repository, as the commands below use paths relative to it:
+
+    ```sh
+    cd ../../../..
+    ```
 
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
@@ -92,10 +97,12 @@ new GPG key-pair dedicated for an organization.
 
     gpg --batch --full-generate-key <<EOF
     %no-protection
-    Key-Type: 1
-    Key-Length: 4096
-    Subkey-Type: 1
-    Subkey-Length: 4096
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
     Expire-Date: 0
     Name-Comment: ${KEY_COMMENT}
     Name-Real: ${KEY_NAME}
@@ -106,11 +113,21 @@ new GPG key-pair dedicated for an organization.
 
     ```sh
     gpg --list-secret-keys "${KEY_NAME}"
+    ```
 
-    sec   rsa4096 2021-11-25 [SC]
-          YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    The command above should produce the output like:
 
-    export KEY_FP=YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    ```text
+    pub   ed25519 2021-11-25 [SC]
+          XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    uid   ...
+    sub   cv25519 2021-11-25 [E]
+    ```
+
+    Now, export the fingerprint:
+
+    ```sh
+    export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
 1. Share the new GPG public key in this repository:
@@ -130,12 +147,13 @@ new GPG key-pair dedicated for an organization.
     EOF
     ```
 
-1. Import the MC's master GPG private key from your safe storage into your keychain. In our example, we're gonna
-   use `LastPass` for that:
+1. Import the management cluster's master GPG private key from your safe storage into your keychain. In our example, we're
+going to use 1Password (`op` CLI tool) for that:
 
     ```sh
+    eval $(op signin)
     gpg --import \
-    <(lpass show --notes "Shared-Dev Common/GPG private key (${MC_NAME}, master, Flux)")
+    <(op read "Dev Common/GPG private key (${MC_NAME}, master, Flux)/notesPlain")
     ```
 
 1. Decrypt the `${MC_NAME}.gpgkey.enc.yaml` file with SOPS:
@@ -150,10 +168,10 @@ new GPG key-pair dedicated for an organization.
     (
     cat <<EOF
     data:
-      ${MC_NAME}.${ORG_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64)
+      ${MC_NAME}.${ORG_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64 | tr -d '\n')
     EOF
     ) | kubectl patch \
-    --dry-run=client \
+    --local \
     -f management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml \
     --patch-file=/dev/stdin \
     -o yaml > management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml.new
@@ -172,10 +190,26 @@ new GPG key-pair dedicated for an organization.
     sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Push changes to the repository and wait for Flux to reconcile the secret. After that,
-Flux should be ready to decrypt and reconcile the organization's secrets.
+1. Add the organization's private key to a safe encrypted storage of your choice, for example 1Password:
 
-1. Go to the Organization's directory:
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}" |
+    jq -snR '{"fields": [{"value": inputs  }]}' |
+    op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${ORG_NAME}, Flux)" --format json -
+    ```
+
+1. Delete the organization's and the master private keys from the keychain:
+
+    ```sh
+    export MASTER_KEY_FP=$(gpg --show-keys --with-colons management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc |
+    awk -F: '/^fpr/{print $10; exit}')
+    gpg --delete-secret-keys "${KEY_FP}" "${MASTER_KEY_FP}"
+    ```
+
+1. Push changes to the repository and wait for `Flux` to reconcile the secret. After that,
+`Flux` should be ready to decrypt and reconcile the organization's secrets.
+
+1. Go to the organization's directory:
 
     ```sh
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}
@@ -188,11 +222,21 @@ Flux should be ready to decrypt and reconcile the organization's secrets.
     cd secrets
     ```
 
-1. Place your Kubernetes Secret into this directory and encrypt it with SOPS.
-SOPS encryption rule configured earlier ensures it will get encrypted with the Organization's key:
+1. Place your Kubernetes Secret into this directory, for example:
 
     ```sh
-    sops --encrypt --in-place management-clusters/${MC_NAME}/organizations/${ORG_NAME}/secrets/secret.enc.yaml
+    kubectl create secret generic my-secret \
+    --namespace=org-${ORG_NAME} \
+    --from-literal=token=CHANGE_ME \
+    --dry-run=client \
+    -o yaml > secret.enc.yaml
+    ```
+
+1. Encrypt it with SOPS. The SOPS encryption rule configured earlier ensures it will get encrypted with the
+Organization's key:
+
+    ```sh
+    sops --encrypt --in-place secret.enc.yaml
     ```
 
 1. Push changes to the repository.

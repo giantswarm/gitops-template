@@ -1,0 +1,13 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-flux
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 1.9.1
+  url: oci://gsoci.azurecr.io/charts/giantswarm/flux-app

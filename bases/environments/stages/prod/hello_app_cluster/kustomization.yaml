@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: replace
+    files:
+      - values=cluster_user_config.yaml
+    name: ${cluster_name}-user-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+kind: Kustomization
+# (optional) here we can enforce the app versions that we want in prod
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        value: "3.2.2"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
+# block end
+resources:
+  - ../../../../cluster_templates/hello_app_cluster

@@ -1,0 +1,40 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-cert-manager
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-cert-manager
+    namespace: org-${organization}
+  install:
+    # the target namespace does not exist in a new workload cluster
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
+  releaseName: cert-manager
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-cert-manager-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: ${cluster_name}-cert-manager-user-secrets
+      optional: true
+      valuesKey: values

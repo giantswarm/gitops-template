@@ -1,18 +1,19 @@
 # Repository Structure
 
-- [Repository Structure](#repository-structure)
-  - [General Remarks](#general-remarks)
-  - [Security Architecture](#security-architecture)
-    - [Overview](#overview)
-    - [Multiple GPG Keys](#multiple-gpg-keys)
-  - [Rules for Naming Resources](#rules-for-naming-resources)
-  - [Rules for Optional Components](#rules-for-optional-components)
-    - [`[OTHER_RESOURCES]`](#other_resources)
-    - [`[kustomization.yaml]`](#kustomizationyaml)
-    - [`[organizations]`](#organizations)
-    - [`[workload-clusters]`](#workload-clusters)
-  - [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
-    - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
+- [General Remarks](#general-remarks)
+- [Structure Version](#structure-version)
+- [Security Architecture](#security-architecture)
+  - [Overview](#overview)
+  - [Multiple GPG Keys](#multiple-gpg-keys)
+- [Rules for Naming Resources](#rules-for-naming-resources)
+- [Rules for Optional Components](#rules-for-optional-components)
+  - [`[OTHER_RESOURCES]`](#other_resources)
+  - [`[kustomization.yaml]`](#kustomizationyaml)
+  - [`[organizations]`](#organizations)
+  - [`[workload-clusters]`](#workload-clusters)
+  - [`[mapi] and [out-of-band]`](#mapi-and-out-of-band)
+- [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)
+  - [Two Kustomization CRs motivation](#two-kustomization-crs-motivation)
 
 ## General Remarks
 
@@ -22,8 +23,11 @@ building blocks (i.e., organizations, workload clusters, apps, etc.) and their r
 ```text
 .sops.yaml
 bases
+├── app_sets
+├── apps
+├── cluster_templates
 ├── clusters
-└── nodepools
+└── environments
 management-clusters
 └── MC_NAME
     ├── .sops.keys
@@ -31,7 +35,8 @@ management-clusters
     ├── [OTHER_RESOURCES]
     ├── secrets
     |   ├── MC_NAME.gpgkey.enc.yaml
-    |   └── [WC_NAME.gpgkey.enc.yaml]
+    |   ├── [WC_NAME.gpgkey.enc.yaml]
+    |   └── [WC_NAME-direct.gpgkey.enc.yaml]
     ├── MC_NAME.yaml
     └── [organizations]
         ├── [kustomization.yaml]
@@ -42,12 +47,17 @@ management-clusters
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
+                ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
-                    ├── [kustomization.yaml]            WC_NAME.yaml responsibility
-                    ├── apps
-                    ├── cluster
-                    └── [OTHER_RESOURCES]
+                    ├── [out-of-band]                     WC_NAME.yaml responsibility
+                    |   ├── [kustomization.yaml]
+                    |   └── [OTHER_RESOURCES]
+                    └── mapi
+                        ├── [kustomization.yaml]
+                        ├── apps
+                        ├── cluster
+                        └── [OTHER_RESOURCES]
 ```
 
 Capital letters are placeholders for the actual names of user resources and MUST be changed upon configuration. In case
@@ -64,11 +74,56 @@ RECOMMENDED to stay compliant with the [Rules for Optional Components](#rules-fo
 This offers flexibility and supports different environments and use cases.
 
 The horizontal line marks the delegation of reconciliation responsibility. Resources above the line are managed by
-the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`, see the
+the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`; see the
 [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
 GPG encryption provides resource security. The repository provides a way to manage
 all the encryption and decryption keys through its structure; see the [Security Architecture](#security-architecture).
+
+## Structure Version
+
+The structure described in this document is versioned, so that a repository built on it can tell when it
+has fallen behind. **The current structure version is `1`.**
+
+The version is a plain integer, incremented whenever this document prescribes a change that an existing
+repository would have to follow: a directory that moves, a file that is added to every layer, a naming rule
+that changes. Purely additive documentation, new examples, and changes to the contents of the app manifests
+under `bases/` do not bump it.
+
+`kubectl gs gitops` records the version in a `.gitops-metadata.yaml` file at the root of the repository it
+generates, together with an entry for every management cluster, organization, workload cluster, app and
+cluster base it created:
+
+```yaml
+apiVersion: gitops.giantswarm.io/v1alpha1
+kind: RepositoryMetadata
+structureVersion: 1
+generatedWith: kubectl-gs/5.7.3
+layers:
+  - kind: management-cluster
+    path: management-clusters/MC_NAME
+    structureVersion: 1
+    generatedWith: kubectl-gs/5.7.3
+```
+
+That file is deliberately at the repository root, outside the scope the `MC_NAME.yaml` Kustomization CR
+reconciles, so it is never applied to a cluster. It is managed by the tooling and SHOULD NOT be edited
+by hand.
+
+Run `kubectl gs gitops check` against a clone to see which parts of it were generated with an older
+structure version. The command exits non-zero when anything is behind, so it can be wired into the
+repository's own CI. A repository created before the metadata file existed holds none; run
+`kubectl gs gitops check --adopt` once to record what is already there. Note that adoption assumes the
+existing layers are current, so it cannot recover drift from before it ran.
+
+The `check` command requires a `kubectl-gs` release that ships it; older versions have no
+`gitops check` subcommand. Run `kubectl gs gitops check --help` to confirm yours does, and
+`kubectl gs selfupdate` if it does not.
+
+When bumping the version, record what changed under the corresponding entry in this repository's
+[CHANGELOG](../CHANGELOG.md), and bump `StructureVersion` in
+[kubectl-gs](https://github.com/giantswarm/kubectl-gs/blob/main/internal/gitops/metadata/types.go) to match.
+The two are kept in lockstep by hand; nothing enforces it.
 
 ## Security Architecture
 
@@ -85,7 +140,7 @@ The public key of the master key-pair MUST be shared in an unencrypted form with
 The private key of the master key-pair MUST be wrapped into the mandatory `MC_NAME.gpgkey.enc.yaml` Kubernetes Secret
 and encrypted with itself.
 The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered by the `MC_NAME.yaml` Kustomization CR
-(see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence MAY be used for decrypting
+(see [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)), and hence MAY be used for decrypting
 everything up to the `[workload-clusters]` directory (inclusive).
 
 Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml` Kubernetes
@@ -94,8 +149,8 @@ The public key of the key pair MUST be shared in an unencrypted form within the 
 key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
 GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a
 GitOps process.
-The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence MAY be used for
-decrypting everything from the `WC_NAME` directory (inclusive).
+The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence
+MAY be used for decrypting everything from the `WC_NAME` directory (inclusive).
 
 The figure below depicts the relationship between Kustomization CRs and Kubernetes Secrets.
 
@@ -128,7 +183,7 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
 ```
 
@@ -226,7 +281,7 @@ a `kustomization.yaml`. Hence, the file **plays a crucial role in the GitOps pro
 User MAY omit it if they do not rely on the
 [kustomize feature](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#kustomize-feature-list)
 and when feeling confident about Flux auto-discovering resources. Otherwise, it is RECOMMENDED to create it and use it
-to explicitly control resources to be reconciled (with `.bases` and `.resources` fields).
+to explicitly control resources to be reconciled (with the `.resources` field).
 
 Make sure that if you create the `kustomization.yaml` file, it contains the following option, which makes debugging easier:
 
@@ -357,10 +412,30 @@ management-clusters
             └── demo0
 ```
 
+### `[mapi] and [out-of-band]`
+
+The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, with the latter being optional.
+The `mapi` MUST hold resources orchestrated by the means of Management API, so for example the cluster App CR,
+the `HelmRelease` and `OCIRepository` CRs of the apps, the ConfigMaps and Secrets with their values, etc., basically
+any resources that configure Workload Cluster from the Management Cluster. The `out-of-band`, when used, MUST hold
+the manifests that are meant to be reconciled directly in the Workload Cluster, without ever referring to the
+Management API, so additional ConfigMaps, Secrets, Deployments, etc., or basically everything that is not delivered
+as an app.
+
+The rules of governing these directories are:
+
+1. The `mapi` directory MUST always be created.
+1. If out of band method of delivering resources directly to the Workload Cluster is needed, the `out-of-band`
+directory MUST be created in addition.
+1. User MAY choose between two out-of-band delivery methods. The first one involves creating Flux app in the
+Workload Cluster and configure it to reconcile `out-of-band` directory. The other method involves creating
+additional Kustomization CR in the Management Cluster that uses `kubeconfig` for the Workload Cluster to
+remotely create resources from the `out-of-band` directory.
+
 ## Flux Kustomization CRs Involved
 
-Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`; see the
-shortened version of the structure below.
+Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`; see
+the shortened version of the structure below.
 
 ```text
 management-clusters
@@ -372,13 +447,14 @@ management-clusters
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml            # Second Kustomization CR
                 └── WC_NAME
-                    ├── apps
-                    └── cluster
+                    └── mapi
+                        ├── apps
+                        └── cluster
 ```
 
 The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `WC_NAME.yaml`, but not any
 resource under the `WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that includes, and
-hence tells Flux to create, only the `WC_NAME.yaml` from the `workload-clusters` directory; see example below:
+hence tells Flux to create, only the `WC_NAME.yaml` from the `workload-clusters` directory; see the example below:
 
 ```text
 resources:
@@ -392,10 +468,11 @@ everything there and hence takes over the reconciliation from where the `MC_NAME
 
 But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious, as without it there is no
 reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
-[variable substitution feature of Flux](https://fluxcd.io/docs/components/kustomize/kustomization/#variable-substitution)
+[variable substitution feature of Flux](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution)
 for configuring widely repeatable fields that could otherwise be hard to configure. These fields are workload cluster ID,
 control plane ID, release, etc.; virtually any field that must be repeated for different CRs, like `Cluster`,
-`MachineDeployment`, `App`, etc., falls into this category. Let's consider available options together.
+`MachineDeployment`, `App`, `HelmRelease`, `OCIRepository`, etc., falls into this category. Let's consider available
+options together.
 
 Providing values for these fields via patches feels cumbersome and error-prone, and leaves a decent footprint.
 

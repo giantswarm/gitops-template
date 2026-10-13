@@ -1,0 +1,12 @@
+apiVersion: security.giantswarm.io/v1alpha1
+kind: Organization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: org-name
+---
+apiVersion: security.giantswarm.io/v1alpha1
+kind: Organization
+metadata:
+  name: org-name

@@ -1,12 +1,11 @@
 # Add a new Workload Cluster repository structure
 
-- [Add a new Workload Cluster repository structure](#add-a-new-workload-cluster-repository-structure)
-  - [Example](#example)
-  - [Export environment variables](#export-environment-variables)
-  - [Create Flux GPG regular key pair (optional step)](#create-flux-gpg-regular-key-pair-optional-step)
-  - [Directory tree](#directory-tree)
-  - [MC configuration](#mc-configuration)
-  - [Recommended next steps](#recommended-next-steps)
+- [Example](#example)
+- [Export environment variables](#export-environment-variables)
+- [Create Flux GPG regular key pair (optional step)](#create-flux-gpg-regular-key-pair-optional-step)
+- [Directory tree](#directory-tree)
+- [MC configuration](#mc-configuration)
+- [Recommended next steps](#recommended-next-steps)
 
 Adding a new Workload Cluster requires a few major steps in the configuration process. One of them
 is to prepare the necessary structure and configuration for the GitOps repository itself.
@@ -22,17 +21,19 @@ This includes:
 
 ## Example
 
-An example of a WC cluster directory structure is available in [WC_NAME/](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
+An example of a workload cluster directory structure is available in [WC_NAME/](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/).
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
-this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note** In order to ensure consistency in the execution of this instruction, consider exporting the following
+environment variables for easy reference. These represent common names used throughout these commands such as
+Management Cluster codename, Organization name and Workload cluster name.
 
 ```sh
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
+export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
 ## Create Flux GPG regular key pair (optional step)
@@ -54,10 +55,12 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
     gpg --batch --full-generate-key <<EOF
     %no-protection
-    Key-Type: 1
-    Key-Length: 4096
-    Subkey-Type: 1
-    Subkey-Length: 4096
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
     Expire-Date: 0
     Name-Comment: ${KEY_COMMENT}
     Name-Real: ${KEY_NAME}
@@ -68,11 +71,21 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
     ```sh
     gpg --list-secret-keys "${KEY_NAME}"
+    ```
 
-    sec   rsa4096 2021-11-25 [SC]
-          YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    The command above should produce the output like:
 
-    export KEY_FP=YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    ```text
+    pub   ed25519 2021-11-25 [SC]
+          XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    uid   ...
+    sub   cv25519 2021-11-25 [E]
+    ```
+
+    Now, export the fingerprint:
+
+    ```sh
+    export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
 1. Save the private key as a Kubernetes Secret into the MC `secrets` directory:
@@ -101,11 +114,13 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     ```
 
 1. As a backup, save the private key to an external encrypted storage. As an example, you can add the private key
-   to LastPass as a secure note:
+   to 1Password (`op` CLI tool) as a secure note:
 
     ```sh
+    eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    lpass add --notes --non-interactive "Shared-Dev Common/GPG private key (${MC_NAME}, ${WC_NAME}, Flux)"
+    jq -snR '{"fields": [{"value": inputs }]}' |
+    op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --format json -
     ```
 
 1. Delete the private key from the keychain:
@@ -125,8 +140,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
     ```sh
     cat <<EOF >> .sops.yaml
-      - path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/.*\.enc\.yaml
-        encrypted_regex: ^(data|stringData)$
+      - encrypted_regex: ^(data|stringData)$
+        path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/.*\.enc\.yaml
         pgp: ${KEY_FP}
     EOF
     ```
@@ -145,13 +160,22 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     mkdir ${WC_NAME}
     ```
 
-1. Go to the newly created directory and create 2 sub-directories there:
+1. Go to the newly created directory and create `mapi` directory. If you need out-of-band
+   delivery method create also `out-of-band` directory. Next go to the `mapi` directory:
+
+    ```sh
+    cd ${WC_NAME}
+    mkdir mapi                # resources managed with Management API
+    # mkdir out-of-band       # resources managed outside Management API, created directly in WC
+    cd mapi
+    ```
+
+1. Create 2 sub-directories:
 
     - `apps` - Workload Cluster managed apps,
     - `cluster` - Workload Cluster definition.
 
     ```sh
-    cd ${WC_NAME}
     mkdir apps cluster
     ```
 
@@ -161,40 +185,35 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     cd apps
     ```
 
-1. Create the `patch_cluster_config.yaml` file to provide common configuration for all the Apps that are going to be
-   installed to the new cluster. We're basically ensuring 2 things here: first, that there's a shared Config Map that we
-   will use for common values (like cluster's domain name), and second that all the apps know how to configure a
-   `kubeConfig` secret that will be used to connect to the new cluster.
+1. Create the `patch_cluster_config.yaml` file to provide common configuration for all the apps that are going to be
+   installed to the new cluster. Here we make sure that every `HelmRelease` knows about the `kubeConfig` secret used to
+   connect to the new cluster, so each app only has to describe its own chart and values.
 
     ```sh
     cat <<EOF > patch_cluster_config.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
+    apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
     metadata:
       labels:
         giantswarm.io/managed-by: flux
       name: ignored
     spec:
-      config:
-        configMap:
-          name: ${cluster_id}-cluster-values
-          namespace: ${cluster_id}
       kubeConfig:
-        context:
-          name: giantswarm-${cluster_id}-context
-        inCluster: false
-        secret:
-          name: ${cluster_id}-kubeconfig
-          namespace: ${cluster_id}
+        secretRef:
+          name: \${cluster_name}-kubeconfig
     EOF
     ```
 
-    **Note**, the `giantswarm.io/managed-by: flux` label is very important here, it tells the `app-admission-controller`
-    of App Platform to ignore any missing ConfigMaps and Secrets set in `spec.userConfig` of the App CRs. This is needed
-    to avoid race conditions, where Flux creates first the App CR and only later a referenced ConfigMap or Secret.
+    **Note**, values are not part of this patch. A patch cannot add a shared entry to `spec.valuesFrom`: `kustomize`
+    has no merge strategy for `HelmRelease`, so it falls back to a JSON merge patch, which replaces a list rather than
+    appending to it. Instead every `HelmRelease` lists the same layers itself, see
+    [bases/apps/hello-world](/bases/apps/hello-world/helmrelease.yaml): the `${cluster_name}-cluster-values` ConfigMap
+    (`baseDomain`, `provider`, ...) that an App CR used to get from App Platform, the app's defaults, and optional
+    `-user-values` / `-user-secrets` overrides. A `HelmRelease` that references a required ConfigMap or Secret which
+    does not exist yet stays not-ready and is retried, so there is no race with the order Flux creates objects in.
 
 1. Create the `kustomization.yaml` file, with empty resources (for now) but applying our patch created above to any
-   objects we add here in future:
+   objects we add here in the future:
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -203,13 +222,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     patches:
     - path: patch_cluster_config.yaml
       target:
-        kind: App
-    - patch: |-
-        - op: replace
-          path: "/metadata/namespace"
-          value: ${WC_NAME}
-      target:
-        kind: ".*"
+        kind: HelmRelease
+    namespace: org-${ORG_NAME}
     resources: []
     EOF
     ```
@@ -230,30 +244,31 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one fo the templates:
+1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-      cd ../../
+      cd ../../../
       cat <<EOF > ${WC_NAME}.yaml
-      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
         namespace: default
       spec:
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
         postBuild:
           substitute:
-            cluster_id: "${WC_NAME}"
+            cluster_name: "${WC_NAME}"
+            organization: "${ORG_NAME}"
         prune: false
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
-          name: YOUR_REPO
+          name: ${GIT_REPOSITORY_NAME}
         timeout: 2m
       EOF
       ```
@@ -262,9 +277,9 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-      cd ../../
+      cd ../../../
       cat <<EOF > ${WC_NAME}.yaml
-      apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
@@ -275,31 +290,66 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           secretRef:
             name: sops-gpg-${WC_NAME}
         interval: 1m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
         postBuild:
           substitute:
-            cluster_id: "${WC_NAME}"
+            cluster_name: "${WC_NAME}"
+            organization: "${ORG_NAME}"
         prune: false
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
-          name: YOUR_REPO
+          name: ${GIT_REPOSITORY_NAME}
         timeout: 2m
       EOF
       ```
 
+1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
+   directory and referencing the right `kubeconfig` Secret. Create it in the namespace of that Secret, which is the
+   organization namespace for CAPI clusters:
+
+   ```sh
+   cat <<EOF > ${WC_NAME}-direct.yaml
+   apiVersion: kustomize.toolkit.fluxcd.io/v1
+   kind: Kustomization
+   metadata:
+     name: ${MC_NAME}-clusters-${WC_NAME}-direct
+     namespace: org-${ORG_NAME}
+   spec:
+     interval: 1m
+     kubeConfig:
+       secretRef:
+         # key: kubeConfig
+         name: ${WC_NAME}-kubeconfig
+     path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
+     prune: false
+     sourceRef:
+       kind: GitRepository
+       name: ${GIT_REPOSITORY_NAME}
+       namespace: default
+     timeout: 2m
+   EOF
+   ```
+
+   **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
+   in the above command to tell Flux where to look for the `kubeconfig`, and to use the namespace the legacy
+   cluster's `kubeconfig` Secret lives in.
+
+### Configuring default apps
+
+The default apps of a cluster are part of its cluster App. Configure them through the cluster App values under
+`global.apps`, the same way as the rest of the cluster configuration, see the `cilium` entry in
+[bases/clusters/capa/template/cluster_config.yaml](/bases/clusters/capa/template/cluster_config.yaml) and
+[Add Workload Cluster instance](./add_wc_instance.md).
+
 ## MC configuration
 
-1. Go to the `workload-clusters` directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    ```
-
-1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource:
+1. Still in the `workload-clusters` directory, edit the mandatory `kustomization.yaml` adding the WC's Kustomization
+   CR as a resource. Uncomment second line if you have created the out-of-band Kustomization CR as well:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
+    # yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" kustomization.yaml
     ```
 
     The resulting file should look like this:
@@ -309,6 +359,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     kind: Kustomization
     resources:
     - ${WC_NAME}.yaml
+    - ${WC_NAME}-direct.yaml
     ```
 
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should be ready to reconcile

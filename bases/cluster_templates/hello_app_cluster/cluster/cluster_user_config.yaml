@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  values: ""
+kind: ConfigMap
+metadata:
+  name: ${cluster_name}-user-config
+  namespace: org-${organization}

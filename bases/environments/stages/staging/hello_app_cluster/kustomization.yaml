@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+# (optional) here we can enforce the app versions that we want in this stage.
+# The staging stage follows the newest stable hello-world release below the
+# next major. A range without a pre-release comparator never matches a
+# pre-release tag.
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/ref
+        value:
+          semver: '>=3.0.0 <4.0.0'
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
+# block end
+resources:
+  - ../../../../cluster_templates/hello_app_cluster

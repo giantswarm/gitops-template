@@ -1,0 +1,20 @@
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    app-operator.giantswarm.io/version: 0.0.0
+    giantswarm.io/managed-by: flux
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  catalog: cluster
+  config:
+    configMap:
+      name: ${cluster_name}-config
+      namespace: org-${organization}
+  extraConfigs: []
+  kubeConfig:
+    inCluster: true
+  name: cluster-aws
+  namespace: org-${organization}
+  version: ""

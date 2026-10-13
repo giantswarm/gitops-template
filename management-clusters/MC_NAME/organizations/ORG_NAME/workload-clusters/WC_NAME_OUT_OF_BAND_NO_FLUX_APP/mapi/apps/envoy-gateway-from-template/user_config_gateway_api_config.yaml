@@ -1,0 +1,12 @@
+gateways:
+  default:
+    listeners:
+      https:
+        # DNS record and certificate entry for the hello-world app's hostname,
+        # `hello.<cluster base domain>`
+        subdomains:
+          - hello
+    # an example override on top of the App Template defaults
+    service:
+      annotations:
+        example.com/owner: platform-team

@@ -1,8 +1,0 @@
-apiVersion: infrastructure.giantswarm.io/v1alpha3
-kind: AWSCluster
-metadata:
-  name: ${cluster_id}
-  namespace: org-${organization}
-spec:
-  cluster:
-    description: "GitOps Demo Cluster"

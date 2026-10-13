@@ -1,0 +1,31 @@
+---
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    app-operator.giantswarm.io/version: 0.0.0
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-eu-central
+  namespace: org-org-name
+spec:
+  catalog: cluster
+  extraConfigs:
+    - kind: configMap
+      name: hello-app-prod-eu-central-config
+      namespace: org-org-name
+      priority: 1
+    - kind: configMap
+      name: hello-app-prod-eu-central-region-config
+      namespace: org-org-name
+      priority: 25
+  kubeConfig:
+    inCluster: true
+  name: cluster-aws
+  namespace: org-org-name
+  userConfig:
+    configMap:
+      name: hello-app-prod-eu-central-user-config
+      namespace: org-org-name
+  version: ""

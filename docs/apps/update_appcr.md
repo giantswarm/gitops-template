@@ -3,7 +3,8 @@
 - [Update an existing App](#update-an-existing-app)
   - [Export environment variables](#export-environment-variables)
   - [Updating App](#updating-app)
-    - [Updating App CR](#updating-app-cr)
+    - [Updating the chart version](#updating-the-chart-version)
+    - [Updating the HelmRelease](#updating-the-helmrelease)
     - [Updating ConfigMap-based user values](#updating-configmap-based-user-values)
     - [Updating Secret-based user values](#updating-secret-based-user-values)
 
@@ -23,45 +24,72 @@ export APP_NAME=APP_NAME
 
 ## Updating App
 
-  App update and reconfiguration must be done in a correct resource. If you want to reconfigure a property of App CR,
-  like application version, you have to edit the `appcr.yaml` file. If you want to edit the plain text or encrypted
-  configuration, you have to edit the relevant resource type.
+  App update and reconfiguration must be done in a correct resource:
 
-### Updating App CR
+- the chart version lives in the `OCIRepository`, in the `ocirepository.yaml` file,
+- how the chart is installed, for example the target namespace, timeouts or retries, lives in the `HelmRelease`, in
+  the `helmrelease.yaml` file,
+- plain text configuration lives in the `-user-values` ConfigMap, generated from the `override_config.yaml` file,
+- encrypted configuration lives in the `-user-secrets` Secret, in the `secret.enc.yaml` file.
+
+  For an App created from an [App Template](./add_app_template.md), the `ocirepository.yaml` and `helmrelease.yaml`
+  files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change
+  them for a single cluster, add a patch to the App's `kustomization.yaml`, see
+  [Adding App using App Template](./add_appcr.md#adding-app-using-app-template).
+
+### Updating the chart version
 
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
-1. Edit the `appcr.yaml` if you want to update the App CR fields, like version, catalog, etc. For all the supported
-fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/management-api/crd/apps.application.giantswarm.io/)
+1. Set the new chart version in the `OCIRepository`:
+
+    ```sh
+    yq -i '.spec.ref.tag = "NEW_VERSION"' ocirepository.yaml
+    ```
+
+    To have Flux pick up new versions by itself, use a version range instead, see
+    [Enable automatic updates of an existing App](./automatic_updates_appcr.md).
+
+### Updating the HelmRelease
+
+1. Go to the App directory:
+
+    ```sh
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    ```
+
+1. Edit the `helmrelease.yaml`. For all the supported fields reference
+   [the HelmRelease documentation](https://fluxcd.io/flux/components/helm/helmreleases/).
 
 ### Updating ConfigMap-based user values
 
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
-1. Edit the `configmap.yaml` if you want to update a non-secret user configuration
+1. Edit the `override_config.yaml` if you want to update a non-secret user configuration
 
 ### Updating Secret-based user values
 
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
 1. Import the WC's regular GPG private key from your safe storage into your keychain. In our example, we're gonna
-   use `LastPass` for that:
+   use 1Password's CLI `op` for that:
 
     ```sh
+    eval $(op signin)
     gpg --import \
-    <(lpass show --notes "Shared-Dev Common/GPG private key (${MC_NAME}, ${WC_NAME}, Flux)")
+    <(op read "Dev Common/GPG private key (${MC_NAME}, ${WC_NAME}, Flux)/notesPlain")
     ```
 
 1. Decrypt the `secret.enc.yaml` file with SOPS:
@@ -70,28 +98,16 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
     sops --decrypt --in-place secret.enc.yaml
     ```
 
-1. Grab the `.data.values` field from the Secret and base64-decode it:
+1. Edit the values under `.stringData.values` if you want to update a secret user configuration.
+
+    If the Secret holds them base64-encoded under `.data.values` instead, as Secrets created with
+    `kubectl create secret` do, decode them into a temporary file, edit it, and encode them back:
 
     ```sh
     yq eval .data.values secret.enc.yaml | base64 -d > values.tmp.yaml
-    ```
-
-1. Edit the `values.tmp.yaml` if you want to update a secret user configuration
-1. Save the base64-encoded `values.tmp.yaml` into variable:
-
-    ```sh
-    export NEW_USER_VALUES=$(cat values.tmp.yaml | base64)
-    ```
-
-1. Replace Secret's `.data.values` with new value:
-
-    ```sh
+    # edit values.tmp.yaml
+    export NEW_USER_VALUES=$(base64 < values.tmp.yaml | tr -d '\n')
     yq -i eval ".data.values = \"${NEW_USER_VALUES}\"" secret.enc.yaml
-    ```
-
-1. Remove the `values.tmp.yaml`:
-
-    ```sh
     rm values.tmp.yaml
     ```
 
@@ -104,5 +120,8 @@ fields reference [the App CRD schema](https://docs.giantswarm.io/ui-api/manageme
 1. Remove the private GPG key from your keychain and submit the PR.
 
     ```sh
+    export KEY_FP=$(gpg --show-keys --with-colons \
+    "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc" |
+    awk -F: '/^fpr/{print $10; exit}')
     gpg --delete-secret-keys "${KEY_FP}"
     ```

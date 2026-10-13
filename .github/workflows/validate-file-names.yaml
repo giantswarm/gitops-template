@@ -1,0 +1,8 @@
+name: Validate file names
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+jobs:
+  validate:
+    uses: giantswarm/github-workflows/.github/workflows/validate-file-names.yaml@main

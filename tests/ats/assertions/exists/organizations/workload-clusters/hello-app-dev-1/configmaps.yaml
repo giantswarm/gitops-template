@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+data:
+  values: |
+    global:
+      apps:
+        cilium:
+          extraConfigs:
+            - kind: ConfigMap
+              name: hello-app-dev-1-cilium-bpf-values
+      cluster:
+        internal:
+          advancedConfiguration:
+            controlPlane:
+              apiServer:
+                bindPort: 443
+                etcdPrefix: giantswarm.io
+      connectivity:
+        network:
+          pods:
+            cidrBlocks:
+              - 10.0.0.0/16
+          services:
+            cidrBlocks:
+              - 172.18.192.0/20
+          vpcId: vpc-0xxxxxxxxxxxxxb
+      controlPlane:
+          additionalSecurityGroups:
+            - id: sg-0xxxxxxxxxxxxxx3f
+          instanceType: r5.8xlarge
+          oidc:
+            clientId: spn:my-id
+            groupsClaim: groups
+            issuerUrl: https://sts.windows.net/my-id
+            usernameClaim: upn
+      metadata:
+        description: description
+        name: hello-app-dev-1
+        organization: org-name
+      nodePools:
+        xxxxx:
+          additionalSecurityGroups:
+            - id: sg-0xxxxxxxxxxxxxx3f
+          availabilityZones:
+            - eu-west-1a
+          instanceType: m6a.xlarge
+          maxSize: 10
+          minSize: 1
+      providerSpecific:
+        awsClusterRoleIdentityName: hello-app-dev-1-aws-cluster-role-identity
+        region: eu-west-1
+kind: ConfigMap
+metadata:
+  name: hello-app-dev-1-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    replicaCount: 3
+    ingress:
+      enabled: false
+    route:
+      enabled: true
+      kind: HTTPRoute
+      parentRefs: # has to be in sync with the Gateway served by the cluster's Envoy Gateway
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames: # under the cluster's base domain and in the Gateway's `listeners.https.subdomains`
+        - "hello.{{ .Values.baseDomain }}"
+kind: ConfigMap
+metadata:
+  name: hello-app-dev-1-hello-world-values
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: ""
+kind: ConfigMap
+metadata:
+  name: hello-app-dev-1-user-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    gateways:
+      default:
+        listeners:
+          https:
+            # DNS record and certificate entry for the hello-world app's hostname,
+            # `hello.<cluster base domain>`
+            subdomains:
+              - hello
+kind: ConfigMap
+metadata:
+  name: hello-app-dev-1-gateway-api-config-user-values
+  namespace: org-org-name

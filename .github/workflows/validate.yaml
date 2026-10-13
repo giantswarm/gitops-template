@@ -1,0 +1,16 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [HEAD_BRANCH, main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@main
+    secrets:
+      GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

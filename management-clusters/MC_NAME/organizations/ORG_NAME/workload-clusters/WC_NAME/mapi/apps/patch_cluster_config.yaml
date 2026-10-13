@@ -1,0 +1,10 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/managed-by: flux
+  name: ignored
+spec:
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig

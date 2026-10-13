@@ -1,0 +1,27 @@
+---
+apiVersion: application.giantswarm.io/v1alpha1
+kind: App
+metadata:
+  labels:
+    app-operator.giantswarm.io/version: 0.0.0
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1
+  namespace: org-org-name
+spec:
+  catalog: cluster
+  config:
+    configMap:
+      name: hello-app-staging-1-config
+      namespace: org-org-name
+  extraConfigs: []
+  kubeConfig:
+    inCluster: true
+  name: cluster-aws
+  namespace: org-org-name
+  userConfig:
+    configMap:
+      name: hello-app-staging-1-user-config
+      namespace: org-org-name
+  version: ""

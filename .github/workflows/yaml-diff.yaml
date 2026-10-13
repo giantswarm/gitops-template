@@ -1,0 +1,12 @@
+name: yaml-diff
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  yaml-diff:
+    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@main

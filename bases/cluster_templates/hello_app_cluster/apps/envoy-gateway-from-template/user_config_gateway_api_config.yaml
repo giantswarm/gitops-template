@@ -1,0 +1,8 @@
+gateways:
+  default:
+    listeners:
+      https:
+        # DNS record and certificate entry for the hello-world app's hostname,
+        # `hello.<cluster base domain>`
+        subdomains:
+          - hello
