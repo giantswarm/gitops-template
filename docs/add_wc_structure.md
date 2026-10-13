@@ -139,11 +139,12 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
-    cat <<EOF >> .sops.yaml
-      - encrypted_regex: ^(data|stringData)$
-        path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/.*\.enc\.yaml
-        pgp: ${KEY_FP}
-    EOF
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/mapi/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
     ```
 
 ## Directory tree
