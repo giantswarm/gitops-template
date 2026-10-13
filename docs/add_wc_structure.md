@@ -119,7 +119,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     ```sh
     eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    jq -snR '{"fields": [{"value": inputs }]}' |
+    jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |
     op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --format json -
     ```
 
