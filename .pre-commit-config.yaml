@@ -16,7 +16,7 @@ repos:
 
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks
-      rev: v1.9.0  # Use the ref you want to point at
+      rev: v1.10.0  # Use the ref you want to point at
       hooks:
           - id: python-use-type-annotations
           - id: python-check-blanket-noqa
