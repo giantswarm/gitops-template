@@ -1,6 +1,6 @@
 # Add a new Management Cluster
 
-- [Export Management Cluster codename](#export-management-cluster-codename)
+- [Export environment variables](#export-environment-variables)
 - [Flux GPG master key pair](#flux-gpg-master-key-pair)
 - [Directory tree](#directory-tree)
 - [Initial cluster configuration](#initial-cluster-configuration)
@@ -21,13 +21,17 @@ In general, we have to complete 3 major steps to provide the necessary structure
 
 *Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
-## Export Management Cluster codename
+## Export environment variables
 
-**Note**, cluster codename is needed in multiple places across these instructions, the least error prone way of providing
-it is by exporting it as an environment variable:
+**Note**, the cluster codename and the GitOps repository are needed in multiple places across these instructions, the
+least error prone way of providing them is by exporting them as environment variables:
 
 ```sh
 export MC_NAME=YOUR_CODENAME
+# name of the Flux GitRepository CR pointing at this repository, a valid Kubernetes name
+export GITOPS_REPO=YOUR_GITOPS_REPO_NAME
+# HTTPS URL of this repository
+export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
 ```
 
 ## Flux GPG master key pair
@@ -202,7 +206,7 @@ en- and decrypt real user-related data.
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
         kind: GitRepository
-        name: GITOPS_REPO  # TODO: the name of the GitRepository created in the next section
+        name: ${GITOPS_REPO}
       timeout: 2m
     EOF
     ```
@@ -236,7 +240,7 @@ Bear in mind `Flux` needs credentials to read the repository when it is private.
     ```sh
     flux create secret git github-https-credentials \
     --namespace=default \
-    --url=https://github.com/GITOPS_REPO \
+    --url=${GITOPS_REPO_URL} \
     --username=git \
     --password="${GITHUB_TOKEN}"
     ```
@@ -251,11 +255,11 @@ Bear in mind `Flux` needs credentials to read the repository when it is private.
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
     metadata:
-      name: GITOPS_REPO  # TODO: set as needed
+      name: ${GITOPS_REPO}
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/GITOPS_REPO  # TODO: set as needed
+      url: ${GITOPS_REPO_URL}
       secretRef:
         name: github-https-credentials
       ref:
