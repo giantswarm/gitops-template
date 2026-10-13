@@ -7,6 +7,8 @@ on:
     - assigned
     - labeled
 
+permissions: {}
+
 jobs:
   build_user_list:
     name: Get yaml config of GS users
