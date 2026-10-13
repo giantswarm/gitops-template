@@ -1,188 +1,41 @@
 # Enable automatic updates of an existing App
 
-> **Note**
-> This page describes automatic updates for App CRs, through Flux image automation and `$imagepolicy` setters. The
-> apps in this repository are `HelmRelease` + `OCIRepository` pairs and update through a `spec.ref.semver` range on the
-> `OCIRepository` instead, see
-> [hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates/ocirepository.yaml)
-> and the stages in [Add Workload Cluster environments](/docs/add_wc_environments.md). The example linked below no
-> longer contains the image automation objects.
-
 - [Enable automatic updates of an existing App](#enable-automatic-updates-of-an-existing-app)
   - [Example](#example)
   - [Export environment variables](#export-environment-variables)
-  - [Directory tree](#directory-tree)
-  - [App CR version field mark](#app-cr-version-field-mark)
-  - [Secrets for scanning private images (optional)](#secrets-for-scanning-private-images-optional)
+  - [Version range](#version-range)
+  - [Apps created from an App Template](#apps-created-from-an-app-template)
+  - [Checking the installed version](#checking-the-installed-version)
+  - [Credentials for private registries (optional)](#credentials-for-private-registries-optional)
 
 Follow the below instructions to tell Flux to automatically update an existing App. Automatic update means
-that Flux will scan a remote repository for you and automatically update your deployed application version
-while also creating commits in your repository to reflect these changes.
+that Flux will check the chart registry for you and automatically install new chart versions as they are published.
 
-Configuring automated version updates requires a few additional Flux API objects to be defined, namely:
-
-- `ImageUpdateAutomation`, which defines the core update properties, like the git repo where the commits are to be
-  made, commit messages structure and how to update files in the repository,
-- `ImageRepository` to configure where images are stored and new versions can be detected,
-- `ImagePolicy` to configure which of the detected new tags will be considered as possible to update to.
-- additionally, you have to edit your existing App manifest to include a marker showing the manifest's property you
-  want to have auto updated by Flux (usually App version property).
-
-Flux will watch for new Docker image tags for your App and use them to update the `.spec.version` field in the App CR. It
-will do it by pushing commits to this repository.
-
-**Note**, in order to use this mechanism you have to make sure that image tags of your App corresponds to its version,
-otherwise this process will result in setting meaningless version in the `.spec.version` field.
+The chart version of an App is set in its `OCIRepository`. Instead of a fixed `spec.ref.tag`, you can give it a
+`spec.ref.semver` range: Flux then picks the highest chart tag that satisfies the range, checks the registry again
+every `spec.interval`, and the `HelmRelease` upgrades the App as soon as a newer matching tag shows up. No other Flux
+objects are needed, and Flux doesn't commit anything to this repository: the repository keeps the range, the cluster
+reports the version it installed.
 
 ## Example
 
-An example of an App automated updates is available in [WC_NAME/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates).
+An example of an App with automated updates is available in
+[WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates/ocirepository.yaml).
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name, Workload Cluster name and some App-related values are needed in
-multiple places across this instruction, the least error prone way of providing them is by exporting as environment variables:
+**Note**, Management Cluster codename, Organization name, Workload Cluster name and App name are needed in
+multiple places across this instruction, the least error prone way of providing them is by exporting as environment
+variables:
 
 ```sh
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
 export APP_NAME=APP_NAME
-export APP_IMAGE_REGISTRY=APP_IMAGE_REGISTRY
 ```
 
-## Directory tree
-
-1. Go to the Workload Cluster directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi
-    ```
-
-1. Create the `automatic-updates` directory there and enter it:
-
-    ```sh
-    mkdir automatic-updates
-    cd automatic-updates
-    ```
-
-1. Create the `imageupdate.yaml` file that defines an automation process for updating Git repository:
-
-    ```sh
-    cat <<EOF > imageupdate.yaml
-    apiVersion: image.toolkit.fluxcd.io/v1beta2
-    kind: ImageUpdateAutomation
-    metadata:
-      name: ${WC_NAME}-updates
-      namespace: default
-    spec:
-      interval: 1m0s
-      sourceRef:
-        kind: GitRepository
-        name: YOUR_REPO
-      git:
-        checkout:
-          ref:
-            branch: main
-        commit:
-          author:
-            email: fluxcdbot@users.noreply.github.com
-            name: fluxcdbot
-          messageTemplate: '{{range .Updated.Images}}{{println .}}{{end}}'
-        push:
-          branch: main
-      update:
-        path: ./management-clusters/${MC_NAME}
-        strategy: Setters
-    EOF
-    ```
-
-1. Leave `automatic-updates` directory and go into the App directory:
-
-    ```sh
-    cd ../apps/${APP_NAME}
-    ```
-
-1. Create the [ImageRepository CR](https://fluxcd.io/docs/components/image/imagerepositories/) to configure registry to
-scan for new tags:
-
-    ```sh
-    cat <<EOF > imagerepository.yaml
-    apiVersion: image.toolkit.fluxcd.io/v1beta2
-    kind: ImageRepository
-    metadata:
-      name: ${APP_NAME}
-      namespace: default
-    spec:
-      image: ${APP_IMAGE_REGISTRY}
-      interval: 1m0s
-    EOF
-    ```
-
-1. Create the [ImagePolicy CR](https://fluxcd.io/docs/components/image/imagepolicies/) with rules for tags selection:
-
-    ```sh
-    cat <<EOF > imagepolicy.yaml
-    apiVersion: image.toolkit.fluxcd.io/v1beta2
-    kind: ImagePolicy
-    metadata:
-      name: ${APP_NAME}
-      namespace: flux-system
-    spec:
-      imageRepositoryRef:
-        name: ${APP_NAME}
-      filterTags:
-          extract: \$version
-          pattern: ^v?(?P<version>.*)$
-      policy:
-        semver:
-          range: '>=0.0.1'
-    EOF
-    ```
-
-    **Note**, the `filterTags` is processed first and gives opportunity to filter the image tags before they are
-    considered by the policy rule. Here, it is used to skip the heading `v` in version upon passing it to the policy.
-
-    Check [Flux docs](https://fluxcd.io/docs/components/image/imagepolicies/#examples) for more examples of possible policies.
-
-1. Go back to the `apps` directory:
-
-    ```sh
-    cd ..
-    ```
-
-1. Edit the `kustomization.yaml` file listing newly created files:
-
-    ```sh
-    yq -i eval ".resources += [\"${APP_NAME}/imagepolicy.yaml\",\"${APP_NAME}/imagerepository.yaml\"] | .resources style=\"\"" kustomization.yaml
-    ```
-
-    The resultant file should looks similar to this:
-
-    ```yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    resources:
-    - ${APP_NAME}/imagepolicy.yaml
-    - ${APP_NAME}/imagerepository.yaml
-    ```
-
-1. Edit the `kustomization.yaml` file again, and add a patch for placing Flux' resources in the default namespace
-or one of your organization namespaces:
-
-    ```yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    patches:
-    - patch: |-
-      - op: replace
-        path: "/metadata/namespace"
-        value: default
-    target:
-      kind: 'ImagePolicy|ImageRepository'
-    ```
-
-## App CR version field mark
+## Version range
 
 1. Go to the App directory:
 
@@ -190,69 +43,107 @@ or one of your organization namespaces:
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
-2. Mark the `.spec.version` field for update in the App CR:
+1. Replace the fixed version of the `OCIRepository` with a version range, for example every release from `3.0.0` on,
+   but below the next major version, which might bring breaking changes:
 
     ```sh
-    sed -i "s/version:.*$/& # {\"\$imagepolicy\": \"default:${APP_NAME}:tag\"}/" appcr.yaml
+    yq -i '.spec.ref = {"semver": ">=3.0.0 <4.0.0"}' ocirepository.yaml
     ```
 
-   The resultant file should looks similar to this:
+    The resulting file should look similar to this:
 
-   ```yaml
-   apiVersion: application.giantswarm.io/v1alpha1
-   kind: App
-   metadata:
-     name: hello-world
-   spec:
-     version: 0.1.2 # {"$imagepolicy": "default:hello-world:tag"}
-   ```
+    ```yaml
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: OCIRepository
+    metadata:
+      name: ${cluster_name}-hello-world
+      namespace: org-${organization}
+    spec:
+      interval: 10m
+      provider: generic
+      ref:
+        semver: '>=3.0.0 <4.0.0'
+      url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+    ```
 
-## Secrets for scanning private images (optional)
+    **Note**, a range only matches pre-release tags, like `3.1.0-rc.1`, if it has a pre-release comparator itself:
+    `>=3.0.0-0` matches every release and pre-release from `3.0.0` on. Use `spec.ref.semverFilter` to narrow the
+    matching tags down with a regular expression, see
+    [Add Workload Cluster environments](../add_wc_environments.md#the-development-cluster) for an example that
+    follows development builds, and the [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/)
+    for all the options.
 
-1. Export path to the Docker registry config with secrets:
+## Apps created from an App Template
+
+The `OCIRepository` of an App created from an [App Template](./add_app_template.md) is part of the Template. To enable
+automatic updates for a single cluster, add a patch to the App's `kustomization.yaml` instead. The `$` of the target
+name is escaped, as `kustomize` reads the name as a regular expression:
+
+```yaml
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/ref
+        value:
+          semver: '>=3.0.0 <4.0.0'
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
+```
+
+## Checking the installed version
+
+The repository only holds the range. To see which version Flux picked, check the `OCIRepository` and `HelmRelease` on
+the Management Cluster:
+
+```sh
+kubectl get ocirepositories,helmreleases -n org-${ORG_NAME}
+```
+
+## Credentials for private registries (optional)
+
+Charts from the Giant Swarm catalog are public. If your chart is in a private registry, give the `OCIRepository`
+credentials to read it.
+
+1. Export path to the Docker registry config with credentials:
 
     ```sh
     export DOCKER_CONFIG_JSON=PATH
     ```
 
-1. Go to the Management Cluster secrets directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/secrets
-    ```
-
-1. Create Kubernetes Secret with Docker Registry credentials and save it into a file:
-
-    ```sh
-    kubectl create secret docker-registry \
-    flux-pull-secrets \
-    --namespace default \
-    --from-file .dockerconfigjson=${DOCKER_CONFIG_JSON} \
-    --dry-run=client \
-    -o yaml > pullsecrets.enc.yaml
-    ```
-
-1. Import the master GPG public key and encrypt the Kubernetes Secret with it:
-
-    ```sh
-    gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
-    sops --encrypt --in-place pullsecrets.enc.yaml
-    ```
-
-1. Edit `kustomization.yaml` and list newly created secret as resource:
-
-    ```sh
-    yq -i eval '.resources += "pullsecrets.enc.yaml" | .resources style=""' kustomization.yaml
-    ```
-
 1. Go to the App directory:
 
     ```sh
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
-1. Edit the `imagerepository.yaml` file and reference the newly created secrets there:
+1. Create Kubernetes Secret with Docker Registry credentials in the organization namespace, where the `OCIRepository`
+   lives, and save it into a file:
 
     ```sh
-    yq -i eval '.spec.secretRef.name = "flux-pull-secrets"' imagerepository.yaml
+    kubectl create secret docker-registry \
+    ${WC_NAME}-${APP_NAME}-pull-secret \
+    --namespace org-${ORG_NAME} \
+    --from-file .dockerconfigjson=${DOCKER_CONFIG_JSON} \
+    --dry-run=client \
+    -o yaml > pullsecret.enc.yaml
+    ```
+
+1. Import the Workload Cluster's GPG public key and encrypt the Kubernetes Secret with it:
+
+    ```sh
+    gpg --import "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc"
+    sops --encrypt --in-place pullsecret.enc.yaml
+    ```
+
+1. Reference the Secret in the `OCIRepository`:
+
+    ```sh
+    yq -i ".spec.secretRef.name = \"${WC_NAME}-${APP_NAME}-pull-secret\"" ocirepository.yaml
+    ```
+
+1. Add the Secret to the resources of the App's `kustomization.yaml`:
+
+    ```sh
+    yq -i '.resources += ["pullsecret.enc.yaml"]' kustomization.yaml
     ```

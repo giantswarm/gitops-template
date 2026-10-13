@@ -14,7 +14,7 @@ You can follow the instructions below to store CAPx cluster templates in the rep
 [repository structure](./repo_structure.md).
 
 Adding definitions can be done on two levels: shared cluster template and version specific template, see
-[create shared template base](#create-shared-template-base-optional)
+[create shared template base](#create-shared-cluster-template-base-optional)
 and [create versioned base](#create-versioned-base-optional).
 
 If all you want is to create a new CAPx cluster using an existing definition,
@@ -85,33 +85,63 @@ as this can strongly depend on resources involved, how much of them you would li
     mkdir -p bases/clusters/${CAPX}/template
     ```
 
-1. Create cluster App CR template:
+1. Create cluster App CR template. The cluster App takes its default configuration from the `${cluster_name}-config`
+   ConfigMap created in the next steps:
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/template/cluster.yaml
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
     metadata:
+      labels:
+        app-operator.giantswarm.io/version: 0.0.0
+        giantswarm.io/managed-by: flux
       name: \${cluster_name}
       namespace: org-\${organization}
     spec:
-      catalog: giantswarm
+      catalog: cluster
+      config:
+        configMap:
+          name: \${cluster_name}-config
+          namespace: org-\${organization}
+      extraConfigs: []
       kubeConfig:
         inCluster: true
       name: cluster-${PROVIDER}
       namespace: org-\${organization}
-      version: \${cluster_release}
+      version: ""
+    EOF
+    ```
+
+1. Create the default configuration shared by all the clusters created from this template. It holds plain
+   [values](https://docs.giantswarm.io/app-platform/app-configuration/#values-format) of the `cluster-${PROVIDER}`
+   chart, see [bases/clusters/capa/template/cluster_config.yaml](/bases/clusters/capa/template/cluster_config.yaml)
+   for a fuller example:
+
+    ```sh
+    cat <<EOF > bases/clusters/${CAPX}/template/cluster_config.yaml
+    global:
+      metadata:
+        description: \${cluster_description}
+        name: \${cluster_name}
+        organization: \${organization}
     EOF
     ```
 
 1. Create the template's `kustomization.yaml`, note usage of
 [`ConfigMap` generator](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/configGeneration.md)
-for turning config from the previous step into a `ConfigMap` and placing it under the
-[values](https://docs.giantswarm.io/app-platform/app-configuration/#values-format) key:
+for turning config from the previous step into a `ConfigMap` and placing it under the `values` key:
 
     ```sh
     cat <<EOF > bases/clusters/${CAPX}/template/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
+    configMapGenerator:
+      - files:
+        - values=cluster_config.yaml
+        name: \${cluster_name}-config
+        namespace: org-\${organization}
+    generatorOptions:
+      disableNameSuffixHash: true
     kind: Kustomization
     resources:
       - cluster.yaml
@@ -121,16 +151,17 @@ for turning config from the previous step into a `ConfigMap` and placing it unde
 1. Create the `readme.md` listing variables supported and expected values:
 
     ```sh
-    cat <<EOF > readme.md
+    cat <<EOF > bases/clusters/${CAPX}/template/readme.md
     # Input Variables
 
     Expected variables are in the table below.
 
     | Variable | Expected Value |
     | :--: | :--: |
+    | \`cluster_description\` | User Friendly name for the cluster |
     | \`cluster_name\` | Unique name of the Workload Cluster, MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
     | \`organization\` | Organization name, the \`org-\` prefix MUST not be part of it and MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-    | \`cluster_release\` | Cluster app version, reference the [Cluster AWS](https://github.com/giantswarm/cluster-aws/releases) for more insight on releases |
+    EOF
     ```
 
 ## Create versioned base (optional)
@@ -141,113 +172,87 @@ over multiple releases,
 and although minor differences can be handled on the `userConfig` level, it is advised for the bases to follow major
 `values.yaml` schema versions to avoid confusion.
 
-There is an example for CAPA [2.2.0](/bases/clusters/capa/template) as major changes were introduced
-to the `values.yaml` in the [cluster-aws 2.2.0 release](https://github.com/giantswarm/cluster-aws/releases/tag/2.2.0).
+This repository does not ship a versioned base: the examples use the [template](/bases/clusters/capa/template) base
+directly.
 
 **IMPORTANT**, despite the below instructions referencing `kubectl-gs` for templating configuration, `kubectl-gs`
 generates configuration for the most recent schema only. If you configure a base for older versions of cluster app,
 it is advised to check what is generated against the version-specific `values.yaml`.
 
-1. Export CAPx name, provider name and cluster App version you are about to create, for example `capa`, `aws` and `2.2.0`:
+1. Export CAPx name, provider name and the `cluster-${PROVIDER}` chart version (its git tag) you are about to create
+   a base for, for example `capa`, `aws` and `v2.2.0`:
 
     ```sh
     export CAPX=capa
-    export PROVIDER=AWS
-    export CLUSTER_VERSION="2.2.0"
+    export PROVIDER=aws
+    export CLUSTER_VERSION="v2.2.0"
     ```
 
 1. Create a directory structure:
 
     ```sh
-    mkdir -p bases/clusters/${CAPX}/${VERSION}
-    mkdir -p bases/nodepools/${CAPX}/${VERSION}
+    mkdir -p bases/clusters/${CAPX}/${CLUSTER_VERSION}
     ```
 
 1. Use the [kubectl gs template cluster](https://docs.giantswarm.io/ui-api/kubectl-gs/template-cluster/) to template
-cluster resources, see example for the `aws` provider below. Use arbitrary values for the mandatory fields, we
-will configure them later in our process:
+cluster resources, see example for the `aws` provider below. Pick a `--release` that ships the chart version exported
+above. Use arbitrary values for the other mandatory fields, we will configure them later in our process:
 
     ```sh
     kubectl gs template cluster \
     --release 30.0.0 \
     --name mywcl \
     --organization myorg \
-    --provider capa \
+    --provider ${CAPX} \
+    > bases/clusters/${CAPX}/${CLUSTER_VERSION}/cluster.tmp.yaml
     ```
 
-1. Split up the `cluster.yaml` into multiple files:
+1. Discard everything except the values of the `mywcl-userconfig` ConfigMap and move them to the base:
 
     ```sh
-    COUNT=$(grep -e '---' bases/clusters/${CAPX}/${VERSION}/cluster.tmp.yaml | wc -l | tr -d ' ')
-    csplit bases/clusters/${CAPX}/${VERSION}/cluster.tmp.yaml /---/ "{$((COUNT-2))}"
-    rm bases/clusters/${CAPX}/${VERSION}/cluster.tmp.yaml
+    yq 'select(.metadata.name == "mywcl-userconfig") | .data.values' \
+    bases/clusters/${CAPX}/${CLUSTER_VERSION}/cluster.tmp.yaml \
+    > bases/clusters/${CAPX}/${CLUSTER_VERSION}/cluster_config.yaml
+    rm bases/clusters/${CAPX}/${CLUSTER_VERSION}/cluster.tmp.yaml
     ```
 
-1. Discard everything except `mywcl-cluster-userconfig` and move it to the base:
+1. Replace `mywcl`, `myorg` values from the previous step with variables. The single quotes keep the shell from
+   expanding the variables, which Flux substitutes later:
 
     ```sh
-    for f in $(ls xx*)
-    do
-        name=$(yq eval '.metadata.name' $f | tr '[:upper:]' '[:lower:]')
-        if [[ "$name" == "mywcl-cluster-userconfig" ]]
-        then
-            yq eval '.data.values' $f > bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
-        else
-            rm $f
-        fi
-    done
+    sed -i 's/myorg/${organization}/g' bases/clusters/${CAPX}/${CLUSTER_VERSION}/cluster_config.yaml
+    sed -i 's/mywcl/${cluster_name}/g' bases/clusters/${CAPX}/${CLUSTER_VERSION}/cluster_config.yaml
     ```
 
-1. Replace `mywcl`, `myorg` values from the previous step with variables:
-
-    ```sh
-    sed -i "s/myorg/${organization}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
-    sed -i "s/mywcl/${cluster_name}/g" bases/clusters/${CAPX}/${VERSION}/cluster_config.yaml
-    ```
+    The generated values also pin the Giant Swarm release in `global.release.version`. Keep it to tie the base to that
+    release, or replace it with a variable to set it per cluster.
 
 1. Compare `cluster_config.yaml` against the version-specific `values.yaml`, and tweak it if necessary to match the
 expected schema. At this point you may also provide extra configuration, like additional availability zones, node
 pools, etc.:
 
     ```sh
-    wget https://github.com/giantswarm/cluster-aws/archive/refs/tags/${CLUSTER_VERSION}.tar.gz
+    wget https://github.com/giantswarm/cluster-${PROVIDER}/archive/refs/tags/${CLUSTER_VERSION}.tar.gz
     tar -xvf ${CLUSTER_VERSION}.tar.gz cluster-${PROVIDER}-${CLUSTER_VERSION:1}/helm/cluster-${PROVIDER}/values.yaml
-    vim cluster-aws-${CLUSTER_VERSION:1}/helm/cluster-${PROVIDER}/values.yaml
+    vim cluster-${PROVIDER}-${CLUSTER_VERSION:1}/helm/cluster-${PROVIDER}/values.yaml
     ```
 
-1. Create a patch for the cluster App CR to provide the newly created configuration:
+1. Create the `kustomization.yaml`, referencing the template, and replacing its `${cluster_name}-config` ConfigMap with
+   one generated out of `cluster_config.yaml`. The template's cluster App already reads its configuration from that
+   ConfigMap, so no patch is needed:
 
     ```sh
-    cat <<EOF > bases/clusters/${CAPX}/${VERSION}/patch_config.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
-    metadata:
-      name: \${cluster_name}
-      namespace: org-\${organization}
-    spec:
-      extraConfigs:
-        - kind: configMap
-          name: \${cluster_name}-config
-          namespace: org-\${organization}
-          priority: 1
-    EOF
-    ```
-
-1. Create the `kustomization.yaml`, referencing the template, and generating the ConfigMap out of `cluster_config.yaml`:
-
-    ```sh
-    cat <<EOF > bases/clusters/${CAPX}/${VERSION}/kustomization.yaml
+    cat <<EOF > bases/clusters/${CAPX}/${CLUSTER_VERSION}/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     configMapGenerator:
-      - files:
-        - values=cluster_config.yaml
+      - behavior: replace
+        files:
+          - values=cluster_config.yaml
         name: \${cluster_name}-config
         namespace: org-\${organization}
     generatorOptions:
       disableNameSuffixHash: true
     kind: Kustomization
-    patchesStrategicMerge:
-      - patch_config.yaml
     resources:
       - ../template
     EOF
@@ -256,15 +261,16 @@ pools, etc.:
 1. Copy `readme.md` from the template base:
 
     ```sh
-    cp bases/clusters/${CAPX}/template/readme.md bases/clusters/${CAPX}/${VERSION}/readme.md
+    cp bases/clusters/${CAPX}/template/readme.md bases/clusters/${CAPX}/${CLUSTER_VERSION}/readme.md
     ```
 
 1. Export bases paths:
 
     ```sh
-    export CLUSTER_PATH=bases/clusters/${CAPX}/${VERSION}
+    export CLUSTER_PATH=bases/clusters/${CAPX}/${CLUSTER_VERSION}
     ```
 
 ## Recommended next steps
 
-- [Managing Apps installed in clusters with GitOps](./apps/README.md)
+- [Prepare multiple environments](./add_wc_environments.md)
+- [Add a new Workload Cluster repository structure](./add_wc_structure.md)

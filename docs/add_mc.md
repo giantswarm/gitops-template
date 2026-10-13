@@ -1,6 +1,6 @@
 # Add a new Management Cluster
 
-- [Export Management Cluster codename](#export-management-cluster-codename)
+- [Export environment variables](#export-environment-variables)
 - [Flux GPG master key pair](#flux-gpg-master-key-pair)
 - [Directory tree](#directory-tree)
 - [Initial cluster configuration](#initial-cluster-configuration)
@@ -21,18 +21,23 @@ In general, we have to complete 3 major steps to provide the necessary structure
 
 *Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
 
-## Export Management Cluster codename
+## Export environment variables
 
-**Note**, cluster codename is needed in multiple places across these instructions, the least error prone way of providing
-it is by exporting it as an environment variable:
+**Note**, the cluster codename and the GitOps repository are needed in multiple places across these instructions, the
+least error prone way of providing them is by exporting them as environment variables:
 
 ```sh
 export MC_NAME=YOUR_CODENAME
+# name of the Flux GitRepository CR pointing at this repository, a valid Kubernetes name
+export GITOPS_REPO=YOUR_GITOPS_REPO_NAME
+# HTTPS URL of this repository
+export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
 ```
 
 ## Flux GPG master key pair
 
-**Note**, temporarily there is no automation behind creating master keys. This however may be subject to change.
+**Note**, `kubectl gs gitops add management-cluster --gen-master-key` can generate the master key pair together with
+the directory tree, see `kubectl gs gitops add management-cluster --help`. The steps below do it by hand.
 
 A master GPG keypair is used for en- and decryption of other GPG keys kept in this repository, that are in turn used to
 en- and decrypt real user-related data.
@@ -81,38 +86,45 @@ en- and decrypt real user-related data.
 1. Create and apply Kubernetes `Secret` to the management cluster API using the private key:
 
     ```sh
-    kubectl config set-context gs-$MC_NAME
+    kubectl config use-context gs-$MC_NAME
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-master \
     --namespace=default \
     --from-file=${MC_NAME}.master.asc=/dev/stdin
     ```
 
-1. Add the private to a safe encrypted storage of your choice. For example, to export the key to 1Password
-   as a secure note, you can run:
+1. Add the private key to a safe encrypted storage of your choice, for example your password manager. You will need
+   it again whenever you change the encrypted keys of this management cluster, see
+   [Add a new Organization](./add_org.md).
+
+    For example, with the 1Password CLI (`op`), store it as the body of a secure note. The `jq` filter wraps the
+    armored key into the item template, in the `notesPlain` field of a secure note:
 
     ```sh
     eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    jq -snR '{"fields": [{"value": inputs  }]}' |
+    jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |
     op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, master, Flux)" --format json -
     ```
 
-1. Delete the private key from the keychain (make sure you don't leave any unencrypted or local copies of the private
-   master key! This is *essential* for your GitOps deployment security!):
+    To import the key back into your keychain later, read the note body:
 
     ```sh
-    gpg --delete-secret-keys "${KEY_FP}"
+    op item get "GPG private key (${MC_NAME}, master, Flux)" --vault 'Dev Common' --format json |
+    jq -j '.fields[] | select(.id == "notesPlain") | .value' |
+    gpg --import
     ```
 
-1. Add the automatic key selection rule to the `creation_rules` section of the [SOPS configuration file](/.sops.yaml):
+1. Add the automatic key selection rule to the `creation_rules` list of the
+   [SOPS configuration file](/.sops.yaml). `yq` creates the list if the file is new or empty:
 
     ```sh
-    cat <<EOF >> .sops.yaml
-    - path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
-      encrypted_regex: ^(data|stringData)$
-      pgp: ${KEY_FP}
-    EOF
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
     ```
 
 ## Directory tree
@@ -124,7 +136,7 @@ en- and decrypt real user-related data.
     mkdir ${MC_NAME}
     ```
 
-1. Go to the newly created directory and create 2 sub-directories there:
+1. Go to the newly created directory and create 3 sub-directories there:
 
     - `.sops.keys` - storage for all GPG public keys,
     - `organizations` - storage for MC organizations,
@@ -170,7 +182,7 @@ en- and decrypt real user-related data.
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
-    - ${MC_NAME}.master.gpgkey.enc.yaml
+    - ${MC_NAME}.gpgkey.enc.yaml
     EOF
     ```
 
@@ -184,15 +196,26 @@ en- and decrypt real user-related data.
       name: ${MC_NAME}-gitops
       namespace: default
     spec:
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-gpg-master
       serviceAccountName: automation
       prune: false
       interval: 1m
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
         kind: GitRepository
-        name: YOUR_REPO
+        name: ${GITOPS_REPO}
       timeout: 2m
     EOF
+    ```
+
+1. Delete the private key from the keychain (make sure you don't leave any unencrypted or local copies of the private
+   master key! This is *essential* for your GitOps deployment security!):
+
+    ```sh
+    gpg --delete-secret-keys "${KEY_FP}"
     ```
 
 ## Initial cluster configuration
@@ -200,10 +223,30 @@ en- and decrypt real user-related data.
 Once all the above steps are completed, the management cluster's `Flux` can be initially configured to work against this
 repository.
 
-Bear in mind `Flux` needs GitHub credentials since the repository is private. This instruction assumes such credentials are
-available in the `github-https-credentials` Kubernetes `Secret`, created according to the
-[FluxCD installation intranet page](https://intranet.giantswarm.io/docs/support-and-ops/installation-setup-guide/fluxcd-installation/#create-a-secret-for-private-repository-access)
-in the `default` namespace.
+Bear in mind `Flux` needs credentials to read the repository when it is private. The steps below keep them in the
+`github-https-credentials` Kubernetes `Secret` in the `default` namespace.
+
+1. Create a GitHub token that can read the repository, for example a
+   [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)
+   limited to this repository with read-only `Contents` permission, and export it:
+
+    ```sh
+    export GITHUB_TOKEN=YOUR_TOKEN
+    ```
+
+1. Create the `Secret` with [flux create secret git](https://fluxcd.io/flux/cmd/flux_create_secret_git/). GitHub
+   accepts the token as the password of any user name:
+
+    ```sh
+    flux create secret git github-https-credentials \
+    --namespace=default \
+    --url=${GITOPS_REPO_URL} \
+    --username=git \
+    --password="${GITHUB_TOKEN}"
+    ```
+
+    To use an SSH deploy key instead, see the SSH examples on the same page, and use the `ssh://` URL in the
+    `GitRepository` below.
 
 1. Create a GitRepository CR:
 
@@ -212,11 +255,11 @@ in the `default` namespace.
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
     metadata:
-      name: GITOPS_REPO  # TODO: set as needed
+      name: ${GITOPS_REPO}
       namespace: default
     spec:
       interval: 1m
-      url: https://github.com/GITOPS_REPO  # TODO: set as needed
+      url: ${GITOPS_REPO_URL}
       secretRef:
         name: github-https-credentials
       ref:

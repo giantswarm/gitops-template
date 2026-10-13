@@ -15,16 +15,21 @@ An example of a workload cluster instance created using the CAPI is available in
 
 1. Export environment variables
 
-**Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places across
-this instruction, the least error prone way of providing them is by exporting as environment variables. `CLUSTER_PATH`
-is a variable pointing to a directory with a cluster template base.
+    **Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places
+    across this instruction, the least error prone way of providing them is by exporting as environment variables.
+    `CLUSTER_PATH` is a variable pointing to a directory with a cluster base, for example the
+    [template](/bases/clusters/capa/template) base or a versioned one created with
+    [Add a CAPx Workload Cluster template](./add_wc_template.md):
 
-```sh
-export MC_NAME=CODENAME
-export ORG_NAME=ORGANIZATION
-export WC_NAME=CLUSTER_NAME
-export CLUSTER_PATH=bases/cluster_templates/XYZ
-```
+    ```sh
+    export MC_NAME=CODENAME
+    export ORG_NAME=ORGANIZATION
+    export WC_NAME=CLUSTER_NAME
+    export CLUSTER_PATH=bases/clusters/capa/template
+    ```
+
+    To create a cluster together with a set of apps from an environment template instead, see
+    [Add Workload Cluster environments](./add_wc_environments.md).
 
 1. Go to the Workload Cluster definition directory:
 
@@ -36,9 +41,16 @@ export CLUSTER_PATH=bases/cluster_templates/XYZ
 
     ```yaml
     # cat /tmp/values
-    clusterDescription: My GitOps Cluster
-    cloudConfig: my-cloud-config
+    global:
+      metadata:
+        description: My GitOps Cluster
+      nodePools:
+        nodepool0:
+          instanceType: m6i.xlarge
     ```
+
+    The values follow the `values.yaml` schema of the cluster chart, `cluster-aws` in this example. The default apps
+    of the cluster are configured in the same values, under `global.apps`.
 
     Export the path to the file:
 
@@ -94,8 +106,6 @@ export CLUSTER_PATH=bases/cluster_templates/XYZ
     EOF
     ```
 
-1. (optional) Repeat the same steps if you need to customize default apps App.
-
 1. Leave the `cluster` directory and go to `workload-clusters`:
 
     ```sh
@@ -114,10 +124,9 @@ export CLUSTER_PATH=bases/cluster_templates/XYZ
       ...
       postBuild:
         substitute:
+          cluster_description: "My GitOps Cluster"
           cluster_name: "demo0"
           organization: "gitops-demo"
-          cluster_release: "0.8.0"
-          default_apps_release: "0.2.0"
       ...
     ```
 
