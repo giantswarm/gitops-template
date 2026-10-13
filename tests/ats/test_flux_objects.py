@@ -220,7 +220,9 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
     for key in top_level_keys:
         if key not in ass:
             continue
-        diff = DeepDiff(ass[key], cluster_obj.obj[key], ignore_order=True)
+        diff = DeepDiff(
+            ass[key], cluster_obj.obj[key], ignore_order=True, threshold_to_diff_deeper=0
+        )
         # we have no difference between the expectation and the real object
         if len(diff) == 0:
             continue
@@ -251,5 +253,5 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
         # Even if we only have 'dictionary_item_added', it has to show that added stuff is only on the
         #  real object side. In other words, we check that all the attributes given in the expectation
         # are present in the real object.
-        for d in diff.tree["dictionary_item_added"].items:
+        for d in diff.tree["dictionary_item_added"]:
             assert isinstance(d.t1, NotPresent)
