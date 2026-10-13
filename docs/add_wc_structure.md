@@ -99,11 +99,11 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Edit the `management-clusters/${MC_NAME}/secrets/kustomization.yaml` by adding the newly created secret to its resources:
+1. Add the newly created secret to the resources of the `management-clusters/${MC_NAME}/secrets/kustomization.yaml`:
 
-    ```yaml
-    resources:
-    - ${WC_NAME}.gpgkey.enc.yaml
+    ```sh
+    yq -i eval ".resources += \"${WC_NAME}.gpgkey.enc.yaml\" | .resources style=\"\"" \
+    management-clusters/${MC_NAME}/secrets/kustomization.yaml
     ```
 
 1. Import the master GPG public key and encrypt the Kubernetes Secret with it:
