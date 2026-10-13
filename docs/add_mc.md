@@ -111,15 +111,16 @@ en- and decrypt real user-related data.
     gpg --import
     ```
 
-1. Add the automatic key selection rule to the end of the `creation_rules` list in the
-   [SOPS configuration file](/.sops.yaml), indented like the rules already there:
+1. Add the automatic key selection rule to the `creation_rules` list of the
+   [SOPS configuration file](/.sops.yaml). `yq` creates the list if the file is new or empty:
 
     ```sh
-    cat <<EOF >> .sops.yaml
-      - encrypted_regex: ^(data|stringData)$
-        path_regex: management-clusters/${MC_NAME}/secrets/.*\.enc\.yaml
-        pgp: ${KEY_FP}
-    EOF
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
     ```
 
 ## Directory tree
