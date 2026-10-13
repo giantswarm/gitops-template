@@ -64,8 +64,9 @@ create a `kustomization.yaml` similar to the one below:
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-commonLabels:
-  gitops.giantswarm.io/appSet: hello-web-app # this label will be applied to all resources included in the App Set
+labels:
+  - pairs:
+      gitops.giantswarm.io/appSet: hello-web-app # this label will be applied to all resources included in the App Set
 # (optional) replace default config of apps included in the set
 configMapGenerator:
   - behavior: replace
@@ -91,8 +92,18 @@ resources:
 
 Please note the following in the example above:
 
-- We use the `gitops.giantswarm.io/appSet: YOUR_NAME` that will identify all the components included in the App Set.
-  This makes debugging easier later, as you can easily find what belongs to the Set after it is deployed.
+- We use the `gitops.giantswarm.io/appSet: YOUR_NAME` label to identify all the components included in the App Set.
+  It is a plain label, nothing acts on it, but it makes debugging easier later, as you can easily find what belongs
+  to the Set after it is deployed:
+
+  ```sh
+  kubectl get helmreleases,ocirepositories,configmaps -n org-${ORG_NAME} -l gitops.giantswarm.io/appSet=YOUR_NAME
+  ```
+
+  The label is set on the objects the App Set Template builds, on the Management Cluster. Objects added by an App Set
+  instance, like its `-user-values` ConfigMap, don't get it, and neither do the resources the charts install in the
+  Workload Cluster. `labels` only labels the objects' metadata; unlike the deprecated `commonLabels`, it leaves
+  selectors alone.
 - One of the key benefits of App Sets is to be able to provide a specific set of app versions, that is known to make
   the apps work well together. Over here, we do that as a set of in-line patches, so it is immediately visible
   in the `kustomization.yaml` file which versions are used.
