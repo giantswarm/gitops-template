@@ -152,8 +152,9 @@ going to use 1Password (`op` CLI tool) for that:
 
     ```sh
     eval $(op signin)
-    gpg --import \
-    <(op read "Dev Common/GPG private key (${MC_NAME}, master, Flux)/notesPlain")
+    op item get "GPG private key (${MC_NAME}, master, Flux)" --vault 'Dev Common' --format json |
+    jq -j '.fields[] | select(.id == "notesPlain") | .value' |
+    gpg --import
     ```
 
 1. Decrypt the `${MC_NAME}.gpgkey.enc.yaml` file with SOPS:
@@ -194,7 +195,7 @@ going to use 1Password (`op` CLI tool) for that:
 
     ```sh
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    jq -snR '{"fields": [{"value": inputs  }]}' |
+    jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |
     op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${ORG_NAME}, Flux)" --format json -
     ```
 
