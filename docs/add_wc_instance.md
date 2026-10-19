@@ -37,26 +37,39 @@ An example of a workload cluster instance created using the CAPI is available in
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/cluster
     ```
 
-1. If you need to customize cluster configuration, prepare the values overrides and export its path. Find example below:
+1. Pick the Giant Swarm release the cluster runs. List the releases available on the Management Cluster, then read
+   the version of the cluster chart that the chosen release ships, `cluster-aws` for the `aws` releases:
 
-    ```yaml
-    # cat /tmp/values
+    ```sh
+    kubectl get releases.release.giantswarm.io
+    export RELEASE_VERSION=36.1.0
+    export CLUSTER_APP_VERSION=$(kubectl get releases.release.giantswarm.io aws-${RELEASE_VERSION} -o yaml |
+    yq '.spec.components[] | select(.name == "cluster-aws") | .version')
+    ```
+
+    The cluster needs both: the release in its values, and the matching chart version on its App CR. Without the
+    release, the App fails with an error saying the release should not be empty. When upgrading the cluster later,
+    change both together.
+
+1. Prepare the cluster values. They have to set the release; everything else is optional and only overrides the
+   defaults of the Management Cluster:
+
+    ```sh
+    export USERCONFIG_VALUES=/tmp/values
+    cat <<EOF > ${USERCONFIG_VALUES}
     global:
       metadata:
         description: My GitOps Cluster
       nodePools:
         nodepool0:
           instanceType: m6i.xlarge
+      release:
+        version: ${RELEASE_VERSION}
+    EOF
     ```
 
     The values follow the `values.yaml` schema of the cluster chart, `cluster-aws` in this example. The default apps
     of the cluster are configured in the same values, under `global.apps`.
-
-    Export the path to the file:
-
-    ```sh
-    export USERCONFIG_VALUES=/tmp/values
-    ```
 
 1. Create a `ConfigMap` out of the values overrides:
 
@@ -73,7 +86,7 @@ An example of a workload cluster instance created using the CAPI is available in
     EOF
     ```
 
-1. Create patch for applying user-config values:
+1. Create patch for applying user-config values and setting the cluster chart version of the release:
 
     ```sh
     cat <<EOF > patch_userconfig.yaml
@@ -83,6 +96,7 @@ An example of a workload cluster instance created using the CAPI is available in
       name: \${cluster_name}
       namespace: org-\${organization}
     spec:
+      version: "${CLUSTER_APP_VERSION}"
       userConfig:
         configMap:
           name: \${cluster_name}-userconfig
