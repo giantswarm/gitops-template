@@ -17,4 +17,4 @@ spec:
     inCluster: true
   name: cluster-aws
   namespace: org-${organization}
-  version: ""
+  version: ""  # required; set per cluster to the cluster-aws version of its release
