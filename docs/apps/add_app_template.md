@@ -34,12 +34,12 @@ registry.
 
 ## Setting up directory tree structure for managing apps
 
-1. Go to the `apps` directory and prepare a directory for the new App Template:
+1. From the root of the repository, create a directory for the new App Template under `bases/apps`, which is
+   created too if this is the first App Template, and enter it:
 
     ```sh
-    cd bases/apps/
-    mkdir ${APP_NAME}
-    cd ${APP_NAME}/
+    mkdir -p bases/apps/${APP_NAME}
+    cd bases/apps/${APP_NAME}/
     ```
 
 1. Create the `OCIRepository` that points at the chart:
