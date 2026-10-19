@@ -147,6 +147,17 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     }]' .sops.yaml
     ```
 
+1. Commit the encrypted `${WC_NAME}.gpgkey.enc.yaml` in the same commit as the `secrets/kustomization.yaml` that
+   lists it, together with the public key and `.sops.yaml`. If the list reaches the repository without the file,
+   the Management Cluster's Kustomization fails to build and stops reconciling:
+
+    ```sh
+    git add management-clusters/${MC_NAME}/secrets \
+    management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc \
+    .sops.yaml
+    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
+    ```
+
 ## Directory tree
 
 1. Go to the `workload-clusters` directory:
@@ -235,7 +246,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     cd ../cluster
     ```
 
-1. Create `kustomization.yaml` file and populate it with empty resources for now:
+1. Create `kustomization.yaml` file and populate it with empty resources for now. The
+   [Workload Cluster instance](./add_wc_instance.md) steps replace it with one that creates the cluster:
 
     ```sh
     cat <<EOF > kustomization.yaml
