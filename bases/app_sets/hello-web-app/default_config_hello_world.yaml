@@ -1,4 +1,5 @@
-replicaCount: 2
+autoscaling:
+  minReplicas: 2
 ingress:
   enabled: false
 route:
