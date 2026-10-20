@@ -292,7 +292,7 @@ buildMetadata: [originAnnotations]
 ### `[organizations]`
 
 It is RECOMMENDED to use it explicitly when there are other resources populated under the `MC_NAME` directory; see
-`[OTHER_RESOURCES]`. This avoids ambiguity as the number of resources grows. When different kinds are mixed in a 
+`[OTHER_RESOURCES]`. This avoids ambiguity as the number of resources grows. When different kinds are mixed in a
 single directory, this blurs their content and degrades readability.
 
 ```text
@@ -334,7 +334,8 @@ management-clusters
 ```
 
 With no `OTHER_RESOURCES` present, or when preferring a flatter structure, the user MAY decide not to use the
-organizations' container explicitly, and store organizations by their names directly under the `MC_NAME`; see the example below.
+organizations' container explicitly, and store organizations by their names directly under the `MC_NAME`; see the
+example below.
 
 ```text
 management-clusters
@@ -466,8 +467,8 @@ everything there and hence takes over the reconciliation from where the `MC_NAME
 
 ### Two Kustomization CRs motivation
 
-But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious, as without it there is no
-reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
+But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious, as without it there
+is no reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
 [variable substitution feature of Flux](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution)
 for configuring widely repeatable fields that could otherwise be hard to configure. These fields are workload cluster ID,
 control plane ID, release, etc.; virtually any field that must be repeated for different CRs, like `Cluster`,
@@ -480,8 +481,9 @@ Not using patches, and hence bases, means placing a complete definition of resou
 in an even bigger footprint, and works against good practices; e.g., imagine a user needs to update a field in all the CRs
 of a certain kind and how annoying it could be without a base.
 
-This clearly feels like there is a certain group of fields that could use a little templating magic, which is sadly not supported
-in Kubernetes kustomize. One could ask why not introduce Helm charts to do it? If we did, it would solve the problem,
-but at the cost of introducing additional layers in between Kustomization and the end resource, and the related effort of doing it.
+This clearly feels like there is a certain group of fields that could use a little templating magic, which is sadly
+not supported in Kubernetes kustomize. One could ask why not introduce Helm charts to do it? If we did, it would solve
+the problem, but at the cost of introducing additional layers in between Kustomization and the end resource, and the
+related effort of doing it.
 
 Hence, a simple variable substitution offered by Flux feels like the right answer.
