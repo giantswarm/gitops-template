@@ -56,39 +56,58 @@ An example showing how to use an App Set is available in
 ## Creating an App Set Template
 
 Creating an App Set Template is not much different than [creating an App Template](add_app_template.md). Please check the
-docs there first, if you haven't already.
+docs there first, if you haven't already. The steps below create the `hello-web-app` example, which bundles the
+`hello-world` App Template; replace the names with your own.
 
-To get started, go to the `bases` directory and create a subdirectory for your App Set Template. In this directory,
-create a `kustomization.yaml` similar to the one below:
+1. From the root of the repository, create a directory for the App Set Template under `bases/app_sets`, and enter it:
 
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-labels:
-  - pairs:
-      gitops.giantswarm.io/appSet: hello-web-app # this label will be applied to all resources included in the App Set
-# (optional) replace default config of apps included in the set
-configMapGenerator:
-  - behavior: replace
-    files:
-    - values=default_config_hello_world.yaml
-    name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
-# block end
-kind: Kustomization
-namespace: org-${organization} # the org namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
-# (optional) here we can enforce versions of the apps that we know work well together
-patches:
-  - patch: |-
-      - op: replace
-        path: /spec/ref/tag
-        value: "3.2.2"
-    target:
-      kind: OCIRepository
-      name: \${cluster_name}-hello-world
-# block end
-resources:
-  - ../../apps/hello-world
-```
+    ```sh
+    mkdir -p bases/app_sets/hello-web-app
+    cd bases/app_sets/hello-web-app
+    ```
+
+1. (optional - if replacing the default config of an app in the set) Put the values the app gets in this set into a
+   file. It replaces the App Template's whole `-values` ConfigMap, so it has to hold every default the app needs:
+
+    ```sh
+    cat <<'EOF' > default_config_hello_world.yaml
+    replicaCount: 2
+    EOF
+    ```
+
+1. Create the `kustomization.yaml`. The quoted `'EOF'` keeps the shell from expanding `${cluster_name}` and
+   `${organization}`, which Flux substitutes later:
+
+    ```sh
+    cat <<'EOF' > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    buildMetadata: [originAnnotations]
+    labels:
+      - pairs:
+          gitops.giantswarm.io/appSet: hello-web-app # this label will be applied to all resources included in the App Set
+    # (optional) replace default config of apps included in the set
+    configMapGenerator:
+      - behavior: replace
+        files:
+        - values=default_config_hello_world.yaml
+        name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
+    # block end
+    kind: Kustomization
+    namespace: org-${organization} # the org namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
+    # (optional) here we can enforce versions of the apps that we know work well together
+    patches:
+      - patch: |-
+          - op: replace
+            path: /spec/ref/tag
+            value: "3.2.2"
+        target:
+          kind: OCIRepository
+          name: \${cluster_name}-hello-world
+    # block end
+    resources:
+      - ../../apps/hello-world
+    EOF
+    ```
 
 Please note the following in the example above:
 
@@ -120,24 +139,58 @@ Please note the following in the example above:
 ## Using an App Set
 
 Using an App Set Template is once again very similar to using a single
-[App Template](./add_appcr.md#adding-app-using-app-template). To create one, pick your desired App Set Template from
-the [bases/app_sets](/bases/app_sets/) directory. Then, create a new directory in the `mapi/app_sets` directory of
-your Workload Cluster. In that directory, create a `kustomization.yaml` file based on the following pattern:
+[App Template](./add_appcr.md#adding-app-using-app-template).
 
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-configMapGenerator:
-  - files:
-      - values=override_config_hello_world.yaml
-    name: ${cluster_name}-hello-world-user-values
-generatorOptions:
-  disableNameSuffixHash: true
-kind: Kustomization
-namespace: org-${organization}
-resources:
-  - ../../../../../../../../../bases/app_sets/hello-web-app
-```
+**Note**, an App Set and a standalone App created from the same App Template produce objects with the same names, for
+example `${cluster_name}-hello-world`. A cluster can only have one of them. To move an app that is installed
+standalone into a set, remove it from the `mapi/apps` directory in the same commit that adds the set: the objects keep
+their names, so Flux updates them in place instead of reinstalling the app.
+
+1. Export the names of the Management Cluster, Organization and Workload Cluster:
+
+    ```sh
+    export MC_NAME=CODENAME
+    export ORG_NAME=ORGANIZATION
+    export WC_NAME=CLUSTER_NAME
+    ```
+
+1. Create a directory for the App Set in the `mapi/app_sets` directory of your Workload Cluster, and enter it:
+
+    ```sh
+    mkdir -p management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/app_sets/hello-web-app-1
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/app_sets/hello-web-app-1
+    ```
+
+1. (optional - if overriding the config of an app in the set) Put only the values to change into a file:
+
+    ```sh
+    cat <<'EOF' > override_config_hello_world.yaml
+    replicaCount: 3
+    EOF
+    ```
+
+1. Create the `kustomization.yaml`, pointing at the App Set Template from the
+   [bases/app_sets](/bases/app_sets/) directory:
+
+    ```sh
+    cat <<'EOF' > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    buildMetadata: [originAnnotations]
+    configMapGenerator:
+      - files:
+          - values=override_config_hello_world.yaml
+        name: ${cluster_name}-hello-world-user-values
+    generatorOptions:
+      disableNameSuffixHash: true
+    kind: Kustomization
+    namespace: org-${organization}
+    resources:
+      - ../../../../../../../../../bases/app_sets/hello-web-app
+    EOF
+    ```
+
+    There is no list to update: the `mapi` directory has no `kustomization.yaml`, so Flux picks up every directory
+    with a `kustomization.yaml` below it, including the new one.
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set
 Template. The `${cluster_name}-hello-world-user-values` ConfigMap is the optional user layer the app's `HelmRelease`
