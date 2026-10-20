@@ -7,6 +7,7 @@
     - [Updating the HelmRelease](#updating-the-helmrelease)
     - [Updating ConfigMap-based user values](#updating-configmap-based-user-values)
     - [Updating Secret-based user values](#updating-secret-based-user-values)
+  - [Apps from an App Set](#apps-from-an-app-set)
 
 Follow the below instructions to update an existing App.
 
@@ -36,6 +37,8 @@ export APP_NAME=APP_NAME
   files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change
   them for a single cluster, add a patch to the App's `kustomization.yaml`, see
   [Adding App using App Template](./add_appcr.md#adding-app-using-app-template).
+
+  For an App installed through an App Set, see [Apps from an App Set](#apps-from-an-app-set).
 
 ### Updating the chart version
 
@@ -126,3 +129,36 @@ export APP_NAME=APP_NAME
     awk -F: '/^fpr/{print $10; exit}')
     gpg --delete-secret-keys "${KEY_FP}"
     ```
+
+## Apps from an App Set
+
+An App installed through an [App Set](./app_sets.md) has no `mapi/apps/${APP_NAME}` directory. Its files are in the
+directory of the App Set instance, `mapi/app_sets/YOUR_APP_SET`, next to the instance's `kustomization.yaml`:
+
+- plain text configuration is in the `override_config_<app>.yaml` file, for example `override_config_hello_world.yaml`,
+  which the instance's `configMapGenerator` turns into the `${cluster_name}-${APP_NAME}-user-values` ConfigMap,
+- encrypted configuration is in the `${cluster_name}-${APP_NAME}-user-secrets` Secret, an encrypted file in the same
+  directory that is listed under `resources:` in its `kustomization.yaml`. Edit it with the steps of
+  [Updating Secret-based user values](#updating-secret-based-user-values), run in that directory and with that file
+  in place of `secret.enc.yaml`,
+- the `OCIRepository` and the `HelmRelease` come from the App Set Template, which usually pins the chart version of
+  every app in the set. Changing them there changes the App in every cluster that uses the set.
+
+To change the chart version for a single cluster, add a patch on the `OCIRepository` to the instance's
+`kustomization.yaml`. Kustomize applies it after the App Set Template's own version patch, so it replaces the pinned
+version for this cluster only. The `$` of the target name is escaped, as `kustomize` reads the name as a regular
+expression:
+
+```yaml
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        value: "NEW_VERSION"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
+```
+
+To follow a version range instead, see
+[Enable automatic updates of an existing App](./automatic_updates_appcr.md#apps-from-an-app-set).
