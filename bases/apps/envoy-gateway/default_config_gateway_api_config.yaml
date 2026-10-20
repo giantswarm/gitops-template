@@ -1,0 +1,19 @@
+# `baseDomain` and `provider` come from the cluster values, so the Gateway is reachable
+# under `*.<cluster base domain>`.
+#
+# Prerequisites on the workload cluster: the Giant Swarm default apps the charts build
+# on (cert-manager, external-dns, Kyverno, Cilium, the monitoring CRDs), plus
+# - Gateway API support enabled in cert-manager, for the Gateway's Let's Encrypt
+#   certificate (HTTP01 through the Gateway)
+# - on AWS (`provider: capa`): aws-load-balancer-controller, as the Gateway is exposed
+#   through a Network Load Balancer
+gateways:
+  default:
+    # apps attach their HTTPRoutes to this Gateway, see `route.parentRefs` of the
+    # hello-world app
+    name: giantswarm-default
+    # each app hostname under the base domain needs a DNS record and a certificate
+    # entry; list the app subdomains here (for example `hello` for hello-world)
+    # listeners:
+    #   https:
+    #     subdomains: []

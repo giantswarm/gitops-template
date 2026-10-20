@@ -1,9 +1,0 @@
----
-apiVersion: image.toolkit.fluxcd.io/v1beta2
-kind: ImageRepository
-metadata:
-  name: hello-app-dev-1-hello-app
-  namespace: org-org-name
-spec:
-  image: gsoci.azurecr.io/charts/giantswarm/hello-world
-  interval: 10m0s

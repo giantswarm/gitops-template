@@ -1,26 +1,22 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: create
-    files:
-      - values=hello_world_app_user_config.yaml
-    name: ${cluster_name}-hello-world-user-config
-    namespace: org-${organization}
-generatorOptions:
-  disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce the app versions that we want in this stage
+# (optional) here we can enforce the app versions that we want in this stage.
+# The dev stage follows the highest dev build of hello-world: `semver` with the
+# `-0` suffix makes pre-releases eligible, `semverFilter` keeps only dev builds
+# (`X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`). Builds of the same version are
+# ordered by branch hash before timestamp, so to follow one branch put its
+# CRC32 into the filter instead of `[0-9a-f]{8}`.
 patches:
   - patch: |-
       - op: replace
-        path: /spec/version
-        value: '3.2.2' # {"$imagepolicy": "org-${organization}:${cluster_name}-hello-app"}
+        path: /spec/ref
+        value:
+          semver: '>=3.0.0-0'
+          semverFilter: '-r[0-9a-f]{8}t[0-9]{14}h[0-9a-f]{7}'
     target:
-      kind: App
+      kind: OCIRepository
       name: \${cluster_name}-hello-world
 # block end
 resources:
-  - automatic_updates/
-  - imagepolicies.yaml
-  - imagerepositories.yaml
   - ../../../../cluster_templates/hello_app_cluster

@@ -1,0 +1,13 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-cert-manager
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 4.1.1
+  url: oci://gsoci.azurecr.io/charts/giantswarm/cert-manager-app

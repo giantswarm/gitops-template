@@ -1,0 +1,44 @@
+# One OCIRepository per chart, in the shape giantswarm/appcr-to-helmrelease-converter
+# emits for a migrated App CR, with the chart version pinned in `spec.ref.tag`.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-gateway-api-crds
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 1.9.1
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-crds
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-envoy-gateway
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 1.10.3
+  url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-gateway-api-config
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 1.11.3
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config

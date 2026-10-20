@@ -5,4 +5,4 @@ commonLabels:
 kind: Kustomization
 namespace: org-${organization}
 resources:
-  - ingress-nginx-from-template/
+  - envoy-gateway-from-template/

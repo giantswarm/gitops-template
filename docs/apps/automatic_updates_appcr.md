@@ -1,5 +1,13 @@
 # Enable automatic updates of an existing App
 
+> **Note**
+> This page describes automatic updates for App CRs, through Flux image automation and `$imagepolicy` setters. The
+> apps in this repository are `HelmRelease` + `OCIRepository` pairs and update through a `spec.ref.semver` range on the
+> `OCIRepository` instead, see
+> [hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates/ocirepository.yaml)
+> and the stages in [Add Workload Cluster environments](/docs/add_wc_environments.md). The example linked below no
+> longer contains the image automation objects.
+
 - [Enable automatic updates of an existing App](#enable-automatic-updates-of-an-existing-app)
   - [Example](#example)
   - [Export environment variables](#export-environment-variables)

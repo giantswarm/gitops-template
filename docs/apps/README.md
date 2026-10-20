@@ -1,5 +1,11 @@
 # Managing Apps installed in clusters with GitOps
 
+> **Note**
+> The apps in this repository are now `HelmRelease` + `OCIRepository` pairs, but the pages below still walk through
+> the App CR workflow and `kubectl gs template app`. They are being rewritten as part of
+> [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380). For the shape the example manifests
+> actually have today, read [bases/apps/hello-world](/bases/apps/hello-world/).
+
 Below is an index of docs about how to manage applications deployed to clusters:
 
    1. [Add a new App Template to the repository](add_app_template.md)

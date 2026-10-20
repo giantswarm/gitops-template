@@ -1,11 +1,16 @@
 replicaCount: 1
 ingress:
-  # has to match the ingress class the cluster's ingress controller serves,
-  # see `controller.ingressClassResource.name` of the ingress-nginx app
-  className: nginx
-  # the hostname below has to be set for the app to be reachable
-  # hosts:
-  #   - host: FILL_IN
-  #     paths:
-  #       - path: /
-  #         pathType: Prefix
+  enabled: false
+route:
+  enabled: true
+  kind: HTTPRoute
+  # has to match the Gateway served by the cluster's Envoy Gateway, see
+  # `gateways.default.name` of the envoy-gateway app
+  parentRefs:
+    - name: giantswarm-default
+      namespace: envoy-gateway-system
+  # set a hostname for the app to be reachable. It has to be under the cluster's base
+  # domain (`baseDomain` comes from the cluster values) and listed in the Gateway's
+  # `listeners.https.subdomains`, see the envoy-gateway app
+  # hostnames:
+  #   - "FILL_IN.{{ .Values.baseDomain }}"
