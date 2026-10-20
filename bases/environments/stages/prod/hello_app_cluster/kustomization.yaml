@@ -18,6 +18,14 @@ patches:
     target:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
+  # the cluster chart version the release ships
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: "11.0.1"
+    target:
+      kind: App
+      name: \${cluster_name}
 # block end
 resources:
   - ../../../../cluster_templates/hello_app_cluster

@@ -103,6 +103,16 @@ export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
+Each stage also pins the Giant Swarm release its clusters run: the release goes into the cluster values, and the
+version of the cluster chart that release ships goes onto the cluster App CR. Without them the cluster App fails, see
+[Add Workload Cluster instance](./add_wc_instance.md) for how to look both up on the Management Cluster. In this
+example all stages run the same release; a stage that should run a newer one sets other values.
+
+```sh
+export RELEASE_VERSION=36.1.0
+export CLUSTER_APP_VERSION=11.0.1
+```
+
 Change our working directory to the `hello_app_cluster` development cluster environment base.
 
 ```sh
@@ -127,12 +137,28 @@ makes pre-releases eligible at all, `semverFilter` then keeps only dev builds. F
 for builds of the same version semver orders by the branch hash before the timestamp, so if several branches publish dev
 builds, put the CRC32 of the branch to follow into the filter instead of `[0-9a-f]{8}`.
 
-Let's create the `kustomization.yaml` file for the development cluster.
+Let's create the cluster values with the release, and the `kustomization.yaml` file for the development cluster. The
+values replace the empty `${cluster_name}-user-config` ConfigMap of the cluster template, and a patch sets the cluster
+chart version on the cluster App CR.
 
 ```sh
+cat <<EOF > cluster_user_config.yaml
+global:
+  release:
+    version: ${RELEASE_VERSION}
+EOF
+
 cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: replace
+    files:
+      - values=cluster_user_config.yaml
+    name: \${cluster_name}-user-config
+    namespace: org-\${organization}
+generatorOptions:
+  disableNameSuffixHash: true
 kind: Kustomization
 patches:
   - patch: |-
@@ -144,6 +170,13 @@ patches:
     target:
       kind: OCIRepository
       name: \\\${cluster_name}-hello-world
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: "${CLUSTER_APP_VERSION}"
+    target:
+      kind: App
+      name: \\\${cluster_name}
 resources:
   - ../../../../cluster_templates/hello_app_cluster
 EOF
@@ -169,12 +202,26 @@ It is similar to the development cluster in the following manners:
 We want the versions automatically rolled out here to be more stable, so we tell Flux to automatically install all
 stable versions that are at least version `3.0.0`, but we do not want to automatically introduce possibly breaking
 changes in a major version bump, so let's stay below `4.0.0`. A range without a pre-release comparator never matches a
-pre-release tag, so no filter is needed.
+pre-release tag, so no filter is needed. The release is set the same way as for the development cluster.
 
 ```sh
+cat <<EOF > cluster_user_config.yaml
+global:
+  release:
+    version: ${RELEASE_VERSION}
+EOF
+
 cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
+configMapGenerator:
+  - behavior: replace
+    files:
+      - values=cluster_user_config.yaml
+    name: \${cluster_name}-user-config
+    namespace: org-\${organization}
+generatorOptions:
+  disableNameSuffixHash: true
 kind: Kustomization
 patches:
   - patch: |-
@@ -185,6 +232,13 @@ patches:
     target:
       kind: OCIRepository
       name: \\\${cluster_name}-hello-world
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: "${CLUSTER_APP_VERSION}"
+    target:
+      kind: App
+      name: \\\${cluster_name}
 resources:
   - ../../../../cluster_templates/hello_app_cluster
 EOF
@@ -229,18 +283,18 @@ It is similar to the staging cluster in the following manners:
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 
 Note in the `kustomization.yaml` above that we create another `ConfigMap` for the production cluster
-that contains some extra settings for our cluster.
+that contains some extra settings for our cluster, besides the release: bigger nodes, and more of them.
 
 ```sh
 cat <<EOF > cluster_user_config.yaml
 global:
   nodePools:
-    xxxxx:
-      additionalSecurityGroups:
-        - id: sg-1xxxxxxxxxxxxxx3f
+    nodepool0:
       instanceType: m6a.8xlarge
       maxSize: 50
       minSize: 10
+  release:
+    version: ${RELEASE_VERSION}
 EOF
 ```
 
@@ -248,7 +302,7 @@ Notice however that we decided not to set up `Automatic Updates` for this cluste
 
 Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
-in our `OCIRepository` resources.
+in our `OCIRepository` resources, next to the cluster chart version of the release.
 
 ```sh
 cat <<EOF >> kustomization.yaml
@@ -260,6 +314,13 @@ patches:
     target:
       kind: OCIRepository
       name: \\\${cluster_name}-hello-world
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: "${CLUSTER_APP_VERSION}"
+    target:
+      kind: App
+      name: \\\${cluster_name}
 EOF
 ```
 

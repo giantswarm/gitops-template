@@ -1,5 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
+# the Giant Swarm release the clusters of this stage run, see cluster_user_config.yaml
+configMapGenerator:
+  - behavior: replace
+    files:
+      - values=cluster_user_config.yaml
+    name: ${cluster_name}-user-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
 kind: Kustomization
 # (optional) here we can enforce the app versions that we want in this stage.
 # The staging stage follows the newest stable hello-world release below the
@@ -14,6 +23,14 @@ patches:
     target:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
+  # the cluster chart version the release ships
+  - patch: |-
+      - op: replace
+        path: /spec/version
+        value: "11.0.1"
+    target:
+      kind: App
+      name: \${cluster_name}
 # block end
 resources:
   - ../../../../cluster_templates/hello_app_cluster
