@@ -71,7 +71,8 @@ docs there first, if you haven't already. The steps below create the `hello-web-
 
     ```sh
     cat <<'EOF' > default_config_hello_world.yaml
-    replicaCount: 2
+    autoscaling:
+      minReplicas: 2
     EOF
     ```
 
@@ -165,7 +166,8 @@ their names, so Flux updates them in place instead of reinstalling the app.
 
     ```sh
     cat <<'EOF' > override_config_hello_world.yaml
-    replicaCount: 3
+    autoscaling:
+      minReplicas: 3
     EOF
     ```
 
