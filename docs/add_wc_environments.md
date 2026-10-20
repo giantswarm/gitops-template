@@ -434,10 +434,7 @@ spec:
   postBuild:
     substitute:
       cluster_description: "description"
-      cluster_domain: "MY_DOMAIN"
       cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
-      cluster_release: "0.8.1"
-      default_apps_release: "0.2.0"
       organization: "${ORG_NAME}"
   prune: false
   serviceAccountName: automation
