@@ -5,6 +5,7 @@
   - [Export environment variables](#export-environment-variables)
   - [Version range](#version-range)
   - [Apps created from an App Template](#apps-created-from-an-app-template)
+  - [Apps from an App Set](#apps-from-an-app-set)
   - [Checking the installed version](#checking-the-installed-version)
   - [Credentials for private registries (optional)](#credentials-for-private-registries-optional)
 
@@ -90,6 +91,13 @@ patches:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
 ```
+
+## Apps from an App Set
+
+For an App installed through an [App Set](./app_sets.md), add the same patch to the `kustomization.yaml` of the App Set
+instance, in the cluster's `mapi/app_sets/YOUR_APP_SET` directory. Kustomize applies the instance's patches after the
+App Set Template's, so the range replaces the version the App Set pins, for this cluster only. Bear in mind that an
+App Set usually pins its versions on purpose, because its apps are known to work well together at those versions.
 
 ## Checking the installed version
 
