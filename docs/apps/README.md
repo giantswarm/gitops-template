@@ -1,10 +1,9 @@
 # Managing Apps installed in clusters with GitOps
 
-> **Note**
-> The apps in this repository are now `HelmRelease` + `OCIRepository` pairs, but the pages below still walk through
-> the App CR workflow and `kubectl gs template app`. They are being rewritten as part of
-> [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380). For the shape the example manifests
-> actually have today, read [bases/apps/hello-world](/bases/apps/hello-world/).
+Apps in this repository are Flux `HelmRelease` + `OCIRepository` pairs: the `OCIRepository` points at the chart in an
+OCI registry, the `HelmRelease` installs it into the workload cluster. See
+[bases/apps/hello-world](/bases/apps/hello-world/) for an example. Only the cluster itself is still an App CR, see
+[Add a new Workload Cluster](../add_wc.md).
 
 Below is an index of docs about how to manage applications deployed to clusters:
 

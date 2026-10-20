@@ -18,13 +18,16 @@
 ## General Remarks
 
 The repository follows a certain structure that mimics the actual hierarchy of the installation
-building blocks, i.e. organizations, workload clusters, apps, etc., and their relations to each other, see figure below.
+building blocks (i.e., organizations, workload clusters, apps, etc.) and their relationships; see the figure below.
 
 ```text
 .sops.yaml
 bases
+├── app_sets
+├── apps
+├── cluster_templates
 ├── clusters
-└── nodepools
+└── environments
 management-clusters
 └── MC_NAME
     ├── .sops.keys
@@ -63,19 +66,19 @@ of any doubt, it is RECOMMENDED to follow the [Rules for Naming Resources](#rule
 Nodes of the structure carrying an extension, e.g. `*.yaml` denote files, while the rest are considered directories,
 e.g. `organizations`. A special case to this rule is the `OTHER_RESOURCES` placeholder that denotes both files and
 directories, in order to emphasize that the structure MAY be extended by a user at different levels, with resources they
-need. When doing so however, the user SHOULD try to stay compliant with the hierarchy and find the best match for the
+need. When doing so, however, the user SHOULD try to stay compliant with the hierarchy and find the best match for the
 resources to be introduced.
 
-Components enclosed between square brackets `[]` are considered OPTIONAL, hence users MAY omit them, it is however
+Components enclosed between square brackets `[]` are considered OPTIONAL; hence users MAY omit them; it is however
 RECOMMENDED to stay compliant with the [Rules for Optional Components](#rules-for-optional-components) when doing so.
-This is to offer flexibility and allow different environments and use-cases.
+This offers flexibility and supports different environments and use cases.
 
-The horizontal line marks the delegation of responsibility for reconciliation. Resources above the line are managed by
-the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`,
-see the [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
+The horizontal line marks the delegation of reconciliation responsibility. Resources above the line are managed by
+the `MC_NAME.yaml` Kustomization CR, whereas resources below the line are managed by the `WC_NAME.yaml`; see the
+[Flux Kustomization CRs Involved](#flux-kustomization-crs-involved).
 
-The security of resources is provided by GPG encryption. The repository provides a way to manage
-all the encryption and decryption keys through its structure, see the [Security Architecture](#security-architecture).
+GPG encryption provides resource security. The repository provides a way to manage
+all the encryption and decryption keys through its structure; see the [Security Architecture](#security-architecture).
 
 ## Structure Version
 
@@ -137,21 +140,19 @@ The public key of the master key-pair MUST be shared in an unencrypted form with
 The private key of the master key-pair MUST be wrapped into the mandatory `MC_NAME.gpgkey.enc.yaml` Kubernetes Secret
 and encrypted with itself.
 The `MC_NAME.gpgkey.enc.yaml` serves the purpose of decrypting files delivered by the `MC_NAME.yaml` Kustomization CR
-(see [Flux Kustomization CRs Involved](#flux-kustomizations-crs-involved)), and hence MAY be used for decrypting
+(see [Flux Kustomization CRs Involved](#flux-kustomization-crs-involved)), and hence MAY be used for decrypting
 everything up to the `[workload-clusters]` directory (inclusive).
 
-Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml`
-Kubernetes
-Secret, which is otherwise optional, and at minimum needs to contain a single GPG key-pair.
-The public key of the key-pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
-key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the
-master
+Enabling encryption for the workload cluster resources REQUIRES creating the `WC_NAME.gpgkey.enc.yaml` Kubernetes
+Secret, which is otherwise optional, and must contain at least one GPG key pair.
+The public key of the key pair MUST be shared in an unencrypted form within the `.sops.keys` directory. The private
+key of the key-pair MUST be wrapped into the `WC_NAME.gpgkey.enc.yaml` Kubernetes Secret, encrypted with the master
 GPG key, and placed under the management cluster secrets directory. This effectively turns key management into a
 GitOps process.
 The `WC_NAME.gpgkey.enc.yaml` is to be referenced by the `WC_NAME.yaml` Kustomization CR, and hence
 MAY be used for decrypting everything from the `WC_NAME` directory (inclusive).
 
-The relation between Kustomization CRs and Kubernetes Secrets is depicted in the figure below.
+The figure below depicts the relationship between Kustomization CRs and Kubernetes Secrets.
 
 ```text
                 MC_NAME.yaml
@@ -174,7 +175,7 @@ The relation between Kustomization CRs and Kubernetes Secrets is depicted in the
 
 In their most basic forms, both the `MC_NAME.gpgkey.enc.yaml` and the `WC_NAME.gpgkey.enc.yaml` secrets contain
 only a single private GPG key each: the master and workload cluster' key-pair, respectively. Each key is being
-prescribed a basic encryption rule in the `.sops.yaml`, see example below:
+prescribed a basic encryption rule in the `.sops.yaml`; see the example below:
 
 ```yaml
 creation_rules:
@@ -188,7 +189,7 @@ creation_rules:
 
 If a more granular encryption scenario is needed, users MAY choose to enrich any one of them with additional
 private keys. In such cases, the user is also REQUIRED to update the `.sops.yaml` file with the respective encryption rules.
-Let's consider a simple example of such scenario. Imagine a user decides to provide encryption for the `demo-gitops`
+Let's consider a simple example. Imagine a user decides to provide encryption for the `demo-gitops`
 organization secrets with a separate key-pair, and then also to keep both `app1` and `app2` Apps secured with
 their own individual key-pairs. The resulting configuration may look like the one presented below.
 
@@ -238,16 +239,16 @@ Naming recommendations are in the table below.
 | Placeholder | Rule |
 | :--: | :--: |
 | `MC_NAME`   | User is REQUIRED to use the Management Cluster codename for clarity |
-| `ORG_NAME`  | Organization name, it is RECOMMENDED to not use capital letters and omit the `org-` prefix |
-| `WC_NAME`   | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster id |
+| `ORG_NAME`  | Organization name; it is RECOMMENDED to not use capital letters and to omit the `org-` prefix |
+| `WC_NAME`   | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster ID |
 
 ## Rules for Optional Components
 
 ### `[OTHER_RESOURCES]`
 
 Any resources supported by Kubernetes, not explicitly targeted by the structure described here. Upon configuration,
-when the number of these additional resources is relatively high, it is RECOMMENDED to group them by their kinds aiming
-for readability, see examples below.
+when the number of these additional resources is relatively high, it is RECOMMENDED to group them by their kinds, aiming
+for readability; see examples below.
 
 ```text
 ## RECOMMENDED ##
@@ -269,18 +270,18 @@ management-clusters
     └── cm.yaml
 ```
 
-The "relatively high" is however a subject to user preferences, hence user MAY use any hierarchy they see fit, as far
+The "relatively high" is, however, subject to user preferences; hence, users MAY use any hierarchy they see fit, as far
 as it does not break the general structure presented here.
 
 ### `[kustomization.yaml]`
 
 If the file is not present under a path supplied to Flux, it will then auto-generate it for a given directory and its
-sub-directories, recursively continuing the process until either reaching the bottom of directory hierarchy or finding
+subdirectories, recursively continuing the process until either reaching the bottom of the directory hierarchy or finding
 a `kustomization.yaml`. Hence, the file **plays a crucial role in the GitOps process**, even if not explicitly created.
 User MAY omit it if they do not rely on the
 [kustomize feature](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/#kustomize-feature-list)
-and when feeling confident about Flux auto discovering resources. Otherwise it is RECOMMENDED to create it and use it
-to explicitly control resources to be reconciled (with `.bases` and `.resources` fields).
+and when feeling confident about Flux auto-discovering resources. Otherwise, it is RECOMMENDED to create it and use it
+to explicitly control resources to be reconciled (with the `.resources` field).
 
 Make sure that if you create the `kustomization.yaml` file, it contains the following option, which makes debugging easier:
 
@@ -290,9 +291,9 @@ buildMetadata: [originAnnotations]
 
 ### `[organizations]`
 
-It is RECOMMENDED to use it explicitly when there are other resources populated under the `MC_NAME` directory, see
-`[OTHER_RESOURCES]`. This is to avoid ambiguity that could arise with an increasing number of resources, when different
-kinds of those are mixed together in a single directory, this blurs their content and thus degrades readability.
+It is RECOMMENDED to use it explicitly when there are other resources populated under the `MC_NAME` directory; see
+`[OTHER_RESOURCES]`. This avoids ambiguity as the number of resources grows. When different kinds are mixed in a
+single directory, this blurs their content and degrades readability.
 
 ```text
 ## RECOMMENDED ##
@@ -332,8 +333,9 @@ management-clusters
             └── demo-gitops.yaml
 ```
 
-With no `OTHER_RESOURCES` present, or when preferring a flatter structure, the user MAY decide to not use the
-organizations' container explicitly, and store organizations by their names directly under the `MC_NAME`, see example below.
+With no `OTHER_RESOURCES` present, or when preferring a flatter structure, the user MAY decide not to use the
+organizations' container explicitly, and store organizations by their names directly under the `MC_NAME`; see the
+example below.
 
 ```text
 management-clusters
@@ -344,8 +346,8 @@ management-clusters
 
 ### `[workload-clusters]`
 
-It is RECOMMENDED to use it explicitly when there are other resources populated under the `ORG_NAME` directory, see
-`[OTHER_RESOURCES]`, see examples below. The same reasoning as for the `[organizations]` apply here.
+It is RECOMMENDED to use it explicitly when there are other resources populated under the `ORG_NAME` directory; see
+`[OTHER_RESOURCES]`; see examples below. The same reasoning as for the `[organizations]` applies here.
 
 ```text
 ## RECOMMENDED ##
@@ -397,8 +399,8 @@ management-clusters
             └── demo0
 ```
 
-With no `OTHER_RESOURCES` present, or when preferring a flatter structure, the user MAY decide to not use the
-`workload-clusters` container explicitly, and store clusters by their names directly under the `ORG_NAME`, see example below.
+With no `OTHER_RESOURCES` present, or when preferring a flatter structure, the user MAY decide not to use the
+`workload-clusters` container explicitly, and store clusters by their names directly under the `ORG_NAME`; see example below.
 
 ```text
 management-clusters
@@ -414,11 +416,12 @@ management-clusters
 ### `[mapi] and [out-of-band]`
 
 The `WC_NAME` directory is split into two directories, `mapi` and `out-of-band`, with the latter being optional.
-The `mapi` MUST hold resources orchestrated by the means of Management API, so for example App CRs,
-configuration for these App CRs, etc., basically any resources that configure Workload Cluster from the
-Management Cluster. The `out-of-band`, when used, MUST hold the manifests that are meant to be reconciled
-directly in the Workload Cluster, without ever referring to the Management API, so additional ConfigMaps, Secret,
-Deployments, etc., or basically everything that iss not supported by the App CRs.
+The `mapi` MUST hold resources orchestrated by the means of Management API, so for example the cluster App CR,
+the `HelmRelease` and `OCIRepository` CRs of the apps, the ConfigMaps and Secrets with their values, etc., basically
+any resources that configure Workload Cluster from the Management Cluster. The `out-of-band`, when used, MUST hold
+the manifests that are meant to be reconciled directly in the Workload Cluster, without ever referring to the
+Management API, so additional ConfigMaps, Secrets, Deployments, etc., or basically everything that is not delivered
+as an app.
 
 The rules of governing these directories are:
 
@@ -432,8 +435,8 @@ remotely create resources from the `out-of-band` directory.
 
 ## Flux Kustomization CRs Involved
 
-Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`,
-see the shortened version of the structure below.
+Current design assumes use of **two** types of Flux's Kustomization CRs: the `MC_NAME.yaml` and the `WC_NAME.yaml`; see
+the shortened version of the structure below.
 
 ```text
 management-clusters
@@ -450,11 +453,9 @@ management-clusters
                         └── cluster
 ```
 
-The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `WC_NAME.yaml`, but
-not any
-resource under the `WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that
-includes, and
-hence tells Flux to create, only the `WC_NAME.yaml` from the `workload-clusters` directory, see example below:
+The `MC_NAME.yaml` starts at the `MC_NAME/` directory and reconciles everything up to the `WC_NAME.yaml`, but not any
+resource under the `WC_NAME/` directory. This is accomplished with the mandatory `kustomization.yaml` that includes, and
+hence tells Flux to create, only the `WC_NAME.yaml` from the `workload-clusters` directory; see the example below:
 
 ```text
 resources:
@@ -466,21 +467,23 @@ everything there and hence takes over the reconciliation from where the `MC_NAME
 
 ### Two Kustomization CRs motivation
 
-But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious as without it there is no
-reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
-[variable substitution feature of Flux](https://fluxcd.io/docs/components/kustomize/kustomization/#variable-substitution)
-for configuring widely repeatable fields, that could otherwise be hard to configure. These fields are workload cluster ID,
-control plane ID, release, etc., virtually any field that must be repeated for different CRs, like `Cluster`,
-`MachineDeployment`, `App`, etc., falls into this category. Let's consider available options together.
+But why two Kustomization CRs? The need for the first one, namely the `MC_NAME.yaml`, is obvious, as without it there
+is no reconciliation at all. The `WC_NAME.yaml` has been introduced in order to use the
+[variable substitution feature of Flux](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution)
+for configuring widely repeatable fields that could otherwise be hard to configure. These fields are workload cluster ID,
+control plane ID, release, etc.; virtually any field that must be repeated for different CRs, like `Cluster`,
+`MachineDeployment`, `App`, `HelmRelease`, `OCIRepository`, etc., falls into this category. Let's consider available
+options together.
 
-Providing values to these fields by means of patches feels cumbersome and error prone, and leaves a decent footprint.
+Providing values for these fields via patches feels cumbersome and error-prone, and leaves a decent footprint.
 
 Not using patches, and hence bases, means placing a complete definition of resources into the structure, but it results
-in an even bigger footprint, and works against good practices, e.g. imagine user needs to update a field in all the CRs
+in an even bigger footprint, and works against good practices; e.g., imagine a user needs to update a field in all the CRs
 of a certain kind and how annoying it could be without a base.
 
-This clearly feels there is a certain group of fields that could use a little templating magic, which is sadly not supported
-in the Kubernetes kustomize. One could ask why not introduce Helm Chart to do it? If we did, it would solve the problem,
-but at the cost of introducing additional layers in between Kustomization and end resource, and related effort of doing it.
+This clearly feels like there is a certain group of fields that could use a little templating magic, which is sadly
+not supported in Kubernetes kustomize. One could ask why not introduce Helm charts to do it? If we did, it would solve
+the problem, but at the cost of introducing additional layers in between Kustomization and the end resource, and the
+related effort of doing it.
 
-Hence, a simple variables substitution offered by Flux, feels the right answer.
+Hence, a simple variable substitution offered by Flux feels like the right answer.

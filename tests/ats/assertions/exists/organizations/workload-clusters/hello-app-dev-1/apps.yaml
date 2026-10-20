@@ -24,4 +24,4 @@ spec:
     configMap:
       name: hello-app-dev-1-user-config
       namespace: org-org-name
-  version: ""
+  version: "11.0.1"
