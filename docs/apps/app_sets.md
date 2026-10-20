@@ -68,11 +68,23 @@ docs there first, if you haven't already. The steps below create the `hello-web-
 
 1. (optional - if replacing the default config of an app in the set) Put the values the app gets in this set into a
    file. It replaces the App Template's whole `-values` ConfigMap, so it has to hold every default the app needs:
+   start from the App Template's `default_config.yaml` and change what the set needs. Here the set keeps the
+   `hello-world` defaults, raises the minimum number of replicas and gives the app a hostname:
 
     ```sh
     cat <<'EOF' > default_config_hello_world.yaml
     autoscaling:
       minReplicas: 2
+    ingress:
+      enabled: false
+    route:
+      enabled: true
+      kind: HTTPRoute
+      parentRefs: # has to be in sync with the Gateway served by the cluster's Envoy Gateway
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames: # under the cluster's base domain and in the Gateway's `listeners.https.subdomains`
+        - "hello.{{ .Values.baseDomain }}"
     EOF
     ```
 
