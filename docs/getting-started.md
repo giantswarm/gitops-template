@@ -24,7 +24,8 @@ You need:
 - the tools listed in [Appendices](./appendices.md): `git`, `kubectl`,
   [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/), `flux`, `gpg`, `sops` and `yq`,
 - access to the management cluster, see
-  [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with `kubectl gs login MC_NAME`; you need write access to the `default` and `org-*` namespaces,
+  [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
+  `kubectl gs login MC_NAME`. You need write access to the `default` and `org-*` namespaces,
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, you can
@@ -57,11 +58,15 @@ repository, and a `Kustomization` that tells it which directory to apply.
 > kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO} --gen-master-key
 > ```
 
-1. Create the directory and a GPG master key without a passphrase:
+1. Create the management cluster's directory:
 
     ```sh
     mkdir -p ${MC_DIR}/.sops.keys ${MC_DIR}/secrets ${MC_DIR}/organizations
+    ```
 
+1. Create a GPG master key without a passphrase:
+
+    ```sh
     gpg --batch --full-generate-key <<EOF
     %no-protection
     Key-Type: EDDSA
@@ -74,27 +79,54 @@ repository, and a `Kustomization` that tells it which directory to apply.
     Name-Comment: ${MC_NAME} Flux Master
     Name-Real: ${MC_NAME}
     EOF
+    ```
 
+    Then save its fingerprint for the next commands:
+
+    ```sh
     export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
     ```
 
-1. Give the private key to Flux as the `sops-gpg-master` Secret, and keep an encrypted copy in the repository:
+1. Write the private key into the `sops-gpg-master` Secret:
 
     ```sh
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-master --namespace=default \
     --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml \
     > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
 
+    Apply it, so Flux can decrypt files with the key:
+
+    ```sh
+    kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Share the public key in the repository:
+
+    ```sh
     gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
+    ```
+
+    Add a rule to `.sops.yaml`, so `sops` encrypts the files in the `secrets` directory with this key:
+
+    ```sh
     yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
       "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
       "pgp": "'"${KEY_FP}"'"
     }]' .sops.yaml
-    sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
 
+1. Encrypt the Secret, which keeps an encrypted copy of the key in the repository:
+
+    ```sh
+    sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+    List it in the `secrets` directory's `kustomization.yaml`:
+
+    ```sh
     cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
@@ -103,15 +135,19 @@ repository, and a `Kustomization` that tells it which directory to apply.
     EOF
     ```
 
-1. Store the private key in your password manager, you need it to add more keys later. Then remove it from your
-   machine:
+1. Print the private key and store it in your password manager. You need it to add more keys later:
 
     ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}"   # copy the output to your password manager
+    gpg --export-secret-keys --armor "${KEY_FP}"
+    ```
+
+    Then remove it from your machine:
+
+    ```sh
     gpg --delete-secret-keys "${KEY_FP}"
     ```
 
-1. Create the `Kustomization` that applies the management cluster directory, then commit and push:
+1. Create the `Kustomization` that applies the management cluster directory:
 
     ```sh
     cat <<EOF > ${MC_DIR}/${MC_NAME}.yaml
@@ -134,19 +170,25 @@ repository, and a `Kustomization` that tells it which directory to apply.
         name: ${GITOPS_REPO}
       timeout: 2m
     EOF
+    ```
 
-    git add .sops.yaml ${MC_DIR}
-    git commit -m "Add management cluster ${MC_NAME}"
-    git push
+    Commit and push:
+
+    ```sh
+    git add .sops.yaml ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
     ```
 
 1. Connect Flux to the repository. Use a GitHub token with read access to the repository's contents, for example a
-   [fine-grained personal access token][github-token]:
+   [fine-grained personal access token][github-token]. Store it in a Secret:
 
     ```sh
     flux create secret git github-https-credentials --namespace=default \
     --url=${GITOPS_REPO_URL} --username=git --password=YOUR_GITHUB_TOKEN
+    ```
 
+    Create the `GitRepository`. Its `ignore` field keeps Flux from reading the example directories:
+
+    ```sh
     cat <<EOF | kubectl apply -f -
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
@@ -166,16 +208,25 @@ repository, and a `Kustomization` that tells it which directory to apply.
         !bases/**
         **.md
     EOF
+    ```
 
+    Finally, apply the `Kustomization`:
+
+    ```sh
     kubectl apply -f ${MC_DIR}/${MC_NAME}.yaml
     ```
 
     These are the only resources you apply by hand. From now on, Flux applies everything you push.
 
-**Check:** both resources are `Ready`:
+**Check:** the `GitRepository` is `Ready`:
 
 ```sh
 flux get sources git ${GITOPS_REPO} -n default
+```
+
+The `Kustomization` is `Ready` too:
+
+```sh
 flux get kustomizations ${MC_NAME}-gitops -n default
 ```
 
@@ -191,9 +242,15 @@ exists, these steps bring it under GitOps.
 > kubectl gs gitops add organization --name ${ORG_NAME} --management-cluster ${MC_NAME}
 > ```
 
+First, create the organization's directory:
+
 ```sh
 mkdir -p ${ORG_DIR}/workload-clusters
+```
 
+Create the `Organization`:
+
+```sh
 cat <<EOF > ${ORG_DIR}/${ORG_NAME}.yaml
 apiVersion: security.giantswarm.io/v1alpha1
 kind: Organization
@@ -201,22 +258,27 @@ metadata:
   name: ${ORG_NAME}
 spec: {}
 EOF
+```
 
+Create an empty list of clusters. You add your cluster to it in the next step:
+
+```sh
 cat <<EOF > ${ORG_DIR}/workload-clusters/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources: []
 EOF
+```
 
-git add ${ORG_DIR}
-git commit -m "Add organization ${ORG_NAME}"
-git push
+Finally, commit and push:
+
+```sh
+git add ${ORG_DIR} && git commit -m "Add organization ${ORG_NAME}" && git push
 ```
 
 **Check:** the namespace `org-${ORG_NAME}` exists, which takes about a minute:
 
 ```sh
-kubectl get organization ${ORG_NAME}
 kubectl get namespace org-${ORG_NAME}
 ```
 
@@ -236,22 +298,36 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
 >   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
 > ```
 
-1. Pick a Giant Swarm release, and read the version of the `cluster-aws` chart it ships:
+1. List the Giant Swarm releases and pick one:
 
     ```sh
     kubectl get releases.release.giantswarm.io
+    ```
+
+    Export the release you picked:
+
+    ```sh
     export RELEASE_VERSION=36.1.0
+    ```
+
+    Then read the version of the `cluster-aws` chart it ships:
+
+    ```sh
     export CLUSTER_APP_VERSION=$(kubectl get releases.release.giantswarm.io aws-${RELEASE_VERSION} -o yaml |
     yq '.spec.components[] | select(.name == "cluster-aws") | .version')
     ```
 
 1. Create the cluster definition. It points at the base, sets the chart version, and adds your values on top of the
-   base's defaults. The values follow the
-   [`cluster-aws` schema](https://github.com/giantswarm/cluster-aws/blob/main/helm/cluster-aws/README.md):
+   base's defaults. First, create its directory:
 
     ```sh
     mkdir -p ${WC_DIR}/mapi/cluster
+    ```
 
+    Put your values into a ConfigMap. They follow the
+    [`cluster-aws` schema](https://github.com/giantswarm/cluster-aws/blob/main/helm/cluster-aws/README.md):
+
+    ```sh
     cat <<EOF > ${WC_DIR}/mapi/cluster/cluster_userconfig.yaml
     apiVersion: v1
     kind: ConfigMap
@@ -264,7 +340,11 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
           release:
             version: ${RELEASE_VERSION}
     EOF
+    ```
 
+    Create a patch that sets the chart version on the cluster App and points it at your values:
+
+    ```sh
     cat <<EOF > ${WC_DIR}/mapi/cluster/patch_userconfig.yaml
     apiVersion: application.giantswarm.io/v1alpha1
     kind: App
@@ -278,7 +358,11 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
           name: \${cluster_name}-userconfig
           namespace: org-\${organization}
     EOF
+    ```
 
+    Then tie the base, the values and the patch together:
+
+    ```sh
     cat <<EOF > ${WC_DIR}/mapi/cluster/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
@@ -290,8 +374,8 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
     EOF
     ```
 
-1. Create the cluster's `Kustomization` and list it in `workload-clusters/kustomization.yaml`. `prune: false` keeps
-   Flux from deleting the cluster if the file is removed by mistake:
+1. Create the cluster's `Kustomization`. Note that `prune: false` keeps Flux from deleting the cluster if the file is
+   removed by mistake:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
@@ -315,27 +399,47 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
         name: ${GITOPS_REPO}
       timeout: 2m
     EOF
-
-    yq -i '.resources += ["'"${WC_NAME}"'.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
-
-    git add ${ORG_DIR}
-    git commit -m "Add workload cluster ${WC_NAME}"
-    git push
     ```
 
-**Check:** the `Kustomization` and the cluster App are ready. The cluster takes 15 to 20 minutes to come up:
+    Add it to the organization's list of clusters:
+
+    ```sh
+    yq -i '.resources += ["'"${WC_NAME}"'.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
+    ```
+
+    Finally, commit and push:
+
+    ```sh
+    git add ${ORG_DIR} && git commit -m "Add workload cluster ${WC_NAME}" && git push
+    ```
+
+**Check:** the cluster's `Kustomization` is `Ready`:
 
 ```sh
 flux get kustomizations ${MC_NAME}-clusters-${WC_NAME} -n default
-kubectl get apps ${WC_NAME} -n org-${ORG_NAME}
+```
+
+The cluster takes 15 to 20 minutes to come up. Watch it with:
+
+```sh
 kubectl gs get clusters -n org-${ORG_NAME}
 ```
 
-Once the cluster is up, log in to it, note its context for later, and switch back to the management cluster:
+Once the cluster is up, log in to it:
 
 ```sh
 kubectl gs login ${MC_NAME} --workload-cluster ${WC_NAME} --organization ${ORG_NAME}
+```
+
+Save its context for the checks below:
+
+```sh
 export WC_CONTEXT=$(kubectl config current-context)
+```
+
+Then switch back to the management cluster:
+
+```sh
 kubectl config use-context gs-${MC_NAME}
 ```
 
@@ -348,13 +452,21 @@ An app is two Flux resources on the management cluster: an `OCIRepository` that 
 `HelmRelease` that installs it into the workload cluster through the cluster's `${cluster_name}-kubeconfig` Secret.
 Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app) chart.
 
-1. Create the app with its values. The `configMapGenerator` turns `values.yaml` into the ConfigMap the `HelmRelease`
-   reads:
+1. Save the app's directory for the next commands:
 
     ```sh
     export APP_DIR=${WC_DIR}/mapi/apps/hello-world
-    mkdir -p ${APP_DIR}
+    ```
 
+    Then create it:
+
+    ```sh
+    mkdir -p ${APP_DIR}
+    ```
+
+1. Create the `OCIRepository`, which sets the chart and its version:
+
+    ```sh
     cat <<'EOF' > ${APP_DIR}/ocirepository.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
@@ -367,7 +479,11 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
         tag: 3.2.3
       url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
     EOF
+    ```
 
+1. Create the `HelmRelease`, which installs the chart into the workload cluster:
+
+    ```sh
     cat <<'EOF' > ${APP_DIR}/helmrelease.yaml
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
@@ -395,12 +511,24 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
           name: ${cluster_name}-hello-world-values
           valuesKey: values
     EOF
+    ```
 
+    The `${cluster_name}-cluster-values` ConfigMap is created for every workload cluster and gives the chart values
+    such as `baseDomain`. Values listed later in `valuesFrom` win.
+
+1. Put the app's values into `values.yaml`:
+
+    ```sh
     cat <<'EOF' > ${APP_DIR}/values.yaml
     ingress:
       enabled: false
     EOF
+    ```
 
+1. Create the `kustomization.yaml`. Its `configMapGenerator` turns `values.yaml` into the ConfigMap the `HelmRelease`
+   reads:
+
+    ```sh
     cat <<'EOF' > ${APP_DIR}/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
@@ -417,21 +545,21 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     EOF
     ```
 
-    The `${cluster_name}-cluster-values` ConfigMap is created for every workload cluster and gives the chart values
-    such as `baseDomain`. Values listed later in `valuesFrom` win.
-
 1. Commit and push:
 
     ```sh
-    git add ${APP_DIR}
-    git commit -m "Deploy hello-world to ${WC_NAME}"
-    git push
+    git add ${APP_DIR} && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
     ```
 
-**Check:** the release is ready on the management cluster, and the pods run in the workload cluster:
+**Check:** the release is `Ready` on the management cluster:
 
 ```sh
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
+```
+
+The pods run in the workload cluster:
+
+```sh
 kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
 
@@ -440,21 +568,33 @@ Learn more:
 
 ## 5. Update the app
 
-To update an app, change its files and push. Here you upgrade the chart and run at least two replicas:
+To update an app, change its files and push. First, upgrade the chart:
 
 ```sh
 yq -i '.spec.ref.tag = "3.2.4"' ${APP_DIR}/ocirepository.yaml
-yq -i '.autoscaling.minReplicas = 2' ${APP_DIR}/values.yaml
-
-git add ${APP_DIR}
-git commit -m "Update hello-world on ${WC_NAME}"
-git push
 ```
 
-**Check:** the release reports the new chart version, and two pods run:
+Change a value, to run at least two replicas:
+
+```sh
+yq -i '.autoscaling.minReplicas = 2' ${APP_DIR}/values.yaml
+```
+
+Then commit and push:
+
+```sh
+git add ${APP_DIR} && git commit -m "Update hello-world on ${WC_NAME}" && git push
+```
+
+**Check:** the release reports the new chart version:
 
 ```sh
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
+```
+
+Two pods run:
+
+```sh
 kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
 
@@ -469,27 +609,46 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
 
     ```sh
     yq -i '.spec.prune = true' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
-    git commit -am "Allow deletion of ${WC_NAME}"
-    git push
     ```
 
-1. Wait until Flux applies it, then remove the cluster from the repository and delete its `Kustomization`. Flux then
-   deletes the cluster and its apps:
+    Commit and push:
 
     ```sh
-    flux get kustomizations ${MC_NAME}-clusters-${WC_NAME} -n default   # wait for the new revision
+    git commit -am "Allow deletion of ${WC_NAME}" && git push
+    ```
 
+1. Wait until the cluster's `Kustomization` shows the new revision:
+
+    ```sh
+    flux get kustomizations ${MC_NAME}-clusters-${WC_NAME} -n default
+    ```
+
+1. Remove the cluster from the organization's list:
+
+    ```sh
     yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
-    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
-    git commit -am "Delete workload cluster ${WC_NAME}"
-    git push
+    ```
 
+    Remove its files, then commit and push:
+
+    ```sh
+    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml && git commit -am "Delete workload cluster ${WC_NAME}" && git push
+    ```
+
+1. Make Flux read the change right away:
+
+    ```sh
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
+    ```
+
+    Finally, delete the cluster's `Kustomization`. Flux then deletes the cluster and its apps:
+
+    ```sh
     kubectl delete kustomization ${MC_NAME}-clusters-${WC_NAME} -n default
     ```
 
-    The management cluster's `Kustomization` has `prune: false`, so it doesn't delete the cluster's `Kustomization`
-    by itself, which is why you delete it by hand.
+    Note that you delete it by hand because the management cluster's `Kustomization` has `prune: false`. It doesn't
+    delete the cluster's `Kustomization` by itself.
 
 ## Next steps
 
