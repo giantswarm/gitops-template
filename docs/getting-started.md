@@ -37,8 +37,8 @@ You need:
   only try this guide, create a [secret store for testing](./appendices.md#secret-store-for-testing),
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
-The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, you can
-keep them for reference.
+The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so you
+can keep them for reference.
 
 Export the names used in all the commands below:
 
@@ -57,8 +57,8 @@ export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 
 Note that the variables only live in your current shell. If you open a new one, run the exports again.
 
-Note that if you use namespaced `SecretStore`s instead, you need one in `default` and one in `org-${ORG_NAME}`. Then
-set `kind: SecretStore` in the `ExternalSecret`s below.
+If you use namespaced `SecretStore`s instead, you need one in `default` and one in `org-${ORG_NAME}`. Then set
+`kind: SecretStore` in the `ExternalSecret`s below.
 
 ## 1. Connect the management cluster
 
@@ -536,8 +536,8 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     EOF
     ```
 
-1. (Optional) Give the app secret values. Store them in your secret manager as Helm values in YAML. hello-world has no
-   secret settings, so as an example, store this:
+1. (Optional) Give the app secret values. Store them in your secret manager as Helm values in YAML. The hello-world
+   chart has no secret settings, so as an example, store this:
 
     ```yaml
     podAnnotations:
@@ -615,7 +615,7 @@ To update an app, change its files and push. First, upgrade the chart:
 yq -i '.spec.ref.tag = "3.2.4"' ${APP_DIR}/ocirepository.yaml
 ```
 
-Change a value, to run at least two replicas:
+Next, change a value so that at least two replicas run:
 
 ```sh
 yq -i '.autoscaling.minReplicas = 2' ${APP_DIR}/values.yaml
@@ -633,7 +633,7 @@ git add ${APP_DIR} && git commit -m "Update hello-world on ${WC_NAME}" && git pu
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 ```
 
-Two pods run:
+At least two pods run:
 
 ```sh
 kubectl --context ${WC_CONTEXT} get pods -n hello-world
@@ -642,8 +642,8 @@ kubectl --context ${WC_CONTEXT} get pods -n hello-world
 To change a secret value, change it in your secret manager. ESO copies it within the `refreshInterval`, and Flux
 upgrades the release at its next `interval`.
 
-To let Flux install new chart versions by itself, see
-[Enable automatic updates of an existing App](./apps/automatic_updates_appcr.md).
+To let Flux install new chart versions by itself, replace `tag` with a `semver` range in the `OCIRepository`. For
+example, `semver: 3.2.x` installs every new patch version.
 
 ## 6. Delete the cluster (optional)
 

@@ -32,8 +32,8 @@ You need:
   `kubectl gs login MC_NAME`. You need write access to the `default` and `org-*` namespaces,
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
-The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, you can
-keep them for reference.
+The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so you
+can keep them for reference.
 
 Export the names used in all the commands below:
 
@@ -63,7 +63,7 @@ repository, and a `Kustomization` that tells it which directory to apply.
 > kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO} --gen-master-key
 > ```
 >
-> It doesn't add the key to your gpg keyring. Import it from the Secret file it created:
+> It doesn't add the key to your GPG keyring. Import it from the Secret file it created:
 >
 > ```sh
 > yq '.data[]' ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml | base64 -d | gpg --import
@@ -197,9 +197,10 @@ repository, and a `Kustomization` that tells it which directory to apply.
     git add .sops.yaml ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
     ```
 
-1. Connect Flux to the repository. Use a GitHub token with read access to the repository's contents, for example a
-   [fine-grained personal access token][github-token]. (Optional) Store it in a Secret. Skip this if the
-   `github-https-credentials` Secret already exists in the `default` namespace and can read this repository:
+1. Connect Flux to the repository. (Optional) Store a GitHub token in a Secret. Skip this if the
+   `github-https-credentials` Secret already exists in the `default` namespace and can read this repository. The token
+   needs read access to the repository's contents, for example a
+   [fine-grained personal access token][github-token]:
 
     ```sh
     flux create secret git github-https-credentials --namespace=default \
@@ -610,7 +611,7 @@ To update an app, change its files and push. First, upgrade the chart:
 yq -i '.spec.ref.tag = "3.2.4"' ${APP_DIR}/ocirepository.yaml
 ```
 
-Change a value, to run at least two replicas:
+Next, change a value so that at least two replicas run:
 
 ```sh
 yq -i '.autoscaling.minReplicas = 2' ${APP_DIR}/values.yaml
@@ -628,14 +629,14 @@ git add ${APP_DIR} && git commit -m "Update hello-world on ${WC_NAME}" && git pu
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 ```
 
-Two pods run:
+At least two pods run:
 
 ```sh
 kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
 
-To let Flux install new chart versions by itself, see
-[Enable automatic updates of an existing App](./apps/automatic_updates_appcr.md).
+To let Flux install new chart versions by itself, replace `tag` with a `semver` range in the `OCIRepository`. For
+example, `semver: 3.2.x` installs every new patch version.
 
 ## 6. Delete the cluster (optional)
 
