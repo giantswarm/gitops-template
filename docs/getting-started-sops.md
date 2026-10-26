@@ -481,7 +481,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 >   --organization ${ORG_NAME} --target-cluster ${WC_NAME} --target-namespace hello-world \
 >   --values-from ConfigMap/${WC_NAME}-cluster-values:values \
 >   --values-from ConfigMap/${WC_NAME}-hello-world-values:values \
->   --dry-run | yq -s 'strenv(APP_DIR) + "/" + (.kind | downcase) + ".yaml"'
+>   --dry-run | APP_DIR=${APP_DIR:?run the first step below} yq -s 'strenv(APP_DIR) + "/" + (.kind | downcase) + ".yaml"'
 > ```
 >
 > This writes `ocirepository.yaml` and `helmrelease.yaml`. Then continue with the `values.yaml` step.
