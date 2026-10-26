@@ -8,6 +8,11 @@ Every change goes the same way: you commit a file, push it, and Flux on the mana
 more about the approach, see
 [GitOps at Giant Swarm](https://docs.giantswarm.io/tutorials/continuous-deployment/gitops-at-giantswarm/).
 
+No secret is stored in the repository. Secrets live in your secret manager, such as Vault or AWS Secrets Manager, and
+[External Secrets Operator](https://docs.giantswarm.io/overview/security/external-secrets-operator/) (ESO) copies
+them into the management cluster. If you'd rather keep secrets in the repository, encrypted, follow
+[Getting started with SOPS](./getting-started-sops.md) instead.
+
 - [Before you start](#before-you-start)
 - [1. Connect the management cluster](#1-connect-the-management-cluster)
 - [2. Add an organization](#2-add-an-organization)
@@ -22,10 +27,13 @@ more about the approach, see
 You need:
 
 - the tools listed in [Appendices](./appendices.md): `git`, `kubectl`,
-  [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/), `flux`, `gpg`, `sops` and `yq`,
+  [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/), `flux` and `yq`,
 - access to the management cluster, see
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
   `kubectl gs login MC_NAME`. You need write access to the `default` and `org-*` namespaces,
+- a `ClusterSecretStore` on the management cluster that can read your secret manager. ESO runs on every Giant Swarm
+  management cluster. To create a store, see
+  [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/),
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, you can
@@ -39,36 +47,39 @@ export ORG_NAME=ORGANIZATION         # organization name, without the `org-` pre
 export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits
 export GITOPS_REPO=REPO_NAME         # name for the Flux GitRepository, for example `gitops`
 export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
+export SECRET_STORE=STORE_NAME       # name of the ClusterSecretStore
 
 export MC_DIR=management-clusters/${MC_NAME}
 export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 ```
 
+Note that if you use namespaced `SecretStore`s instead, you need one in `default` and one in `org-${ORG_NAME}`. Then
+set `kind: SecretStore` in the `ExternalSecret`s below.
+
 ## 1. Connect the management cluster
 
-Flux on the management cluster needs three things: a key to decrypt secrets stored in the repository, access to the
-repository, and a `Kustomization` that tells it which directory to apply.
+Flux on the management cluster needs two things: access to the repository, and a `Kustomization` that tells it which
+directory to apply. ESO gives it the repository credentials from your secret manager.
 
 > **Shortcut:** [`kubectl gs gitops add management-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-mc/)
-> does steps 1 to 6 for you, with a new master key:
+> does steps 1 and 2 for you:
 >
 > ```sh
-> kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO} --gen-master-key
+> kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO}
 > ```
 >
-> It doesn't add the key to your gpg keyring. Import it from the Secret file it created:
+> It also creates a `secrets` directory with an empty `sops-gpg-master` Secret, which this guide doesn't use. Remove
+> it, then continue with step 3:
 >
 > ```sh
-> yq '.data[]' ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml | base64 -d | gpg --import
+> rm -r ${MC_DIR}/secrets
 > ```
->
-> Then set `KEY_FP` as in step 4, and continue with step 7.
 
 1. Create the management cluster's directory:
 
     ```sh
-    mkdir -p ${MC_DIR}/.sops.keys ${MC_DIR}/secrets ${MC_DIR}/organizations
+    mkdir -p ${MC_DIR}/organizations
     ```
 
 1. Create the `Kustomization` that applies the management cluster directory:
@@ -81,10 +92,6 @@ repository, and a `Kustomization` that tells it which directory to apply.
       name: ${MC_NAME}-gitops
       namespace: default
     spec:
-      decryption:
-        provider: sops
-        secretRef:
-          name: sops-gpg-master
       interval: 1m
       path: ./management-clusters/${MC_NAME}
       prune: false
@@ -96,111 +103,60 @@ repository, and a `Kustomization` that tells it which directory to apply.
     EOF
     ```
 
-1. (Optional) Create a GPG master key without a passphrase. If you already have a master key for this management
-   cluster, skip this command. Save the private key from your password manager to a file and import it instead, with
-   `gpg --import FILE`:
-
-    ```sh
-    gpg --batch --full-generate-key <<EOF
-    %no-protection
-    Key-Type: EDDSA
-    Key-Curve: ed25519
-    Key-Usage: sign
-    Subkey-Type: ECDH
-    Subkey-Curve: cv25519
-    Subkey-Usage: encrypt
-    Expire-Date: 0
-    Name-Comment: ${MC_NAME} Flux Master
-    Name-Real: ${MC_NAME}
-    EOF
-    ```
-
-1. Save the key's fingerprint for the next commands:
-
-    ```sh
-    export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
-    ```
-
-    If you imported a key with another name, set `KEY_FP` to the fingerprint that `gpg --list-secret-keys` shows.
-
-1. Write the private key into the `sops-gpg-master` Secret:
-
-    ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}" |
-    kubectl create secret generic sops-gpg-master --namespace=default \
-    --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml \
-    > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-1. Share the public key in the repository:
-
-    ```sh
-    gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
-    ```
-
-    Add a rule to `.sops.yaml`, so `sops` encrypts the files in the `secrets` directory with this key:
-
-    ```sh
-    yq -i '.creation_rules += [{
-      "encrypted_regex": "^(data|stringData)$",
-      "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
-      "pgp": "'"${KEY_FP}"'"
-    }]' .sops.yaml
-    ```
-
-1. Apply the Secret, so Flux can decrypt files with the key. If the management cluster already has this key in its
-   `sops-gpg-master` Secret, this command changes nothing:
-
-    ```sh
-    kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-1. Encrypt the Secret, which keeps an encrypted copy of the key in the repository:
-
-    ```sh
-    sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-    List it in the `secrets` directory's `kustomization.yaml`:
-
-    ```sh
-    cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    resources:
-    - ${MC_NAME}.gpgkey.enc.yaml
-    EOF
-    ```
-
-1. (Optional) Print the private key and store it in your password manager. You need it to add more keys later. Skip
-   this if the key is already in your password manager:
-
-    ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}"
-    ```
-
-    Then remove it from your machine:
-
-    ```sh
-    gpg --delete-secret-keys "${KEY_FP}"
-    ```
-
 1. Commit and push:
 
     ```sh
-    git add .sops.yaml ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
+    git add ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
     ```
 
-1. Connect Flux to the repository. Use a GitHub token with read access to the repository's contents, for example a
-   [fine-grained personal access token][github-token]. (Optional) Store it in a Secret. Skip this if the
-   `github-https-credentials` Secret already exists in the `default` namespace and can read this repository:
+1. (Optional) Give Flux access to the repository. Skip this if the `github-https-credentials` Secret already exists in
+   the `default` namespace and can read this repository.
+
+    First, create a GitHub token with read access to the repository's contents, for example a
+    [fine-grained personal access token][github-token]. Store it in your secret manager, then save the name of that
+    secret:
 
     ```sh
-    flux create secret git github-https-credentials --namespace=default \
-    --url=${GITOPS_REPO_URL} --username=git --password=YOUR_GITHUB_TOKEN
+    export GITHUB_TOKEN_KEY=gitops/github-token
     ```
 
-    Create the `GitRepository`. Its `ignore` field keeps Flux from reading the example directories:
+    Create an `ExternalSecret`. ESO reads the token and writes it into the `github-https-credentials` Secret, in the
+    format Flux expects:
+
+    ```sh
+    cat <<EOF | kubectl apply -f -
+    apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: github-https-credentials
+      namespace: default
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: ${SECRET_STORE}
+      target:
+        name: github-https-credentials
+        template:
+          data:
+            username: git
+            password: "{{ .token }}"
+      data:
+        - secretKey: token
+          remoteRef:
+            key: ${GITHUB_TOKEN_KEY}
+    EOF
+    ```
+
+    If the secret in your secret manager holds several fields, add `property: FIELD_NAME` under `remoteRef`.
+
+    **Check:** the `ExternalSecret` reports `SecretSynced`:
+
+    ```sh
+    kubectl get externalsecret github-https-credentials -n default
+    ```
+
+1. Create the `GitRepository`. Its `ignore` field keeps Flux from reading the example directories:
 
     ```sh
     cat <<EOF | kubectl apply -f -
@@ -524,11 +480,16 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
         - kind: ConfigMap
           name: ${cluster_name}-hello-world-values
           valuesKey: values
+        - kind: Secret
+          name: ${cluster_name}-hello-world-user-secrets
+          optional: true
+          valuesKey: values
     EOF
     ```
 
     The `${cluster_name}-cluster-values` ConfigMap is created for every workload cluster and gives the chart values
-    such as `baseDomain`. Values listed later in `valuesFrom` win.
+    such as `baseDomain`. Values listed later in `valuesFrom` win. The last entry is optional. You can fill it with
+    secret values a few steps below.
 
 1. Put the app's values into `values.yaml`:
 
@@ -559,6 +520,50 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     EOF
     ```
 
+1. (Optional) Give the app secret values. Store them in your secret manager as Helm values in YAML. hello-world has no
+   secret settings, so as an example, store this:
+
+    ```yaml
+    podAnnotations:
+      example.com/source: secret-manager
+    ```
+
+    Save the name of that secret:
+
+    ```sh
+    export APP_SECRET_KEY=gitops/hello-world-values
+    ```
+
+    Create an `ExternalSecret`. ESO turns the values into the `${cluster_name}-hello-world-user-secrets` Secret the
+    `HelmRelease` reads:
+
+    ```sh
+    cat <<EOF > ${APP_DIR}/externalsecret.yaml
+    apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: \${cluster_name}-hello-world-user-secrets
+      namespace: org-\${organization}
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: ${SECRET_STORE}
+      target:
+        name: \${cluster_name}-hello-world-user-secrets
+      data:
+        - secretKey: values
+          remoteRef:
+            key: ${APP_SECRET_KEY}
+    EOF
+    ```
+
+    Add it to the app's `kustomization.yaml`:
+
+    ```sh
+    yq -i '.resources += ["externalsecret.yaml"]' ${APP_DIR}/kustomization.yaml
+    ```
+
 1. Commit and push:
 
     ```sh
@@ -575,6 +580,12 @@ The pods run in the workload cluster:
 
 ```sh
 kubectl --context ${WC_CONTEXT} get pods -n hello-world
+```
+
+If you added secret values, the `ExternalSecret` reports `SecretSynced`:
+
+```sh
+kubectl get externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME}
 ```
 
 Learn more:
@@ -611,6 +622,9 @@ Two pods run:
 ```sh
 kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
+
+To change a secret value, change it in your secret manager. ESO copies it within the `refreshInterval`, and Flux
+upgrades the release at its next `interval`.
 
 To let Flux install new chart versions by itself, see
 [Enable automatic updates of an existing App](./apps/automatic_updates_appcr.md).
@@ -666,9 +680,9 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
 
 ## Next steps
 
-- Keep secrets in the repository, encrypted with SOPS: create a
-  [key for the cluster](./add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step), then
-  [provide encrypted values](./apps/add_appcr.md#providing-encrypted-values).
+- Keep secrets in the repository instead, encrypted with SOPS: [Getting started with SOPS](./getting-started-sops.md).
+- Learn more about ESO, and the risks of depending on it:
+  [External Secrets Operator](https://docs.giantswarm.io/overview/security/external-secrets-operator/).
 - Reuse an app's configuration across clusters: [App Templates](./apps/add_app_template.md) and
   [App Sets](./apps/app_sets.md).
 - Run dev, staging and production clusters from shared templates:
