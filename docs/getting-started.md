@@ -33,7 +33,8 @@ You need:
   `kubectl gs login MC_NAME`. You need write access to the `default` and `org-*` namespaces,
 - a `ClusterSecretStore` on the management cluster that can read your secret manager. ESO runs on every Giant Swarm
   management cluster. To create a store, see
-  [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/),
+  [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/). To
+  only try this guide, create a [secret store for testing](./appendices.md#secret-store-for-testing),
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, you can
