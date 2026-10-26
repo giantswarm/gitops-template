@@ -14,7 +14,7 @@ more about the approach, see
 - [3. Create a workload cluster](#3-create-a-workload-cluster)
 - [4. Deploy an app](#4-deploy-an-app)
 - [5. Update the app](#5-update-the-app)
-- [6. Delete the cluster](#6-delete-the-cluster)
+- [6. Delete the cluster (optional)](#6-delete-the-cluster-optional)
 - [Next steps](#next-steps)
 
 ## Before you start
@@ -51,100 +51,24 @@ Flux on the management cluster needs three things: a key to decrypt secrets stor
 repository, and a `Kustomization` that tells it which directory to apply.
 
 > **Shortcut:** [`kubectl gs gitops add management-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-mc/)
-> creates the directory, the `Kustomization` and the master key. You still apply the key and connect the repository
-> as shown below:
+> does steps 1 to 6 for you, with a new master key:
 >
 > ```sh
 > kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO} --gen-master-key
 > ```
+>
+> It doesn't add the key to your gpg keyring. Import it from the Secret file it created:
+>
+> ```sh
+> yq '.data[]' ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml | base64 -d | gpg --import
+> ```
+>
+> Then set `KEY_FP` as in step 4, and continue with step 7.
 
 1. Create the management cluster's directory:
 
     ```sh
     mkdir -p ${MC_DIR}/.sops.keys ${MC_DIR}/secrets ${MC_DIR}/organizations
-    ```
-
-1. Create a GPG master key without a passphrase:
-
-    ```sh
-    gpg --batch --full-generate-key <<EOF
-    %no-protection
-    Key-Type: EDDSA
-    Key-Curve: ed25519
-    Key-Usage: sign
-    Subkey-Type: ECDH
-    Subkey-Curve: cv25519
-    Subkey-Usage: encrypt
-    Expire-Date: 0
-    Name-Comment: ${MC_NAME} Flux Master
-    Name-Real: ${MC_NAME}
-    EOF
-    ```
-
-    Then save its fingerprint for the next commands:
-
-    ```sh
-    export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
-    ```
-
-1. Write the private key into the `sops-gpg-master` Secret:
-
-    ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}" |
-    kubectl create secret generic sops-gpg-master --namespace=default \
-    --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml \
-    > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-    Apply it, so Flux can decrypt files with the key:
-
-    ```sh
-    kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-1. Share the public key in the repository:
-
-    ```sh
-    gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
-    ```
-
-    Add a rule to `.sops.yaml`, so `sops` encrypts the files in the `secrets` directory with this key:
-
-    ```sh
-    yq -i '.creation_rules += [{
-      "encrypted_regex": "^(data|stringData)$",
-      "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
-      "pgp": "'"${KEY_FP}"'"
-    }]' .sops.yaml
-    ```
-
-1. Encrypt the Secret, which keeps an encrypted copy of the key in the repository:
-
-    ```sh
-    sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-    List it in the `secrets` directory's `kustomization.yaml`:
-
-    ```sh
-    cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    resources:
-    - ${MC_NAME}.gpgkey.enc.yaml
-    EOF
-    ```
-
-1. Print the private key and store it in your password manager. You need it to add more keys later:
-
-    ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}"
-    ```
-
-    Then remove it from your machine:
-
-    ```sh
-    gpg --delete-secret-keys "${KEY_FP}"
     ```
 
 1. Create the `Kustomization` that applies the management cluster directory:
@@ -172,14 +96,104 @@ repository, and a `Kustomization` that tells it which directory to apply.
     EOF
     ```
 
-    Commit and push:
+1. (Optional) Create a GPG master key without a passphrase. If you already have a master key for this management
+   cluster, skip this command. Save the private key from your password manager to a file and import it instead, with
+   `gpg --import FILE`:
+
+    ```sh
+    gpg --batch --full-generate-key <<EOF
+    %no-protection
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
+    Expire-Date: 0
+    Name-Comment: ${MC_NAME} Flux Master
+    Name-Real: ${MC_NAME}
+    EOF
+    ```
+
+1. Save the key's fingerprint for the next commands:
+
+    ```sh
+    export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
+    ```
+
+    If you imported a key with another name, set `KEY_FP` to the fingerprint that `gpg --list-secret-keys` shows.
+
+1. Write the private key into the `sops-gpg-master` Secret:
+
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}" |
+    kubectl create secret generic sops-gpg-master --namespace=default \
+    --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml \
+    > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Share the public key in the repository:
+
+    ```sh
+    gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
+    ```
+
+    Add a rule to `.sops.yaml`, so `sops` encrypts the files in the `secrets` directory with this key:
+
+    ```sh
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
+    ```
+
+1. Apply the Secret, so Flux can decrypt files with the key. If the management cluster already has this key in its
+   `sops-gpg-master` Secret, this command changes nothing:
+
+    ```sh
+    kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Encrypt the Secret, which keeps an encrypted copy of the key in the repository:
+
+    ```sh
+    sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+    List it in the `secrets` directory's `kustomization.yaml`:
+
+    ```sh
+    cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+    - ${MC_NAME}.gpgkey.enc.yaml
+    EOF
+    ```
+
+1. (Optional) Print the private key and store it in your password manager. You need it to add more keys later. Skip
+   this if the key is already in your password manager:
+
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}"
+    ```
+
+    Then remove it from your machine:
+
+    ```sh
+    gpg --delete-secret-keys "${KEY_FP}"
+    ```
+
+1. Commit and push:
 
     ```sh
     git add .sops.yaml ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
     ```
 
 1. Connect Flux to the repository. Use a GitHub token with read access to the repository's contents, for example a
-   [fine-grained personal access token][github-token]. Store it in a Secret:
+   [fine-grained personal access token][github-token]. (Optional) Store it in a Secret. Skip this if the
+   `github-https-credentials` Secret already exists in the `default` namespace and can read this repository:
 
     ```sh
     flux create secret git github-https-credentials --namespace=default \
@@ -601,7 +615,7 @@ kubectl --context ${WC_CONTEXT} get pods -n hello-world
 To let Flux install new chart versions by itself, see
 [Enable automatic updates of an existing App](./apps/automatic_updates_appcr.md).
 
-## 6. Delete the cluster
+## 6. Delete the cluster (optional)
 
 Skip this step to keep the cluster. Deleting it takes two pushes, so that a mistake can't remove a cluster:
 
