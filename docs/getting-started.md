@@ -423,6 +423,23 @@ An app is two Flux resources on the management cluster: an `OCIRepository` that 
 `HelmRelease` that installs it into the workload cluster through the cluster's `${cluster_name}-kubeconfig` Secret.
 Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app) chart.
 
+> **Shortcut:** [`kubectl gs deploy chart`](https://docs.giantswarm.io/reference/kubectl-gs/deploy-chart/) with
+> `--dry-run` writes the `OCIRepository` and the `HelmRelease` for you. It checks that the chart version exists, then
+> prints the resources instead of applying them. Always pass `--dry-run` here. Without it, the command applies the
+> resources to the management cluster directly, outside of Git. Note that `:values` in `--values-from` needs
+> kubectl-gs 5.11.0 or newer. After the first step below, run:
+>
+> ```sh
+> kubectl gs deploy chart --chart-name hello-world --version 3.2.3 \
+>   --organization ${ORG_NAME} --target-cluster ${WC_NAME} --target-namespace hello-world \
+>   --values-from ConfigMap/${WC_NAME}-cluster-values:values \
+>   --values-from ConfigMap/${WC_NAME}-hello-world-values:values \
+>   --values-from Secret/${WC_NAME}-hello-world-user-secrets:values:optional \
+>   --dry-run | yq -s 'strenv(APP_DIR) + "/" + (.kind | downcase) + ".yaml"'
+> ```
+>
+> This writes `ocirepository.yaml` and `helmrelease.yaml`. Then continue with the `values.yaml` step.
+
 1. Save the app's directory for the next commands:
 
     ```sh
