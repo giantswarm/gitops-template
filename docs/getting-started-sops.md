@@ -49,6 +49,8 @@ export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 ```
 
+Note that the variables only live in your current shell. If you open a new one, run the exports again.
+
 ## 1. Connect the management cluster
 
 Flux on the management cluster needs three things: a key to decrypt secrets stored in the repository, access to the

@@ -55,6 +55,8 @@ export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 ```
 
+Note that the variables only live in your current shell. If you open a new one, run the exports again.
+
 Note that if you use namespaced `SecretStore`s instead, you need one in `default` and one in `org-${ORG_NAME}`. Then
 set `kind: SecretStore` in the `ExternalSecret`s below.
 
@@ -67,15 +69,11 @@ directory to apply. ESO gives it the repository credentials from your secret man
 > does steps 1 and 2 for you:
 >
 > ```sh
-> kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO}
+> kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${GITOPS_REPO} --skip-encryption
 > ```
 >
-> It also creates a `secrets` directory with an empty `sops-gpg-master` Secret, which this guide doesn't use. Remove
-> it, then continue with step 3:
->
-> ```sh
-> rm -r ${MC_DIR}/secrets
-> ```
+> `--skip-encryption` leaves out the SOPS directories this guide doesn't use. It needs kubectl-gs 5.11.0 or newer.
+> Then continue with step 3.
 
 1. Create the management cluster's directory:
 
