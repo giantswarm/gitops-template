@@ -9,10 +9,7 @@ spec:
   postBuild:
     substitute:
       cluster_description: "description"
-      cluster_domain: "env-prod-your-cluster-domain-name"  # TODO: change 'env-prod-your-cluster-domain-name' to real domain name
       cluster_name: "hello-app-prod-us-west"  # TODO: change 'hello-app-prod-us-west' to your cluster name; must be a correct k8s resource name (DNS-like)
-      cluster_release: "0.8.1"
-      default_apps_release: "0.2.0"
       organization: "org-name"  # TODO: change 'org-name' to your organization name
   prune: false
   serviceAccountName: automation

@@ -99,11 +99,11 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Edit the `management-clusters/${MC_NAME}/secrets/kustomization.yaml` by adding the newly created secret to its resources:
+1. Add the newly created secret to the resources of the `management-clusters/${MC_NAME}/secrets/kustomization.yaml`:
 
-    ```yaml
-    resources:
-    - ${WC_NAME}.gpgkey.enc.yaml
+    ```sh
+    yq -i eval ".resources += \"${WC_NAME}.gpgkey.enc.yaml\" | .resources style=\"\"" \
+    management-clusters/${MC_NAME}/secrets/kustomization.yaml
     ```
 
 1. Import the master GPG public key and encrypt the Kubernetes Secret with it:
@@ -119,7 +119,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     ```sh
     eval $(op signin)
     gpg --export-secret-keys --armor "${KEY_FP}" |
-    jq -snR '{"fields": [{"value": inputs }]}' |
+    jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |
     op item create --vault 'Dev Common' --category securenote --title "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --format json -
     ```
 
@@ -139,11 +139,23 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
 
     ```sh
-    cat <<EOF >> .sops.yaml
-      - encrypted_regex: ^(data|stringData)$
-        path_regex: management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/.*\.enc\.yaml
-        pgp: ${KEY_FP}
-    EOF
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/mapi/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
+    ```
+
+1. Commit the encrypted `${WC_NAME}.gpgkey.enc.yaml` in the same commit as the `secrets/kustomization.yaml` that
+   lists it, together with the public key and `.sops.yaml`. If the list reaches the repository without the file,
+   the Management Cluster's Kustomization fails to build and stops reconciling:
+
+    ```sh
+    git add management-clusters/${MC_NAME}/secrets \
+    management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc \
+    .sops.yaml
+    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
     ```
 
 ## Directory tree
@@ -164,6 +176,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
    delivery method create also `out-of-band` directory. Next go to the `mapi` directory:
 
     ```sh
+    cd ${WC_NAME}
     mkdir mapi                # resources managed with Management API
     # mkdir out-of-band       # resources managed outside Management API, created directly in WC
     cd mapi
@@ -175,7 +188,6 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     - `cluster` - Workload Cluster definition.
 
     ```sh
-    cd ${WC_NAME}
     mkdir apps cluster
     ```
 
@@ -200,7 +212,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     spec:
       kubeConfig:
         secretRef:
-          name: ${cluster_name}-kubeconfig
+          name: \${cluster_name}-kubeconfig
     EOF
     ```
 
@@ -234,7 +246,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     cd ../cluster
     ```
 
-1. Create `kustomization.yaml` file and populate it with empty resources for now:
+1. Create `kustomization.yaml` file and populate it with empty resources for now. The
+   [Workload Cluster instance](./add_wc_instance.md) steps replace it with one that creates the cluster:
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -263,12 +276,14 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
+            organization: "${ORG_NAME}"
         prune: false
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
           name: ${GIT_REPOSITORY_NAME}
         timeout: 2m
+      EOF
       ```
 
     - if you have created a dedicated GPG key for the cluster (running with Secrets encryption):
@@ -292,25 +307,27 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
+            organization: "${ORG_NAME}"
         prune: false
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
           name: ${GIT_REPOSITORY_NAME}
         timeout: 2m
+      EOF
       ```
 
 1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
-   directory and referencing the right `kubeconfig` file:
+   directory and referencing the right `kubeconfig` Secret. Create it in the namespace of that Secret, which is the
+   organization namespace for CAPI clusters:
 
    ```sh
-   cat <<EOF >> ${WC_NAME}-direct.yaml
-   ---
+   cat <<EOF > ${WC_NAME}-direct.yaml
    apiVersion: kustomize.toolkit.fluxcd.io/v1
    kind: Kustomization
    metadata:
      name: ${MC_NAME}-clusters-${WC_NAME}-direct
-     namespace: ${WC_NAME}
+     namespace: org-${ORG_NAME}
    spec:
      interval: 1m
      kubeConfig:
@@ -328,77 +345,20 @@ Kubernetes Secret, you MUST not create multiple Secrets.
    ```
 
    **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
-   in the above command to tell Flux where to look for the `kubeconfig`.
+   in the above command to tell Flux where to look for the `kubeconfig`, and to use the namespace the legacy
+   cluster's `kubeconfig` Secret lives in.
 
-### Configuring default-apps
+### Configuring default apps
 
-You can also kustomize the `default-apps` for your cluster by creating a [user config map](https://docs.giantswarm.io/app-platform/app-configuration/)
-and patching the CR for the App.
-
-1. Create the user config map in the workload cluster's `cluster` directory. For example, let's configure CoreDNS:
-
-   ```sh
-   # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/cluster
-   cd ${WC_NAME}/mapi/cluster
-   echo <<EOF >> default_apps_user_config.yaml
-   apiVersion: v1
-   data:
-     values: |
-       userConfig:
-         coreDNS:
-           configMap:
-              values: |
-                configmap:
-                  custom:
-                    my-domain.local {
-                      log
-                      errors
-                      cache 30
-                      loop
-                      reload
-                      loadbalance
-                  }
-   kind: ConfigMap
-   metadata:
-   name: ${cluster_name}-default-apps-userconfig
-   namespace: org-${organization}
-   EOF
-   ```
-
-1. Create the patch for the `default-apps` CR:
-
-    ```sh
-    echo <<EOF >> patch_user_config_default_apps.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
-    metadata:
-      name: ${cluster_name}-default-apps
-      namespace: org-${organization}
-    spec:
-      userConfig:
-        configMap:
-          name: ${cluster_name}-default-apps-userconfig
-          namespace: org-${organization}
-    EOF
-    ```
-
-1. Finally, add the user config map and the patch to the `${WC_NAME}/mapi/cluster/kustomization.yaml`
-
-   ```sh
-   yq -i eval ".patchesStrategicMerge += \"default_apps_user_config.yaml\" | .patchesStrategicMerge style=\"\"" kustomization.yaml
-   yq -i eval ".resources += \"patch_user_config_default_apps.yaml\" | .resources style=\"\"" kustomization.yaml
-   ```
+The default apps of a cluster are part of its cluster App. Configure them through the cluster App values under
+`global.apps`, the same way as the rest of the cluster configuration, see the `cilium` entry in
+[bases/clusters/capa/template/cluster_config.yaml](/bases/clusters/capa/template/cluster_config.yaml) and
+[Add Workload Cluster instance](./add_wc_instance.md).
 
 ## MC configuration
 
-1. Go to the `workload-clusters` directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    ```
-
-1. Edit the mandatory `kustomization.yaml` adding the WC's Kustomization CR as a resource. Uncomment second
-   line if you have created the out-of-band Kustomization CR as well:
+1. Still in the `workload-clusters` directory, edit the mandatory `kustomization.yaml` adding the WC's Kustomization
+   CR as a resource. Uncomment second line if you have created the out-of-band Kustomization CR as well:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
