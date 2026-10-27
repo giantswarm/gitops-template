@@ -29,7 +29,8 @@ You need:
   [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/), `flux`, `gpg`, `sops` and `yq`,
 - access to the management cluster, see
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
-  `kubectl gs login MC_NAME`. You need write access to the `default` and `org-*` namespaces,
+  `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
+  is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces,
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so you
