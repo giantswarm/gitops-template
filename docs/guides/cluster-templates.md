@@ -11,14 +11,14 @@ Our CAPx (CAPI provider-specific clusters) are delivered by Giant Swarm as an ap
 is an `App` containing the cluster instance definition.
 
 You can follow the instructions below to store CAPx cluster templates in the repository. The instructions respect the
-[repository structure](./repo_structure.md).
+[repository structure](../repo_structure.md).
 
 Adding definitions can be done on two levels: shared cluster template and version specific template, see
 [create shared template base](#create-shared-cluster-template-base-optional)
 and [create versioned base](#create-versioned-base-optional).
 
 If all you want is to create a new CAPx cluster using an existing definition,
-go to the [creating cluster instance with CAPx](./add_wc_instance.md).
+go to the [creating cluster instance with CAPx](../add_wc_instance.md).
 
 **IMPORTANT**, CAPx configuration utilizes the
 [app platform configuration levels](https://docs.giantswarm.io/tutorials/app-platform/app-configuration/#levels),
@@ -272,5 +272,5 @@ pools, etc.:
 
 ## Recommended next steps
 
-- [Prepare multiple environments](./add_wc_environments.md)
-- [Add a new Workload Cluster repository structure](./add_wc_structure.md)
+- [Prepare multiple environments](./environments.md)
+- [Add a new Workload Cluster repository structure](../add_wc_structure.md)

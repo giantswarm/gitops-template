@@ -11,7 +11,7 @@
 - [Recommended next steps](#recommended-next-steps)
 
 Follow the instructions below to add a new App to a cluster managed in this repository.
-You can add an App directly (without any intermediate step) or use an [App Template](add_app_template.md).
+You can add an App directly (without any intermediate step) or use an [App Template](./app-templates.md).
 The documentation below shows common steps as well as what is different in both cases.
 
 An app is a Flux `HelmRelease` that installs a Helm chart into the workload cluster, and an `OCIRepository` that
@@ -295,5 +295,5 @@ already be configured. Commit the changes to the branch your Flux is using.
 
 ## Recommended next steps
 
-- [Enable automatic updates of an existing App](./automatic_updates_appcr.md)
-- [Update an existing App](./update_appcr.md)
+- [Enable automatic updates of an existing App](./automatic-updates.md)
+- [Update an existing App](./update-app.md)

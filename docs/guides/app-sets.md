@@ -55,7 +55,7 @@ An example showing how to use an App Set is available in
 
 ## Creating an App Set Template
 
-Creating an App Set Template is not much different than [creating an App Template](add_app_template.md). Please check the
+Creating an App Set Template is not much different than [creating an App Template](./app-templates.md). Please check the
 docs there first, if you haven't already. The steps below create the `hello-web-app` example, which bundles the
 `hello-world` App Template; replace the names with your own.
 
@@ -146,13 +146,13 @@ Please note the following in the example above:
 - It is recommended to re-use App Templates to create App Set Templates. That's exactly what we do here: apps defined
   in the `resources:` block are App Templates, that, if needed, can be also used standalone.
 - The example above doesn't cover handling Secrets - we do that for brevity. Secrets can be created the same way as in
-  normal [App Templates](./add_app_template.md) and overrode the same as ConfigMaps or Secrets when creating
-  [App from a Template](./add_appcr.md#adding-app-using-app-template).
+  normal [App Templates](./app-templates.md) and overrode the same as ConfigMaps or Secrets when creating
+  [App from a Template](./add-app.md#adding-app-using-app-template).
 
 ## Using an App Set
 
 Using an App Set Template is once again very similar to using a single
-[App Template](./add_appcr.md#adding-app-using-app-template).
+[App Template](./add-app.md#adding-app-using-app-template).
 
 **Note**, an App Set and a standalone App created from the same App Template produce objects with the same names, for
 example `${cluster_name}-hello-world`. A cluster can only have one of them. To move an app that is installed
@@ -212,4 +212,4 @@ already lists in `spec.valuesFrom`, so creating it is enough: no patch is needed
 whole config, but only YAML keys we need to change. The namespace has to stay the organization namespace, as the
 `HelmRelease` finds its kubeconfig Secret, cluster values and `OCIRepository` there; the namespace the app is
 installed into on the workload cluster is its `spec.targetNamespace`. If you want to learn more about how config
-overrides work, please consult our [docs about creating apps](add_appcr.md), as in general App Set is just a bundle of them.
+overrides work, please consult our [docs about creating apps](./add-app.md), as in general App Set is just a bundle of them.

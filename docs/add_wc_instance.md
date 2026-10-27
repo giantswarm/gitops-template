@@ -19,7 +19,7 @@ An example of a workload cluster instance created using the CAPI is available in
     across this instruction, the least error prone way of providing them is by exporting as environment variables.
     `CLUSTER_PATH` is a variable pointing to a directory with a cluster base, for example the
     [template](/bases/clusters/capa/template) base or a versioned one created with
-    [Add a CAPx Workload Cluster template](./add_wc_template.md):
+    [Add a CAPx Workload Cluster template](./guides/cluster-templates.md):
 
     ```sh
     export MC_NAME=CODENAME
@@ -29,7 +29,7 @@ An example of a workload cluster instance created using the CAPI is available in
     ```
 
     To create a cluster together with a set of apps from an environment template instead, see
-    [Add Workload Cluster environments](./add_wc_environments.md).
+    [Add Workload Cluster environments](./guides/environments.md).
 
 1. Go to the Workload Cluster definition directory:
 
@@ -149,4 +149,4 @@ you have just created.
 
 ## Recommended next steps
 
-- [Managing Apps installed in clusters with GitOps](./apps/README.md)
+- [Managing Apps installed in clusters with GitOps](./guides/README.md)

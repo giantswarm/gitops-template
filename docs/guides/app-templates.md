@@ -123,7 +123,7 @@ registry.
     1. `${cluster_name}-cluster-values`, created for every workload cluster with values like `baseDomain`,
     1. `${cluster_name}-${APP_NAME}-values`, the default configuration of this App Template,
     1. `${cluster_name}-${APP_NAME}-user-values` and `${cluster_name}-${APP_NAME}-user-secrets`, optional
-       overrides for a single cluster, see [adding an App](./add_appcr.md).
+       overrides for a single cluster, see [adding an App](./add-app.md).
 
 1. Put the default configuration of the app, plain Helm values, into the `default_config.yaml` file. We use the
    ConfigMap generator feature of `kustomize` to turn it into the `${cluster_name}-${APP_NAME}-values` ConfigMap, so the
@@ -136,7 +136,7 @@ registry.
     ```
 
     Values that have to be kept secret don't belong here: provide them per cluster through the `-user-secrets`
-    Secret, see [adding an App](./add_appcr.md).
+    Secret, see [adding an App](./add-app.md).
 
 1. Add the `kustomization.yaml` file:
 
@@ -161,5 +161,5 @@ At this point, you should have a ready App Template.
 
 ## Recommended next steps
 
-- [Add a new App to a Workload Cluster](add_appcr.md)
-- [Creating and using App Sets](app_sets.md)
+- [Add a new App to a Workload Cluster](./add-app.md)
+- [Creating and using App Sets](./app-sets.md)

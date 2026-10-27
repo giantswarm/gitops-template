@@ -309,7 +309,7 @@ kubectl get namespace org-${ORG_NAME}
 A cluster gets its own `Kustomization`, which applies the `${WC_DIR}/mapi` directory and fills in variables such as
 `${cluster_name}` in the files below. The cluster itself is an App that installs the `cluster-aws` chart, built from
 the [CAPA base](/bases/clusters/capa/template) that ships with this repository. For other providers, see
-[Add a CAPx Workload Cluster template](./add_wc_template.md).
+[Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
 > creates the same cluster, with slightly different file names. It looks up the `cluster-aws` version of the release in
@@ -697,11 +697,11 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
 - Keep secrets in a secret manager instead, with External Secrets Operator: [Getting started](./getting-started.md).
 - Keep secrets in the repository, encrypted with SOPS: create a
   [key for the cluster](./add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step), then
-  [provide encrypted values](./apps/add_appcr.md#providing-encrypted-values).
-- Reuse an app's configuration across clusters: [App Templates](./apps/add_app_template.md) and
-  [App Sets](./apps/app_sets.md).
+  [provide encrypted values](./guides/add-app.md#providing-encrypted-values).
+- Reuse an app's configuration across clusters: [App Templates](./guides/app-templates.md) and
+  [App Sets](./guides/app-sets.md).
 - Run dev, staging and production clusters from shared templates:
-  [Add Workload Cluster environments](./add_wc_environments.md).
+  [Add Workload Cluster environments](./guides/environments.md).
 - Understand how the repository is organized: [Repository structure](./repo_structure.md).
 
 [github-token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token

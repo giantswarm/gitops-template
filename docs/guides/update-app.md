@@ -33,10 +33,10 @@ export APP_NAME=APP_NAME
 - plain text configuration lives in the `-user-values` ConfigMap, generated from the `override_config.yaml` file,
 - encrypted configuration lives in the `-user-secrets` Secret, in the `secret.enc.yaml` file.
 
-  For an App created from an [App Template](./add_app_template.md), the `ocirepository.yaml` and `helmrelease.yaml`
+  For an App created from an [App Template](./app-templates.md), the `ocirepository.yaml` and `helmrelease.yaml`
   files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change
   them for a single cluster, add a patch to the App's `kustomization.yaml`, see
-  [Adding App using App Template](./add_appcr.md#adding-app-using-app-template).
+  [Adding App using App Template](./add-app.md#adding-app-using-app-template).
 
   For an App installed through an App Set, see [Apps from an App Set](#apps-from-an-app-set).
 
@@ -55,7 +55,7 @@ export APP_NAME=APP_NAME
     ```
 
     To have Flux pick up new versions by itself, use a version range instead, see
-    [Enable automatic updates of an existing App](./automatic_updates_appcr.md).
+    [Enable automatic updates of an existing App](./automatic-updates.md).
 
 ### Updating the HelmRelease
 
@@ -132,7 +132,7 @@ export APP_NAME=APP_NAME
 
 ## Apps from an App Set
 
-An App installed through an [App Set](./app_sets.md) has no `mapi/apps/${APP_NAME}` directory. Its files are in the
+An App installed through an [App Set](./app-sets.md) has no `mapi/apps/${APP_NAME}` directory. Its files are in the
 directory of the App Set instance, `mapi/app_sets/YOUR_APP_SET`, next to the instance's `kustomization.yaml`:
 
 - plain text configuration is in the `override_config_<app>.yaml` file, for example `override_config_hello_world.yaml`,
@@ -161,4 +161,4 @@ patches:
 ```
 
 To follow a version range instead, see
-[Enable automatic updates of an existing App](./automatic_updates_appcr.md#apps-from-an-app-set).
+[Enable automatic updates of an existing App](./automatic-updates.md#apps-from-an-app-set).

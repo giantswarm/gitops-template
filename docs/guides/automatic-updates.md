@@ -70,13 +70,13 @@ export APP_NAME=APP_NAME
     **Note**, a range only matches pre-release tags, like `3.1.0-rc.1`, if it has a pre-release comparator itself:
     `>=3.0.0-0` matches every release and pre-release from `3.0.0` on. Use `spec.ref.semverFilter` to narrow the
     matching tags down with a regular expression, see
-    [Add Workload Cluster environments](../add_wc_environments.md#the-development-cluster) for an example that
+    [Add Workload Cluster environments](./environments.md#the-development-cluster) for an example that
     follows development builds, and the [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/)
     for all the options.
 
 ## Apps created from an App Template
 
-The `OCIRepository` of an App created from an [App Template](./add_app_template.md) is part of the Template. To enable
+The `OCIRepository` of an App created from an [App Template](./app-templates.md) is part of the Template. To enable
 automatic updates for a single cluster, add a patch to the App's `kustomization.yaml` instead. The `$` of the target
 name is escaped, as `kustomize` reads the name as a regular expression:
 
@@ -94,7 +94,7 @@ patches:
 
 ## Apps from an App Set
 
-For an App installed through an [App Set](./app_sets.md), add the same patch to the `kustomization.yaml` of the App Set
+For an App installed through an [App Set](./app-sets.md), add the same patch to the `kustomization.yaml` of the App Set
 instance, in the cluster's `mapi/app_sets/YOUR_APP_SET` directory. Kustomize applies the instance's patches after the
 App Set Template's, so the range replaces the version the App Set pins, for this cluster only. Bear in mind that an
 App Set usually pins its versions on purpose, because its apps are known to work well together at those versions.
