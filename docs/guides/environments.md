@@ -70,7 +70,7 @@ mkdir -p bases/environments/stages/prod
 Each of these contain a `hello_app_cluster` example, built from the
 [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository.
 A cluster template bundles everything a kind of cluster gets: here the
-[CAPA cluster base](/bases/clusters/capa/template) from [Add a CAPx Workload Cluster template](./add_wc_template.md),
+[CAPA cluster base](/bases/clusters/capa/template) from [Add a CAPx Workload Cluster template](./cluster-templates.md),
 the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-app](/bases/app_sets/hello-web-app)
 App Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository
 doesn't have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
@@ -110,7 +110,7 @@ export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 
 Each stage also pins the Giant Swarm release its clusters run: the release goes into the cluster values, and the
 version of the cluster chart that release ships goes onto the cluster App CR. Without them the cluster App fails, see
-[Add Workload Cluster instance](./add_wc_instance.md) for how to look both up on the Management Cluster. In this
+[Add Workload Cluster instance](../add_wc_instance.md) for how to look both up on the Management Cluster. In this
 example all stages run the same release; a stage that should run a newer one sets other values.
 
 ```sh
