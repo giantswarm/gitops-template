@@ -312,13 +312,17 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
 [Add a CAPx Workload Cluster template](./add_wc_template.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same layout, after you pick a release in the first step below:
+> creates the same cluster, with slightly different file names. It looks up the `cluster-aws` version of the release in
+> [giantswarm/releases](https://github.com/giantswarm/releases), and needs kubectl-gs 5.11.0 or newer. After you pick
+> a release in the first step below, run:
 >
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
 >   --management-cluster ${MC_NAME} --repository-name ${GITOPS_REPO} \
 >   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
 > ```
+>
+> Then commit and push, as in the last step below.
 
 1. List the Giant Swarm releases and pick one:
 
