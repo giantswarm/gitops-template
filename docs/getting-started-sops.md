@@ -347,7 +347,13 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
    base's defaults. First, create its directory:
 
     ```sh
-    mkdir -p ${WC_DIR}/mapi/cluster
+    mkdir -p ${WC_DIR}/mapi/cluster ${WC_DIR}/mapi/apps
+    cat <<'EOF' > ${WC_DIR}/mapi/apps/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    namespace: org-${organization}
+    resources: []
+    EOF
     ```
 
     Put your values into a ConfigMap. They follow the
