@@ -295,13 +295,7 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
    base's defaults. First, create its directory:
 
     ```sh
-    mkdir -p ${WC_DIR}/mapi/cluster ${WC_DIR}/mapi/apps
-    cat <<'EOF' > ${WC_DIR}/mapi/apps/kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    namespace: org-${organization}
-    resources: []
-    EOF
+    mkdir -p ${WC_DIR}/mapi/cluster
     ```
 
     Put your values into a ConfigMap. They follow the
@@ -351,6 +345,25 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
     resources:
       - ../../../../../../../../bases/clusters/capa/template
       - cluster_userconfig.yaml
+    EOF
+    ```
+
+1. Create the list of apps to deploy to the cluster. It starts empty, and you add an app to it in the next step. First,
+   create its directory:
+
+    ```sh
+    mkdir -p ${WC_DIR}/mapi/apps
+    ```
+
+    Then create the list:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/mapi/apps/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    buildMetadata: [originAnnotations]
+    namespace: org-${organization}
+    resources: []
     EOF
     ```
 
@@ -591,10 +604,16 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     yq -i '.resources += ["externalsecret.yaml"]' ${APP_DIR}/kustomization.yaml
     ```
 
+1. Add the app to the cluster's list of apps:
+
+    ```sh
+    yq -i '.resources += ["hello-world"]' ${WC_DIR}/mapi/apps/kustomization.yaml
+    ```
+
 1. Commit and push:
 
     ```sh
-    git add ${APP_DIR} && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
+    git add ${WC_DIR}/mapi/apps && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
     ```
 
 **Check:** the release is `Ready` on the management cluster:
