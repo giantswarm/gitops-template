@@ -28,6 +28,12 @@ An example of a workload cluster instance created using the CAPI is available in
     export CLUSTER_PATH=bases/clusters/capa/template
     ```
 
+    For a published Giant Swarm release v35 or later, you can use the [release](/bases/clusters/capa/release) base
+    instead. It deploys the `release-aws` chart, whose version is the release version, so the release lives in git.
+    With it, skip setting the release in the values and the chart version in the patch below, and add
+    `release: "36.1.0"` to the `postBuild.substitute` of the Kustomization CR. Use the template base for older
+    releases or for a Release CR you created by hand.
+
     To create a cluster together with a set of apps from an environment template instead, see
     [Add Workload Cluster environments](./add_wc_environments.md).
 
