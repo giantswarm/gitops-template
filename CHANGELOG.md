@@ -7,6 +7,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A CAPA cluster base in `bases/clusters/capa/release` for the `release-aws` chart. The App's version is the
+  Giant Swarm release, taken from the `release` variable, so the release lives in git. Use it for published
+  releases v35 and later. `bases/clusters/capa/template` stays the base for older releases and for Release CRs
+  created by hand.
 - `renovate.json5` extending the shared
   [giantswarm/renovate-presets](https://github.com/giantswarm/renovate-presets)
   default, so dependency updates are managed here the same way as in every other
