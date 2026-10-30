@@ -126,9 +126,9 @@ Files git ignores, such as decrypted secrets, are not covered by that undo, whic
 change, move or delete them. Run it with `--dry-run` first to see which files it would change, and review the result with
 `git diff` before committing it.
 
-Layers recorded without a structure version cannot be upgraded, as there is no telling which migrations
-they need. If you know the version they were generated with, set their `structureVersion` by hand, the one
-case that calls for editing the metadata file. Otherwise remove their entries and run
+Layers recorded without a structure version cannot be upgraded, as there is no way of telling which
+migrations they need. If you know the version they were generated with, set their `structureVersion` by
+hand, the one case that calls for editing the metadata file. Otherwise, remove their entries and run
 `kubectl gs gitops check --adopt` to record them as current.
 
 Migrations work on the layers `kubectl gs gitops` records. A structure change that would also need files
