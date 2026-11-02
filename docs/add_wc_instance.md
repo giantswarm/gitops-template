@@ -2,6 +2,7 @@
 
 - [Example](#example)
 - [Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases)
+- [Creating a cluster from the release base](#creating-a-cluster-from-the-release-base)
 - [Recommended next steps](#recommended-next-steps)
 
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
@@ -10,6 +11,8 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 ## Example
 
 An example of a workload cluster instance created using the CAPI is available in [WC_NAME/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/).
+An example that uses the release base is in
+[WC_NAME_RELEASE/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_RELEASE/mapi/cluster/).
 
 ## Creating cluster based on existing bases
 
@@ -28,11 +31,9 @@ An example of a workload cluster instance created using the CAPI is available in
     export CLUSTER_PATH=bases/clusters/capa/template
     ```
 
-    For a published Giant Swarm release v35 or later, you can use the [release](/bases/clusters/capa/release) base
-    instead. It deploys the `release-aws` chart, whose version is the release version, so the release lives in git.
-    With it, skip setting the release in the values and the chart version in the patch below, and add
-    `release: "36.1.0"` to the `postBuild.substitute` of the Kustomization CR. Use the template base for older
-    releases or for a Release CR you created by hand.
+    For a release that has a `release-aws` chart, you can use the [release](/bases/clusters/capa/release) base
+    instead. It keeps the release in git. Follow
+    [Creating a cluster from the release base](#creating-a-cluster-from-the-release-base) for it.
 
     To create a cluster together with a set of apps from an environment template instead, see
     [Add Workload Cluster environments](./add_wc_environments.md).
@@ -149,6 +150,151 @@ An example of a workload cluster instance created using the CAPI is available in
           organization: "gitops-demo"
       ...
     ```
+
+1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
+you have just created.
+
+## Creating a cluster from the release base
+
+The [release](/bases/clusters/capa/release) base deploys the `release-aws` chart. Its chart version is the Giant
+Swarm release, so the release lives in the Kustomization CR in git, and you upgrade the cluster by changing it there.
+The chart sets the release in the values itself, and you don't look up a `cluster-aws` version.
+
+Use it when the `cluster` catalog has a `release-aws` chart for your release. That's every release from v34.0.0 on.
+For other releases, or for a Release CR you created by hand, use the steps in
+[Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
+
+1. Export environment variables:
+
+    ```sh
+    export MC_NAME=CODENAME
+    ```
+
+    ```sh
+    export ORG_NAME=ORGANIZATION
+    ```
+
+    ```sh
+    export WC_NAME=CLUSTER_NAME
+    ```
+
+    ```sh
+    export CLUSTER_PATH=bases/clusters/capa/release
+    ```
+
+1. Go to the Workload Cluster definition directory:
+
+    ```sh
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/cluster
+    ```
+
+1. Pick the Giant Swarm release the cluster runs. First, list the releases available on the Management Cluster:
+
+    ```sh
+    kubectl get releases.release.giantswarm.io
+    ```
+
+    Then export the one you picked, without the `aws-` prefix:
+
+    ```sh
+    export RELEASE_VERSION=36.1.0
+    ```
+
+1. Prepare the cluster values. Everything in them is optional and only overrides the defaults of the Management
+   Cluster. Don't set `global.release.version`, because the chart sets it:
+
+    ```sh
+    export USERCONFIG_VALUES=/tmp/values
+    ```
+
+    ```sh
+    cat <<EOF > ${USERCONFIG_VALUES}
+    global:
+      metadata:
+        description: My GitOps Cluster
+      nodePools:
+        nodepool0:
+          instanceType: m6i.xlarge
+    EOF
+    ```
+
+    The values follow the `values.yaml` schema of the `cluster-aws` chart.
+
+1. Create a `ConfigMap` out of the values overrides:
+
+    ```sh
+    cat <<EOF > cluster_userconfig.yaml
+    apiVersion: v1
+    data:
+      values: |
+    $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
+    kind: ConfigMap
+    metadata:
+      name: \${cluster_name}-userconfig
+      namespace: org-\${organization}
+    EOF
+    ```
+
+1. Create a patch that applies the user-config values. It doesn't set `spec.version`, because the base takes it
+   from the `release` variable:
+
+    ```sh
+    cat <<EOF > patch_userconfig.yaml
+    apiVersion: application.giantswarm.io/v1alpha1
+    kind: App
+    metadata:
+      name: \${cluster_name}
+      namespace: org-\${organization}
+    spec:
+      userConfig:
+        configMap:
+          name: \${cluster_name}-userconfig
+          namespace: org-\${organization}
+    EOF
+    ```
+
+1. Create the `kustomization.yaml` referencing the base and the newly created files:
+
+    ```sh
+    cat <<EOF > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    commonLabels:
+      giantswarm.io/managed-by: flux
+    kind: Kustomization
+    patches:
+      - path: patch_userconfig.yaml
+    resources:
+      - ../../../../../../../../${CLUSTER_PATH}
+      - cluster_userconfig.yaml
+    EOF
+    ```
+
+1. Leave the `cluster` directory and go to `workload-clusters`:
+
+    ```sh
+    cd ../../../
+    ```
+
+1. Edit the Kustomization CR for the workload cluster and set the variables of the base, `release` included:
+
+    ```yaml
+    # cat ${WC_NAME}.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    ...
+    spec:
+      ...
+      postBuild:
+        substitute:
+          cluster_description: "My GitOps Cluster"
+          cluster_name: "demo0"
+          organization: "gitops-demo"
+          release: "36.1.0"
+      ...
+    ```
+
+    Note that without `release`, the App gets an empty version and the cluster doesn't install. To upgrade the
+    cluster later, change `release` to a newer release.
 
 1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
 you have just created.

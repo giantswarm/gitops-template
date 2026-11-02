@@ -1,8 +1,11 @@
 # Input Variables
 
 This base deploys a cluster with the `release-aws` chart. Its chart version is the Giant Swarm release version, so
-the release lives in git and you upgrade the cluster by changing `release`. Use it for published releases v35 and
-later. For older releases, or for a Release CR you created by hand, use the [template](../template) base instead.
+the release lives in git and you upgrade the cluster by changing `release`. It's an overlay of the
+[template](../template) base that only changes the chart name and version.
+
+Use it when the `cluster` catalog has a `release-aws` chart for your release. That's every release from v34.0.0 on,
+and v31.2.0, v32.3.0 and v33.3.0. For other releases, or for a Release CR you created by hand, use the template base.
 
 Expected variables are in the table below.
 
