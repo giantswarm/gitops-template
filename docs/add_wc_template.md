@@ -57,6 +57,11 @@ directory and search for some that meet your needs, then export their paths with
 export CLUSTER_PATH=CLUSTER_BASE_PATH
 ```
 
+For CAPA, use [bases/clusters/capa/release](/bases/clusters/capa/release) for a release that has a `release-aws`
+chart in the `cluster` catalog, which is every release from v34.0.0 on. Use
+[bases/clusters/capa/template](/bases/clusters/capa/template) for older releases or for a Release CR you created by
+hand.
+
 If the desired base is not there, you can add it. Reference the next sections to get a general idea of how to do it.
 
 ## Create shared cluster template base (optional)
