@@ -312,9 +312,10 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
 [Add a CAPx Workload Cluster template](./add_wc_template.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with slightly different file names. It looks up the `cluster-aws` version of the release in
-> [giantswarm/releases](https://github.com/giantswarm/releases), and needs kubectl-gs 5.11.0 or newer. After you pick
-> a release in the first step below, run:
+> creates the same cluster, with slightly different file names. It doesn't set the `cluster-aws` version on the App.
+> It writes the release to the cluster values, and the management cluster sets the `cluster-aws` version that the
+> release ships. It needs kubectl-gs 5.12.0 or newer.
+> After you pick a release in the first step below, run:
 >
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
@@ -501,7 +502,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 > `--dry-run` writes the `OCIRepository` and the `HelmRelease` for you. It checks that the chart version exists, then
 > prints the resources instead of applying them. Always pass `--dry-run` here. Without it, the command applies the
 > resources to the management cluster directly, outside of Git. Note that `:values` in `--values-from` needs
-> kubectl-gs 5.11.0 or newer. After the first step below, run:
+> kubectl-gs 5.12.0 or newer. After the first step below, run:
 >
 > ```sh
 > kubectl gs deploy chart --chart-name hello-world --version 3.2.3 \
