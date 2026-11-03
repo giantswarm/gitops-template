@@ -503,7 +503,7 @@ In such a case you would end up with the below setup.
 Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
 
 Note that we use the extra configs feature of App CR to patch in additional layers of configurations for out Application.
-You can read more about this feature [here](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
+You can read more about [extra configs](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
 
 And the kustomization for this cluster looks like.
 

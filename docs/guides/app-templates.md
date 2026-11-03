@@ -5,9 +5,9 @@
 - [Setting up directory tree structure for managing apps](#setting-up-directory-tree-structure-for-managing-apps)
 - [Recommended next steps](#recommended-next-steps)
 
-In order to avoid adding the same application from scratch across all your clusters, you can prepare App Templates that provide
-a pre-configured version of an App. This also allows you to manage and version an app's config even if the app itself is
-not yet installed in any cluster.
+In order to avoid adding the same application from scratch across all your clusters, you can prepare App Templates that
+provide a pre-configured version of an App. This also allows you to manage and version an app's config even if the app
+itself is not yet installed in any cluster.
 
 An app is a Flux `HelmRelease` that installs a Helm chart into the workload cluster, and an `OCIRepository` that
 points at the chart in an OCI registry. Both live in the organization namespace on the management cluster.

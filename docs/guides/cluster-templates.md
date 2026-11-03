@@ -27,7 +27,8 @@ in the following manner:
 - cluster templates provide default configuration via `App'` `config` field,
 - cluster instances provide custom configuration via `App'` `userConfig` field, that is overlaid on top of `config`.
 
-See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/merging-configmaps-gitops).
+See more about this approach in the
+[RFC on merging ConfigMaps](https://github.com/giantswarm/rfc/tree/main/merging-configmaps-gitops).
 
 ## Example
 
@@ -68,10 +69,9 @@ If the desired base is not there, you can add it. Reference the next sections to
 
 *Note: if a template base for your provider is already here, you most probably want to skip this part.*
 
-**IMPORTANT:** shared cluster template base cannot serve as a standalone base for cluster creation, it is there only to abstract
-App CRs that are common to all clusters versions.
-It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid
-code duplication across bases.
+**IMPORTANT:** shared cluster template base cannot serve as a standalone base for cluster creation, it is there only to
+abstract App CRs that are common to all clusters versions. It is then used as a base to other bases, which provide an
+overlay with a specific configuration. This is to avoid code duplication across bases.
 
 **Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic
 steps needed to move forward. Hence, instructions here will not always be precise in telling you what to change,

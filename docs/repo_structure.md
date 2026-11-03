@@ -265,9 +265,9 @@ Naming recommendations are in the table below.
 
 | Placeholder | Rule |
 | :--: | :--: |
-| `MC_NAME`   | User is REQUIRED to use the Management Cluster codename for clarity |
-| `ORG_NAME`  | Organization name; it is RECOMMENDED to not use capital letters and to omit the `org-` prefix |
-| `WC_NAME`   | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster ID |
+| `MC_NAME` | User is REQUIRED to use the Management Cluster codename for clarity |
+| `ORG_NAME` | Organization name; it is RECOMMENDED to not use capital letters and to omit the `org-` prefix |
+| `WC_NAME` | User MAY give it an arbitrary name, but it is RECOMMENDED to use the Workload Cluster ID |
 
 ## Rules for Optional Components
 
