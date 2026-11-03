@@ -29,12 +29,12 @@ repos:
 
     # static type checking with mypy
     - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v2.4.0
+      rev: v2.4.1
       hooks:
           - id: mypy
 
     - repo: https://github.com/pycqa/flake8
-      rev: '7.4.1'  # pick a git hash / tag to point to
+      rev: '7.5.0'  # pick a git hash / tag to point to
       hooks:
           - id: flake8
 
@@ -46,7 +46,7 @@ repos:
             args: [ --format=json ]
 
     - repo: https://github.com/igorshubovych/markdownlint-cli
-      rev: v0.31.1
+      rev: v0.50.0
       hooks:
           - id: markdownlint
 

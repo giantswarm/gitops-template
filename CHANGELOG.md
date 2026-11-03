@@ -7,6 +7,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A CAPA cluster base in `bases/clusters/capa/release` for the `release-aws` chart, and an example workload
+  cluster that uses it. The base is an overlay of `bases/clusters/capa/template`. The App's version is the
+  Giant Swarm release, taken from the `release` variable, so the release lives in git. Use it for releases that
+  have a `release-aws` chart, which is every release from v34.0.0 on. `bases/clusters/capa/template` stays the
+  base for older releases and for Release CRs created by hand.
 - `renovate.json5` extending the shared
   [giantswarm/renovate-presets](https://github.com/giantswarm/renovate-presets)
   default, so dependency updates are managed here the same way as in every other
@@ -24,6 +29,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Bumping the version here requires bumping `StructureVersion` in
   `kubectl-gs` to match; the two are kept in lockstep by hand.
   See [giantswarm/giantswarm#23540](https://github.com/giantswarm/giantswarm/issues/23540).
+- The [Structure Version](docs/repo_structure.md#structure-version) section
+  now covers `kubectl gs gitops upgrade`, which brings a repository generated
+  with an older structure version up to date, and requires every version bump
+  to ship with a migration in `kubectl-gs`.
 - Semantic YAML diff PR comments via the new `yaml-diff` workflow
   (calls `giantswarm/github-workflows/.github/workflows/yaml-diff.yaml`).
   Key reordering without value changes no longer shows up as noise in PR
