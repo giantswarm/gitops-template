@@ -307,99 +307,56 @@ kubectl get namespace org-${ORG_NAME}
 ## 3. Create a workload cluster
 
 A cluster gets its own `Kustomization`, which applies the `${WC_DIR}/mapi` directory and fills in variables such as
-`${cluster_name}` in the files below. The cluster itself is an App that installs the `cluster-aws` chart, built from
-the [CAPA base](/bases/clusters/capa/template) that ships with this repository. For other providers, see
+`${cluster_name}` in the files below. The cluster itself is an App that installs the `release-aws` chart, built from
+the [CAPA release base](/bases/clusters/capa/release) that ships with this repository. The chart version is the Giant
+Swarm release, so the release the cluster runs is stored in Git. For other providers, see
 [Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with slightly different file names. It doesn't set the `cluster-aws` version on the App.
-> It writes the release to the cluster values, and the management cluster sets the `cluster-aws` version that the
-> release ships. It needs kubectl-gs 5.12.0 or newer.
-> After you pick a release in the first step below, run:
+> creates the same cluster, with slightly different file names. It needs kubectl-gs 5.12.0 or newer. Note that
+> kubectl-gs 5.12.0 says the base holds no cluster App and asks you to set the release in the values. Ignore that. The
+> release base doesn't need it. After you pick a release in the first step below, run:
 >
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
 >   --management-cluster ${MC_NAME} --repository-name ${GITOPS_REPO} \
->   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
+>   --base bases/clusters/capa/release --release ${RELEASE_VERSION}
 > ```
 >
 > Then commit and push, as in the last step below.
 
-1. List the Giant Swarm releases and pick one:
+1. List the Giant Swarm releases and pick an AWS one from v34.0.0 on. These have a `release-aws` chart:
 
     ```sh
     kubectl get releases.release.giantswarm.io
     ```
 
-    Export the release you picked:
+    Export the release you picked, without the `aws-` prefix:
 
     ```sh
-    export RELEASE_VERSION=36.1.0
+    export RELEASE_VERSION=36.2.0
     ```
 
-    Then read the version of the `cluster-aws` chart it ships:
-
-    ```sh
-    export CLUSTER_APP_VERSION=$(kubectl get releases.release.giantswarm.io aws-${RELEASE_VERSION} -o yaml |
-    yq '.spec.components[] | select(.name == "cluster-aws") | .version')
-    ```
-
-1. Create the cluster definition. It points at the base, sets the chart version, and adds your values on top of the
-   base's defaults. First, create its directory:
+1. Create the cluster definition. It points at the release base. First, create its directory:
 
     ```sh
     mkdir -p ${WC_DIR}/mapi/cluster
     ```
 
-    Put your values into a ConfigMap. They follow the
-    [`cluster-aws` schema](https://github.com/giantswarm/cluster-aws/blob/main/helm/cluster-aws/README.md):
-
-    ```sh
-    cat <<EOF > ${WC_DIR}/mapi/cluster/cluster_userconfig.yaml
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: \${cluster_name}-userconfig
-      namespace: org-\${organization}
-    data:
-      values: |
-        global:
-          release:
-            version: ${RELEASE_VERSION}
-    EOF
-    ```
-
-    Create a patch that sets the chart version on the cluster App and points it at your values:
-
-    ```sh
-    cat <<EOF > ${WC_DIR}/mapi/cluster/patch_userconfig.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
-    metadata:
-      name: \${cluster_name}
-      namespace: org-\${organization}
-    spec:
-      version: "${CLUSTER_APP_VERSION}"
-      userConfig:
-        configMap:
-          name: \${cluster_name}-userconfig
-          namespace: org-\${organization}
-    EOF
-    ```
-
-    Then tie the base, the values and the patch together:
+    Then create its `kustomization.yaml`:
 
     ```sh
     cat <<EOF > ${WC_DIR}/mapi/cluster/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
-    patches:
-      - path: patch_userconfig.yaml
     resources:
-      - ../../../../../../../../bases/clusters/capa/template
-      - cluster_userconfig.yaml
+      - ../../../../../../../../bases/clusters/capa/release
     EOF
     ```
+
+    The cluster runs with the base's defaults. To add your own values, see
+    [Creating a cluster from the release base](./add_wc_instance.md#creating-a-cluster-from-the-release-base). Don't
+    set `global.release.version` in them, because the chart sets it.
 
 1. Create the list of apps to deploy to the cluster. It starts empty, and you add an app to it in the next step. First,
    create its directory:
@@ -438,6 +395,7 @@ the [CAPA base](/bases/clusters/capa/template) that ships with this repository. 
           cluster_description: "${WC_NAME} managed by GitOps"
           cluster_name: "${WC_NAME}"
           organization: "${ORG_NAME}"
+          release: "${RELEASE_VERSION}"
       prune: false
       serviceAccountName: automation
       sourceRef:
