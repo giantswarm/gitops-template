@@ -1,6 +1,6 @@
 ---
 # Pins this repository, and anything forked from it, to a version of the
-# repository structure described in docs/repo_structure.md.
+# repository structure described in docs/reference/repo-structure.md.
 #
 # `kubectl gs gitops` maintains this file: `gitops init` creates it and every
 # `gitops add ...` records the layer it generated under `layers`. It is listed

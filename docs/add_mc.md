@@ -7,7 +7,7 @@
 - [Recommended next steps](#recommended-next-steps)
 
 Follow the instructions below to add a new management cluster to this repository. You need to have a valid connection
-(`kube.config`) to the Management Cluster. The instructions respect the [repository structure](./repo_structure.md).
+(`kube.config`) to the Management Cluster. The instructions respect the [repository structure](./reference/repo-structure.md).
 
 In general, we have to complete 3 major steps to provide the necessary structure for a new MC:
 
@@ -19,7 +19,7 @@ In general, we have to complete 3 major steps to provide the necessary structure
 1. [Initial configuration](#initial-cluster-configuration) that shows what objects do we have to create on the Management
    Cluster to bootstrap our GitOps management process.
 
-*Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
+*Note: As always, instructions here respect the [repository structure](./reference/repo-structure.md).*
 
 ## Export environment variables
 
