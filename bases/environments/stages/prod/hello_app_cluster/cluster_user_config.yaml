@@ -4,5 +4,3 @@ global:
       instanceType: m6a.8xlarge
       maxSize: 50
       minSize: 10
-  release:
-    version: 36.1.0
