@@ -22,10 +22,10 @@ spec:
       priority: 25
   kubeConfig:
     inCluster: true
-  name: cluster-aws
+  name: release-aws
   namespace: org-org-name
   userConfig:
     configMap:
       name: hello-app-prod-eu-central-user-config
       namespace: org-org-name
-  version: "11.0.1"
+  version: "36.2.0"
