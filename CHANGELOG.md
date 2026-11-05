@@ -21,7 +21,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [giantswarm/roadmap#3943](https://github.com/giantswarm/roadmap/issues/3943).
 - The repository structure is now versioned. The layout described in
   `docs/repo_structure.md` is **structure version 1**, and a new
-  [Structure Version](docs/repo_structure.md#structure-version) section
+  [Structure Version](docs/reference/repo-structure.md#structure-version) section
   defines what does and does not warrant a bump. `kubectl gs gitops` records
   the version in a `.gitops-metadata.yaml` file at the root of the
   repositories it generates, and `kubectl gs gitops check` reports the parts
@@ -29,7 +29,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Bumping the version here requires bumping `StructureVersion` in
   `kubectl-gs` to match; the two are kept in lockstep by hand.
   See [giantswarm/giantswarm#23540](https://github.com/giantswarm/giantswarm/issues/23540).
-- The [Structure Version](docs/repo_structure.md#structure-version) section
+- The [Structure Version](docs/reference/repo-structure.md#structure-version) section
   now covers `kubectl gs gitops upgrade`, which brings a repository generated
   with an older structure version up to date, and requires every version bump
   to ship with a migration in `kubectl-gs`.

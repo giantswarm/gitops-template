@@ -692,6 +692,6 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
   [App Sets](./guides/app-sets.md).
 - Run dev, staging and production clusters from shared templates:
   [Add Workload Cluster environments](./guides/environments.md).
-- Understand how the repository is organized: [Repository structure](./repo_structure.md).
+- Understand how the repository is organized: [Repository structure](./reference/repo-structure.md).
 
 [github-token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
