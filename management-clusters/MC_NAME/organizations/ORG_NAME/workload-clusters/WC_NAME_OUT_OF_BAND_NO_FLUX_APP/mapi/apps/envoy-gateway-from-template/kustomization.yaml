@@ -10,6 +10,6 @@ kind: Kustomization
 namespace: org-${organization}
 resources:
   # config you'd rather not keep in plain text goes into a SOPS-encrypted Secret,
-  # see docs/apps/add_appcr.md
+  # see docs/guides/add-app.md
   - secret.enc.yaml
   - ../../../../../../../../../bases/apps/envoy-gateway
