@@ -20,7 +20,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   actually gone stale. Closes
   [giantswarm/roadmap#3943](https://github.com/giantswarm/roadmap/issues/3943).
 - The repository structure is now versioned. The layout described in
-  `docs/repo_structure.md` is **structure version 1**, and a new
+  `docs/reference/repo-structure.md` is **structure version 1**, and a new
   [Structure Version](docs/reference/repo-structure.md#structure-version) section
   defines what does and does not warrant a bump. `kubectl gs gitops` records
   the version in a `.gitops-metadata.yaml` file at the root of the

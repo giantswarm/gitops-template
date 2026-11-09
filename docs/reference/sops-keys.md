@@ -22,8 +22,8 @@ To encrypt files of a workload cluster, add a key pair for it:
 - Its private key goes into the `WC_NAME.gpgkey.enc.yaml` Secret in the management cluster's `secrets` directory,
   encrypted with the master key.
 
-The `WC_NAME.yaml` Kustomization references that Secret and uses it to decrypt everything in the `WC_NAME`
-directory.
+The `WC_NAME.yaml` Kustomization references that Secret in `spec.decryption` and uses it to decrypt what it applies,
+the `WC_NAME/mapi` directory.
 
 ```text
                 MC_NAME.yaml

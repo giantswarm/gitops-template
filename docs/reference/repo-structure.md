@@ -64,7 +64,7 @@ How to read it:
 - Names with an extension, like `MC_NAME.yaml`, are files. The rest are directories.
 - Names in square brackets are optional. See [optional components](#optional-components).
 - The horizontal line splits the work between the two [Flux Kustomizations](#flux-kustomizations). `MC_NAME.yaml`
-  applies everything above it, and `WC_NAME.yaml` applies everything below it.
+  applies everything above it, and `WC_NAME.yaml` applies the `mapi` directory below it.
 - `.sops.yaml`, `.sops.keys` and the `*.gpgkey.enc.yaml` files are only needed when you encrypt secrets with SOPS.
   See [SOPS keys](./sops-keys.md).
 
@@ -99,7 +99,8 @@ kubectl gs gitops check
 ```
 
 It exits with an error when anything is behind, so you can run it in CI. If your repository is older than the
-metadata file, run `kubectl gs gitops check --adopt` once to record what's there as current.
+metadata file, run `kubectl gs gitops check --adopt` once to record what's there as current. It assumes what's there
+is current, so it can't find drift from before you ran it.
 
 To bring the repository up to date, first see which files would change:
 
@@ -115,7 +116,8 @@ kubectl gs gitops upgrade
 
 It changes the files in place and keeps your own edits where it can. Review the result with `git diff` before you
 commit it. If something goes wrong, undo it with Git. That's why the command doesn't run on a repository with
-uncommitted changes unless you pass `--force`.
+uncommitted changes, or on a directory Git doesn't track, unless you pass `--force`. Migrations never touch files Git
+ignores, such as decrypted secrets, so move those yourself.
 
 Note that layers recorded without a structure version can't be upgraded. If you know the version they were created
 with, set their `structureVersion` by hand. Otherwise, remove their entries and run
@@ -205,7 +207,8 @@ The optional `out-of-band` directory holds resources that go straight into the w
 ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are two ways to apply it:
 
 - Run Flux in the workload cluster and point it at the `out-of-band` directory.
-- Add another Flux Kustomization on the management cluster that uses the workload cluster's kubeconfig.
+- Add another Flux Kustomization on the management cluster that uses the workload cluster's kubeconfig. That's the
+  optional `WC_NAME-direct.yaml`, with its own `WC_NAME-direct.gpgkey.enc.yaml`.
 
 ## Flux Kustomizations
 
@@ -219,7 +222,7 @@ management-clusters
         └── ORG_NAME
             └── workload-clusters
                 ├── kustomization.yaml
-                ├── WC_NAME.yaml            # applies WC_NAME/
+                ├── WC_NAME.yaml            # applies WC_NAME/mapi/
                 └── WC_NAME
                     └── mapi
                         ├── apps
@@ -234,5 +237,5 @@ resources:
   - WC_NAME.yaml
 ```
 
-`WC_NAME.yaml` then applies its `WC_NAME/` directory. It also sets the variables, like `${cluster_name}`, that the
+`WC_NAME.yaml` then applies its `WC_NAME/mapi` directory. It also sets the variables, like `${cluster_name}`, that the
 bases use. See [How it works](../how-it-works.md) for why there are two.
