@@ -1,7 +1,6 @@
 # Add Workload Cluster instance (CAPx/CAPI)
 
 - [Example](#example)
-- [Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases)
 - [Creating a cluster from the release base](#creating-a-cluster-from-the-release-base)
 - [Recommended next steps](#recommended-next-steps)
 
@@ -10,159 +9,20 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 
 ## Example
 
-An example of a workload cluster instance created using the CAPI is available in [WC_NAME/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/).
-An example that uses the release base is in
+An example of a workload cluster instance created from the release base is in
 [WC_NAME_RELEASE/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_RELEASE/mapi/cluster/).
-
-## Creating cluster based on existing bases
-
-1. Export environment variables
-
-    **Note**, Management Cluster codename, Organization name and Workload Cluster name are needed in multiple places
-    across this instruction, the least error prone way of providing them is by exporting as environment variables.
-    `CLUSTER_PATH` is a variable pointing to a directory with a cluster base, for example the
-    [template](/bases/clusters/capa/template) base or a versioned one created with
-    [Add a CAPx Workload Cluster template](./guides/cluster-templates.md):
-
-    ```sh
-    export MC_NAME=CODENAME
-    export ORG_NAME=ORGANIZATION
-    export WC_NAME=CLUSTER_NAME
-    export CLUSTER_PATH=bases/clusters/capa/template
-    ```
-
-    For a release that has a `release-aws` chart, you can use the [release](/bases/clusters/capa/release) base
-    instead. It keeps the release in git. Follow
-    [Creating a cluster from the release base](#creating-a-cluster-from-the-release-base) for it.
-
-    To create a cluster together with a set of apps from an environment template instead, see
-    [Add Workload Cluster environments](./guides/environments.md).
-
-1. Go to the Workload Cluster definition directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/cluster
-    ```
-
-1. Pick the Giant Swarm release the cluster runs. List the releases available on the Management Cluster, then read
-   the version of the cluster chart that the chosen release ships, `cluster-aws` for the `aws` releases:
-
-    ```sh
-    kubectl get releases.release.giantswarm.io
-    export RELEASE_VERSION=36.1.0
-    export CLUSTER_APP_VERSION=$(kubectl get releases.release.giantswarm.io aws-${RELEASE_VERSION} -o yaml |
-    yq '.spec.components[] | select(.name == "cluster-aws") | .version')
-    ```
-
-    The cluster needs both: the release in its values, and the matching chart version on its App CR. Without the
-    release, the App fails with an error saying the release should not be empty. When upgrading the cluster later,
-    change both together.
-
-1. Prepare the cluster values. They have to set the release; everything else is optional and only overrides the
-   defaults of the Management Cluster:
-
-    ```sh
-    export USERCONFIG_VALUES=/tmp/values
-    cat <<EOF > ${USERCONFIG_VALUES}
-    global:
-      metadata:
-        description: My GitOps Cluster
-      nodePools:
-        nodepool0:
-          instanceType: m6i.xlarge
-      release:
-        version: ${RELEASE_VERSION}
-    EOF
-    ```
-
-    The values follow the `values.yaml` schema of the cluster chart, `cluster-aws` in this example. The default apps
-    of the cluster are configured in the same values, under `global.apps`.
-
-1. Create a `ConfigMap` out of the values overrides:
-
-    ```sh
-    cat <<EOF > cluster_userconfig.yaml
-    apiVersion: v1
-    data:
-      values: |
-    $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
-    kind: ConfigMap
-    metadata:
-      name: \${cluster_name}-userconfig
-      namespace: org-\${organization}
-    EOF
-    ```
-
-1. Create patch for applying user-config values and setting the cluster chart version of the release:
-
-    ```sh
-    cat <<EOF > patch_userconfig.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
-    metadata:
-      name: \${cluster_name}
-      namespace: org-\${organization}
-    spec:
-      version: "${CLUSTER_APP_VERSION}"
-      userConfig:
-        configMap:
-          name: \${cluster_name}-userconfig
-          namespace: org-\${organization}
-    EOF
-    ```
-
-1. Create the `kustomization.yaml` referencing base and newly created files:
-
-    ```sh
-    cat <<EOF > kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    commonLabels:
-      giantswarm.io/managed-by: flux
-    kind: Kustomization
-    patchesStrategicMerge:
-      - patch_userconfig.yaml
-    resources:
-    - ../../../../../../../../${CLUSTER_PATH}
-    - cluster_userconfig.yaml
-    EOF
-    ```
-
-1. Leave the `cluster` directory and go to `workload-clusters`:
-
-    ```sh
-    # cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-    cd ../../../
-    ```
-
-1. Edit the Kustomization CR for the workload cluster and assign values to the variables from bases, see example below:
-
-    ```yaml
-    # cat ${WC_NAME}.yaml
-    apiVersion: kustomize.toolkit.fluxcd.io/v1
-    kind: Kustomization
-    ...
-    spec:
-      ...
-      postBuild:
-        substitute:
-          cluster_description: "My GitOps Cluster"
-          cluster_name: "demo0"
-          organization: "gitops-demo"
-      ...
-    ```
-
-1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
-you have just created.
 
 ## Creating a cluster from the release base
 
 The [release](/bases/clusters/capa/release) base deploys the `release-aws` chart. Its chart version is the Giant
 Swarm release, so the release lives in the Kustomization CR in git, and you upgrade the cluster by changing it there.
-The chart sets the release in the values itself, and you don't look up a `cluster-aws` version.
+The chart sets the release in the values itself.
 
-Use it when the `cluster` catalog has a `release-aws` chart for your release. That's every release from v34.0.0 on.
-For other releases, or for a Release CR you created by hand, use the steps in
-[Creating cluster based on existing bases](#creating-cluster-based-on-existing-bases).
+The `cluster` catalog has a `release-aws` chart for every release from v34.0.0 on. For an older release, or for a
+Release CR you created by hand, build the cluster on the [template](/bases/clusters/capa/template) base instead and
+set the release in the values, under `global.release.version`. The
+[WC_NAME](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/) example uses
+it.
 
 1. Export environment variables:
 
@@ -182,6 +42,9 @@ For other releases, or for a Release CR you created by hand, use the steps in
     export CLUSTER_PATH=bases/clusters/capa/release
     ```
 
+    To create a cluster together with a set of apps from an environment template instead, see
+    [Add Workload Cluster environments](./guides/environments.md).
+
 1. Go to the Workload Cluster definition directory:
 
     ```sh
@@ -197,7 +60,7 @@ For other releases, or for a Release CR you created by hand, use the steps in
     Then export the one you picked, without the `aws-` prefix:
 
     ```sh
-    export RELEASE_VERSION=36.1.0
+    export RELEASE_VERSION=36.2.0
     ```
 
 1. Prepare the cluster values. Everything in them is optional and only overrides the defaults of the Management
@@ -218,7 +81,8 @@ For other releases, or for a Release CR you created by hand, use the steps in
     EOF
     ```
 
-    The values follow the `values.yaml` schema of the `cluster-aws` chart.
+    The values follow the `values.yaml` schema of the `cluster-aws` chart. The default apps of the cluster are
+    configured in the same values, under `global.apps`.
 
 1. Create a `ConfigMap` out of the values overrides:
 
@@ -289,7 +153,7 @@ For other releases, or for a Release CR you created by hand, use the steps in
           cluster_description: "My GitOps Cluster"
           cluster_name: "demo0"
           organization: "gitops-demo"
-          release: "36.1.0"
+          release: "36.2.0"
       ...
     ```
 
