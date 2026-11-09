@@ -84,4 +84,4 @@ Clusters and apps need secrets, such as an app's passwords. There are two ways t
 
 - [Getting started](./getting-started.md) creates a cluster with an app, step by step.
 - [Guides](./guides/README.md) cover templates, environments and managing apps.
-- [Repository structure](./repo_structure.md) lists every directory and file, and the rules for naming them.
+- [Repository structure](./reference/repo-structure.md) lists every directory and file, and the rules for naming them.
