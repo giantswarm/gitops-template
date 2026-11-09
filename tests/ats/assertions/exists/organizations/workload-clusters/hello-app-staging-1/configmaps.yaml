@@ -34,7 +34,7 @@ metadata:
 ---
 apiVersion: v1
 data:
-  values: "global:\n  release:\n    version: 36.1.0\n"
+  values: ""
 kind: ConfigMap
 metadata:
   name: hello-app-staging-1-user-config

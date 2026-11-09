@@ -18,11 +18,11 @@ patches:
     target:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
-  # the cluster chart version the release ships
+  # the Giant Swarm release the clusters of this stage run
   - patch: |-
       - op: replace
         path: /spec/version
-        value: "11.0.1"
+        value: "36.2.0"
     target:
       kind: App
       name: \${cluster_name}

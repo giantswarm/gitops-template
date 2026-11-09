@@ -20,8 +20,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   actually gone stale. Closes
   [giantswarm/roadmap#3943](https://github.com/giantswarm/roadmap/issues/3943).
 - The repository structure is now versioned. The layout described in
-  `docs/repo_structure.md` is **structure version 1**, and a new
-  [Structure Version](docs/repo_structure.md#structure-version) section
+  `docs/reference/repo-structure.md` is **structure version 1**, and a new
+  [Structure Version](docs/reference/repo-structure.md#structure-version) section
   defines what does and does not warrant a bump. `kubectl gs gitops` records
   the version in a `.gitops-metadata.yaml` file at the root of the
   repositories it generates, and `kubectl gs gitops check` reports the parts
@@ -29,7 +29,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Bumping the version here requires bumping `StructureVersion` in
   `kubectl-gs` to match; the two are kept in lockstep by hand.
   See [giantswarm/giantswarm#23540](https://github.com/giantswarm/giantswarm/issues/23540).
-- The [Structure Version](docs/repo_structure.md#structure-version) section
+- The [Structure Version](docs/reference/repo-structure.md#structure-version) section
   now covers `kubectl gs gitops upgrade`, which brings a repository generated
   with an older structure version up to date, and requires every version bump
   to ship with a migration in `kubectl-gs`.
@@ -43,6 +43,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The `hello_app_cluster` cluster template and its dev, staging and prod stages build on
+  `bases/clusters/capa/release`. Each stage sets the release as the cluster App's version, `36.2.0` in the
+  examples, and no longer sets `global.release.version` in its values. The dev and staging stages have no
+  values file left. `docs/add_wc_instance.md` and `docs/guides/environments.md` only describe the release base.
 - Envoy Gateway replaces ingress-nginx as the example edge. The new
   `bases/apps/envoy-gateway` App Template installs `gateway-api-crds`,
   `envoy-gateway` and `gateway-api-config` into the workload cluster as three

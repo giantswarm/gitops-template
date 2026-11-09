@@ -68,12 +68,11 @@ mkdir -p bases/environments/stages/prod
 ```
 
 Each of these contain a `hello_app_cluster` example, built from the
-[hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository.
-A cluster template bundles everything a kind of cluster gets: here the
-[CAPA cluster base](/bases/clusters/capa/template) from [Add a CAPx Workload Cluster template](./add_wc_template.md),
-the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-app](/bases/app_sets/hello-web-app)
-App Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository
-doesn't have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
+[hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository. A
+cluster template bundles everything a kind of cluster gets: here the [CAPA release base](/bases/clusters/capa/release),
+the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-app](/bases/app_sets/hello-web-app) App
+Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository doesn't
+have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
 
 ```sh
 mkdir -p bases/environments/stages/dev/hello_app_cluster
@@ -108,14 +107,13 @@ export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
-Each stage also pins the Giant Swarm release its clusters run: the release goes into the cluster values, and the
-version of the cluster chart that release ships goes onto the cluster App CR. Without them the cluster App fails, see
-[Add Workload Cluster instance](./add_wc_instance.md) for how to look both up on the Management Cluster. In this
-example all stages run the same release; a stage that should run a newer one sets other values.
+Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the release base, whose
+`release-aws` chart has the release as its version, so a patch sets the release as the version of the cluster App CR.
+Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. In this example all stages run the same release.
+A stage that should run a newer one sets another version.
 
 ```sh
-export RELEASE_VERSION=36.1.0
-export CLUSTER_APP_VERSION=11.0.1
+export RELEASE_VERSION=36.2.0
 ```
 
 Change our working directory to the `hello_app_cluster` development cluster environment base.
@@ -142,28 +140,13 @@ makes pre-releases eligible at all, `semverFilter` then keeps only dev builds. F
 for builds of the same version semver orders by the branch hash before the timestamp, so if several branches publish dev
 builds, put the CRC32 of the branch to follow into the filter instead of `[0-9a-f]{8}`.
 
-Let's create the cluster values with the release, and the `kustomization.yaml` file for the development cluster. The
-values replace the empty `${cluster_name}-user-config` ConfigMap of the cluster template, and a patch sets the cluster
-chart version on the cluster App CR.
+Let's create the `kustomization.yaml` file for the development cluster. A patch sets the release as the version of the
+cluster App CR. Don't set `global.release.version` in the cluster values, because the `release-aws` chart sets it.
 
 ```sh
-cat <<EOF > cluster_user_config.yaml
-global:
-  release:
-    version: ${RELEASE_VERSION}
-EOF
-
 cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: replace
-    files:
-      - values=cluster_user_config.yaml
-    name: \${cluster_name}-user-config
-    namespace: org-\${organization}
-generatorOptions:
-  disableNameSuffixHash: true
 kind: Kustomization
 patches:
   - patch: |-
@@ -178,7 +161,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: "${CLUSTER_APP_VERSION}"
+        value: "${RELEASE_VERSION}"
     target:
       kind: App
       name: \\\${cluster_name}
@@ -210,23 +193,9 @@ changes in a major version bump, so let's stay below `4.0.0`. A range without a 
 pre-release tag, so no filter is needed. The release is set the same way as for the development cluster.
 
 ```sh
-cat <<EOF > cluster_user_config.yaml
-global:
-  release:
-    version: ${RELEASE_VERSION}
-EOF
-
 cat <<EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: replace
-    files:
-      - values=cluster_user_config.yaml
-    name: \${cluster_name}-user-config
-    namespace: org-\${organization}
-generatorOptions:
-  disableNameSuffixHash: true
 kind: Kustomization
 patches:
   - patch: |-
@@ -240,7 +209,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: "${CLUSTER_APP_VERSION}"
+        value: "${RELEASE_VERSION}"
     target:
       kind: App
       name: \\\${cluster_name}
@@ -287,8 +256,8 @@ It is similar to the staging cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 
-Note in the `kustomization.yaml` above that we create another `ConfigMap` for the production cluster
-that contains some extra settings for our cluster, besides the release: bigger nodes, and more of them.
+Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-user-config` `ConfigMap` of the
+cluster template with extra settings for the production cluster: bigger nodes, and more of them.
 
 ```sh
 cat <<EOF > cluster_user_config.yaml
@@ -298,8 +267,6 @@ global:
       instanceType: m6a.8xlarge
       maxSize: 50
       minSize: 10
-  release:
-    version: ${RELEASE_VERSION}
 EOF
 ```
 
@@ -307,7 +274,7 @@ Notice however that we decided not to set up `Automatic Updates` for this cluste
 
 Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
-in our `OCIRepository` resources, next to the cluster chart version of the release.
+in our `OCIRepository` resources, next to the release of the cluster.
 
 ```sh
 cat <<EOF >> kustomization.yaml
@@ -322,7 +289,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/version
-        value: "${CLUSTER_APP_VERSION}"
+        value: "${RELEASE_VERSION}"
     target:
       kind: App
       name: \\\${cluster_name}
@@ -503,7 +470,7 @@ In such a case you would end up with the below setup.
 Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
 
 Note that we use the extra configs feature of App CR to patch in additional layers of configurations for out Application.
-You can read more about this feature [here](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
+You can read more about [extra configs](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
 
 And the kustomization for this cluster looks like.
 

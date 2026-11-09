@@ -11,14 +11,14 @@ Our CAPx (CAPI provider-specific clusters) are delivered by Giant Swarm as an ap
 is an `App` containing the cluster instance definition.
 
 You can follow the instructions below to store CAPx cluster templates in the repository. The instructions respect the
-[repository structure](./repo_structure.md).
+[repository structure](../reference/repo-structure.md).
 
 Adding definitions can be done on two levels: shared cluster template and version specific template, see
 [create shared template base](#create-shared-cluster-template-base-optional)
 and [create versioned base](#create-versioned-base-optional).
 
 If all you want is to create a new CAPx cluster using an existing definition,
-go to the [creating cluster instance with CAPx](./add_wc_instance.md).
+go to the [creating cluster instance with CAPx](../add_wc_instance.md).
 
 **IMPORTANT**, CAPx configuration utilizes the
 [app platform configuration levels](https://docs.giantswarm.io/tutorials/app-platform/app-configuration/#levels),
@@ -27,7 +27,8 @@ in the following manner:
 - cluster templates provide default configuration via `App'` `config` field,
 - cluster instances provide custom configuration via `App'` `userConfig` field, that is overlaid on top of `config`.
 
-See more about this approach [here](https://github.com/giantswarm/rfc/tree/main/merging-configmaps-gitops).
+See more about this approach in the
+[RFC on merging ConfigMaps](https://github.com/giantswarm/rfc/tree/main/merging-configmaps-gitops).
 
 ## Example
 
@@ -68,10 +69,9 @@ If the desired base is not there, you can add it. Reference the next sections to
 
 *Note: if a template base for your provider is already here, you most probably want to skip this part.*
 
-**IMPORTANT:** shared cluster template base cannot serve as a standalone base for cluster creation, it is there only to abstract
-App CRs that are common to all clusters versions.
-It is then used as a base to other bases, which provide an overlay with a specific configuration. This is to avoid
-code duplication across bases.
+**IMPORTANT:** shared cluster template base cannot serve as a standalone base for cluster creation, it is there only to
+abstract App CRs that are common to all clusters versions. It is then used as a base to other bases, which provide an
+overlay with a specific configuration. This is to avoid code duplication across bases.
 
 **Bear in mind**, this is not a complete guide of how to create a perfect base, but rather a mere summary of basic
 steps needed to move forward. Hence, instructions here will not always be precise in telling you what to change,
@@ -277,5 +277,5 @@ pools, etc.:
 
 ## Recommended next steps
 
-- [Prepare multiple environments](./add_wc_environments.md)
-- [Add a new Workload Cluster repository structure](./add_wc_structure.md)
+- [Prepare multiple environments](./environments.md)
+- [Add a new Workload Cluster repository structure](../add_wc_structure.md)

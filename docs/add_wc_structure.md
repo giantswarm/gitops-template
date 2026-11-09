@@ -17,7 +17,7 @@ This includes:
    our configuration.
 1. [Adding our new Workload Cluster to an existing Management Cluster definition](#mc-configuration).
 
-*Note: As always, instructions here respect the [repository structure](./repo_structure.md).*
+*Note: As always, instructions here respect the [repository structure](./reference/repo-structure.md).*
 
 ## Example
 
@@ -381,4 +381,4 @@ the new workload cluster and apps.
 ## Recommended next steps
 
 - [Add Workload Cluster instance](./add_wc_instance.md)
-- [Managing Apps installed in clusters with GitOps](./apps/README.md)
+- [Managing Apps installed in clusters with GitOps](./guides/README.md)
