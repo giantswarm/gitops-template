@@ -256,8 +256,8 @@ It is similar to the staging cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 
-Note in the `kustomization.yaml` above that we create another `ConfigMap` for the production cluster
-that contains some extra settings for our cluster: bigger nodes, and more of them.
+Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-user-config` `ConfigMap` of the
+cluster template with extra settings for the production cluster: bigger nodes, and more of them.
 
 ```sh
 cat <<EOF > cluster_user_config.yaml
