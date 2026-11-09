@@ -10,8 +10,10 @@ Work in progress and new features are tracked [in this ticket](https://github.co
 
 ## Using this repository
 
+To learn what happens between a `git push` and a running cluster, read [How it works](docs/how-it-works.md).
+
 A good starting point is the
-[repository structure](docs/repo_structure.md) doc, which explains how this repository
+[repository structure](docs/reference/repo-structure.md) doc, which explains how this repository
 works.
 
 Please check [Appendices](docs/appendices.md) on the assumptions made for the code examples throughout this repository.
