@@ -43,6 +43,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
+  repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
+  is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported. The `WC_NAME` and
+  out-of-band example clusters are built on `bases/clusters/capa/release` and set the `release` variable. kubectl-gs
+  6.0.0 generates this structure, and `kubectl gs gitops upgrade` moves a fork from version 1 once its App CRs are gone.
 - `bases/clusters/capa/release` deploys the `release-aws` chart as a Flux `OCIRepository` and `HelmRelease` instead of
   an App CR, like `kubectl gs template cluster` does since kubectl-gs 5.13.0. The release is the `OCIRepository` tag. A
   cluster adds its own values with a ConfigMap and a patch that appends it to the `HelmRelease`'s `valuesFrom`, the same

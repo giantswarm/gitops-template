@@ -18,11 +18,9 @@ The [release](/bases/clusters/capa/release) base deploys the `release-aws` chart
 `HelmRelease`. Its chart version is the Giant Swarm release, so the release lives in the Kustomization CR in git, and
 you upgrade the cluster by changing it there. The chart sets the release in the values itself.
 
-The `cluster` catalog has a `release-aws` chart for every release from v34.0.0 on. For an older release, or for a
-Release CR you created by hand, build the cluster on the [template](/bases/clusters/capa/template) base instead and
-set the release in the values, under `global.release.version`. The
-[WC_NAME](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/) example uses
-it.
+There's a `release-aws` chart for every release from v34.0.0 on. Older releases and Release CRs created by hand have
+none. They need the `cluster-aws` chart as an App CR, which this repository no longer supports, see the
+[App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
 
 1. Export environment variables:
 

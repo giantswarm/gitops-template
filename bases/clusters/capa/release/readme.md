@@ -9,8 +9,8 @@ To add your own values, add a ConfigMap with a `values` key next to the base, an
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_RELEASE/mapi/cluster/) example.
 
 Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
-v32.3.0 and v33.3.0. For other releases, or for a Release CR you created by hand, use the [template](../template) base.
-It deploys the `cluster-aws` chart as an App CR, because that chart needs the App Platform to build its values.
+v32.3.0 and v33.3.0. Other releases, and Release CRs created by hand, need the `cluster-aws` chart as an App CR, which
+this repository no longer supports.
 
 Expected variables are in the table below.
 

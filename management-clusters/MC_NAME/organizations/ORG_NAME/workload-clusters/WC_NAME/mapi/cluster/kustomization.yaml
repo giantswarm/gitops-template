@@ -3,8 +3,12 @@ buildMetadata: [originAnnotations]
 commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
-patchesStrategicMerge:
-  - patch_user_config.yaml
+patches:
+  - path: patch_user_config.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \${cluster_name}
 resources:
-  - ../../../../../../../../bases/clusters/capa/template
+  - ../../../../../../../../bases/clusters/capa/release
   - cluster_user_config.yaml
