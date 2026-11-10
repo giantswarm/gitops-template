@@ -350,9 +350,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
 ### Configuring default apps
 
-The default apps of a cluster are part of its cluster App. Configure them through the cluster App values under
-`global.apps`, the same way as the rest of the cluster configuration, see the `cilium` entry in
-[bases/clusters/capa/template/cluster_config.yaml](/bases/clusters/capa/template/cluster_config.yaml) and
+The default apps of a cluster are part of its cluster chart. Configure them in the cluster values under
+`global.apps`, the same way as the rest of the cluster configuration, see
 [Add Workload Cluster instance](./add_wc_instance.md).
 
 ## MC configuration

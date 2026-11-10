@@ -200,8 +200,8 @@ management-clusters
 ### `mapi` and `[out-of-band]`
 
 Every workload cluster directory has a `mapi` directory. It holds the resources on the management cluster that
-configure the workload cluster, through the Management API. Examples are the cluster App, the apps' `HelmRelease`
-and `OCIRepository` resources, and the ConfigMaps and Secrets with their values.
+configure the workload cluster, through the Management API. Examples are the `HelmRelease` and `OCIRepository`
+resources of the cluster and its apps, and the ConfigMaps and Secrets with their values.
 
 The optional `out-of-band` directory holds resources that go straight into the workload cluster, such as extra
 ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are two ways to apply it:

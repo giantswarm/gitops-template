@@ -255,10 +255,10 @@ kubectl get namespace org-${ORG_NAME}
 ## 3. Create a workload cluster
 
 A cluster gets its own `Kustomization`, which applies the `${WC_DIR}/mapi` directory and fills in variables such as
-`${cluster_name}` in the files below. The cluster itself is an App that installs the `release-aws` chart, built from
-the [CAPA release base](/bases/clusters/capa/release) that ships with this repository. The chart version is the Giant
-Swarm release, so the release the cluster runs is stored in Git. For other providers, see
-[Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
+`${cluster_name}` in the files below. The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart,
+built from the [CAPA release base](/bases/clusters/capa/release) that ships with this repository. The chart version is
+the Giant Swarm release, so the release the cluster runs is stored in Git. For other providers, see [Add a CAPx Workload
+Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
 > creates the same cluster, with slightly different file names. It needs kubectl-gs 5.12.0 or newer. Note that
