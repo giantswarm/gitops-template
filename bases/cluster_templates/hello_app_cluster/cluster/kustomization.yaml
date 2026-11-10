@@ -10,5 +10,5 @@ patches:
       kind: HelmRelease
       name: \${cluster_name}
 resources:
-  - ../../../clusters/capa/release
+  - ../../../clusters/capa/template
   - cluster_user_config.yaml

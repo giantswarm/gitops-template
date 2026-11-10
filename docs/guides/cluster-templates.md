@@ -14,20 +14,20 @@ The values come in layers. Flux merges the entries of the `HelmRelease`'s `value
 
 - the base's `${cluster_name}-config` ConfigMap holds the defaults of every cluster made from the base
 - a cluster appends its own ConfigMap with a patch, see
-  [Creating a cluster from the release base](../add_wc_instance.md#creating-a-cluster-from-the-release-base)
+  [Creating a cluster from the CAPA cluster base](../add_wc_instance.md#creating-a-cluster-from-the-capa-cluster-base)
 
 The instructions respect the [repository structure](../reference/repo-structure.md).
 
 ## Example
 
-[bases/clusters/capa/release](/bases/clusters/capa/release) is the base for CAPA clusters.
+[bases/clusters/capa/template](/bases/clusters/capa/template) is the base for CAPA clusters.
 
 ## Choose a base
 
 Go to the [bases](/bases/clusters) directory and pick a base, then export its path:
 
 ```sh
-export CLUSTER_PATH=bases/clusters/capa/release
+export CLUSTER_PATH=bases/clusters/capa/template
 ```
 
 The `release-aws` chart exists for every release from v34.0.0 on. Older releases and Release CRs created by hand have
@@ -105,14 +105,14 @@ that replaces the `${cluster_name}-config` ConfigMap.
       disableNameSuffixHash: true
     kind: Kustomization
     resources:
-      - ../release
+      - ../template
     EOF
     ```
 
 1. Copy the `readme.md` of the base below, which lists the variables the base expects:
 
     ```sh
-    cp bases/clusters/capa/release/readme.md bases/clusters/capa/${BASE_NAME}/readme.md
+    cp bases/clusters/capa/template/readme.md bases/clusters/capa/${BASE_NAME}/readme.md
     ```
 
 1. Export the path of the new base:
