@@ -1,7 +1,5 @@
-# Values are merged in `valuesFrom` order, later entries win (maps are merged,
-# lists are replaced):
-#   1. ${cluster_name}-config        the cluster's name, organization and description
-#   2. ${cluster_name}-user-config   (optional) the cluster's own settings
+# A cluster adds its own values by appending a ConfigMap to `valuesFrom` with a
+# patch. Later entries win (maps are merged, lists are replaced).
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -32,8 +30,4 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-config
-      valuesKey: values
-    - kind: ConfigMap
-      name: ${cluster_name}-user-config
-      optional: true
       valuesKey: values

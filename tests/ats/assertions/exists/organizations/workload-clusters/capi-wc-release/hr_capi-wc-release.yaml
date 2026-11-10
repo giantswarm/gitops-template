@@ -34,5 +34,4 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: capi-wc-release-user-config
-      optional: true
       valuesKey: values

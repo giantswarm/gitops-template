@@ -84,8 +84,7 @@ it.
     The values follow the `values.yaml` schema of the `cluster-aws` chart. The default apps of the cluster are
     configured in the same values, under `global.apps`.
 
-1. Create a `ConfigMap` out of the values overrides. The base's `HelmRelease` reads a ConfigMap with this name if it
-   exists, after the base values, so it needs no patch:
+1. Create a `ConfigMap` out of the values overrides:
 
     ```sh
     cat <<EOF > cluster_user_config.yaml
@@ -100,7 +99,21 @@ it.
     EOF
     ```
 
-1. Create the `kustomization.yaml` referencing the base and the newly created file:
+1. Create a patch that appends the `ConfigMap` to the `valuesFrom` of the base's `HelmRelease`. Values later in the
+   list win, so yours override the base's:
+
+    ```sh
+    cat <<EOF > patch_user_config.yaml
+    - op: add
+      path: /spec/valuesFrom/-
+      value:
+        kind: ConfigMap
+        name: \${cluster_name}-user-config
+        valuesKey: values
+    EOF
+    ```
+
+1. Create the `kustomization.yaml` referencing the base and the newly created files:
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -108,6 +121,12 @@ it.
     commonLabels:
       giantswarm.io/managed-by: flux
     kind: Kustomization
+    patches:
+      - path: patch_user_config.yaml
+        target:
+          group: helm.toolkit.fluxcd.io
+          kind: HelmRelease
+          name: \\\${cluster_name}
     resources:
       - ../../../../../../../../${CLUSTER_PATH}
       - cluster_user_config.yaml

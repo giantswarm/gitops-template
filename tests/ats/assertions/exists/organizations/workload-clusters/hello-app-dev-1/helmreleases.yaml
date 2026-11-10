@@ -230,5 +230,4 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-dev-1-user-config
-      optional: true
       valuesKey: values

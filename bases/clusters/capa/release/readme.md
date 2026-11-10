@@ -4,8 +4,9 @@ This base deploys a cluster with the `release-aws` chart, as a Flux `OCIReposito
 version is the Giant Swarm release version, so the release lives in git and you upgrade the cluster by changing
 `release`.
 
-To add your own values, add a `${cluster_name}-user-config` ConfigMap with a `values` key next to the base. The
-`HelmRelease` reads it if it exists, after the base values.
+To add your own values, add a ConfigMap with a `values` key next to the base, and a patch that appends it to the
+`HelmRelease`'s `valuesFrom`. See the [WC_NAME_RELEASE](
+/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_RELEASE/mapi/cluster/) example.
 
 Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
 v32.3.0 and v33.3.0. For other releases, or for a Release CR you created by hand, use the [template](../template) base.
