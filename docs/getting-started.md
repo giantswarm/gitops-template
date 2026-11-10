@@ -261,7 +261,7 @@ the Giant Swarm release, so the release the cluster runs is stored in Git. For o
 Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with slightly different file names. It needs kubectl-gs 5.13.1 or newer. After you pick a
+> creates the same cluster, with slightly different file names. It needs kubectl-gs 6.0.0 or newer. After you pick a
 > release in the first step below, run:
 >
 > ```sh
