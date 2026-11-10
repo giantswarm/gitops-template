@@ -261,9 +261,8 @@ Swarm release, so the release the cluster runs is stored in Git. For other provi
 [Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with slightly different file names. It needs kubectl-gs 5.12.0 or newer. Note that
-> kubectl-gs 5.12.0 says the base holds no cluster App and asks you to set the release in the values. Ignore that. The
-> release base doesn't need it. After you pick a release in the first step below, run:
+> creates the same cluster, with slightly different file names. It needs kubectl-gs 5.13.1 or newer. After you pick a
+> release in the first step below, run:
 >
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
