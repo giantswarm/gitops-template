@@ -69,7 +69,7 @@ mkdir -p bases/environments/stages/prod
 
 Each of these contain a `hello_app_cluster` example, built from the
 [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository. A
-cluster template bundles everything a kind of cluster gets: here the [CAPA release base](/bases/clusters/capa/release),
+cluster template bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa/template),
 the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-app](/bases/app_sets/hello-web-app) App
 Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository doesn't
 have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
@@ -107,7 +107,7 @@ export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
-Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the release base, whose
+Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the CAPA cluster base, whose
 `release-aws` chart has the release as its version, so a patch sets the release as the tag of the cluster's
 `OCIRepository`.
 Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. In this example all stages run the same release.

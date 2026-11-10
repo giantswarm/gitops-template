@@ -2,11 +2,11 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   labels:
-    giantswarm.io/cluster: capi-wc-release
+    giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-release
+    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: capi-wc-release
+  name: capi-wc-name
   namespace: org-org-name
 spec:
   interval: 10m

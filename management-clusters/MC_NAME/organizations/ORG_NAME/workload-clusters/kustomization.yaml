@@ -5,7 +5,6 @@ commonLabels:
 kind: Kustomization
 resources:
   - WC_NAME.yaml
-  - WC_NAME_RELEASE.yaml
   - HELLO_APP_DEV_CLUSTER_1.yaml
   - HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
   - HELLO_APP_PROD_CLUSTER_US_WEST.yaml

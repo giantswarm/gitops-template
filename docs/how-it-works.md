@@ -47,7 +47,7 @@ workload cluster. Resources that must be applied inside the workload cluster dir
 
 Most clusters and apps look alike. The `bases` directory holds what they share, so a cluster's own files stay short:
 
-- `bases/clusters` holds the cluster bases, grouped by provider. For example, `bases/clusters/capa/release`
+- `bases/clusters` holds the cluster bases, grouped by provider. For example, `bases/clusters/capa/template`
   installs the `release-aws` chart, whose version is the Giant Swarm release.
 - `bases/apps` has App Templates: an app with its default values, ready to deploy to many clusters.
 - `bases/app_sets` groups apps that you deploy together.
@@ -58,14 +58,14 @@ A cluster's directory points at bases in its `kustomization.yaml` and only adds 
 values. The bases use variables like `${cluster_name}` where every cluster needs its own name. The cluster's Flux
 `Kustomization` sets them, so one base works for every cluster.
 
-For example, a cluster made from the release base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
+For example, a cluster made from the CAPA cluster base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
 `cluster_description`, `cluster_name`, `organization` and `release` variables in its Flux `Kustomization`:
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../../../../../../../bases/clusters/capa/release
+  - ../../../../../../../../bases/clusters/capa/template
 ```
 
 To upgrade the cluster, you change `release` and push.

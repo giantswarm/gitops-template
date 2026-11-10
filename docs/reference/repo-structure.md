@@ -71,7 +71,7 @@ How to read it:
 ## Structure version
 
 The structure on this page has a version, so a repository built on it can tell when it has fallen behind. The
-current structure version is `1`. It goes up when an existing repository has to change to follow the structure, for
+current structure version is `2`. It goes up when an existing repository has to change to follow the structure, for
 example when a directory moves or a naming rule changes. New examples and changes to the apps under `bases/` don't
 change it.
 
@@ -81,13 +81,13 @@ entry for every management cluster, organization, workload cluster, app and base
 ```yaml
 apiVersion: gitops.giantswarm.io/v1alpha1
 kind: RepositoryMetadata
-structureVersion: 1
-generatedWith: kubectl-gs/5.7.3
+structureVersion: 2
+generatedWith: kubectl-gs/6.0.0
 layers:
   - kind: management-cluster
     path: management-clusters/MC_NAME
-    structureVersion: 1
-    generatedWith: kubectl-gs/5.7.3
+    structureVersion: 2
+    generatedWith: kubectl-gs/6.0.0
 ```
 
 The file sits outside of what Flux applies, so it never reaches a cluster. Don't edit it by hand.
@@ -118,6 +118,12 @@ It changes the files in place and keeps your own edits where it can. Review the 
 commit it. If something goes wrong, undo it with Git. That's why the command doesn't run on a repository with
 uncommitted changes, or on a directory Git doesn't track, unless you pass `--force`. Migrations never touch files Git
 ignores, such as decrypted secrets, so move those yourself.
+
+Version 2 deploys clusters and apps with Flux `HelmRelease`s instead of App CRs. The upgrade to it doesn't convert
+App CRs, because the `HelmRelease` has to take over the Helm release the App CR installed in the cluster. It fails on
+every layer that still deploys or patches an App CR. Move those first, see the
+[App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
+Then it rewrites the user config patch of each workload cluster for the `HelmRelease`.
 
 Note that layers recorded without a structure version can't be upgraded. If you know the version they were created
 with, set their `structureVersion` by hand. Otherwise, remove their entries and run

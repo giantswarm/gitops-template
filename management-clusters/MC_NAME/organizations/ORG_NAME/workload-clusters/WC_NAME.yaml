@@ -11,6 +11,7 @@ spec:
       cluster_description: "description"
       cluster_name: "capi-wc-name"  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
       organization: "org-name"  # TODO: change 'org-name' to your organization name
+      release: "36.2.0"  # TODO: change '36.2.0' to the Giant Swarm release the cluster runs
   prune: false
   serviceAccountName: automation
   sourceRef:

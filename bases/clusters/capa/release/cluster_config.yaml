@@ -1,5 +1,0 @@
-global:
-  metadata:
-    description: ${cluster_description}
-    name: ${cluster_name}
-    organization: ${organization}

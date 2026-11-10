@@ -2,23 +2,23 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: capi-wc-release
+    giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-release
+    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: capi-wc-release
+  name: capi-wc-name
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: capi-wc-release
+    name: capi-wc-name
     namespace: org-org-name
   install:
     remediation:
       remediateLastFailure: false
       retries: 10
   interval: 5m
-  releaseName: capi-wc-release
+  releaseName: capi-wc-name
   serviceAccountName: automation
   storageNamespace: org-org-name
   targetNamespace: org-org-name
@@ -30,8 +30,8 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
-      name: capi-wc-release-config
+      name: capi-wc-name-config
       valuesKey: values
     - kind: ConfigMap
-      name: capi-wc-release-user-config
+      name: capi-wc-name-user-config
       valuesKey: values
