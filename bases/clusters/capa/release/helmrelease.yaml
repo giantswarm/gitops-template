@@ -1,0 +1,39 @@
+# Values are merged in `valuesFrom` order, later entries win (maps are merged,
+# lists are replaced):
+#   1. ${cluster_name}-config        the cluster's name, organization and description
+#   2. ${cluster_name}-user-config   (optional) the cluster's own settings
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}
+    namespace: org-${organization}
+  install:
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
+  releaseName: ${cluster_name}
+  serviceAccountName: automation
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-user-config
+      optional: true
+      valuesKey: values

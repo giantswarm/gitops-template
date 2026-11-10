@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    # the chart version is the Giant Swarm release
+    tag: ${release}
+  timeout: 60s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

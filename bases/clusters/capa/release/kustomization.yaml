@@ -1,15 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
+configMapGenerator:
+  - files:
+    - values=cluster_config.yaml
+    name: ${cluster_name}-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
 kind: Kustomization
-patches:
-  - patch: |-
-      - op: replace
-        path: /spec/name
-        value: release-aws
-      - op: replace
-        path: /spec/version
-        value: ${release}
-    target:
-      group: application.giantswarm.io
-      kind: App
 resources:
-  - ../template
+  - helmrelease.yaml
+  - ocirepository.yaml

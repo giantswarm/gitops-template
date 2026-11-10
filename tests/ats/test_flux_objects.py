@@ -52,14 +52,29 @@ def check_flux_objects_successful(
         if not ignored_objects:
             ignored_objects = []
         # HelmReleases that deploy to a workload cluster through its kubeconfig can't get ready here,
-        #  as the test has no workload clusters. Their existence is still checked by the assertions,
-        #  and their charts by the OCIRepository check.
+        #  as the test has no workload clusters. Neither can the ones that create a cluster from a
+        #  release-<provider> chart, as there is no Cluster API. Their existence is still checked by
+        #  the assertions, and their charts by the OCIRepository check.
+        cluster_charts = set()
+        if obj_type is HelmReleaseCR:
+            cluster_charts = {
+                r.name
+                for r in OCIRepositoryCR.objects(kube_cluster.kube_client)
+                .filter(namespace=ns.name)
+                .all()
+                if "/charts/giantswarm/release-" in r.obj.get("spec", {}).get("url", "")
+            }
         obj_names = [
             o.name
             for o in objects
             if f"{ns}/{o.name}" not in ignored_objects
             and not (
-                obj_type is HelmReleaseCR and o.obj.get("spec", {}).get("kubeConfig")
+                obj_type is HelmReleaseCR
+                and (
+                    o.obj.get("spec", {}).get("kubeConfig")
+                    or o.obj.get("spec", {}).get("chartRef", {}).get("name")
+                    in cluster_charts
+                )
             )
         ]
         if not obj_names:
