@@ -69,7 +69,7 @@ mkdir -p bases/environments/stages/prod
 
 Each of these contain a `hello_app_cluster` example, built from the
 [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository. A
-cluster template bundles everything a kind of cluster gets: here the [CAPA release base](/bases/clusters/capa/release),
+cluster template bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa/template),
 the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-app](/bases/app_sets/hello-web-app) App
 Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository doesn't
 have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
@@ -107,8 +107,9 @@ export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
-Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the release base, whose
-`release-aws` chart has the release as its version, so a patch sets the release as the version of the cluster App CR.
+Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the CAPA cluster base, whose
+`release-aws` chart has the release as its version, so a patch sets the release as the tag of the cluster's
+`OCIRepository`.
 Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. In this example all stages run the same release.
 A stage that should run a newer one sets another version.
 
@@ -140,8 +141,9 @@ makes pre-releases eligible at all, `semverFilter` then keeps only dev builds. F
 for builds of the same version semver orders by the branch hash before the timestamp, so if several branches publish dev
 builds, put the CRC32 of the branch to follow into the filter instead of `[0-9a-f]{8}`.
 
-Let's create the `kustomization.yaml` file for the development cluster. A patch sets the release as the version of the
-cluster App CR. Don't set `global.release.version` in the cluster values, because the `release-aws` chart sets it.
+Let's create the `kustomization.yaml` file for the development cluster. A patch sets the release as the tag of the
+cluster's `OCIRepository`. Don't set `global.release.version` in the cluster values, because the `release-aws` chart
+sets it.
 
 ```sh
 cat <<EOF > kustomization.yaml
@@ -160,10 +162,10 @@ patches:
       name: \\\${cluster_name}-hello-world
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: "${RELEASE_VERSION}"
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}
 resources:
   - ../../../../cluster_templates/hello_app_cluster
@@ -208,10 +210,10 @@ patches:
       name: \\\${cluster_name}-hello-world
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: "${RELEASE_VERSION}"
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}
 resources:
   - ../../../../cluster_templates/hello_app_cluster
@@ -288,10 +290,10 @@ patches:
       name: \\\${cluster_name}-hello-world
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: "${RELEASE_VERSION}"
     target:
-      kind: App
+      kind: OCIRepository
       name: \\\${cluster_name}
 EOF
 ```
@@ -445,7 +447,7 @@ And for production we will take it one step further by splitting it into multipl
 
 - for the production environment we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml)
-- and another one in a different region with some different configuration for the cluster App CR [HELLO_APP_PROD_CLUSTER_US_WEST](
+- and another one in a different region with some different values for the cluster [HELLO_APP_PROD_CLUSTER_US_WEST](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml)
 
 All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
@@ -469,8 +471,9 @@ In such a case you would end up with the below setup.
 
 Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
 
-Note that we use the extra configs feature of App CR to patch in additional layers of configurations for out Application.
-You can read more about [extra configs](https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs).
+Note that we add the region's values to the cluster's `HelmRelease` as another `valuesFrom` entry. Flux merges the
+entries in order, so the region's values go after the base values and before the cluster's own
+`${cluster_name}-user-config`.
 
 And the kustomization for this cluster looks like.
 
@@ -481,33 +484,27 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 patches:
+  # the region's values go after the base values and before the cluster's own
   - patch: |
       - op: add
-        path: /spec/extraConfigs/-
+        path: /spec/valuesFrom/1
         value:
-          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-            name: "\${cluster_name}-config"
-            namespace: org-\${organization}
-            priority: 1
-      - op: add
-        path: /spec/extraConfigs/-
-        value:
-          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-            name: "\${cluster_name}-region-config"
-            namespace: org-\${organization}
+          kind: ConfigMap
+          name: "\${cluster_name}-region-config"
+          valuesKey: values
     target:
-      group: application.giantswarm.io
-      kind: App
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
       name: \\\${cluster_name}
       namespace: org-\\\${organization}
-      version: v1alpha1
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../../../bases/environments/regions/eu_central
 EOF
 ```
 
-For the `us-west` region version of the production cluster we need to create the same patch for the cluster App CR.
+For the `us-west` region version of the production cluster we need to create the same patch for the cluster's
+`HelmRelease`.
 The resultant `kustomization.yaml` looks like the one below.
 
 ```bash
@@ -517,26 +514,19 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 patches:
+  # the region's values go after the base values and before the cluster's own
   - patch: |
       - op: add
-        path: /spec/extraConfigs/-
+        path: /spec/valuesFrom/1
         value:
-          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-            name: "\${cluster_name}-config"
-            namespace: org-\${organization}
-            priority: 1
-      - op: add
-        path: /spec/extraConfigs/-
-        value:
-          # See: https://docs.giantswarm.io/app-platform/app-configuration/#extra-configs
-            name: "\${cluster_name}-region-config"
-            namespace: org-\${organization}
+          kind: ConfigMap
+          name: "\${cluster_name}-region-config"
+          valuesKey: values
     target:
-      group: application.giantswarm.io
-      kind: App
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
       name: \\\${cluster_name}
       namespace: org-\\\${organization}
-      version: v1alpha1
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../../../bases/environments/regions/us_west

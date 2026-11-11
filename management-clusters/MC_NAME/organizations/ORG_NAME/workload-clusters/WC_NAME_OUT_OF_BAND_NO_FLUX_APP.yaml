@@ -15,6 +15,7 @@ spec:
       cluster_description: "description"
       cluster_name: "mapi-out-of-band-no-flux"
       organization: "org-name"  # TODO: change 'org-name' to your organization name
+      release: "36.2.0"  # TODO: change '36.2.0' to the Giant Swarm release the cluster runs
   prune: false
   serviceAccountName: automation
   sourceRef:

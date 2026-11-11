@@ -43,6 +43,21 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
+  repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
+  is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported.
+  `bases/clusters/capa/release` takes its place as `bases/clusters/capa/template`, the path
+  `kubectl gs gitops add base` generates. The `WC_NAME` and out-of-band example clusters are built on it and set the
+  `release` variable. `WC_NAME_RELEASE` is removed, because `WC_NAME` is now the same cluster. kubectl-gs 6.0.0
+  generates this structure, and `kubectl gs gitops upgrade` moves a fork from version 1 once its App CRs are gone.
+- `bases/clusters/capa/release` deploys the `release-aws` chart as a Flux `OCIRepository` and `HelmRelease` instead of
+  an App CR, like `kubectl gs template cluster` does since kubectl-gs 5.13.0. The release is the `OCIRepository` tag. A
+  cluster adds its own values with a ConfigMap and a patch that appends it to the `HelmRelease`'s `valuesFrom`, the same
+  layout `kubectl gs gitops add workload-cluster` generates since giantswarm/kubectl-gs#2274. Stages set the release on
+  the `OCIRepository`, and the prod clusters add their region values to `valuesFrom`. `bases/clusters/capa/template`
+  stays an App CR, because the `cluster-aws` chart needs App Platform. Clusters created from the old release base are
+  App CRs, and moving them needs a hand-over that doesn't reinstall them. See
+  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
 - The `hello_app_cluster` cluster template and its dev, staging and prod stages build on
   `bases/clusters/capa/release`. Each stage sets the release as the cluster App's version, `36.2.0` in the
   examples, and no longer sets `global.release.version` in its values. The dev and staging stages have no

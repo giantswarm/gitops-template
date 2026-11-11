@@ -1,7 +1,7 @@
 # Add Workload Cluster instance (CAPx/CAPI)
 
 - [Example](#example)
-- [Creating a cluster from the release base](#creating-a-cluster-from-the-release-base)
+- [Creating a cluster from the CAPA cluster base](#creating-a-cluster-from-the-capa-cluster-base)
 - [Recommended next steps](#recommended-next-steps)
 
 This doc explains how to create an actual Cluster infrastructure instance. A pre-request for this step is to complete
@@ -9,20 +9,18 @@ This doc explains how to create an actual Cluster infrastructure instance. A pre
 
 ## Example
 
-An example of a workload cluster instance created from the release base is in
-[WC_NAME_RELEASE/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_RELEASE/mapi/cluster/).
+An example of a workload cluster instance created from the CAPA cluster base is in
+[WC_NAME/mapi/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/).
 
-## Creating a cluster from the release base
+## Creating a cluster from the CAPA cluster base
 
-The [release](/bases/clusters/capa/release) base deploys the `release-aws` chart. Its chart version is the Giant
-Swarm release, so the release lives in the Kustomization CR in git, and you upgrade the cluster by changing it there.
-The chart sets the release in the values itself.
+The [CAPA cluster base](/bases/clusters/capa/template) deploys the `release-aws` chart with a Flux `OCIRepository` and
+`HelmRelease`. Its chart version is the Giant Swarm release, so the release lives in the Kustomization CR in git, and
+you upgrade the cluster by changing it there. The chart sets the release in the values itself.
 
-The `cluster` catalog has a `release-aws` chart for every release from v34.0.0 on. For an older release, or for a
-Release CR you created by hand, build the cluster on the [template](/bases/clusters/capa/template) base instead and
-set the release in the values, under `global.release.version`. The
-[WC_NAME](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/) example uses
-it.
+There's a `release-aws` chart for every release from v34.0.0 on. Older releases and Release CRs created by hand have
+none. They need the `cluster-aws` chart as an App CR, which this repository no longer supports, see the
+[App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
 
 1. Export environment variables:
 
@@ -39,7 +37,7 @@ it.
     ```
 
     ```sh
-    export CLUSTER_PATH=bases/clusters/capa/release
+    export CLUSTER_PATH=bases/clusters/capa/template
     ```
 
     To create a cluster together with a set of apps from an environment template instead, see
@@ -87,33 +85,29 @@ it.
 1. Create a `ConfigMap` out of the values overrides:
 
     ```sh
-    cat <<EOF > cluster_userconfig.yaml
+    cat <<EOF > cluster_user_config.yaml
     apiVersion: v1
     data:
       values: |
     $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
     kind: ConfigMap
     metadata:
-      name: \${cluster_name}-userconfig
+      name: \${cluster_name}-user-config
       namespace: org-\${organization}
     EOF
     ```
 
-1. Create a patch that applies the user-config values. It doesn't set `spec.version`, because the base takes it
-   from the `release` variable:
+1. Create a patch that appends the `ConfigMap` to the `valuesFrom` of the base's `HelmRelease`. Values later in the
+   list win, so yours override the base's:
 
     ```sh
-    cat <<EOF > patch_userconfig.yaml
-    apiVersion: application.giantswarm.io/v1alpha1
-    kind: App
-    metadata:
-      name: \${cluster_name}
-      namespace: org-\${organization}
-    spec:
-      userConfig:
-        configMap:
-          name: \${cluster_name}-userconfig
-          namespace: org-\${organization}
+    cat <<EOF > patch_user_config.yaml
+    - op: add
+      path: /spec/valuesFrom/-
+      value:
+        kind: ConfigMap
+        name: \${cluster_name}-user-config
+        valuesKey: values
     EOF
     ```
 
@@ -126,10 +120,14 @@ it.
       giantswarm.io/managed-by: flux
     kind: Kustomization
     patches:
-      - path: patch_userconfig.yaml
+      - path: patch_user_config.yaml
+        target:
+          group: helm.toolkit.fluxcd.io
+          kind: HelmRelease
+          name: \\\${cluster_name}
     resources:
       - ../../../../../../../../${CLUSTER_PATH}
-      - cluster_userconfig.yaml
+      - cluster_user_config.yaml
     EOF
     ```
 
@@ -157,8 +155,8 @@ it.
       ...
     ```
 
-    Note that without `release`, the App gets an empty version and the cluster doesn't install. To upgrade the
-    cluster later, change `release` to a newer release.
+    Note that without `release`, the `OCIRepository` has no chart version to pull and the cluster doesn't install. To
+    upgrade the cluster later, change `release` to a newer release.
 
 1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
 you have just created.

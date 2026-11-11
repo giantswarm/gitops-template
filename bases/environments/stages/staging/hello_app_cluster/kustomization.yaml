@@ -17,10 +17,10 @@ patches:
   # the Giant Swarm release the clusters of this stage run
   - patch: |-
       - op: replace
-        path: /spec/version
+        path: /spec/ref/tag
         value: "36.2.0"
     target:
-      kind: App
+      kind: OCIRepository
       name: \${cluster_name}
 # block end
 resources:

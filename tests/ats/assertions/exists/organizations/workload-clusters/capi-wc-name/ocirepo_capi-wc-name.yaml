@@ -1,0 +1,17 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: capi-wc-name
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: capi-wc-name
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: "36.2.0"
+  timeout: 60s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

@@ -63,3 +63,21 @@ spec:
   ref:
     semver: '>=3.0.0 <4.0.0'
   url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-staging-1
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-staging-1
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-staging-1
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: "36.2.0"
+  timeout: 60s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

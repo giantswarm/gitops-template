@@ -255,19 +255,19 @@ kubectl get namespace org-${ORG_NAME}
 ## 3. Create a workload cluster
 
 A cluster gets its own `Kustomization`, which applies the `${WC_DIR}/mapi` directory and fills in variables such as
-`${cluster_name}` in the files below. The cluster itself is an App that installs the `release-aws` chart, built from
-the [CAPA release base](/bases/clusters/capa/release) that ships with this repository. The chart version is the Giant
-Swarm release, so the release the cluster runs is stored in Git. For other providers, see
-[Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
+`${cluster_name}` in the files below. The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart,
+built from the [CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
+the Giant Swarm release, so the release the cluster runs is stored in Git. For other providers, see [Add a CAPx Workload
+Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with slightly different file names. It needs kubectl-gs 5.13.1 or newer. After you pick a
+> creates the same cluster, with slightly different file names. It needs kubectl-gs 6.0.0 or newer. After you pick a
 > release in the first step below, run:
 >
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
 >   --management-cluster ${MC_NAME} --repository-name ${GITOPS_REPO} \
->   --base bases/clusters/capa/release --release ${RELEASE_VERSION}
+>   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
 > ```
 >
 > Then commit and push, as in the last step below.
@@ -284,7 +284,7 @@ Swarm release, so the release the cluster runs is stored in Git. For other provi
     export RELEASE_VERSION=36.2.0
     ```
 
-1. Create the cluster definition. It points at the release base. First, create its directory:
+1. Create the cluster definition. It points at the CAPA cluster base. First, create its directory:
 
     ```sh
     mkdir -p ${WC_DIR}/mapi/cluster
@@ -297,13 +297,13 @@ Swarm release, so the release the cluster runs is stored in Git. For other provi
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
-      - ../../../../../../../../bases/clusters/capa/release
+      - ../../../../../../../../bases/clusters/capa/template
     EOF
     ```
 
     The cluster runs with the base's defaults. To add your own values, see
-    [Creating a cluster from the release base](./add_wc_instance.md#creating-a-cluster-from-the-release-base). Don't
-    set `global.release.version` in them, because the chart sets it.
+    [Creating a cluster from the CAPA cluster base](./add_wc_instance.md#creating-a-cluster-from-the-capa-cluster-base).
+    Don't set `global.release.version` in them, because the chart sets it.
 
 1. Create the list of apps to deploy to the cluster. It starts empty, and you add an app to it in the next step. First,
    create its directory:

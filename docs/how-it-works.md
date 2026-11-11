@@ -20,10 +20,10 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
    nothing. It stops there and doesn't apply what's inside the `demowc` directory.
 1. The `demowc.yaml` Kustomization applies the `demowc/mapi` directory. While it does, it fills in variables such as
    `${cluster_name}`, `${organization}` and `${release}` from its own settings.
-1. `mapi/cluster` holds the cluster App. The management cluster installs its chart, for example `release-aws`, and
-   the chart creates the cluster with Cluster API. When the cluster is up, the management cluster also creates the
-   `demowc-kubeconfig` Secret, with access to the new cluster, and the `demowc-cluster-values` ConfigMap, with values
-   apps can use, such as the cluster's base domain.
+1. `mapi/cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
+   `HelmRelease` that installs it on the management cluster. The chart creates the cluster with Cluster API. When the
+   cluster is up, the management cluster also creates the `demowc-kubeconfig` Secret, with access to the new cluster,
+   and the `demowc-cluster-values` ConfigMap, with values apps can use, such as the cluster's base domain.
 1. `mapi/apps` holds the apps. Each app is a Flux `OCIRepository`, which points at a chart in an OCI registry, and a
    Flux `HelmRelease`, which installs it. Both stay on the management cluster, in the `org-demoorg` namespace. The
    `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster.
@@ -47,8 +47,8 @@ workload cluster. Resources that must be applied inside the workload cluster dir
 
 Most clusters and apps look alike. The `bases` directory holds what they share, so a cluster's own files stay short:
 
-- `bases/clusters` holds the cluster bases, grouped by provider. For example, `bases/clusters/capa/release` is a
-  cluster App with the `release-aws` chart, whose version is the Giant Swarm release.
+- `bases/clusters` holds the cluster bases, grouped by provider. For example, `bases/clusters/capa/template`
+  installs the `release-aws` chart, whose version is the Giant Swarm release.
 - `bases/apps` has App Templates: an app with its default values, ready to deploy to many clusters.
 - `bases/app_sets` groups apps that you deploy together.
 - `bases/cluster_templates` and `bases/environments` combine these into clusters for stages like dev and production,
@@ -58,14 +58,14 @@ A cluster's directory points at bases in its `kustomization.yaml` and only adds 
 values. The bases use variables like `${cluster_name}` where every cluster needs its own name. The cluster's Flux
 `Kustomization` sets them, so one base works for every cluster.
 
-For example, a cluster made from the release base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
+For example, a cluster made from the CAPA cluster base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
 `cluster_description`, `cluster_name`, `organization` and `release` variables in its Flux `Kustomization`:
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../../../../../../../bases/clusters/capa/release
+  - ../../../../../../../../bases/clusters/capa/template
 ```
 
 To upgrade the cluster, you change `release` and push.
