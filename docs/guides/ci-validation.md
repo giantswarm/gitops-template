@@ -51,3 +51,9 @@ This build step requires additional configuration using the following environmen
   a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
+
+## Superseded runs
+
+The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to
+a pull request, the run for the previous commit is cancelled. Pushes to a branch, such as a merge to `main`, don't
+cancel the run in progress: it finishes, and GitHub keeps only the newest of the push runs waiting behind it.

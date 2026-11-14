@@ -5,6 +5,14 @@ on:
   push:
     branches: [HEAD_BRANCH, main]
 
+# One run per pull request, or per branch for pushes. A new commit on a pull
+# request cancels the run for the commit it replaces. A push to a branch lets
+# the run in progress finish, so the post-merge result is never cut short;
+# while it runs, GitHub keeps only the newest queued push run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   pull-requests: write
