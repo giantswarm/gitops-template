@@ -102,9 +102,21 @@ def check_flux_objects_successful(
 def check_kustomizations_successful(
     kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> None:
-    check_flux_objects_successful(
-        kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
-    )
+    try:
+        check_flux_objects_successful(
+            kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
+        )
+    except TimeoutError:
+        # say which Kustomization didn't get ready, and why
+        for k in KustomizationCR.objects(kube_cluster.kube_client).filter(
+            namespace=pykube.all
+        ):
+            if not flux_cr_ready(k):
+                logger.error(
+                    f"Kustomization '{k.namespace}/{k.name}' isn't ready: "
+                    f"{k.obj.get('status', {}).get('conditions')}"
+                )
+        raise
 
 
 def test_kustomizations_successful(check_kustomizations_successful: None) -> None:
