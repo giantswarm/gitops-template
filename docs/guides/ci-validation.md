@@ -39,8 +39,19 @@ This validation step offers some broader possibilities for validation, but also 
 
 ### Validation option
 
-By default, this test checks if all the `Kustomization` objects except the ones defined in `GITOPS_IGNORED_OBJECTS`
-environment variable are successfully reconciled in the cluster.
+By default, this test checks if all the `Kustomization` and `OCIRepository` objects except the ones defined in
+`GITOPS_IGNORED_OBJECTS` environment variable are successfully reconciled in the cluster.
+
+`HelmRelease`s that deploy to a workload cluster through its kubeconfig, or create a cluster from a `release-<provider>`
+chart, can't get ready in the test cluster. For every `HelmRelease` the test checks what Flux needs from the management
+cluster instead:
+
+- the `OCIRepository` in `chartRef` exists and is ready,
+- every `HelmRelease` in `dependsOn` exists,
+- every `valuesFrom` ConfigMap or Secret that isn't `optional` exists, and every one that exists has its `valuesKey`
+  holding a YAML mapping. The `<cluster>-cluster-values` ConfigMap is the exception: the management cluster creates it.
+
+Any other `HelmRelease` has to become ready. Each of these checks fails if it finds no object to check.
 
 Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified. Each of these files
 has to contain one or more YAML description of objects of Kubernetes objects you expect to be present in the cluster

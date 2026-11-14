@@ -1,7 +1,8 @@
+import base64
 import logging
 import os.path
 import time
-from typing import Any, Type, TypeVar, Iterator, Union
+from typing import Any, Callable, Type, TypeVar, Iterator, Union
 
 import pykube
 import pytest
@@ -41,42 +42,28 @@ def check_flux_objects_successful(
     obj_type: Type[TFNS],
     ignored_objects: Union[list[str], None] = None,
     timeout_sec: int = FLUX_OBJECTS_READY_TIMEOUT_SEC,
-) -> None:
+    exclude: Union[Callable[[TFNS], bool], None] = None,
+) -> list[TFNS]:
+    """Wait for every object of `obj_type` to be ready, and return all of them.
+
+    Objects in `ignored_objects` (`namespace/name`) are left out entirely. Objects `exclude`
+    returns True for are returned, but not waited for. Fails if there is no object at all,
+    so a check never passes because it found nothing to check.
+    """
+    if not ignored_objects:
+        ignored_objects = []
+    found: list[TFNS] = []
     namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
     for ns in namespaces:
-        objects = (
-            obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
-        )
-        if not objects.response["items"]:
-            continue
-        if not ignored_objects:
-            ignored_objects = []
-        # HelmReleases that deploy to a workload cluster through its kubeconfig can't get ready here,
-        #  as the test has no workload clusters. Neither can the ones that create a cluster from a
-        #  release-<provider> chart, as there is no Cluster API. Their existence is still checked by
-        #  the assertions, and their charts by the OCIRepository check.
-        cluster_charts = set()
-        if obj_type is HelmReleaseCR:
-            cluster_charts = {
-                r.name
-                for r in OCIRepositoryCR.objects(kube_cluster.kube_client)
-                .filter(namespace=ns.name)
-                .all()
-                if "/charts/giantswarm/release-" in r.obj.get("spec", {}).get("url", "")
-            }
-        obj_names = [
-            o.name
-            for o in objects
+        objects = [
+            o
+            for o in obj_type.objects(kube_cluster.kube_client)
+            .filter(namespace=ns.name)
+            .all()
             if f"{ns}/{o.name}" not in ignored_objects
-            and not (
-                obj_type is HelmReleaseCR
-                and (
-                    o.obj.get("spec", {}).get("kubeConfig")
-                    or o.obj.get("spec", {}).get("chartRef", {}).get("name")
-                    in cluster_charts
-                )
-            )
         ]
+        found.extend(objects)
+        obj_names = [o.name for o in objects if not (exclude and exclude(o))]
         if not obj_names:
             continue
         logger.debug(
@@ -92,6 +79,9 @@ def check_flux_objects_successful(
             timeout_sec,
             missing_ok=False,
         )
+    if not found:
+        pytest.fail(f"No {obj_type.__name__} objects found in the cluster to check.")
+    return found
 
 
 @pytest.fixture(scope="module")
@@ -108,13 +98,152 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
     pass
 
 
+def is_cluster_chart(hr: HelmReleaseCR, kube_cluster: Cluster) -> bool:
+    """Whether the HelmRelease creates a workload cluster from a release-<provider> chart."""
+    chart_ref = hr.obj["spec"].get("chartRef", {})
+    repo = (
+        OCIRepositoryCR.objects(kube_cluster.kube_client)
+        .filter(namespace=chart_ref.get("namespace", hr.namespace))
+        .get_or_none(name=chart_ref.get("name"))
+    )
+    return repo is not None and "/charts/giantswarm/release-" in repo.obj.get(
+        "spec", {}
+    ).get("url", "")
+
+
+def needs_workload_cluster(hr: HelmReleaseCR, kube_cluster: Cluster) -> bool:
+    """Whether the HelmRelease can't get ready in the test cluster.
+
+    The ones that deploy to a workload cluster through its kubeconfig can't, as the test has no
+    workload clusters. Neither can the ones that create a cluster from a release-<provider>
+    chart: the chart's resources need the CRDs of a current Cluster API provider and of
+    Crossplane, and its values need the management cluster's `managementCluster` and
+    `baseDomain`.
+    """
+    return bool(hr.obj["spec"].get("kubeConfig")) or is_cluster_chart(hr, kube_cluster)
+
+
+def management_cluster_values(hr: HelmReleaseCR) -> set[str]:
+    """Names of the ConfigMaps a management cluster provides and this repository doesn't.
+
+    The management cluster creates `<cluster>-cluster-values` for every workload cluster. An app
+    that deploys to a workload cluster through its `<cluster>-kubeconfig` Secret reads it first.
+    """
+    secret = hr.obj["spec"].get("kubeConfig", {}).get("secretRef", {}).get("name", "")
+    if not secret.endswith("-kubeconfig"):
+        return set()
+    return {secret.removesuffix("-kubeconfig") + "-cluster-values"}
+
+
+def values_from_problems(hr: HelmReleaseCR, kube_cluster: Cluster) -> list[str]:
+    """Check each `valuesFrom` reference the way helm-controller resolves it.
+
+    A required reference has to exist. Every reference that exists has to have its key, and the
+    key has to hold a YAML mapping (or nothing).
+    """
+    problems: list[str] = []
+    skip = management_cluster_values(hr)
+    for ref in hr.obj["spec"].get("valuesFrom", []):
+        kind, name = ref["kind"], ref["name"]
+        key = ref.get("valuesKey", "values.yaml")
+        if kind == "ConfigMap" and name in skip:
+            continue
+        obj_type = {"ConfigMap": pykube.ConfigMap, "Secret": pykube.Secret}[kind]
+        obj = (
+            obj_type.objects(kube_cluster.kube_client)
+            .filter(namespace=hr.namespace)
+            .get_or_none(name=name)
+        )
+        if obj is None:
+            if not ref.get("optional", False):
+                problems.append(f"{kind} '{name}' doesn't exist")
+            continue
+        data = obj.obj.get("data", {})
+        if key not in data:
+            problems.append(f"{kind} '{name}' has no key '{key}'")
+            continue
+        text = data[key]
+        if kind == "Secret":
+            text = base64.b64decode(text).decode()
+        try:
+            values = yaml.safe_load(text)
+        except yaml.YAMLError as e:
+            problems.append(f"{kind} '{name}' key '{key}' isn't valid YAML: {e}")
+            continue
+        if values is not None and not isinstance(values, dict):
+            problems.append(f"{kind} '{name}' key '{key}' isn't a YAML mapping")
+    return problems
+
+
+def helm_release_problems(hr: HelmReleaseCR, kube_cluster: Cluster) -> list[str]:
+    """Check what helm-controller needs from the management cluster to reconcile `hr`."""
+    problems: list[str] = []
+    spec = hr.obj["spec"]
+
+    chart_ref = spec.get("chartRef")
+    if not chart_ref:
+        problems.append("has no chartRef")
+    elif chart_ref.get("kind") != "OCIRepository":
+        problems.append(f"chartRef kind '{chart_ref.get('kind')}' isn't checked")
+    else:
+        repo = (
+            OCIRepositoryCR.objects(kube_cluster.kube_client)
+            .filter(namespace=chart_ref.get("namespace", hr.namespace))
+            .get_or_none(name=chart_ref["name"])
+        )
+        if repo is None:
+            problems.append(f"OCIRepository '{chart_ref['name']}' doesn't exist")
+        elif not flux_cr_ready(repo):
+            problems.append(f"OCIRepository '{chart_ref['name']}' isn't ready")
+
+    for dep in spec.get("dependsOn", []):
+        dep_ns = dep.get("namespace", hr.namespace)
+        dep_hr = (
+            HelmReleaseCR.objects(kube_cluster.kube_client)
+            .filter(namespace=dep_ns)
+            .get_or_none(name=dep["name"])
+        )
+        if dep_hr is None:
+            problems.append(
+                f"dependsOn HelmRelease '{dep_ns}/{dep['name']}' doesn't exist"
+            )
+
+    problems.extend(values_from_problems(hr, kube_cluster))
+    return problems
+
+
 @pytest.fixture(scope="module")
 def check_helm_release_successful(
-    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
+    kube_cluster: Cluster,
+    gitops_deployment: None,
+    gitops_test_config: GitOpsTestConfig,
+    check_kustomizations_successful: None,
+    check_oci_repositories_successful: None,
 ) -> None:
-    check_flux_objects_successful(
-        kube_cluster, HelmReleaseCR, gitops_test_config.ignored_objects
+    # HelmReleases that can get ready in the test cluster have to. The others can't (see
+    #  needs_workload_cluster), so for every HelmRelease the test checks what helm-controller needs
+    #  from the management cluster before it gets to the workload cluster: the chart source, the
+    #  HelmReleases it depends on, and the values.
+    helm_releases = check_flux_objects_successful(
+        kube_cluster,
+        HelmReleaseCR,
+        gitops_test_config.ignored_objects,
+        exclude=lambda hr: needs_workload_cluster(hr, kube_cluster),
     )
+    problems: list[str] = []
+    for hr in helm_releases:
+        problems.extend(
+            f"HelmRelease '{hr.namespace}/{hr.name}': {p}"
+            for p in helm_release_problems(hr, kube_cluster)
+        )
+    logger.info(f"Checked the references of {len(helm_releases)} HelmReleases.")
+    if problems:
+        for p in problems:
+            logger.error(p)
+        pytest.fail(
+            f"{len(problems)} problems in {len(helm_releases)} HelmReleases:\n"
+            + "\n".join(problems)
+        )
 
 
 def test_helm_release_successful(check_helm_release_successful: None) -> None:
