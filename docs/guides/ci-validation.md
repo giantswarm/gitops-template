@@ -45,7 +45,8 @@ has to contain one or more YAML description of objects of Kubernetes objects you
 after your Kustomizations are deployed. Each object has to have `kind:`, `metadata.name` and `metadata.namespace`
 (if it's a namespace-scoped object) defined. The rest of object definition is arbitrary, but every property specified
 in the assertions file must be also present (and have exactly the same value) as the property of the object present
-in cluster.
+in cluster. Strings are compared as text, so a ConfigMap's `values` has to match line by line. Only trailing whitespace
+is ignored: whether the assertion writes a block as `|` or `|-`, or a line ends in a space, doesn't matter.
 
 ### Configuration
 

@@ -1,7 +1,7 @@
 import logging
 import os.path
 import time
-from typing import Type, TypeVar, Iterator, Union
+from typing import Any, Type, TypeVar, Iterator, Union
 
 import pykube
 import pytest
@@ -230,27 +230,37 @@ def get_plural_from_kind(kind: str) -> str:
     return endpoint
 
 
+def normalize_whitespace(value: Any) -> Any:
+    """Return `value` with trailing whitespace removed from every line of every string in it.
+
+    Multi-line strings, such as the `values` of a ConfigMap, are compared as text. Whether an
+    assertion file writes them as `|` or `|-`, or a line ends in a stray space, says nothing
+    about the values, so those differences are dropped before the comparison. Every other
+    difference in the text, including indentation, still fails it.
+    """
+    if isinstance(value, str):
+        return "\n".join(line.rstrip() for line in value.splitlines())
+    if isinstance(value, dict):
+        return {k: normalize_whitespace(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [normalize_whitespace(v) for v in value]
+    return value
+
+
 def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
     top_level_keys = cluster_obj.obj.keys()
     for key in top_level_keys:
         if key not in ass:
             continue
         diff = DeepDiff(
-            ass[key],
-            cluster_obj.obj[key],
+            normalize_whitespace(ass[key]),
+            normalize_whitespace(cluster_obj.obj[key]),
             ignore_order=True,
             threshold_to_diff_deeper=0,
         )
         # we have no difference between the expectation and the real object
         if len(diff) == 0:
             continue
-        # Check if 'diff' exists in the values_changed otherwise it is an empty space
-        if "values_changed" in diff:
-            vc = diff["values_changed"]
-            if "root['values']" in vc:
-                rv = vc["root['values']"]
-                if "diff" not in rv:
-                    continue
         # The only difference that we allow for is when the real object has some attributes that the
         #  expectation doesn't have. This means that if a diff of a kind different from 'dictionary_item_added'
         #  is detected, it's an error.

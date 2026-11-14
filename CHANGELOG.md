@@ -290,6 +290,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI: `validate.yaml` listed a `HEAD_BRANCH` placeholder among its push branches. It matched no branch and was
   documented nowhere; the push trigger now lists `main` only.
   ([#230](https://github.com/giantswarm/gitops-template/issues/230))
+- `tests/ats` compares a `values` key in the assertions with the object in the cluster. The comparison skipped a
+  changed `values` whenever DeepDiff printed no line diff for it, which covers every single-line value (such as a
+  Secret's base64 `values`) and every other change under the same top-level key, so a values regression passed. Only
+  trailing whitespace on each line is ignored now, which is what the skip was for: `|` against `|-` in an assertion
+  file. ([#222](https://github.com/giantswarm/gitops-template/issues/222))
 
 ## [0.1.0] Initial release
 
