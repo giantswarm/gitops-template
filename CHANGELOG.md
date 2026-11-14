@@ -242,6 +242,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   invalid manifest. The kubeconform failure set the error flag to `true`, which
   the final numeric check read as 0, so only yamllint failures failed the
   `validate` job. The script also runs with `set -u` now.
+- `tools/test-all-ff` prints its usage when it is not run from the repository
+  root. It called an undefined `usage` function there instead.
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.
