@@ -32,6 +32,10 @@ OCI_REPOSITORIES_READY_TIMEOUT_SEC = 180
 FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC = 15
 ASSERTIONS_DIR = "assertions"
 EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
+# objects expected in the workload cluster the -direct out-of-band example applies to
+WORKLOAD_CLUSTER_ASSERTIONS_DIR = os.path.join(
+    ASSERTIONS_DIR, "exists-in-workload-cluster"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +179,25 @@ def test_positive_assertions(
     check_helm_release_successful: None,
     check_kustomizations_successful: None,
 ) -> None:
-    assertions = load_assertions()
+    checked = check_assertions(kube_cluster.kube_client, load_assertions())
+    assert checked > 0, f"No assertions found in '{EXISTS_ASSERTIONS_DIR}'."
+
+
+def test_workload_cluster_assertions(
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    # The -direct out-of-band Kustomization applies its manifests to the workload cluster
+    #  through its kubeconfig Secret; the test's second kind cluster stands in for it.
+    checked = check_assertions(
+        workload_cluster, load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR)
+    )
+    assert checked > 0, f"No assertions found in '{WORKLOAD_CLUSTER_ASSERTIONS_DIR}'."
+
+
+def check_assertions(api: pykube.HTTPClient, assertions: dict[str, Iterator]) -> int:
+    """Check every assertion against the cluster `api` talks to; return how many there were."""
+    checked = 0
     for file, assert_list in assertions.items():
         # I'm out names for "assertion" :P
         for ass in assert_list:
@@ -188,12 +210,10 @@ def test_positive_assertions(
                 logger.error(msg)
                 raise Exception(msg)
             if "namespace" in ass["metadata"]:
-                cluster_obj = pykube.objects.NamespacedAPIObject(
-                    kube_cluster.kube_client, ass
-                )
+                cluster_obj = pykube.objects.NamespacedAPIObject(api, ass)
                 cluster_obj.obj["metadata"]["namespace"] = ass["metadata"]["namespace"]
             else:
-                cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
+                cluster_obj = pykube.objects.APIObject(api, ass)
             setattr(cluster_obj, "kind", ass["kind"])
             setattr(cluster_obj, "version", ass["apiVersion"])
             endpoint = get_plural_from_kind(ass["kind"])
@@ -201,6 +221,8 @@ def test_positive_assertions(
 
             reload_obj_from_cluster(cluster_obj)
             assert_objects(ass, cluster_obj, file)
+            checked += 1
+    return checked
 
 
 def reload_obj_from_cluster(
@@ -232,15 +254,15 @@ def reload_obj_from_cluster(
         )
 
 
-def load_assertions() -> dict[str, Iterator]:
+def load_assertions(assertions_dir: str = EXISTS_ASSERTIONS_DIR) -> dict[str, Iterator]:
     assertions = {}
-    walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
+    walk_dirs = os.walk(assertions_dir)
     for dir_path, _, filenames in walk_dirs:
         for file in filenames:
             rel_path = str(os.path.join(dir_path, file))
             if os.path.splitext(file)[1] != ".yaml":
                 logger.debug(
-                    f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
+                    f"Ignoring file '{rel_path}' in '{assertions_dir}' as it's not a file or it"
                     f" doesn't have a '.yaml' extension."
                 )
                 continue

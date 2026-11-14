@@ -88,14 +88,22 @@ This build step requires additional configuration using the following environmen
   they can be used; as such this variable needs to hold a comma separated list of namespaces, where you want
   to deploy `Kustomization` objects during the test (example: `default,org-org-name`)
 - `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) Flux objects that are expected to have a failed
-  state during the test (example - a Kustomization that targets an external cluster:
-  "org-org-name/mc-name-clusters-mapi-out-of-band-no-flux-direct"). [validate.yaml](../../.github/workflows/validate.yaml)
-  sets it with the `gitops_ignored_objects` input of the shared workflow. Update it there when you rename or add a
-  `Kustomization` that can't become ready in the test cluster.
+  state during the test (example: "org-org-name/my-kustomization"). [validate.yaml](../../.github/workflows/validate.yaml)
+  sets it with the `gitops_ignored_objects` input of the shared workflow, empty in this repository. Update it there
+  when you add a `Kustomization` that can't become ready in the test cluster.
 - `GITOPS_MASTER_GPG_KEY`: this variable needs to be a secret (unless you know what you're doing) and needs to contain
   a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
+
+### The workload cluster of the `-direct` out-of-band example
+
+`WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, through the
+`mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster has for it. The test creates a second `kind` cluster
+named `mapi-out-of-band-no-flux` and puts its kubeconfig in that Secret, so the `Kustomization` reconciles like on a
+management cluster. Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against that second
+cluster, the same way as the files in `tests/ats/assertions/exists`. Running the test locally needs `kind` in your
+`$PATH`.
 
 ## Superseded runs
 

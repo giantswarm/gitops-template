@@ -7,6 +7,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The kind test reconciles the `-direct` out-of-band example, which CI ignored because it targets a workload
+  cluster. `tests/ats` creates a second kind cluster as that workload cluster and puts its kubeconfig in the
+  `mapi-out-of-band-no-flux-kubeconfig` Secret the `Kustomization` reads. The `Kustomization` has to get ready, and
+  the files in `tests/ats/assertions/exists-in-workload-cluster` are checked against the second cluster.
+  `gitops_ignored_objects` in `validate.yaml` is empty now. ([#224](https://github.com/giantswarm/gitops-template/issues/224))
 - A CAPA cluster base in `bases/clusters/capa/release` for the `release-aws` chart, and an example workload
   cluster that uses it. The base is an overlay of `bases/clusters/capa/template`. The App's version is the
   Giant Swarm release, taken from the `release` variable, so the release lives in git. Use it for releases that
