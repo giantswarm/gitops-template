@@ -45,7 +45,7 @@ registry.
 1. Create the `OCIRepository` that points at the chart:
 
     ```sh
-    cat <<EOF > ocirepository.yaml
+    cat <<EOF > oci-repository.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     metadata:
@@ -65,7 +65,7 @@ registry.
 1. Create the `HelmRelease` that installs the chart into the workload cluster:
 
     ```sh
-    cat <<EOF > helmrelease.yaml
+    cat <<EOF > helm-release.yaml
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     metadata:
@@ -152,12 +152,17 @@ registry.
       disableNameSuffixHash: true
     kind: Kustomization
     resources:
-      - helmrelease.yaml
-      - ocirepository.yaml
+      - helm-release.yaml
+      - oci-repository.yaml
     EOF
     ```
 
 At this point, you should have a ready App Template.
+
+An App Template that installs several charts, like [envoy-gateway](/bases/apps/envoy-gateway/), gives each chart a
+directory of its own with a `helm-release.yaml` and an `oci-repository.yaml`, and lists all of them in one
+`kustomization.yaml`. Every file then holds a single resource, as the files `kubectl gs gitops` writes do, so commands
+like `yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` change only the chart you mean.
 
 ## Recommended next steps
 

@@ -27,13 +27,13 @@ export APP_NAME=APP_NAME
 
   App update and reconfiguration must be done in a correct resource:
 
-- the chart version lives in the `OCIRepository`, in the `ocirepository.yaml` file,
+- the chart version lives in the `OCIRepository`, in the `oci-repository.yaml` file,
 - how the chart is installed, for example the target namespace, timeouts or retries, lives in the `HelmRelease`, in
-  the `helmrelease.yaml` file,
+  the `helm-release.yaml` file,
 - plain text configuration lives in the `-user-values` ConfigMap, generated from the `override_config.yaml` file,
 - encrypted configuration lives in the `-user-secrets` Secret, in the `secret.enc.yaml` file.
 
-  For an App created from an [App Template](./app-templates.md), the `ocirepository.yaml` and `helmrelease.yaml`
+  For an App created from an [App Template](./app-templates.md), the `oci-repository.yaml` and `helm-release.yaml`
   files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change
   them for a single cluster, add a patch to the App's `kustomization.yaml`, see
   [Adding App using App Template](./add-app.md#adding-app-using-app-template).
@@ -51,7 +51,7 @@ export APP_NAME=APP_NAME
 1. Set the new chart version in the `OCIRepository`:
 
     ```sh
-    yq -i '.spec.ref.tag = "NEW_VERSION"' ocirepository.yaml
+    yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml
     ```
 
     To have Flux pick up new versions by itself, use a version range instead, see
@@ -65,7 +65,7 @@ export APP_NAME=APP_NAME
     cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
     ```
 
-1. Edit the `helmrelease.yaml`. For all the supported fields reference
+1. Edit the `helm-release.yaml`. For all the supported fields reference
    [the HelmRelease documentation](https://fluxcd.io/flux/components/helm/helmreleases/).
 
 ### Updating ConfigMap-based user values

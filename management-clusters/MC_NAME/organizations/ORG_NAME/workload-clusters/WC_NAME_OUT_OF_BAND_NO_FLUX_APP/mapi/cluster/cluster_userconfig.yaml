@@ -7,5 +7,5 @@ data:
           instanceType: m6i.4xlarge
 kind: ConfigMap
 metadata:
-  name: capi-wc-name-user-config
-  namespace: org-org-name
+  name: ${cluster_name}-cluster-userconfig
+  namespace: org-${organization}

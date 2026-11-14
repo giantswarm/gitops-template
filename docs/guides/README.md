@@ -23,3 +23,5 @@ OCI registry, and the `HelmRelease` installs it into the workload cluster. See
 Repository:
 
 - [Configuring extra validation and diff previews on GitHub](./ci-validation.md)
+- [Move a fork to the kubectl-gs file and resource names](./kubectl-gs-names.md), for repositories forked before
+  the template used them.

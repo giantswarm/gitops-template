@@ -4,7 +4,7 @@ metadata:
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
   name: capi-wc-name
   namespace: org-org-name
@@ -17,12 +17,12 @@ spec:
     remediation:
       remediateLastFailure: false
       retries: 10
-  interval: 5m
+  interval: 5m0s
   releaseName: capi-wc-name
   serviceAccountName: automation
   storageNamespace: org-org-name
   targetNamespace: org-org-name
-  timeout: 10m
+  timeout: 10m0s
   upgrade:
     remediation:
       remediateLastFailure: true
@@ -33,5 +33,5 @@ spec:
       name: capi-wc-name-config
       valuesKey: values
     - kind: ConfigMap
-      name: capi-wc-name-user-config
+      name: capi-wc-name-cluster-userconfig
       valuesKey: values

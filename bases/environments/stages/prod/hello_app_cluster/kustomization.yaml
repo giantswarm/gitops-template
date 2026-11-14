@@ -3,8 +3,8 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - behavior: replace
     files:
-      - values=cluster_user_config.yaml
-    name: ${cluster_name}-user-config
+      - values=cluster_userconfig.yaml
+    name: ${cluster_name}-cluster-userconfig
     namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true

@@ -10,5 +10,5 @@ patches:
     target:
       kind: HelmRelease
 resources:
-  - cert-manager/helmrelease.yaml
-  - cert-manager/ocirepository.yaml
+  - cert-manager/helm-release.yaml
+  - cert-manager/oci-repository.yaml

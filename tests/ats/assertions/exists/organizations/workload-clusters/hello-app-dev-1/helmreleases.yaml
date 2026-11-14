@@ -5,7 +5,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-dev-1-gateway-api-crds
   namespace: org-org-name
@@ -52,7 +52,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-dev-1-envoy-gateway
   namespace: org-org-name
@@ -102,7 +102,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-dev-1-gateway-api-config
   namespace: org-org-name
@@ -151,7 +151,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-dev-1
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-dev-1-hello-world
   namespace: org-org-name
@@ -200,7 +200,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-hello-app-dev-1
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-dev-1
   namespace: org-org-name
@@ -213,12 +213,12 @@ spec:
     remediation:
       remediateLastFailure: false
       retries: 10
-  interval: 5m
+  interval: 5m0s
   releaseName: hello-app-dev-1
   serviceAccountName: automation
   storageNamespace: org-org-name
   targetNamespace: org-org-name
-  timeout: 10m
+  timeout: 10m0s
   upgrade:
     remediation:
       remediateLastFailure: true
@@ -229,5 +229,5 @@ spec:
       name: hello-app-dev-1-config
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-dev-1-user-config
+      name: hello-app-dev-1-cluster-userconfig
       valuesKey: values

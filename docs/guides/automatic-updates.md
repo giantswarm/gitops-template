@@ -21,7 +21,7 @@ reports the version it installed.
 ## Example
 
 An example of an App with automated updates is available in
-[WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates/ocirepository.yaml).
+[WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates/oci-repository.yaml).
 
 ## Export environment variables
 
@@ -48,8 +48,18 @@ export APP_NAME=APP_NAME
    but below the next major version, which might bring breaking changes:
 
     ```sh
-    yq -i '.spec.ref = {"semver": ">=3.0.0 <4.0.0"}' ocirepository.yaml
+    yq -i '.spec.ref = {"semver": ">=3.0.0 <4.0.0"}' oci-repository.yaml
     ```
+
+    `kubectl gs gitops add automatic-update` makes the same change. Run it from the repository root:
+
+    ```sh
+    kubectl gs gitops add automatic-update --management-cluster ${MC_NAME} --organization ${ORG_NAME} \
+      --workload-cluster ${WC_NAME} --app ${APP_NAME} --version-range '>=3.0.0 <4.0.0'
+    ```
+
+    It needs the App's `OCIRepository` in `oci-repository.yaml` in the App directory, so it doesn't work for Apps
+    created from an App Template, see below.
 
     The resulting file should look similar to this:
 
@@ -147,7 +157,7 @@ credentials to read it.
 1. Reference the Secret in the `OCIRepository`:
 
     ```sh
-    yq -i ".spec.secretRef.name = \"${WC_NAME}-${APP_NAME}-pull-secret\"" ocirepository.yaml
+    yq -i ".spec.secretRef.name = \"${WC_NAME}-${APP_NAME}-pull-secret\"" oci-repository.yaml
     ```
 
 1. Add the Secret to the resources of the App's `kustomization.yaml`:

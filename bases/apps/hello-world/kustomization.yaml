@@ -8,5 +8,5 @@ generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 resources:
-  - helmrelease.yaml
-  - ocirepository.yaml
+  - helm-release.yaml
+  - oci-repository.yaml

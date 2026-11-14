@@ -4,11 +4,11 @@ commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
 patches:
-  - path: patch_user_config.yaml
+  - path: patch_cluster_userconfig.yaml
     target:
       group: helm.toolkit.fluxcd.io
       kind: HelmRelease
       name: \${cluster_name}
 resources:
   - ../../../../../../../../bases/clusters/capa/template
-  - cluster_user_config.yaml
+  - cluster_userconfig.yaml

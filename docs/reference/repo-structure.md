@@ -139,6 +139,22 @@ If your `kubectl-gs` doesn't have the `check` and `upgrade` commands, update it 
 | `ORG_NAME` | The organization's name, in lowercase and without the `org-` prefix |
 | `WC_NAME` | Any name, but the workload cluster's name is clearest |
 
+Files and resources use the names `kubectl gs gitops` generates, so it recognizes them in `gitops check`,
+`gitops upgrade` and `gitops add automatic-update`:
+
+| What | Name |
+| --- | --- |
+| Management cluster Flux `Kustomization` | `MC_NAME-gitops`, in `MC_NAME.yaml` |
+| Workload cluster Flux `Kustomization` | `MC_NAME-clusters-WC_NAME`, in `WC_NAME.yaml` |
+| Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
+| An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `mapi/apps/APP_NAME` |
+| A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `mapi/cluster` |
+| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `mapi/cluster` |
+| A cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER/template` |
+
+Repositories forked before the template used these names can move to them with
+[Move a fork to the kubectl-gs file and resource names](../guides/kubectl-gs-names.md).
+
 ## Optional components
 
 ### `[OTHER_RESOURCES]`

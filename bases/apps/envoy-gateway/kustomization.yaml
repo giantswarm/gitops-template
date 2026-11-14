@@ -1,3 +1,22 @@
+# Envoy Gateway is installed as three charts, in this order:
+#   gateway-api-crds   -> the Gateway API CRDs (Gateway, HTTPRoute, ...)
+#   envoy-gateway      -> the Envoy Gateway controller
+#   gateway-api-config -> the `giantswarm-default` GatewayClass and Gateway
+# Each chart has its own directory with a `helm-release.yaml` and an
+# `oci-repository.yaml`, the file names `kubectl gs gitops` uses for an app.
+# The HelmReleases run on the management cluster and install into the workload
+# cluster through its kubeconfig secret. The fields follow what
+# giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR, except
+# install retries and `createNamespace`. The OCIRepositories pin the chart
+# version in `spec.ref.tag`.
+#
+# Values are merged in `valuesFrom` order, later entries win (maps are merged,
+# lists are replaced):
+#   1. ${cluster_name}-cluster-values        cluster values (baseDomain, provider, ...),
+#                                            created for every workload cluster
+#   2. ${cluster_name}-<chart>-values        this App Template's defaults
+#   3. ${cluster_name}-<chart>-user-values   (optional) overrides, like an App CR's userConfig
+#   4. ${cluster_name}-<chart>-user-secrets  (optional) the same, as an encrypted Secret
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 configMapGenerator:
@@ -14,5 +33,9 @@ generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 resources:
-  - ocirepositories.yaml
-  - helmreleases.yaml
+  - gateway-api-crds/oci-repository.yaml
+  - envoy-gateway/oci-repository.yaml
+  - gateway-api-config/oci-repository.yaml
+  - gateway-api-crds/helm-release.yaml
+  - envoy-gateway/helm-release.yaml
+  - gateway-api-config/helm-release.yaml

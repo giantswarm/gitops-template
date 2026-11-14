@@ -5,7 +5,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-gateway-api-crds
   namespace: org-org-name
@@ -21,7 +21,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-envoy-gateway
   namespace: org-org-name
@@ -37,7 +37,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-gateway-api-config
   namespace: org-org-name
@@ -53,7 +53,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central-hello-world
   namespace: org-org-name
@@ -70,14 +70,14 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central
   namespace: org-org-name
 spec:
-  interval: 10m
+  interval: 10m0s
   provider: generic
   ref:
     tag: "36.2.0"
-  timeout: 60s
+  timeout: 1m0s
   url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

@@ -20,7 +20,11 @@ The instructions respect the [repository structure](../reference/repo-structure.
 
 ## Example
 
-[bases/clusters/capa/template](/bases/clusters/capa/template) is the base for CAPA clusters.
+[bases/clusters/capa/template](/bases/clusters/capa/template) is the base for CAPA clusters. It has the files
+`kubectl gs gitops add base --provider capa` writes, described [below](#create-a-base-for-another-provider-optional),
+with two deliberate differences in `cluster_config.yaml`: it sets `global.metadata.description` from
+`${cluster_description}`, and it leaves out the empty `nodepool0` node pool. The base's
+[readme](/bases/clusters/capa/template/readme.md#differences-to-kubectl-gs-gitops-add-base) explains why.
 
 ## Choose a base
 

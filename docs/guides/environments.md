@@ -243,8 +243,8 @@ buildMetadata: [originAnnotations]
 configMapGenerator:
   - behavior: replace
     files:
-      - values=cluster_user_config.yaml
-    name: \${cluster_name}-user-config
+      - values=cluster_userconfig.yaml
+    name: \${cluster_name}-cluster-userconfig
     namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
@@ -258,11 +258,11 @@ It is similar to the staging cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
 
-Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-user-config` `ConfigMap` of the
+Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-cluster-userconfig` `ConfigMap` of the
 cluster template with extra settings for the production cluster: bigger nodes, and more of them.
 
 ```sh
-cat <<EOF > cluster_user_config.yaml
+cat <<EOF > cluster_userconfig.yaml
 global:
   nodePools:
     nodepool0:
@@ -395,7 +395,7 @@ cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: clusters-hello-app-dev-1
+  name: ${MC_NAME}-clusters-hello-app-dev-1
   namespace: default
 spec:
   interval: 1m
@@ -473,7 +473,7 @@ Let's set up a workload cluster both `eu-central` and `us-west` regions that we 
 
 Note that we add the region's values to the cluster's `HelmRelease` as another `valuesFrom` entry. Flux merges the
 entries in order, so the region's values go after the base values and before the cluster's own
-`${cluster_name}-user-config`.
+`${cluster_name}-cluster-userconfig`.
 
 And the kustomization for this cluster looks like.
 

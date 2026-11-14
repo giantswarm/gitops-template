@@ -219,7 +219,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     **Note**, values are not part of this patch. A patch cannot add a shared entry to `spec.valuesFrom`: `kustomize`
     has no merge strategy for `HelmRelease`, so it falls back to a JSON merge patch, which replaces a list rather than
     appending to it. Instead every `HelmRelease` lists the same layers itself, see
-    [bases/apps/hello-world](/bases/apps/hello-world/helmrelease.yaml): the `${cluster_name}-cluster-values` ConfigMap
+    [bases/apps/hello-world](/bases/apps/hello-world/helm-release.yaml): the `${cluster_name}-cluster-values` ConfigMap
     (`baseDomain`, `provider`, ...) that an App CR used to get from App Platform, the app's defaults, and optional
     `-user-values` / `-user-secrets` overrides. A `HelmRelease` that references a required ConfigMap or Secret which
     does not exist yet stays not-ready and is retried, so there is no race with the order Flux creates objects in.
