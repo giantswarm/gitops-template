@@ -1,0 +1,50 @@
+# GitHub only closes issues named with `Closes #N` when a pull request merges
+# into the default branch. While the rebuild collects changes on
+# `template-rebuild`, this workflow closes them instead.
+#
+# Remove this workflow before `template-rebuild` merges into `main`.
+name: close-linked-issues
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [template-rebuild]
+
+permissions: {}
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Close issues named in the pull request body
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          # Same keywords as GitHub: close, fix and resolve in any tense. Every
+          # `#N` on a line that has a keyword counts, so `Closes #1, #2` closes
+          # both. Ranges such as `#1 to #4` only close the two named issues.
+          issues=$(printf '%s\n' "${PR_BODY}" |
+            grep -iE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b' |
+            grep -oE '#[0-9]+' | tr -d '#' | sort -un || true)
+          if [ -z "${issues}" ]; then
+            echo "No linked issues in #${PR_NUMBER}."
+            exit 0
+          fi
+          for n in ${issues}; do
+            state=$(gh issue view "${n}" --json state --jq .state 2>/dev/null || echo MISSING)
+            case "${state}" in
+              OPEN)
+                gh issue close "${n}" --reason completed \
+                  --comment "Done in #${PR_NUMBER}, merged into \`template-rebuild\`."
+                ;;
+              CLOSED) echo "#${n} is already closed." ;;
+              *) echo "#${n} is not an issue in this repository, skipping." ;;
+            esac
+          done
