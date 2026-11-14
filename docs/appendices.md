@@ -34,7 +34,9 @@ For `yq` the [github.com/mikefarah/yq](https://github.com/mikefarah/yq/) version
 You need the following tools installed to use [test-all-ff](/tools/test-all-ff) script.
 
 - `yamllint` of [github.com/adrienverge/yamllint](https://github.com/adrienverge/yamllint)
-- `kubeconform` of [github.com/yannh/kubeconform](https://github.com/yannh/kubeconform)
+- `kubeconform` of [github.com/yannh/kubeconform](https://github.com/yannh/kubeconform); CI uses 0.8.0
+- `curl`, `sha256sum` and `tar`, to fetch the Flux CRD schemas. See [tools](/tools/README.md#test-all-ff) for the
+  schema sources and versions.
 
 ## Secret store for testing
 

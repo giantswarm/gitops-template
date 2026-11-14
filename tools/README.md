@@ -7,7 +7,8 @@ The tools provided here may require the following external tools
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [yq](https://github.com/mikefarah/yq)
 - [yamllint](https://github.com/adrienverge/yamllint)
-- [kubeconform](https://github.com/yannh/kubeconform)
+- [kubeconform](https://github.com/yannh/kubeconform); CI uses 0.8.0
+- `curl`, `sha256sum` and `tar`, to fetch the Flux CRD schemas
 - [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli)
 - [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/)
 
@@ -26,6 +27,20 @@ This tool will run through `yamllint` and `kubeconform` to verify your manifests
 succeed in the cluster.
 
 It runs `fake-flux` under the hood for each kustomization it finds
+
+`kubeconform` runs with `-strict`, so unknown fields fail, and without `-ignore-missing-schemas`, so an object whose
+kind has no schema fails instead of being skipped. The script looks up schemas in this order:
+
+1. Kubernetes `v1.36.5`, the version of the Giant Swarm management clusters, from
+   [yannh/kubernetes-json-schema](https://github.com/yannh/kubernetes-json-schema) at a pinned commit.
+2. Flux `v2.7.5`, the Flux that `flux-app` 1.12.2 runs on the management clusters, from the `crd-schemas.tar.gz` that Flux
+   publishes with each release. The script downloads it once, checks its SHA-256 and keeps it under
+   `${TMPDIR:-/tmp}/gitops-template-schemas`.
+3. Giant Swarm CRDs such as `Organization`, from [giantswarm/json-schema](https://github.com/giantswarm/json-schema)
+   at a pinned commit.
+
+The versions are variables at the top of `test-all-ff`. If you add a resource whose kind is in none of these sources,
+add a `-schema-location` for it to the script.
 
 ### test-all-ff usage
 
