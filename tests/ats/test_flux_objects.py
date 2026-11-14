@@ -103,9 +103,23 @@ def check_kustomizations_successful(
     kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> None:
     try:
-        check_flux_objects_successful(
-            kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
-        )
+        # The root Kustomizations create the cluster ones, so check again until no new
+        #  Kustomization shows up. Otherwise the later checks can run before Flux has applied
+        #  what the cluster Kustomizations create.
+        count = 0
+        while True:
+            check_flux_objects_successful(
+                kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
+            )
+            new_count = len(
+                KustomizationCR.objects(kube_cluster.kube_client)
+                .filter(namespace=pykube.all)
+                .all()
+                .response["items"]
+            )
+            if new_count == count:
+                break
+            count = new_count
     except TimeoutError:
         # say which Kustomization didn't get ready, and why
         for k in KustomizationCR.objects(kube_cluster.kube_client).filter(
