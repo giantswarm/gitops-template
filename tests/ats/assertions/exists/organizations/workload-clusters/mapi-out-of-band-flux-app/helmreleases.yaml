@@ -6,7 +6,7 @@ metadata:
     giantswarm.io/cluster: mapi-out-of-band-flux-app
     giantswarm.io/managed-by: flux
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-mapi-out-of-band-flux-app
     kustomize.toolkit.fluxcd.io/namespace: default
   name: mapi-out-of-band-flux-app-hello-world
   namespace: org-org-name
@@ -55,7 +55,7 @@ metadata:
   labels:
     giantswarm.io/cluster: mapi-out-of-band-flux-app
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-mapi-out-of-band-flux-app
     kustomize.toolkit.fluxcd.io/namespace: default
   name: mapi-out-of-band-flux-app-hello-world-standalone
   namespace: org-org-name
@@ -101,7 +101,7 @@ metadata:
   labels:
     giantswarm.io/cluster: mapi-out-of-band-flux-app
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-mapi-out-of-band-flux-app
     kustomize.toolkit.fluxcd.io/namespace: default
   name: mapi-out-of-band-flux-app-hello-world-app-auto
   namespace: org-org-name
@@ -147,7 +147,7 @@ metadata:
   labels:
     giantswarm.io/cluster: mapi-out-of-band-flux-app
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-mapi-out-of-band-flux-app
     kustomize.toolkit.fluxcd.io/namespace: default
   name: mapi-out-of-band-flux-app-flux
   namespace: org-org-name

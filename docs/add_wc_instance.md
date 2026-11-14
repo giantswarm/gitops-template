@@ -22,6 +22,10 @@ There's a `release-aws` chart for every release from v34.0.0 on. Older releases 
 none. They need the `cluster-aws` chart as an App CR, which this repository no longer supports, see the
 [App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
 
+The steps below write `cluster_userconfig.yaml`, `patch_cluster_userconfig.yaml` and a `${cluster_name}-cluster-userconfig`
+ConfigMap, the same names `kubectl gs gitops add workload-cluster --cluster-user-config` uses, so you can also let the
+CLI create them.
+
 1. Export environment variables:
 
     ```sh
@@ -85,14 +89,14 @@ none. They need the `cluster-aws` chart as an App CR, which this repository no l
 1. Create a `ConfigMap` out of the values overrides:
 
     ```sh
-    cat <<EOF > cluster_user_config.yaml
+    cat <<EOF > cluster_userconfig.yaml
     apiVersion: v1
     data:
       values: |
     $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
     kind: ConfigMap
     metadata:
-      name: \${cluster_name}-user-config
+      name: \${cluster_name}-cluster-userconfig
       namespace: org-\${organization}
     EOF
     ```
@@ -101,12 +105,12 @@ none. They need the `cluster-aws` chart as an App CR, which this repository no l
    list win, so yours override the base's:
 
     ```sh
-    cat <<EOF > patch_user_config.yaml
+    cat <<EOF > patch_cluster_userconfig.yaml
     - op: add
       path: /spec/valuesFrom/-
       value:
         kind: ConfigMap
-        name: \${cluster_name}-user-config
+        name: \${cluster_name}-cluster-userconfig
         valuesKey: values
     EOF
     ```
@@ -120,14 +124,14 @@ none. They need the `cluster-aws` chart as an App CR, which this repository no l
       giantswarm.io/managed-by: flux
     kind: Kustomization
     patches:
-      - path: patch_user_config.yaml
+      - path: patch_cluster_userconfig.yaml
         target:
           group: helm.toolkit.fluxcd.io
           kind: HelmRelease
           name: \\\${cluster_name}
     resources:
       - ../../../../../../../../${CLUSTER_PATH}
-      - cluster_user_config.yaml
+      - cluster_userconfig.yaml
     EOF
     ```
 

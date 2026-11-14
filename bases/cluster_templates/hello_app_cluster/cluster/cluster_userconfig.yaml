@@ -3,5 +3,5 @@ data:
   values: ""
 kind: ConfigMap
 metadata:
-  name: ${cluster_name}-user-config
+  name: ${cluster_name}-cluster-userconfig
   namespace: org-${organization}

@@ -16,5 +16,9 @@ jobs:
       # Matches [requires] python_version in tests/ats/Pipfile. The shared
       # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
       python_version: "3.12"
+      # The out-of-band Kustomization targets a workload cluster the kind test
+      # cluster doesn't have, so it never becomes ready. The shared workflow's
+      # default still names it by its old name.
+      gitops_ignored_objects: "org-org-name/mc-name-clusters-mapi-out-of-band-no-flux-direct"
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

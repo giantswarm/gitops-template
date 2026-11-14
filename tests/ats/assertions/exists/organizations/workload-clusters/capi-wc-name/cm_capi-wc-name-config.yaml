@@ -2,10 +2,16 @@ apiVersion: v1
 data:
   values: |
     global:
+      connectivity:
+        network: {}
+        topology: {}
+      controlPlane: {}
       metadata:
         description: description
         name: capi-wc-name
         organization: org-name
+        preventDeletion: false
+      providerSpecific: {}
 kind: ConfigMap
 metadata:
   name: capi-wc-name-config

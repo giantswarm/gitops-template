@@ -261,7 +261,7 @@ the Giant Swarm release, so the release the cluster runs is stored in Git. For o
 Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with slightly different file names. It needs kubectl-gs 6.0.0 or newer. After you pick a
+> creates the same cluster, with the same file and resource names. It needs kubectl-gs 6.0.0 or newer. After you pick a
 > release in the first step below, run:
 >
 > ```sh
@@ -415,10 +415,12 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 >   --values-from ConfigMap/${WC_NAME}-cluster-values:values \
 >   --values-from ConfigMap/${WC_NAME}-hello-world-values:values \
 >   --values-from Secret/${WC_NAME}-hello-world-user-secrets:values:optional \
->   --dry-run | APP_DIR=${APP_DIR:?run the first step below} yq -s 'strenv(APP_DIR) + "/" + (.kind | downcase) + ".yaml"'
+>   --dry-run | APP_DIR=${APP_DIR:?run the first step below} \
+>   yq -s '.kind as $k | strenv(APP_DIR) + "/" +
+>     {"HelmRelease": "helm-release", "OCIRepository": "oci-repository"}[$k] + ".yaml"'
 > ```
 >
-> This writes `ocirepository.yaml` and `helmrelease.yaml`. Then continue with the `values.yaml` step.
+> This writes `oci-repository.yaml` and `helm-release.yaml`. Then continue with the `values.yaml` step.
 
 1. Save the app's directory for the next commands:
 
@@ -435,7 +437,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 1. Create the `OCIRepository`, which sets the chart and its version:
 
     ```sh
-    cat <<'EOF' > ${APP_DIR}/ocirepository.yaml
+    cat <<'EOF' > ${APP_DIR}/oci-repository.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     metadata:
@@ -452,7 +454,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 1. Create the `HelmRelease`, which installs the chart into the workload cluster:
 
     ```sh
-    cat <<'EOF' > ${APP_DIR}/helmrelease.yaml
+    cat <<'EOF' > ${APP_DIR}/helm-release.yaml
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     metadata:
@@ -513,8 +515,8 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     generatorOptions:
       disableNameSuffixHash: true
     resources:
-      - helmrelease.yaml
-      - ocirepository.yaml
+      - oci-repository.yaml
+      - helm-release.yaml
     EOF
     ```
 
@@ -600,7 +602,7 @@ Learn more:
 To update an app, change its files and push. First, upgrade the chart:
 
 ```sh
-yq -i '.spec.ref.tag = "3.2.4"' ${APP_DIR}/ocirepository.yaml
+yq -i '.spec.ref.tag = "3.2.4"' ${APP_DIR}/oci-repository.yaml
 ```
 
 Next, change a value so that at least two replicas run:

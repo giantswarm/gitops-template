@@ -6,10 +6,10 @@ commonLabels:
 kind: Kustomization
 resources:
   - flux/configmap.yaml
-  - flux/helmrelease.yaml
-  - flux/ocirepository.yaml
-  - hello-world/helmrelease.yaml
-  - hello-world/ocirepository.yaml
-  - hello-world-automatic-updates/helmrelease.yaml
-  - hello-world-automatic-updates/ocirepository.yaml
+  - flux/helm-release.yaml
+  - flux/oci-repository.yaml
+  - hello-world/helm-release.yaml
+  - hello-world/oci-repository.yaml
+  - hello-world-automatic-updates/helm-release.yaml
+  - hello-world-automatic-updates/oci-repository.yaml
   - envoy-gateway-from-template/

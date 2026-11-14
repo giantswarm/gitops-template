@@ -43,6 +43,25 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Breaking:** the template uses the file and resource names `kubectl gs gitops` 6.0.4 generates, so
+  `kubectl gs gitops check --adopt` records every example app and `kubectl gs gitops add automatic-update` works on
+  them. Forks keep working as they are; to move one, follow
+  [Move a fork to the kubectl-gs file and resource names](docs/guides/kubectl-gs-names.md).
+  - Apps keep their `HelmRelease` in `helm-release.yaml` and their `OCIRepository` in `oci-repository.yaml`, instead
+    of `helmrelease.yaml` and `ocirepository.yaml`. The envoy-gateway App Template has a directory per chart instead
+    of `helmreleases.yaml` and `ocirepositories.yaml`, so every file holds one resource.
+    ([#197](https://github.com/giantswarm/gitops-template/issues/197))
+  - A workload cluster's values are in `cluster_userconfig.yaml` and `patch_cluster_userconfig.yaml`, and the
+    ConfigMap is `${cluster_name}-cluster-userconfig`, instead of `cluster_user_config.yaml`, `patch_user_config.yaml`
+    and `${cluster_name}-user-config`. ([#198](https://github.com/giantswarm/gitops-template/issues/198))
+  - The workload cluster Flux `Kustomization`s are named `MC_NAME-clusters-WC_NAME`, for example
+    `mc-name-clusters-capi-wc-name` instead of `clusters-capi-wc-name`. The CI validation ignores the out-of-band
+    `Kustomization` by its new name through the `gitops_ignored_objects` input.
+    ([#199](https://github.com/giantswarm/gitops-template/issues/199))
+  - `bases/clusters/capa/template` has the files `kubectl gs gitops add base --provider capa` writes: one
+    `cluster.yaml` with the `OCIRepository` and the `HelmRelease`, with the CLI's field values, and a
+    `cluster_config.yaml` with the CLI's defaults. It keeps `global.metadata.description` and leaves out the empty
+    `nodepool0` node pool, see its readme. ([#200](https://github.com/giantswarm/gitops-template/issues/200))
 - The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
   repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
   is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported.

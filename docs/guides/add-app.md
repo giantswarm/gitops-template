@@ -77,7 +77,7 @@ template uses, for example `hello-world` for [bases/apps/hello-world](/bases/app
    use a chart from another registry:
 
     ```sh
-    cat <<EOF > ocirepository.yaml
+    cat <<EOF > oci-repository.yaml
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     metadata:
@@ -97,7 +97,7 @@ template uses, for example `hello-world` for [bases/apps/hello-world](/bases/app
 1. Create the `HelmRelease` that installs the chart into the workload cluster:
 
     ```sh
-    cat <<EOF > helmrelease.yaml
+    cat <<EOF > helm-release.yaml
     apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     metadata:
@@ -168,8 +168,8 @@ template uses, for example `hello-world` for [bases/apps/hello-world](/bases/app
     kind: Kustomization
     namespace: org-\${organization}
     resources:
-      - helmrelease.yaml
-      - ocirepository.yaml
+      - helm-release.yaml
+      - oci-repository.yaml
       - secret.enc.yaml # only if providing encrypted values
     EOF
     ```

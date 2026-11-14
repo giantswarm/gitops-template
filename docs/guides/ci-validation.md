@@ -44,7 +44,9 @@ This build step requires additional configuration using the following environmen
   to deploy `Kustomization` objects during the test (example: `default,org-org-name`)
 - `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) Flux objects that are expected to have a failed
   state during the test (example - a Kustomization that targets an external cluster:
-  "default/clusters-mapi-out-of-band-no-flux-direct")
+  "org-org-name/mc-name-clusters-mapi-out-of-band-no-flux-direct"). [validate.yaml](../../.github/workflows/validate.yaml)
+  sets it with the `gitops_ignored_objects` input of the shared workflow. Update it there when you rename or add a
+  `Kustomization` that can't become ready in the test cluster.
 - `GITOPS_MASTER_GPG_KEY`: this variable needs to be a secret (unless you know what you're doing) and needs to contain
   a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
