@@ -1,5 +1,10 @@
-# Required check for pull requests into `template-rebuild`: passes only when
-# the repository owner has approved the pull request's current content.
+# Owner approval gate for pull requests into `template-rebuild`.
+#
+# The result is reported as the commit status `owner-approval-status` on the
+# pull request's head commit, which is the required check. A commit status,
+# unlike a job's check run, is replaced by the next status with the same
+# context, so the run triggered by the owner's review overrides the earlier run
+# triggered by the push.
 #
 # To approve, the owner submits a pull request review (type "Comment" works)
 # whose body contains a line `/approve`. A later review with `/unapprove`, or
@@ -27,19 +32,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  owner-approval:
+  evaluate:
     if: github.event.pull_request.base.ref == 'template-rebuild'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
+      statuses: write
     env:
       APPROVER: mproffitt
+      CONTEXT: owner-approval-status
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       BASE_REF: ${{ github.event.pull_request.base.ref }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Check out the pull request with history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,10 +56,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Find the owner's latest approval
-        id: approval
+      - name: Evaluate the owner's approval
+        id: evaluate
         run: |
           set -euo pipefail
+          verdict() {
+            echo "state=$1" >> "${GITHUB_OUTPUT}"
+            echo "description=$2" >> "${GITHUB_OUTPUT}"
+            echo "$2"
+          }
+
           # Reviews come back oldest first. Track the approval state in order.
           approved=""
           while IFS=$'\t' read -r state commit body64; do
@@ -68,36 +82,45 @@ jobs:
           done < <(gh api --paginate "repos/${GH_REPO}/pulls/${PR_NUMBER}/reviews" \
             --jq '.[] | select(.user.login == env.APPROVER)
                   | [.state, .commit_id, ((.body // "") | @base64)] | @tsv')
-          if [ -z "${approved}" ]; then
-            echo "::error::No /approve review from ${APPROVER} on #${PR_NUMBER}."
-            exit 1
-          fi
-          echo "commit=${approved}" >> "${GITHUB_OUTPUT}"
-          echo "Approved at ${approved}."
 
-      - name: Compare the approved change with the current one
-        env:
-          APPROVED_SHA: ${{ steps.approval.outputs.commit }}
-        run: |
-          set -euo pipefail
-          git fetch --quiet --no-tags origin "${BASE_REF}"
-          if ! git cat-file -e "${APPROVED_SHA}^{commit}" 2>/dev/null; then
-            git fetch --quiet --no-tags origin "${APPROVED_SHA}" || {
-              echo "::error::The approved commit ${APPROVED_SHA} can't be fetched any more. Approve again."
-              exit 1
-            }
+          if [ -z "${approved}" ]; then
+            verdict failure "Waiting for an /approve review from ${APPROVER}"
+            exit 0
           fi
+
+          git fetch --quiet --no-tags origin "${BASE_REF}"
+          if ! git cat-file -e "${approved}^{commit}" 2>/dev/null \
+            && ! git fetch --quiet --no-tags origin "${approved}"; then
+            verdict failure "Approved commit ${approved:0:7} can't be fetched; approve again"
+            exit 0
+          fi
+
           change_id() {
             local base
             base=$(git merge-base "origin/${BASE_REF}" "$1")
             git diff -U0 "${base}" "$1" | git patch-id --stable | cut -d' ' -f1
           }
-          approved_id=$(change_id "${APPROVED_SHA}")
+          approved_id=$(change_id "${approved}")
           current_id=$(change_id "${HEAD_SHA}")
-          echo "approved ${APPROVED_SHA}: ${approved_id:-<empty>}"
+          echo "approved ${approved}: ${approved_id:-<empty>}"
           echo "current  ${HEAD_SHA}: ${current_id:-<empty>}"
-          if [ -z "${current_id}" ] || [ "${approved_id}" != "${current_id}" ]; then
-            echo "::error::The pull request changed since ${APPROVER} approved it. Review it again and approve."
-            exit 1
+
+          if [ -n "${current_id}" ] && [ "${approved_id}" = "${current_id}" ]; then
+            verdict success "Approved by ${APPROVER} at ${approved:0:7}; change unchanged"
+          else
+            verdict failure "Changed since ${APPROVER}'s approval at ${approved:0:7}; approve again"
           fi
-          echo "The approved change is unchanged."
+
+      - name: Report the commit status
+        if: always()
+        env:
+          STATE: ${{ steps.evaluate.outputs.state || 'error' }}
+          DESCRIPTION: ${{ steps.evaluate.outputs.description || 'Approval check failed to run' }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${GH_REPO}/statuses/${HEAD_SHA}" \
+            -f state="${STATE}" \
+            -f context="${CONTEXT}" \
+            -f description="${DESCRIPTION:0:140}" \
+            -f target_url="${RUN_URL}" > /dev/null
+          echo "${CONTEXT}: ${STATE}"
