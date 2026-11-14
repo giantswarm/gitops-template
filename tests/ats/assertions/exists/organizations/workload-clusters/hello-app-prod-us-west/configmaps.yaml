@@ -1,0 +1,82 @@
+---
+apiVersion: v1
+data:
+  values: |
+    global:
+      connectivity:
+        network: {}
+        topology: {}
+      controlPlane: {}
+      metadata:
+        description: description
+        name: hello-app-prod-us-west
+        organization: org-name
+        preventDeletion: false
+      providerSpecific: {}
+kind: ConfigMap
+metadata:
+  name: hello-app-prod-us-west-config
+  namespace: org-org-name
+---
+# The region values are left out on purpose. The us_west overlay still sets the eu-west-1a
+# availability zone (#204) and names its node pool `xxxxx` instead of the stage's `nodepool0`
+# (#206). Add `data` here when those are fixed. The HelmRelease assertion checks that the
+# region values are read between the cluster's base values and its user values.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-us-west-region-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    autoscaling:
+      minReplicas: 3
+    ingress:
+      enabled: false
+    route:
+      enabled: true
+      kind: HTTPRoute
+      parentRefs: # has to be in sync with the Gateway served by the cluster's Envoy Gateway
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames: # under the cluster's base domain and in the Gateway's `listeners.https.subdomains`
+        - "hello.{{ .Values.baseDomain }}"
+kind: ConfigMap
+metadata:
+  name: hello-app-prod-us-west-hello-world-values
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    global:
+      nodePools:
+        nodepool0:
+          instanceType: m6a.8xlarge
+          maxSize: 50
+          minSize: 10
+kind: ConfigMap
+metadata:
+  name: hello-app-prod-us-west-cluster-userconfig
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    gateways:
+      default:
+        listeners:
+          https:
+            # DNS record and certificate entry for the hello-world app's hostname,
+            # `hello.<cluster base domain>`
+            subdomains:
+              - hello
+kind: ConfigMap
+metadata:
+  name: hello-app-prod-us-west-gateway-api-config-user-values
+  namespace: org-org-name
