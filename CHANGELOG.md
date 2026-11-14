@@ -319,6 +319,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the suite keeps testing against the CAPI version it already was. Going past
   the `v1beta1` contract needs a newer `clusterctl` than the `1.2.0` the
   workflow installs, plus newer infrastructure providers.
+- The `-direct` out-of-band example `Kustomization` is in the organization namespace, next to the kubeconfig Secret,
+  but referenced the `GitRepository` without a namespace, so Flux looked for it there and never reconciled the
+  example. Its `sourceRef` now sets `namespace: default`, as `docs/add_wc_structure.md` already showed. The kind test
+  found this once it reconciled the example ([#224](https://github.com/giantswarm/gitops-template/issues/224)).
 - The `WC_NAME` example labelled its `App` CRs `giantswarm.io/cluster: WC_NAME`
   instead of the cluster name. App Platform uses this label to find the
   cluster's `<cluster>-cluster-values` ConfigMap and `<cluster>-kubeconfig`
