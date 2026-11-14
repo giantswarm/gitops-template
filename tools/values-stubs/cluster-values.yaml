@@ -1,0 +1,30 @@
+# Stand-in for the `<cluster>-cluster-values` ConfigMap that cluster-apps-operator
+# creates on the management cluster for every workload cluster. It only exists once the
+# cluster does, so tools/validate-helm-values uses this file in its place when it renders
+# an app's chart. The keys match the real ConfigMap of a CAPA cluster; the values are
+# placeholders.
+baseDomain: wc-name.example.com
+bootstrapMode:
+  apiServerPodPort: 6443
+  enabled: true
+chartOperator:
+  cni:
+    install: true
+ciliumNetworkPolicy:
+  enabled: true
+cluster:
+  calico:
+    CIDR: 100.64.0.0/12
+  kubernetes:
+    API:
+      clusterIPRange: 10.96.0.0/12
+    DNS:
+      IP: 172.31.0.10
+  private: false
+clusterCA: placeholder
+clusterCIDR: ""
+clusterDNSIP: 172.31.0.10
+clusterID: wc-name
+gcpProject: ""
+provider: capa
+subscriptionID: ""

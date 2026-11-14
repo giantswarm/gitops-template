@@ -1,0 +1,15 @@
+# Values for the release-aws chart that tools/validate-helm-values cannot get from the
+# repository. They are the first values file, so values from the repository override them.
+global:
+  # Placeholders for the values the management cluster provides.
+  managementCluster: mc-name
+  connectivity:
+    baseDomain: example.com
+  providerSpecific:
+    region: eu-west-1
+cluster:
+  internal:
+    ephemeralConfiguration:
+      offlineTesting:
+        # Render without looking up the Release resource on the management cluster.
+        renderWithoutReleaseResource: true

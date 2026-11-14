@@ -9,7 +9,7 @@ data:
       provider: github
       credentials:
         username: fakeuser
-        token: faketoken
+        password: faketoken
     kustomizations:
     - name: my-kustomizations
       interval: 1m

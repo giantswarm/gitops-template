@@ -47,6 +47,16 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The assertions now also check the order of `valuesFrom`, which decides how Helm merges values; other lists are
   still compared without order. ([#223](https://github.com/giantswarm/gitops-template/issues/223))
 
+- `tools/validate-helm-values`, which renders the chart of every Flux
+  `HelmRelease` with the values it gets from `valuesFrom` and `spec.values`,
+  and fails when Helm rejects them. A misspelled key such as `instanceTyp` now
+  fails the `validate` job instead of the reconciliation. `test-all-ff
+  validate` runs it for every `Kustomization`. Values that only exist at
+  runtime, like the `<cluster>-cluster-values` ConfigMap, come from stubs in
+  `tools/values-stubs`. `tools/validate-helm-values.ignore` lists four example
+  clusters whose names are longer than the 20 characters `release-aws` allows.
+  Closes [#220](https://github.com/giantswarm/gitops-template/issues/220).
+
 ### Changed
 
 - CI: `validate.yaml`, `yaml-diff.yaml` and `validate-file-names.yaml` call `giantswarm/github-workflows` at a commit
@@ -258,6 +268,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `validate` workflow pins kubeconform 0.8.0 instead of the shared workflow's
   default 0.4.13. Closes
   [#216](https://github.com/giantswarm/gitops-template/issues/216).
+- The `flux-app` user values of the `WC_NAME_OUT_OF_BAND_FLUX_APP` example set
+  the source credentials' `token`, but the chart reads `password`. Its
+  template failed with "b64enc: invalid value; expected string". The key is now
+  `password`.
 - The black pre-commit hook now formats `tests/ats`. Its `exclude: ''` matched
   every path, so black never checked a file. The Python files in `tests/ats`
   are reformatted with it.

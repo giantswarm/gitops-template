@@ -11,6 +11,7 @@ The tools provided here may require the following external tools
 - `curl`, `sha256sum` and `tar`, to fetch the Flux CRD schemas
 - [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli)
 - [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/)
+- [helm](https://helm.sh/docs/intro/install/), for `validate-helm-values`
 
 ## Provides
 
@@ -18,13 +19,14 @@ This directory provides the following tools
 
 - [test-all-ff](https://github.com/giantswarm/gitops-template/blob/main/tools/test-all-ff)
 - [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
+- [validate-helm-values](https://github.com/giantswarm/gitops-template/blob/main/tools/validate-helm-values)
 
 ## `test-all-ff`
 
 You can use this bash tool under a repository based on this template to verify the syntax of your manifests.
 
-This tool will run through `yamllint` and `kubeconform` to verify your manifests pass all checks and is likely to
-succeed in the cluster.
+This tool will run through `yamllint`, `kubeconform` and `validate-helm-values` to verify your manifests pass all
+checks and is likely to succeed in the cluster.
 
 It runs `fake-flux` under the hood for each kustomization it finds
 
@@ -44,8 +46,39 @@ add a `-schema-location` for it to the script.
 
 ### test-all-ff usage
 
-- `validate` Tests all found flux kustomizations with `yamllint` and `kubeconform`
+- `validate` Tests all found flux kustomizations with `yamllint`, `kubeconform` and `validate-helm-values`
 - `template` Prints the entire repo manifest
+
+## `validate-helm-values`
+
+`validate-helm-values <manifest.yaml>` renders the chart of every Flux `HelmRelease` in a rendered manifest with
+`helm template`, using the values the `HelmRelease` would get on the cluster. It fails when Helm rejects them, for
+example because a key is misspelled and the chart's `values.schema.json` doesn't allow it. `test-all-ff validate`
+runs it for every Flux `Kustomization`.
+
+The values come from the `HelmRelease`'s `valuesFrom` entries, in order, followed by `spec.values`. Helm merges them
+the same way Flux does: maps are merged, and lists and scalars are replaced. The chart comes from the `OCIRepository`
+the `HelmRelease` references, or from a `HelmRepository`, and is cached under `${TMPDIR:-/tmp}/gitops-template-charts`.
+A semver range is resolved to the newest matching version, as Flux would resolve it.
+
+Some values don't exist until the cluster runs. They are replaced by stubs in [values-stubs](values-stubs/):
+
+- `cluster-values.yaml` replaces the `<cluster>-cluster-values` ConfigMap, which cluster-apps-operator creates for
+  each workload cluster.
+- `charts/<chart>.yaml` holds values a chart needs from the management cluster, such as `release-aws`'s
+  `global.managementCluster`. It is the first values file, so values from the repository override it.
+
+The check leaves out:
+
+- SOPS-encrypted Secrets, because CI has no key to decrypt them.
+- Optional `valuesFrom` entries that aren't in the repository.
+- `valuesFrom` entries with a `targetPath`. The script prints a note when it skips one.
+
+A `valuesFrom` entry that isn't optional and isn't in the repository fails the check.
+
+[validate-helm-values.ignore](validate-helm-values.ignore) lists `HelmRelease`s whose errors are known. The script still
+renders them and prints the errors, but they don't fail the check. An entry that renders without errors fails the check,
+so the list can't go stale.
 
 ## `fake-flux`
 

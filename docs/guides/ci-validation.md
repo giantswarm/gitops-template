@@ -14,7 +14,9 @@ The workflow offers the following jobs:
 - `check_pre_commit`: it runs all the `pre-commit` validation checks,
 - `validate`: templates all your `Kustomizations` available in `workload_clusters` and passes the output
   through a YAML and Kubernetes objects linters to make sure that your code is valid YAML and produces final
-  manifests understandable to Kubernetes. It attaches a validation report as a comment to your PR.
+  manifests understandable to Kubernetes. It also renders the chart of every `HelmRelease` with its merged values
+  (see [validate-helm-values](../../tools/README.md#validate-helm-values)), so values the chart's schema rejects fail
+  the job. It attaches a validation report as a comment to your PR.
 - `get_diff`: it templates your changed manifests and compares them to a templated version without your changes,
   then it generates and saves a diff between the two and attaches it to your PR
 - `test on kind`: deploys a full `flux` installation to a test `kind` cluster, then deploys your `Kustomizations`

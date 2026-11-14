@@ -112,6 +112,11 @@ function test() {
 			else
 				echo "OK"
 			fi
+
+			echo -n "helm values: "
+			if ! "$(dirname $0)/validate-helm-values" "$tmp_file"; then
+				has_validation_errors=1
+			fi
 			echo ""
 		else
 			echo "---"
