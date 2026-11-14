@@ -174,7 +174,7 @@ def test_positive_assertions(
 
 
 def reload_obj_from_cluster(
-    cluster_obj: Union[pykube.objects.NamespacedAPIObject, pykube.objects.APIObject]
+    cluster_obj: Union[pykube.objects.NamespacedAPIObject, pykube.objects.APIObject],
 ) -> None:
     retries = 0
     obj_loaded = False
@@ -205,7 +205,7 @@ def reload_obj_from_cluster(
 def load_assertions() -> dict[str, Iterator]:
     assertions = {}
     walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
-    for (dir_path, _, filenames) in walk_dirs:
+    for dir_path, _, filenames in walk_dirs:
         for file in filenames:
             rel_path = str(os.path.join(dir_path, file))
             if os.path.splitext(file)[1] != ".yaml":
@@ -236,7 +236,10 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
         if key not in ass:
             continue
         diff = DeepDiff(
-            ass[key], cluster_obj.obj[key], ignore_order=True, threshold_to_diff_deeper=0
+            ass[key],
+            cluster_obj.obj[key],
+            ignore_order=True,
+            threshold_to_diff_deeper=0,
         )
         # we have no difference between the expectation and the real object
         if len(diff) == 0:

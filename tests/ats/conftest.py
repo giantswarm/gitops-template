@@ -47,8 +47,13 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 # contract needs a newer clusterctl (the workflow pins 1.2.0) and new enough
 # infrastructure providers, which is a bigger change than this fix.
 CLUSTER_CTL_CORE_VERSION = "v1.10.10"
-CLUSTER_CTL_RELEASE_URL = "https://github.com/kubernetes-sigs/{repo}/releases/{version}/{components}"
-CLUSTER_CTL_PROVIDER_REPOS = {"aws": "cluster-api-provider-aws", "azure": "cluster-api-provider-azure"}
+CLUSTER_CTL_RELEASE_URL = (
+    "https://github.com/kubernetes-sigs/{repo}/releases/{version}/{components}"
+)
+CLUSTER_CTL_PROVIDER_REPOS = {
+    "aws": "cluster-api-provider-aws",
+    "azure": "cluster-api-provider-azure",
+}
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180

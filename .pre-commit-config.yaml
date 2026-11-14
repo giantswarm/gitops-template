@@ -12,7 +12,6 @@ repos:
           - id: black
             language_version: python3
             files: ^tests/ats/.*\.py$
-            exclude: ''
 
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks

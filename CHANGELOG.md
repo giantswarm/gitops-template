@@ -232,6 +232,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The black pre-commit hook now formats `tests/ats`. Its `exclude: ''` matched
+  every path, so black never checked a file. The Python files in `tests/ats`
+  are reformatted with it.
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.
