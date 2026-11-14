@@ -235,6 +235,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The black pre-commit hook now formats `tests/ats`. Its `exclude: ''` matched
   every path, so black never checked a file. The Python files in `tests/ats`
   are reformatted with it.
+- `tools/test-all-ff validate` now exits non-zero when kubeconform reports an
+  invalid manifest. The kubeconform failure set the error flag to `true`, which
+  the final numeric check read as 0, so only yamllint failures failed the
+  `validate` job. The script also runs with `set -u` now.
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.

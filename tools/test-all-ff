@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC2086,2207
-set -e -o pipefail
+set -euo pipefail
 
 ##
 # We want to be running this script from git root to have widest possible discovery
@@ -39,7 +39,7 @@ export KUSTOMIZATIONS=(
 
 function test() {
 	local mode="$1"
-	local has_validation_errors=false
+	local has_validation_errors=0
 	tmp_dir=$(mktemp -d)
 
 	for kustomization in "${KUSTOMIZATIONS[@]}"; do
@@ -61,7 +61,7 @@ function test() {
 			if ! (
 				kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
 			); then
-				has_validation_errors=true
+				has_validation_errors=1
 			else
 				echo "OK"
 			fi
@@ -82,7 +82,7 @@ if [ $# -gt 1 ]; then
 	help
 fi
 
-case "$1" in
+case "${1:-}" in
 validate | template)
 	test "$1"
 	;;
