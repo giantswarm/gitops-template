@@ -2,10 +2,6 @@
 # shellcheck disable=SC2086,2207
 set -euo pipefail
 
-##
-# We want to be running this script from git root to have widest possible discovery
-[ ! -d .git ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
-
 function help() {
 	echo -e "
 Test syntax using fake-flux-build helper. Must be run from repo root dir (a dir that contains
@@ -16,6 +12,13 @@ Usage: $0 [validate|template]
 "
 	exit 1
 }
+
+##
+# We want to be running this script from git root to have widest possible discovery
+if [ ! -d .git ]; then
+	echo "Not a valid git repository or not run from git root."
+	help
+fi
 
 KUBERNETES_VERSION="master"
 
