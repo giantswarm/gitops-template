@@ -189,6 +189,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `$imagepolicy` setter marker on the automatic-updates example named
   namespace `default`, but the `ImagePolicy` it refers to lives in
   `org-${organization}`.
+- CI: a new commit on a pull request cancels the `validate` run for the commit it replaces, so the kind test no
+  longer runs in parallel for the same pull request. Runs for pushes to a branch are not cancelled.
+  ([#229](https://github.com/giantswarm/gitops-template/issues/229))
 
 ### Removed
 
