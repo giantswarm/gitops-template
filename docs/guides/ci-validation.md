@@ -51,7 +51,8 @@ cluster instead:
 - every `valuesFrom` ConfigMap or Secret that isn't `optional` exists, and every one that exists has its `valuesKey`
   holding a YAML mapping. The `<cluster>-cluster-values` ConfigMap is the exception: the management cluster creates it.
 
-Any other `HelmRelease` has to become ready. Each of these checks fails if it finds no object to check.
+Any other `HelmRelease` has to become ready. Each of these checks waits for objects to show up, lists them again after
+each wait to pick up the ones Flux created meanwhile, and fails if it finds no object to check.
 
 Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified. Each of these files
 has to contain one or more YAML description of objects of Kubernetes objects you expect to be present in the cluster

@@ -37,6 +37,18 @@ EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
 logger = logging.getLogger(__name__)
 
 
+def list_flux_objects(
+    kube_cluster: Cluster, obj_type: Type[TFNS], ignored_objects: list[str]
+) -> list[TFNS]:
+    return [
+        o
+        for o in obj_type.objects(kube_cluster.kube_client)
+        .filter(namespace=pykube.all)
+        .all()
+        if f"{o.namespace}/{o.name}" not in ignored_objects
+    ]
+
+
 def check_flux_objects_successful(
     kube_cluster: Cluster,
     obj_type: Type[TFNS],
@@ -47,41 +59,50 @@ def check_flux_objects_successful(
     """Wait for every object of `obj_type` to be ready, and return all of them.
 
     Objects in `ignored_objects` (`namespace/name`) are left out entirely. Objects `exclude`
-    returns True for are returned, but not waited for. Fails if there is no object at all,
-    so a check never passes because it found nothing to check.
+    returns True for are returned, but not waited for.
+
+    Flux creates objects while others get ready: the root Kustomizations create the cluster
+    Kustomizations, which create the OCIRepositories and HelmReleases. So the check waits
+    for objects to show up, and lists them again after each wait until no new one appears.
+    It fails if none shows up in `timeout_sec`, so it never passes because it found nothing
+    to check.
     """
     if not ignored_objects:
         ignored_objects = []
-    found: list[TFNS] = []
-    namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
-    for ns in namespaces:
-        objects = [
-            o
-            for o in obj_type.objects(kube_cluster.kube_client)
-            .filter(namespace=ns.name)
-            .all()
-            if f"{ns}/{o.name}" not in ignored_objects
-        ]
-        found.extend(objects)
-        obj_names = [o.name for o in objects if not (exclude and exclude(o))]
-        if not obj_names:
-            continue
-        logger.debug(
-            f"Waiting max {timeout_sec} s for the following {obj_type.__name__} objects "
-            f"to be ready in '{ns.name}' namespace: '{obj_names}'."
+    deadline = time.time() + timeout_sec
+    objects = list_flux_objects(kube_cluster, obj_type, ignored_objects)
+    while not objects and time.time() < deadline:
+        time.sleep(5)
+        objects = list_flux_objects(kube_cluster, obj_type, ignored_objects)
+    if not objects:
+        pytest.fail(
+            f"No {obj_type.__name__} objects showed up in the cluster in {timeout_sec} s."
         )
-        wait_for_objects_condition(
-            kube_cluster.kube_client,
-            obj_type,
-            obj_names,
-            ns.name,
-            flux_cr_ready,
-            timeout_sec,
-            missing_ok=False,
-        )
-    if not found:
-        pytest.fail(f"No {obj_type.__name__} objects found in the cluster to check.")
-    return found
+
+    checked: dict[str, TFNS] = {}
+    while True:
+        new = [o for o in objects if f"{o.namespace}/{o.name}" not in checked]
+        if not new:
+            return list(checked.values())
+        for o in new:
+            checked[f"{o.namespace}/{o.name}"] = o
+        to_wait = [o for o in new if not (exclude and exclude(o))]
+        for ns in sorted({o.namespace for o in to_wait}):
+            obj_names = [o.name for o in to_wait if o.namespace == ns]
+            logger.debug(
+                f"Waiting max {timeout_sec} s for the following {obj_type.__name__} objects "
+                f"to be ready in '{ns}' namespace: '{obj_names}'."
+            )
+            wait_for_objects_condition(
+                kube_cluster.kube_client,
+                obj_type,
+                obj_names,
+                ns,
+                flux_cr_ready,
+                timeout_sec,
+                missing_ok=False,
+            )
+        objects = list_flux_objects(kube_cluster, obj_type, ignored_objects)
 
 
 @pytest.fixture(scope="module")

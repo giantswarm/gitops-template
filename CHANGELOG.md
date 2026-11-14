@@ -277,7 +277,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Those still can't get ready in the kind cluster, so the test now checks what Flux needs from the management cluster
   for each of them: the `chartRef` `OCIRepository` is ready, the `dependsOn` `HelmRelease`s exist, and the required
   `valuesFrom` ConfigMaps and Secrets exist and hold YAML values. The Kustomization, OCIRepository and HelmRelease checks
-  fail when they find nothing to check. ([#219](https://github.com/giantswarm/gitops-template/issues/219))
+  fail when they find nothing to check. That showed they ran too early: the Kustomization check only waited for the
+  Kustomizations that existed when it started, the root ones, and the OCIRepository check could run before any
+  OCIRepository existed. The checks now wait for objects to show up and list them again after each wait until no new
+  one appears. ([#219](https://github.com/giantswarm/gitops-template/issues/219))
 - The black pre-commit hook now formats `tests/ats`. Its `exclude: ''` matched
   every path, so black never checked a file. The Python files in `tests/ats`
   are reformatted with it.
