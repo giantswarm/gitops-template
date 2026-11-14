@@ -282,6 +282,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `hello-web-app-1` app set in the two out-of-band examples pointed the
   `App`'s `userConfig` at a ConfigMap in namespace `hello-world-app`, but the
   ConfigMap is generated in `org-${organization}`. It now points there.
+- CI: `validate.yaml` listed a `HEAD_BRANCH` placeholder among its push branches. It matched no branch and was
+  documented nowhere; the push trigger now lists `main` only.
+  ([#230](https://github.com/giantswarm/gitops-template/issues/230))
 
 ## [0.1.0] Initial release
 

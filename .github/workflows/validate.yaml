@@ -1,9 +1,12 @@
 name: validate
 
 on:
+  # Every pull request, whatever its base branch.
   pull_request:
+  # The post-merge check: the state of main after a merge, which no pull
+  # request run has tested when several pull requests merge without a rebase.
   push:
-    branches: [HEAD_BRANCH, main]
+    branches: [main]
 
 # One run per pull request, or per branch for pushes. A new commit on a pull
 # request cancels the run for the commit it replaces. A push to a branch lets
