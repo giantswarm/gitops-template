@@ -17,6 +17,13 @@ jobs:
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 
+## When the workflow runs
+
+`validate.yaml` runs on every pull request, whatever branch it targets, and on every push to `main`. The push run
+checks `main` as it is after a merge, which no pull request run has tested when two pull requests merge one after the
+other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
+`on.push.branches`.
+
 ## `test-on-kind` validation step - additional information
 
 This validation step offers some broader possibilities for validation, but also requires extra configuration.
