@@ -4,11 +4,15 @@
     // Base config - https://github.com/giantswarm/renovate-presets/blob/main/default.json5
     "github>giantswarm/renovate-presets:default.json5",
   ],
-  // Opt-in manager, off by default in Renovate. `.pre-commit-config.yaml` is
-  // this repository's only genuinely stale dependency surface: the
-  // hand-authored workflows all track `giantswarm/github-workflows@main`, and
-  // the `zz_generated.*` ones are devctl-managed and already in the preset's
-  // `ignorePaths`.
+  // The hand-authored workflows call `giantswarm/github-workflows` at a commit
+  // SHA with a `# main` comment. The preset's github-actions manager updates
+  // that digest to the head of `main` and automerges it ("Giant Swarm GitHub
+  // workflows" group), so no rule is needed here. The preset's `pinDigests:
+  // false` for `giantswarm/*` only stops Renovate from adding a SHA; it still
+  // updates one that is there. The `zz_generated.*` workflows are
+  // devctl-managed, still call `@main`, and are in the preset's `ignorePaths`.
+  //
+  // Opt-in manager, off by default in Renovate: `.pre-commit-config.yaml`.
   //
   // `tests/ats/Pipfile` is deliberately left managed here. Chart repos extend
   // `renovate-presets:tests-ats.json5` to disable it, because there the file is

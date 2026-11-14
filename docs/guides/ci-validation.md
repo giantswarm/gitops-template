@@ -1,8 +1,15 @@
 # Configuring extra validation and diff previews on GitHub
 
 With this repository, we're also including a GitHub workflow, that can make your work with this
-repo easier. It is available in the [validate.yaml](../../.github/workflows/validate.yaml) file. It offers the following
-jobs:
+repo easier. It is available in the [validate.yaml](../../.github/workflows/validate.yaml) file.
+
+`validate.yaml`, `yaml-diff.yaml` and `validate-file-names.yaml` call shared workflows from
+[giantswarm/github-workflows](https://github.com/giantswarm/github-workflows) at a commit SHA, followed by a `# main`
+comment, so a change there doesn't change your CI until you take it. With Renovate and the `renovate.json5` this
+repository ships, Renovate opens a pull request that moves the SHA to the newest commit on `main` and merges it once
+your checks pass. Without Renovate, move the SHA yourself when you want a fix from upstream.
+
+The workflow offers the following jobs:
 
 - `check_pre_commit`: it runs all the `pre-commit` validation checks,
 - `validate`: templates all your `Kustomizations` available in `workload_clusters` and passes the output

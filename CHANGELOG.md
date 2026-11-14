@@ -43,6 +43,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- CI: `validate.yaml`, `yaml-diff.yaml` and `validate-file-names.yaml` call `giantswarm/github-workflows` at a commit
+  SHA with a `# main` comment instead of at `@main`, so a change upstream no longer changes this repository's CI
+  without a commit here. Renovate moves the SHA to the head of `main` and automerges it. See
+  [Configuring extra validation](docs/guides/ci-validation.md).
+  ([#227](https://github.com/giantswarm/gitops-template/issues/227))
 - **Breaking:** the template uses the file and resource names `kubectl gs gitops` 6.0.4 generates, so
   `kubectl gs gitops check --adopt` records every example app and `kubectl gs gitops add automatic-update` works on
   them. Forks keep working as they are; to move one, follow

@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   validate:
-    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@main
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@ea1fd69471b840a8f3eb85bf5c8b58a416f111ea # main
     with:
       # Matches [requires] python_version in tests/ats/Pipfile. The shared
       # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
