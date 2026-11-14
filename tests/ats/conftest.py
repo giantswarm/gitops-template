@@ -65,6 +65,13 @@ GS_CRDS_URLS = [
 ]
 GITOPS_TOP_DIR = "../../management-clusters"
 
+KIND_URL = "https://kind.sigs.k8s.io/"
+# The second kind cluster stands in for the workload cluster the -direct out-of-band example
+# targets. The Secret is the one its Kustomization reads through `spec.kubeConfig.secretRef`.
+WORKLOAD_CLUSTER_KIND_NAME = "mapi-out-of-band-no-flux"
+WORKLOAD_CLUSTER_KUBECONFIG_NAME = "mapi-out-of-band-no-flux-kubeconfig"
+WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
+
 logger = logging.getLogger(__name__)
 
 
@@ -118,9 +125,11 @@ class GitOpsTestConfig:
             )
             raise Exception("flux-app version not set")
 
-        ignored_objects = os.environ[self._IGNORED_OBJECTS]
-        if ignored_objects:
-            self.ignored_objects = ignored_objects.split(",")
+        # empty when every Flux object is expected to get ready
+        ignored_objects = os.environ.get(self._IGNORED_OBJECTS, "")
+        self.ignored_objects: list[str] = [
+            o for o in ignored_objects.split(",") if o.strip()
+        ]
 
 
 @pytest.fixture(scope="module")
@@ -375,6 +384,80 @@ def gpg_master_key(
     gpg_master_key.delete()
 
 
+def run_kind(*args: str) -> str:
+    kind_path = shutil.which("kind")
+    if not kind_path:
+        logger.error(
+            f"You must install `kind` from '{KIND_URL}' and make it available in your $PATH."
+        )
+        raise Exception("`kind` not found")
+    run_res = subprocess.run(  # nosec B603 - fixed arguments, no user input
+        [kind_path, *args], capture_output=True, text=True
+    )
+    if run_res.returncode != 0:
+        logger.error(f"`kind {' '.join(args)}` failed: '{run_res.stderr}'")
+        raise Exception(f"`kind {args[0]}` failed")
+    return run_res.stdout
+
+
+@pytest.fixture(scope="module")
+def workload_cluster(
+    kube_cluster: Cluster, init_namespaces: Any
+) -> Iterable[pykube.HTTPClient]:
+    """A second kind cluster, standing in for the workload cluster of the -direct example.
+
+    `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload
+    cluster through the kubeconfig Secret a management cluster has for it. The fixture creates
+    that Secret in the test cluster with the second cluster's kubeconfig, so Flux reconciles
+    the example for real. Kind clusters share a Docker network, so the internal kubeconfig
+    (API server addressed by its container name) works from pods in the test cluster.
+    """
+    # `kind create` writes the new cluster to the kubeconfig and makes it the current context.
+    #  Point it at a file of its own, so the test's kubeconfig keeps pointing at the test cluster.
+    kind_kubeconfig = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="kind-wc-", delete=False
+    ).name
+    run_kind(
+        "create",
+        "cluster",
+        "--name",
+        WORKLOAD_CLUSTER_KIND_NAME,
+        "--kubeconfig",
+        kind_kubeconfig,
+    )
+    try:
+        internal_kubeconfig = run_kind(
+            "get", "kubeconfig", "--internal", "--name", WORKLOAD_CLUSTER_KIND_NAME
+        )
+        kubeconfig_secret = pykube.Secret(
+            kube_cluster.kube_client,
+            {
+                "metadata": {
+                    "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
+                    "namespace": WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
+                },
+                "type": "Opaque",
+                "stringData": {"value": internal_kubeconfig},
+            },
+        )
+        kubeconfig_secret.create()
+
+        # the runner reaches the second cluster on its published port, as for the test cluster
+        yield pykube.HTTPClient(pykube.KubeConfig.from_file(kind_kubeconfig))
+
+        kubeconfig_secret.delete()
+    finally:
+        run_kind(
+            "delete",
+            "cluster",
+            "--name",
+            WORKLOAD_CLUSTER_KIND_NAME,
+            "--kubeconfig",
+            kind_kubeconfig,
+        )
+        os.remove(kind_kubeconfig)
+
+
 @pytest.fixture(scope="module")
 def gitops_environment(
     gs_crds: None,
@@ -382,6 +465,7 @@ def gitops_environment(
     app_platform_controllers: None,
     init_namespaces: Any,
     gpg_master_key: Secret,
+    workload_cluster: pykube.HTTPClient,
     flux_app_deployment: ConfiguredApp,
     flux_deployments: list[pykube.Deployment],
 ) -> ConfiguredApp:

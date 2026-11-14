@@ -30,9 +30,9 @@ jobs:
       # Pin a current kubeconform for tools/test-all-ff. The shared workflow
       # defaults to 0.4.13, from 2021.
       kubeconform_ver: "0.8.0"
-      # The out-of-band Kustomization targets a workload cluster the kind test
-      # cluster doesn't have, so it never becomes ready. The shared workflow's
-      # default still names it by its old name.
-      gitops_ignored_objects: "org-org-name/mc-name-clusters-mapi-out-of-band-no-flux-direct"
+      # Every Flux Kustomization has to get ready. The -direct out-of-band one
+      # targets a workload cluster; tests/ats creates a second kind cluster for
+      # it. Set explicitly, as the shared workflow's default names an object.
+      gitops_ignored_objects: ""
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
