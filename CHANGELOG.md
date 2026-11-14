@@ -41,10 +41,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bot has run on real PRs.
   See [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
 - `tests/ats` asserts the ConfigMaps, `HelmRelease`s and `OCIRepository`s of the `hello-app-prod-us-west` example
-  cluster, which only had its `Kustomization` checked. Its region ConfigMap is asserted without its values until
-  [#204](https://github.com/giantswarm/gitops-template/issues/204) and
-  [#206](https://github.com/giantswarm/gitops-template/issues/206) fix them.
-  ([#223](https://github.com/giantswarm/gitops-template/issues/223))
+  cluster, which only had its `Kustomization` checked. Its region values are asserted as they are today, including
+  the bugs [#204](https://github.com/giantswarm/gitops-template/issues/204) and
+  [#206](https://github.com/giantswarm/gitops-template/issues/206) will fix, as for `hello-app-prod-eu-central`.
+  The assertions now also check the order of `valuesFrom`, which decides how Helm merges values; other lists are
+  still compared without order. ([#223](https://github.com/giantswarm/gitops-template/issues/223))
 
 ### Changed
 

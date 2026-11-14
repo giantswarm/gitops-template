@@ -18,16 +18,26 @@ metadata:
   name: hello-app-prod-us-west-config
   namespace: org-org-name
 ---
-# The region values are left out on purpose. The us_west overlay still sets the eu-west-1a
-# availability zone (#204) and names its node pool `xxxxx` instead of the stage's `nodepool0`
-# (#206). Add `data` here when those are fixed. The HelmRelease assertion checks that the
-# region values are read between the cluster's base values and its user values.
+# These are the us_west overlay's values as they are today, the same way the eu-central
+# assertion records its region. They include two known bugs: the eu-west-1a availability zone
+# (#204) and the `xxxxx` node pool key that doesn't match the stage's `nodepool0` (#206). Update
+# this when those are fixed. The HelmRelease assertion checks that these values are read between
+# the cluster's base values and its user values.
 apiVersion: v1
+data:
+  values: |
+    global:
+      nodePools:
+        xxxxx:
+          additionalSecurityGroups:
+            - id: sg-0xxxxxxxxxxxxxx3f
+          availabilityZones:
+            - eu-west-1a
+          instanceType: m6a.4xlarge
+          maxSize: 10
+          minSize: 1
 kind: ConfigMap
 metadata:
-  labels:
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
-    kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-us-west-region-config
   namespace: org-org-name
 ---

@@ -58,3 +58,35 @@ def test_values_changes_fail(expected: dict, actual: dict) -> None:
             FakeObject(config_map(actual)),  # type: ignore[arg-type]
             "test",
         )
+
+
+def helm_release(value_sources: list[str], extra: dict | None = None) -> dict:
+    spec: dict[str, Any] = {
+        "valuesFrom": [
+            {"kind": "ConfigMap", "name": n, "valuesKey": "values"}
+            for n in value_sources
+        ]
+    }
+    spec.update(extra or {})
+    return {
+        "apiVersion": "helm.toolkit.fluxcd.io/v2",
+        "kind": "HelmRelease",
+        "metadata": {"name": "hr", "namespace": "ns"},
+        "spec": spec,
+    }
+
+
+def test_values_from_order_matters() -> None:
+    # Helm merges `valuesFrom` in order, so a reordered list is a different release.
+    with pytest.raises(pytest.fail.Exception):
+        assert_objects(
+            helm_release(["base", "region", "user"]),
+            FakeObject(helm_release(["base", "user", "region"])),  # type: ignore[arg-type]
+            "test",
+        )
+
+
+def test_other_lists_ignore_order() -> None:
+    expected = helm_release(["base"], {"dependsOn": [{"name": "a"}, {"name": "b"}]})
+    actual = helm_release(["base"], {"dependsOn": [{"name": "b"}, {"name": "a"}]})
+    assert_objects(expected, FakeObject(actual), "test")  # type: ignore[arg-type]

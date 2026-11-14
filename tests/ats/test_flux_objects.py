@@ -247,6 +247,10 @@ def normalize_whitespace(value: Any) -> Any:
     return value
 
 
+def _order_matters_not(level: Any) -> bool:
+    return "valuesFrom" not in level.path()
+
+
 def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
     top_level_keys = cluster_obj.obj.keys()
     for key in top_level_keys:
@@ -255,7 +259,10 @@ def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
         diff = DeepDiff(
             normalize_whitespace(ass[key]),
             normalize_whitespace(cluster_obj.obj[key]),
-            ignore_order=True,
+            # List order doesn't matter, except for `valuesFrom`: Helm merges
+            # values in that order, so a reordered list changes the result.
+            ignore_order=False,
+            ignore_order_func=_order_matters_not,
             threshold_to_diff_deeper=0,
         )
         # we have no difference between the expectation and the real object
