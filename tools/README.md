@@ -73,12 +73,13 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
   `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values
   from the repository override it. It doesn't set the region, so that a cluster without one fails.
 
-A `release-aws` `HelmRelease` whose merged values have no `global.providerSpecific.region` fails, naming the cluster.
-Without a region, `release-aws` takes the region of the management cluster's nodes, so the cluster would be created
-where nobody chose. A cluster sets its region with a component from `bases/environments/regions`, see
-[Regions](/docs/guides/environments.md#regions). Other charts aren't checked. The check also fails a cluster listed in
-`validate-helm-values.ignore`. `test-all-ff validate` checks that the script reports the cluster in
-[testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
+Because the stub doesn't set a region, a `release-aws` `HelmRelease` without `global.providerSpecific.region` fails
+with the chart's own error, "Unable to default the region". On a management cluster, `release-aws` would take the
+region of the management cluster's nodes instead, so the cluster would be created where nobody chose. A cluster sets
+its region with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
+This doesn't cover the clusters listed in `validate-helm-values.ignore`, whose known errors hide the region error, until
+[#274](https://github.com/giantswarm/gitops-template/issues/274) removes that file. `test-all-ff validate` checks
+that the script fails for [testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
 
 The check leaves out:
 

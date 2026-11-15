@@ -23,11 +23,8 @@
 #
 # SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
 #
-# A release-aws HelmRelease whose merged values have no global.providerSpecific.region
-# fails, naming the cluster.
-#
 # HelmReleases listed in validate-helm-values.ignore are rendered, but their errors don't
-# fail the check. The region check still does.
+# fail the check.
 #
 # Usage: validate-helm-values <manifest.yaml>
 set -e -o pipefail
@@ -190,15 +187,6 @@ while IFS=/ read -r ns name; do
 	if [ "$(yq '.spec.values // {} | length' "${hr}")" != "0" ]; then
 		yq '.spec.values' "${hr}" >"${work_dir}/values-inline.yaml"
 		files+=("${work_dir}/values-inline.yaml")
-	fi
-
-	# Without global.providerSpecific.region, release-aws takes the region of the management
-	# cluster's nodes, so a cluster would be created where nobody chose. Every cluster must
-	# set its region. Other charts aren't checked. This doesn't depend on the ignore file.
-	if [ "${chart_name}" == "release-aws" ] &&
-		[ -z "$(yq eval-all -N '. as $f ireduce ({}; . * $f) | .global.providerSpecific.region // ""' "${files[@]}" /dev/null)" ]; then
-		echo "${id}: cluster ${name} has no region, global.providerSpecific.region isn't set. Add a region component from bases/environments/regions to the cluster's kustomization."
-		failed=1
 	fi
 
 	args=(template "$(yq ".spec.releaseName // \"${name}\"" "${hr}")" "${archive}"

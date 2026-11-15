@@ -112,10 +112,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - The `hello_app_cluster` template no longer appends the cluster's own values itself: a cluster lists its region,
     then the template's `userconfig` component, under `components:`, so its own values come last. No cluster inserts
     a ConfigMap at a fixed `valuesFrom` position any more.
-  - The `release-aws` stub of `tools/validate-helm-values` no longer sets a region, so a cluster without one fails,
-    also when it is listed in `validate-helm-values.ignore`. `tools/test-all-ff validate` checks this with
-    `tools/testdata/release-aws-without-region.yaml`. The getting started guides and the cluster in
-    `docs/how-it-works.md` add a region too.
+  - The `release-aws` stub of `tools/validate-helm-values` no longer sets a region, so a cluster without one fails
+    with the chart's "Unable to default the region". This doesn't cover the clusters listed in
+    `validate-helm-values.ignore` until [#274](https://github.com/giantswarm/gitops-template/issues/274) removes that
+    file. `tools/test-all-ff validate` checks this with `tools/testdata/release-aws-without-region.yaml`. The getting
+    started guides and the cluster in `docs/how-it-works.md` add a region too.
 
   **Migrating a fork:**
   - In each cluster's `mapi/cluster/kustomization.yaml`, move the region from `resources:` to `components:`, and add a

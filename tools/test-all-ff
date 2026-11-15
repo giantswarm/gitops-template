@@ -125,10 +125,11 @@ function test() {
 	done
 
 	if [ "${mode}" == "validate" ]; then
-		# validate-helm-values must name a release-aws cluster that has no region.
+		# validate-helm-values must fail for a release-aws cluster that has no region.
 		echo -n "helm values, cluster without a region: "
-		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/release-aws-without-region.yaml" 2>&1 || true)
-		if grep -q "cluster no-region has no region" <<<"${output}"; then
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/release-aws-without-region.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "Unable to default the region" <<<"${output}"; then
 			echo "OK, reported"
 		else
 			echo "not reported:"

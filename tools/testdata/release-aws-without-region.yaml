@@ -1,5 +1,19 @@
 # A release-aws cluster without a region, as when a cluster's kustomization leaves out its
-# region component. tools/test-all-ff checks that tools/validate-helm-values reports it.
+# region component. Its values are otherwise valid, so the only error is the chart's own
+# "Unable to default the region". tools/test-all-ff checks that tools/validate-helm-values
+# reports it.
+apiVersion: v1
+data:
+  values: |
+    global:
+      metadata:
+        name: no-region
+        organization: demo
+kind: ConfigMap
+metadata:
+  name: no-region-config
+  namespace: org-demo
+---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
@@ -29,3 +43,6 @@ spec:
     - kind: ConfigMap
       name: cluster-app-installation-values
       valuesKey: values.yaml
+    - kind: ConfigMap
+      name: no-region-config
+      valuesKey: values
