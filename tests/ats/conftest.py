@@ -138,10 +138,14 @@ class GitOpsTestConfig:
             raise Exception("flux-app version not set")
 
         # empty when every Flux object is expected to get ready
-        ignored_objects = os.environ.get(self._IGNORED_OBJECTS, "")
-        self.ignored_objects: list[str] = [
-            o for o in ignored_objects.split(",") if o.strip()
-        ]
+        self.ignored_objects = parse_ignored_objects(
+            os.environ.get(self._IGNORED_OBJECTS, "")
+        )
+
+
+def parse_ignored_objects(value: str) -> list[str]:
+    """Split the comma-separated `namespace/name` list of GITOPS_IGNORED_OBJECTS."""
+    return [o.strip() for o in value.split(",") if o.strip()]
 
 
 @pytest.fixture(scope="module")
@@ -456,7 +460,11 @@ def workload_cluster(
                 },
             },
         )
-        kubeconfig_secret.create()
+        # an interrupted earlier run can leave the Secret behind
+        if kubeconfig_secret.exists():
+            kubeconfig_secret.update()
+        else:
+            kubeconfig_secret.create()
 
         # the runner reaches the vCluster on the node port, at the kind node's address
         yield pykube.HTTPClient(
@@ -472,6 +480,8 @@ def workload_cluster(
         run_helm(
             "uninstall",
             WORKLOAD_CLUSTER_VCLUSTER_NAME,
+            # the install may have failed before the release existed; keep its error the one shown
+            "--ignore-not-found",
             "--namespace",
             WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
             "--wait",

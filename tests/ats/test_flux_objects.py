@@ -91,9 +91,12 @@ def check_flux_objects_successful(
             continue
         if not ignored_objects:
             ignored_objects = []
-        # HelmReleases that deploy to a workload cluster through its kubeconfig can't get ready here,
-        #  as the test has no workload clusters. Neither can the ones that create a cluster from a
-        #  release-<provider> chart, as the test has no cloud account to create it in. Their existence
+        # HelmReleases that deploy to a workload cluster through its kubeconfig aren't waited for:
+        #  most of the clusters they target don't exist in the test. The test's only workload
+        #  cluster is the vCluster behind mapi-out-of-band-no-flux-kubeconfig, and it is checked
+        #  through the -direct Kustomization and its assertions. Nor are the ones that create a
+        #  cluster from a release-<provider> chart, as the test has no cloud account to create it in.
+        #  Their existence
         #  is still checked by the assertions, and their charts by the OCIRepository check.
         cluster_charts = set()
         if obj_type is HelmReleaseCR:
