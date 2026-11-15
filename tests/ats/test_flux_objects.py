@@ -4,7 +4,17 @@ import logging
 import os.path
 import re
 import time
-from typing import Any, Callable, Iterator, Optional, Protocol, Type, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Iterator,
+    Optional,
+    Protocol,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import pykube
 import pytest
@@ -506,30 +516,40 @@ def values_problem(kind: str, value: str) -> Optional[str]:
     return None
 
 
-def source_problems(
-    kind: str, namespace: str, name: str, index: ObjectLookup
-) -> list[str]:
-    """The chart source has to exist and be Ready.
+def source_ready(kind: str, source: dict) -> bool:
+    """Whether a chart source is Ready.
 
-    An OCI HelmRepository is the exception: Flux doesn't reconcile it, so it has no status
-    and only has to exist.
+    An OCI HelmRepository always is: Flux doesn't reconcile it, so it has no status.
     """
-    source = index.get(kind, namespace, name)
-    if source is None:
-        return [f"{kind} '{namespace}/{name}' doesn't exist"]
     oci_helm_repository = (
         kind == "HelmRepository" and source.get("spec", {}).get("type") == "oci"
     )
-    if not oci_helm_repository and not is_ready(source):
+    return oci_helm_repository or is_ready(source)
+
+
+def source_problems(
+    kind: str,
+    namespace: str,
+    name: str,
+    index: ObjectLookup,
+    ignored_objects: Collection[str] = (),
+) -> list[str]:
+    """The chart source has to exist and, unless it's ignored, be Ready."""
+    source = index.get(kind, namespace, name)
+    if source is None:
+        return [f"{kind} '{namespace}/{name}' doesn't exist"]
+    if f"{namespace}/{name}" not in ignored_objects and not source_ready(kind, source):
         return [f"{kind} '{namespace}/{name}' isn't ready: {not_ready_reason(source)}"]
     return []
 
 
-def chart_problems(hr: dict, index: ObjectLookup) -> list[str]:
+def chart_problems(
+    hr: dict, index: ObjectLookup, ignored_objects: Collection[str] = ()
+) -> list[str]:
     """Check the chart source of a HelmRelease, given as `chartRef` or as `chart`."""
     source = chart_source(hr)
     if source is not None:
-        return source_problems(*source, index)
+        return source_problems(*source, index, ignored_objects)
     ref = chart_source_ref(hr)
     if ref is None:
         return ["has neither chartRef nor chart.spec.sourceRef"]
@@ -540,17 +560,15 @@ def chart_problems(hr: dict, index: ObjectLookup) -> list[str]:
 
 
 def chart_sources_to_wait_for(
-    hrs: list[dict], waited_oci_repositories: set[str]
+    hrs: list[dict], waited_oci_repositories: set[str], ignored_objects: Collection[str]
 ) -> set[tuple[str, str, str]]:
-    """The HelmReleases' chart sources, except the OCIRepositories waited for already.
-
-    `oci_repositories_ready` waits for the OCIRepositories that aren't ignored. An ignored
-    one a HelmRelease uses still has to be waited for here.
-    """
+    """The HelmReleases' chart sources, except the ignored ones and the OCIRepositories
+    `oci_repositories_ready` waited for already."""
     return {
         s
         for s in (chart_source(hr) for hr in hrs)
         if s
+        and f"{s[1]}/{s[2]}" not in ignored_objects
         and not (
             s[0] == "OCIRepository" and f"{s[1]}/{s[2]}" in waited_oci_repositories
         )
@@ -558,7 +576,10 @@ def chart_sources_to_wait_for(
 
 
 def wait_for_chart_sources(
-    kube_cluster: Cluster, hrs: list[dict], waited_oci_repositories: set[str]
+    kube_cluster: Cluster,
+    hrs: list[dict],
+    waited_oci_repositories: set[str],
+    ignored_objects: Collection[str],
 ) -> ClusterIndex:
     """Wait for the HelmReleases' chart sources to be ready; return what the last look saw.
 
@@ -566,7 +587,7 @@ def wait_for_chart_sources(
     One that doesn't exist won't show up any more: the Kustomizations that create the
     sources are ready already. So the wait only covers the ones that exist.
     """
-    sources = chart_sources_to_wait_for(hrs, waited_oci_repositories)
+    sources = chart_sources_to_wait_for(hrs, waited_oci_repositories, ignored_objects)
 
     def attempt() -> tuple[bool, ClusterIndex]:
         index = ClusterIndex(kube_cluster.kube_client)
@@ -580,9 +601,11 @@ def wait_for_chart_sources(
     return poll(OCI_REPOSITORIES_READY_TIMEOUT_SEC, attempt)
 
 
-def helm_release_problems(hr: dict, index: ObjectLookup) -> list[str]:
+def helm_release_problems(
+    hr: dict, index: ObjectLookup, ignored_objects: Collection[str] = ()
+) -> list[str]:
     """Check what helm-controller needs from the management cluster to reconcile `hr`."""
-    problems = chart_problems(hr, index)
+    problems = chart_problems(hr, index, ignored_objects)
     namespace = hr["metadata"]["namespace"]
     for dep in hr["spec"].get("dependsOn") or []:
         dep_ns = dep.get("namespace", namespace)
@@ -618,6 +641,29 @@ def blocked_helm_releases(hrs: dict[str, dict], blocked: set[str]) -> set[str]:
     return blocked
 
 
+def waiting_on_ignored(
+    hrs: list[dict], index: ObjectLookup, ignored_objects: Collection[str]
+) -> set[str]:
+    """The ignored HelmReleases that aren't Ready, and the HelmReleases whose ignored chart
+    source isn't Ready.
+
+    An ignored object has to exist, but the test neither waits for it nor asserts that it's
+    Ready. While it isn't, the HelmReleases that need it can't get ready either.
+    """
+    found = set()
+    for key in ignored_objects:
+        namespace, _, name = key.partition("/")
+        hr = index.get("HelmRelease", namespace, name)
+        if hr is not None and not is_ready(hr):
+            found.add(key)
+    for hr in hrs:
+        s = chart_source(hr)
+        source = index.get(*s) if s and f"{s[1]}/{s[2]}" in ignored_objects else None
+        if s and source is not None and not source_ready(s[0], source):
+            found.add(obj_key(hr))
+    return found
+
+
 @pytest.fixture(scope="module")
 def check_helm_release_successful(
     kube_cluster: Cluster,
@@ -647,21 +693,18 @@ def check_helm_release_successful(
         return
 
     waited_oci_repositories, _ = oci_repositories_ready
-    index = wait_for_chart_sources(
-        kube_cluster, [hr.obj for hr in helm_releases], waited_oci_repositories
-    )
-    cannot_get_ready: set[str] = set()
-    for hr in helm_releases:
-        hr_problems = helm_release_problems(hr.obj, index)
-        problems.extend(f"HelmRelease '{obj_key(hr)}': {p}" for p in hr_problems)
-        if hr_problems or needs_workload_cluster(hr.obj, index):
-            cannot_get_ready.add(obj_key(hr))
-    problems.extend(index.unserved_problems())
     by_key = {obj_key(hr): hr.obj for hr in helm_releases}
-    # An ignored HelmRelease isn't expected to get ready, so neither is one that depends on it.
-    to_wait = set(by_key) - blocked_helm_releases(
-        by_key, cannot_get_ready | set(ignored)
+    index = wait_for_chart_sources(
+        kube_cluster, list(by_key.values()), waited_oci_repositories, ignored
     )
+    cannot_get_ready = waiting_on_ignored(list(by_key.values()), index, ignored)
+    for key, hr_obj in by_key.items():
+        hr_problems = helm_release_problems(hr_obj, index, ignored)
+        problems.extend(f"HelmRelease '{key}': {p}" for p in hr_problems)
+        if hr_problems or needs_workload_cluster(hr_obj, index):
+            cannot_get_ready.add(key)
+    problems.extend(index.unserved_problems())
+    to_wait = set(by_key) - blocked_helm_releases(by_key, cannot_get_ready)
     not_ready, _ = wait_until_ready(
         kube_cluster, HelmReleaseCR, to_wait, ignored, FLUX_OBJECTS_READY_TIMEOUT_SEC
     )

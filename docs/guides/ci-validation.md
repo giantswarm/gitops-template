@@ -57,10 +57,13 @@ cluster instead:
   test takes `<cluster>` from the kubeconfig Secret when it's named `<cluster>-kubeconfig`, as Cluster API names it, and
   otherwise from the `giantswarm.io/cluster` or `cluster.x-k8s.io/cluster-name` label of the `HelmRelease`.
 
-Any other `HelmRelease` has to become ready, unless one of these checks found a problem with it or it depends, directly
-or not, on a `HelmRelease` that can't get ready or is in `GITOPS_IGNORED_OBJECTS`. A `release-<provider>` chart
-(`release-aws`, `release-azure`, `release-vsphere` or `release-cloud-director`) is recognised by its name, from
-`chart.spec.chart`, the `OCIRepository` URL or the `HelmChart`.
+A chart source or `dependsOn` `HelmRelease` in `GITOPS_IGNORED_OBJECTS` still has to exist, but the test doesn't wait
+for it or require it to be ready.
+
+Any other `HelmRelease` has to become ready, unless one of these checks found a problem with it, or it depends, directly
+or not, on a `HelmRelease` that can't get ready, or on an ignored chart source or `HelmRelease` that isn't ready. A
+`release-<provider>` chart (`release-aws`, `release-azure`, `release-vsphere` or `release-cloud-director`) is
+recognised by its name, from `chart.spec.chart`, the `OCIRepository` URL or the `HelmChart`.
 
 The Kustomization check waits for the `Kustomization`s the test applies to show up, then lists them again after each
 wait to pick up the ones Flux created meanwhile. It fails if no `Kustomization` shows up, and passes with a warning if

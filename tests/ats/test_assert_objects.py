@@ -18,6 +18,7 @@ from test_flux_objects import (
     is_ready,
     parse_inventory_id,
     values_from_problems,
+    waiting_on_ignored,
     workload_cluster_names,
 )
 
@@ -312,15 +313,67 @@ def test_blocked_by_an_ignored_helm_release() -> None:
     assert blocked_helm_releases(hrs, {"ns/infra-base"}) == {"ns/infra-base", "ns/app"}
 
 
-def test_chart_sources_to_wait_for_keep_ignored_oci_repositories() -> None:
+def test_chart_sources_to_wait_for_skip_waited_and_ignored() -> None:
     hrs = [
         release({"chartRef": {"kind": "OCIRepository", "name": n}})
-        for n in ("waited", "ignored")
-    ] + [release({"chartRef": None, **chart_from("HelmRepository", "repo")})]
-    assert chart_sources_to_wait_for(hrs, {"ns/waited"}) == {
-        ("OCIRepository", "ns", "ignored"),
-        ("HelmRepository", "ns", "repo"),
+        for n in ("waited", "ignored", "other")
+    ] + [
+        release({"chartRef": None, **chart_from("HelmRepository", n)})
+        for n in ("repo", "ignored-repo")
+    ]
+    assert chart_sources_to_wait_for(
+        hrs, {"ns/waited"}, ["ns/ignored", "ns/ignored-repo"]
+    ) == {("OCIRepository", "ns", "other"), ("HelmRepository", "ns", "repo")}
+
+
+def app_using(name: str, source: str, *deps: str) -> dict:
+    return {
+        "metadata": {"name": name, "namespace": "ns"},
+        "spec": {
+            "chartRef": {"kind": "OCIRepository", "name": source},
+            "dependsOn": [{"name": d} for d in deps],
+        },
     }
+
+
+def apps_to_wait_for(hrs: list[dict], index: FakeIndex, ignored: list[str]) -> set:
+    by_key = {f"ns/{hr['metadata']['name']}": hr for hr in hrs}
+    blocked = waiting_on_ignored(hrs, index, ignored)  # type: ignore[arg-type]
+    return set(by_key) - blocked_helm_releases(by_key, blocked)
+
+
+@pytest.mark.parametrize("status, waited", [("True", True), ("False", False)])
+def test_ignored_dependency(status: str, waited: bool) -> None:
+    # An ignored dependency's readiness isn't asserted. Its dependent is waited for only
+    # while it's Ready.
+    app = app_using("app", "repo", "infra")
+    index = FakeIndex(
+        ("HelmRelease", ready("infra", status)), ("OCIRepository", ready("repo"))
+    )
+    assert helm_release_problems(app, index, ["ns/infra"]) == []  # type: ignore[arg-type]
+    assert apps_to_wait_for([app], index, ["ns/infra"]) == (
+        {"ns/app"} if waited else set()
+    )
+
+
+@pytest.mark.parametrize("status, waited", [("True", True), ("False", False)])
+def test_ignored_chart_source(status: str, waited: bool) -> None:
+    # An ignored chart source has to exist, but isn't polled or required to be Ready. Its
+    # HelmRelease is waited for only while it's Ready.
+    app = app_using("app", "private")
+    index = FakeIndex(("OCIRepository", ready("private", status)))
+    assert chart_sources_to_wait_for([app], set(), ["ns/private"]) == set()
+    assert helm_release_problems(app, index, ["ns/private"]) == []  # type: ignore[arg-type]
+    assert apps_to_wait_for([app], index, ["ns/private"]) == (
+        {"ns/app"} if waited else set()
+    )
+
+
+def test_ignored_chart_source_has_to_exist() -> None:
+    app = app_using("app", "private")
+    assert helm_release_problems(app, FakeIndex(), ["ns/private"]) == [  # type: ignore[arg-type]
+        "OCIRepository 'ns/private' doesn't exist"
+    ]
 
 
 @pytest.mark.parametrize(
