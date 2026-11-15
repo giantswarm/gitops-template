@@ -59,6 +59,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- CI: the kind test installs only the Cluster API v1.14.4 core CRDs, the CAPI version of the management clusters,
+  instead of Cluster API, CAPA and CAPZ with their controllers. Nothing in the template or the tests used them, and
+  this repository doesn't test cluster creation. `validate.yaml` no longer sets `clusterctl_ver`.
+  See [Configuring extra validation](docs/guides/ci-validation.md#cluster-api).
+  ([#289](https://github.com/giantswarm/gitops-template/issues/289))
 - CI: the kind test runs on Kubernetes v1.36, the minor version of the management clusters, instead of v1.23 from
   2022. `validate.yaml` sets kind v0.32.0 (`kindest/node:v1.36.1`), clusterctl v1.14.4, flux-app 1.12.2 and
   apptestctl 0.27.0. `tests/ats` installs Cluster API v1.14.4, CAPA v2.11.1 and CAPZ v1.27.0, the upstream releases

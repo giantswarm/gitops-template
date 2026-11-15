@@ -35,9 +35,6 @@ jobs:
       # the Kubernetes minor version of the management clusters. The shared
       # workflow defaults to kind 0.12.0, which runs Kubernetes v1.23.
       kind_ver: "0.32.0"
-      # The clusterctl that installs Cluster API in the kind test. Keep it on
-      # the release of CLUSTER_CTL_CORE_VERSION in tests/ats/conftest.py.
-      clusterctl_ver: "1.14.4"
       # The flux-app chart the kind test installs: the version on the
       # management clusters (Flux v2.7.5), as in tools/test-all-ff.
       gitops_flux_app_version: "1.12.2"

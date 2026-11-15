@@ -59,12 +59,24 @@ The test cluster runs the same versions as a Giant Swarm management cluster wher
 | Kubernetes | v1.36.1, the default node image of kind v0.32.0 | `kind_ver` in [validate.yaml](../../.github/workflows/validate.yaml) |
 | flux-app | 1.12.2 (Flux v2.7.5) | `gitops_flux_app_version` in validate.yaml |
 | app-operator and chart-operator | installed by apptestctl 0.27.0 | `apptestctl_ver` in validate.yaml |
-| clusterctl | v1.14.4 | `clusterctl_ver` in validate.yaml |
-| Cluster API, CAPA, CAPZ | v1.14.4, v2.11.1, v1.27.0 | `CLUSTER_CTL_CORE_VERSION` and `CLUSTER_CTL_PROVIDERS_MAP` in [conftest.py](../../tests/ats/conftest.py) |
+| Cluster API CRDs | v1.14.4 | `CAPI_VERSION` in [conftest.py](../../tests/ats/conftest.py) |
 
 The shared workflow doesn't take a node image, so the Kubernetes patch version is whatever the kind release defaults
 to. pytest prints the version it ran against at the top of its output, as `kubernetes server: v1.36.1 (linux/amd64)`.
-Keep `clusterctl_ver` on the release of `CLUSTER_CTL_CORE_VERSION`.
+
+### Cluster API
+
+This repository doesn't test cluster creation. Workload clusters are created by the `release-aws` chart on a real
+management cluster, which a kind cluster can't stand in for.
+
+The test cluster has the Cluster API core CRDs only: the `CustomResourceDefinition`s from the `core-components.yaml`
+of the Cluster API release, in the `cluster.x-k8s.io` group and its `addons`, `ipam` and `runtime` subgroups. It runs no
+Cluster API controllers and no infrastructure providers such as CAPA or CAPZ, so nothing acts on a Cluster API object.
+A test can create one, for example a stand-in `Cluster`, and set its status itself. Use `v1beta2`, the version the
+objects are stored in: the CRDs are installed without their conversion webhook, so other versions are served without
+conversion.
+
+The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 
 ### Configuration
 
