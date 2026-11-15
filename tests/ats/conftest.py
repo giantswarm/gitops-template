@@ -11,6 +11,7 @@ from typing import Iterable, Any
 
 import pykube
 import pytest
+import requests
 import validators
 import yaml
 from pykube import Secret
@@ -69,6 +70,30 @@ INSTALLATION_VALUES_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "../../tools/values-stubs/cluster-app-installation-values.yaml",
 )
+# The management cluster creates `<cluster>-cluster-values` for every workload cluster, and the
+# apps of the cluster read it. The stand-in has the content tools/validate-helm-values renders with.
+WORKLOAD_CLUSTER_VALUES_NAME = f"{WORKLOAD_CLUSTER_VCLUSTER_NAME}-cluster-values"
+CLUSTER_VALUES_STUB = "../../tools/values-stubs/cluster-values.yaml"
+# The CRDs the apps of the workload cluster create objects of, beyond the ones their charts
+#  install. A Giant Swarm workload cluster gets them from its default apps; the vCluster gets
+#  only the CRDs, as nothing in the test needs the controllers. The README there lists them,
+#  where they come from and which app needs them.
+WORKLOAD_CLUSTER_CRDS_DIR = "fixtures/crds"
+# The PriorityClass the cluster chart creates in every Giant Swarm workload cluster. The
+#  envoy-gateway Deployment uses it, and its pods can't be created without it.
+WORKLOAD_CLUSTER_PRIORITY_CLASS = {
+    "apiVersion": "scheduling.k8s.io/v1",
+    "kind": "PriorityClass",
+    "metadata": {"name": "giantswarm-critical"},
+    "value": 1000000000,
+}
+
+
+class PriorityClass(pykube.objects.APIObject):
+    version = "scheduling.k8s.io/v1"
+    endpoint = "priorityclasses"
+    kind = "PriorityClass"
+
 
 logger = logging.getLogger(__name__)
 
@@ -413,13 +438,15 @@ def kubeconfig_with_server(kubeconfig: dict, server: str) -> dict:
 def workload_cluster(
     kube_cluster: Cluster, kube_config: str, init_namespaces: Any
 ) -> Iterable[pykube.HTTPClient]:
-    """A vCluster in the test cluster, standing in for the workload cluster of the -direct example.
+    """A vCluster in the test cluster, standing in for the workload cluster of the out-of-band examples.
 
     `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload
-    cluster through the kubeconfig Secret a management cluster has for it. The fixture creates
-    that Secret in the test cluster with the vCluster's kubeconfig, so Flux reconciles the
-    example for real. kustomize-controller reaches the vCluster API server through its Service;
-    the runner reaches it on the Service's node port.
+    cluster, and the cluster's HelmReleases install their apps there, through the kubeconfig
+    Secret a management cluster has for it. The fixture creates that Secret in the test cluster
+    with the vCluster's kubeconfig, so Flux reconciles the example for real. It also creates
+    what the apps need from the management cluster, the cluster values, and in the vCluster
+    the CRDs they need. kustomize-controller and helm-controller reach the vCluster API server
+    through its Service; the runner reaches it on the Service's node port.
     """
     node = next(iter(pykube.Node.objects(kube_cluster.kube_client)))
     node_ip = next(
@@ -442,8 +469,8 @@ def workload_cluster(
                 "image": {"repository": "loft-sh/vcluster-oss"},
                 "persistence": {"volumeClaim": {"enabled": False}},
             },
-            # nothing in the test runs pods in the vCluster
-            "coredns": {"enabled": False},
+            # CoreDNS stays on, the chart's default: the H3a releases run pods in the vCluster.
+            #  Without it, gateway-api-crds and the hello-web-app hello-world didn't get Ready.
             "proxy": {"extraSANs": [service_host, node_ip]},
             "service": {"spec": {"type": "NodePort"}},
         },
@@ -453,6 +480,8 @@ def workload_cluster(
     )
     with values_file:
         yaml.safe_dump(values, values_file)
+    # what the fixture created in the test cluster, deleted again in the end
+    created: list[pykube.objects.APIObject] = []
     try:
         run_helm(
             "upgrade",
@@ -492,6 +521,32 @@ def workload_cluster(
         https_port = next(
             p for p in service.obj["spec"]["ports"] if p["name"] == "https"
         )
+        # the runner reaches the vCluster on the node port, at the kind node's address
+        vcluster_api = pykube.HTTPClient(
+            pykube.KubeConfig(
+                kubeconfig_with_server(
+                    vc_kubeconfig, f"https://{node_ip}:{https_port['nodePort']}"
+                )
+            )
+        )
+        # the node port can refuse connections for a moment after the install
+        wait_for_api(vcluster_api, 60)
+        install_crds(vcluster_api, WORKLOAD_CLUSTER_CRDS_DIR)
+        # the vCluster goes away in the end, and its objects with it
+        apply(PriorityClass(vcluster_api, WORKLOAD_CLUSTER_PRIORITY_CLASS))
+
+        with open(CLUSTER_VALUES_STUB) as f:
+            cluster_values = pykube.ConfigMap(
+                kube_cluster.kube_client,
+                {
+                    "metadata": {
+                        "name": WORKLOAD_CLUSTER_VALUES_NAME,
+                        "namespace": WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
+                    },
+                    "data": {"values": f.read()},
+                },
+            )
+        created.append(apply(cluster_values))
 
         kubeconfig_secret = pykube.Secret(
             kube_cluster.kube_client,
@@ -511,23 +566,12 @@ def workload_cluster(
                 },
             },
         )
-        # an interrupted earlier run can leave the Secret behind
-        if kubeconfig_secret.exists():
-            kubeconfig_secret.update()
-        else:
-            kubeconfig_secret.create()
+        created.append(apply(kubeconfig_secret))
 
-        # the runner reaches the vCluster on the node port, at the kind node's address
-        yield pykube.HTTPClient(
-            pykube.KubeConfig(
-                kubeconfig_with_server(
-                    vc_kubeconfig, f"https://{node_ip}:{https_port['nodePort']}"
-                )
-            )
-        )
-
-        kubeconfig_secret.delete()
+        yield vcluster_api
     finally:
+        for obj in reversed(created):
+            obj.delete()
         run_helm(
             "uninstall",
             WORKLOAD_CLUSTER_VCLUSTER_NAME,
@@ -540,6 +584,61 @@ def workload_cluster(
             kube_config,
         )
         os.remove(values_file.name)
+
+
+def wait_for_api(api: pykube.HTTPClient, timeout_sec: int) -> None:
+    """Wait until the API server answers `/version`."""
+    deadline = time.monotonic() + timeout_sec
+    while True:
+        try:
+            api.get(version="", base="/version").raise_for_status()
+            return
+        except requests.exceptions.RequestException as e:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"The API server didn't answer in {timeout_sec} s: {e}"
+                ) from e
+        time.sleep(2)
+
+
+def apply(obj: pykube.objects.APIObject) -> pykube.objects.APIObject:
+    """Create `obj`, or update it if it exists: an interrupted earlier run can leave it behind."""
+    if obj.exists():
+        obj.update()
+    else:
+        obj.create()
+    return obj
+
+
+def install_crds(api: pykube.HTTPClient, directory: str) -> None:
+    """Create the CustomResourceDefinitions in the `.yaml` files in `directory`, and wait until
+    they're served."""
+    started = time.monotonic()
+    names = []
+    for file in sorted(os.listdir(directory)):
+        if not file.endswith(".yaml"):
+            continue
+        with open(os.path.join(directory, file)) as f:
+            for doc in yaml.safe_load_all(f):
+                if doc and doc.get("kind") == "CustomResourceDefinition":
+                    names.append(apply(pykube.CustomResourceDefinition(api, doc)).name)
+    if not names:
+        raise Exception(f"No CRDs found in '{directory}'")
+    deadline = time.monotonic() + 60
+    for name in names:
+        while True:
+            crd = pykube.CustomResourceDefinition.objects(api).get(name=name)
+            conditions = crd.obj.get("status", {}).get("conditions") or []
+            if any(
+                c["type"] == "Established" and c["status"] == "True" for c in conditions
+            ):
+                break
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"CRD '{name}' isn't established.")
+            time.sleep(1)
+    logger.info(
+        f"Installed {len(names)} CRDs in {time.monotonic() - started:.1f} s: {names}"
+    )
 
 
 def wait_for_secret(api: pykube.HTTPClient, name: str, namespace: str) -> pykube.Secret:

@@ -39,8 +39,50 @@ This validation step offers some broader possibilities for validation, but also 
 
 ### Validation option
 
-By default, this test checks if all the `Kustomization` objects except the ones defined in `GITOPS_IGNORED_OBJECTS`
-environment variable are successfully reconciled in the cluster.
+Every example is something you build from, so an example the test can reconcile has to get `Ready`. The test installs
+what an example needs; it doesn't skip examples to pass. Creating clusters is the one exception, as the test can't
+do it (see [Cluster API](#cluster-api)).
+
+The objects named in `GITOPS_IGNORED_OBJECTS` that are `HelmRelease`s or sources aren't looked at at all. The list
+doesn't apply to `Kustomization`s. The test checks:
+
+| Objects | Check |
+| --- | --- |
+| `Kustomization`s | All of them get `Ready`, including the ones `GITOPS_IGNORED_OBJECTS` names. The test lists them again after each wait, as the root `Kustomization`s create the cluster ones, until no new one appears. Without any `Kustomization`, the test fails. |
+| Sources: `OCIRepository`s, `GitRepository`s, `HelmRepository`s, `HelmChart`s and `Bucket`s | All of them get `Ready`. An OCI `HelmRepository` has no `Ready` condition, as Flux doesn't reconcile it, so it only has to exist. If there are none of a kind, the test passes and logs it. |
+| `HelmRelease`s | Their references exist, and the ones the test cluster can run get `Ready`, see below. If there are none, the test passes and logs it. |
+
+An object is `Ready` when its first condition, where Flux keeps `Ready`, is `Ready` and `True`. Each check waits
+until every object it waits for has been `Ready` once; none of them makes a final pass over all the objects
+afterwards. The waits are 60 seconds for each round of `Kustomization`s, 180 seconds for each kind of source and 720
+seconds for `HelmRelease`s, longer than the examples' `timeout` of 10 minutes, so a `HelmRelease` that doesn't get ready
+reports helm-controller's reason. The test reports the first condition of each object that isn't `Ready`.
+
+Each `HelmRelease` is one of these kinds:
+
+| Kind | Waited for until `Ready` | References checked |
+| --- | --- | --- |
+| Runs on the management cluster: no `kubeConfig`, and not a cluster chart | Yes | All |
+| Cluster chart: exactly `release-aws`, `release-azure`, `release-vsphere` or `release-cloud-director` | No: the test has no cloud account to create the cluster in | All |
+| Workload-cluster app whose `spec.kubeConfig.secretRef` Secret exists in the test cluster | Yes | All |
+| Workload-cluster app whose Secret doesn't exist | No | All, except the two the management cluster creates |
+| One of the first and third kinds, whose `dependsOn` chain reaches a `HelmRelease` of the second or fourth kind, or an ignored one, or whose chart source is ignored | No | All |
+
+The test tells the two kinds of workload-cluster apps apart only by whether the kubeconfig Secret exists, never by the
+cluster's name. The references it checks exist; it doesn't read what's in them:
+
+- the chart source, the `chartRef` or the `chart.spec.sourceRef`, unless it's ignored. Whether it's `Ready` is the
+  source check above.
+- every `valuesFrom` object that isn't `optional: true`, and its key. The values are validated by
+  [validate-helm-values](../../tools/README.md#validate-helm-values) instead.
+- the `kubeConfig` Secret.
+- every `HelmRelease` in `dependsOn`.
+
+The references are checked before the test waits for any `HelmRelease`, so a missing one fails the test at once.
+
+For a workload-cluster app whose Secret doesn't exist, two references are exempt, by exact name: a kubeconfig Secret
+named `<cluster>-kubeconfig`, and the `<cluster>-cluster-values` ConfigMap in its `valuesFrom`. The management cluster
+creates both.
 
 Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified. Each of these files
 has to contain one or more YAML description of objects of Kubernetes objects you expect to be present in the cluster
@@ -87,23 +129,49 @@ This build step requires additional configuration using the following environmen
 - `GITOPS_INIT_NAMESPACES`: namespaces used for testing need to be initialized (RBAC permissions) before
   they can be used; as such this variable needs to hold a comma separated list of namespaces, where you want
   to deploy `Kustomization` objects during the test (example: `default,org-org-name`)
-- `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) Flux objects that are expected to have a failed
-  state during the test (example: "org-org-name/my-kustomization"). [validate.yaml](../../.github/workflows/validate.yaml)
-  sets it with the `gitops_ignored_objects` input of the shared workflow, empty in this repository. Update it there
-  when you add a `Kustomization` that can't become ready in the test cluster.
+- `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) `HelmRelease`s and sources that the test doesn't
+  look at (example: "org-org-name/my-helmrelease"). It doesn't apply to `Kustomization`s, which all have to get
+  `Ready`. [validate.yaml](../../.github/workflows/validate.yaml) sets it with the `gitops_ignored_objects` input of
+  the shared workflow, empty in this repository. Keep it empty: an example the test can reconcile has to get `Ready`,
+  so install what it needs in the test instead.
 - `GITOPS_MASTER_GPG_KEY`: this variable needs to be a secret (unless you know what you're doing) and needs to contain
   a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
 
-### The workload cluster of the `-direct` out-of-band example
+### The workload cluster of the `mapi-out-of-band-no-flux` example
 
-`WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, through the
-`mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster has for it. The test installs a
-[vCluster](https://www.vcluster.com/) named `mapi-out-of-band-no-flux` in the test cluster and puts its kubeconfig, with
-the vCluster's in-cluster Service as the server, in that Secret, so the `Kustomization` reconciles like on a management
-cluster. Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against the vCluster, the same way
-as the files in `tests/ats/assertions/exists`. Running the test locally needs `helm` in your `$PATH`.
+`WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, and the cluster's
+`HelmRelease`s install their apps there, through the `mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster
+has for it. The test installs a [vCluster](https://www.vcluster.com/) named `mapi-out-of-band-no-flux` in the test
+cluster and puts its kubeconfig, with the vCluster's in-cluster Service as the server, in that Secret, so the
+`Kustomization` and the `HelmRelease`s reconcile like on a management cluster. As that Secret exists, the apps have to
+get `Ready`. The test also creates what they need:
+
+- the `mapi-out-of-band-no-flux-cluster-values` ConfigMap, which a management cluster creates for every workload
+  cluster. Its values are [tools/values-stubs/cluster-values.yaml](../../tools/values-stubs/cluster-values.yaml).
+- in the vCluster, the CRDs that a Giant Swarm workload cluster gets from its default apps and the apps create objects
+  of: Cilium's `CiliumNetworkPolicy`, `PodMonitor`, Grafana's `PodLogs`, cert-manager's `Certificate` and `Issuer`,
+  Kyverno's `ClusterPolicy` and external-dns' `DNSEndpoint`. Only the CRDs: nothing in the test needs their
+  controllers. They're kept in [tests/ats/fixtures/crds](../../tests/ats/fixtures/crds/README.md), which says where
+  each comes from, so the test doesn't download them.
+- in the vCluster, the `giantswarm-critical` PriorityClass, which the cluster chart creates in every Giant Swarm
+  workload cluster. The `envoy-gateway` Deployment's pods can't be created without it.
+
+The vCluster runs CoreDNS, as the apps run pods there.
+
+Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against the vCluster, the same way as the
+files in `tests/ats/assertions/exists`. They list the main workload of each app:
+
+- Every workload-cluster app whose kubeconfig Secret exists needs an assertion of its main workload: an object with a
+  `helmRelease: <namespace>/<name>` key naming the `HelmRelease`. The key isn't a field of the object, so the
+  comparison skips it. The test fails for a `HelmRelease` without one, so a new app needs an assertion. For
+  `gateway-api-crds`, which runs no workload, it's the `gateways.gateway.networking.k8s.io` CRD the chart installs.
+- Every `Deployment` in them has to be available, too.
+- The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
+  its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
+
+Running the test locally needs `helm` in your `$PATH`.
 
 `tests/ats/conftest.py` pins the `vcluster` chart (`VCLUSTER_CHART_VERSION`, 0.37.6) and the vCluster's Kubernetes
 image (`VCLUSTER_KUBERNETES_IMAGE_TAG`, v1.36.6). Keep the image on the Kubernetes minor version of the kind cluster and

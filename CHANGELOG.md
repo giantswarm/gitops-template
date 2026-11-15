@@ -304,6 +304,18 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `tools/validate-helm-values` and the kind test use a stand-in for `cluster-app-installation-values`.
   `kubectl gs gitops add base` doesn't add the entry; the base's readme describes the difference.
   ([#273](https://github.com/giantswarm/gitops-template/issues/273))
+- The kind test's `HelmRelease` check checked nothing: it skipped every `HelmRelease` with a `kubeConfig` or a
+  `release-*` chart, which was all 37 of them. It now follows the spec in
+  [#219](https://github.com/giantswarm/gitops-template/issues/219). Workload-cluster apps whose kubeconfig Secret
+  exists in the test cluster, the six of `mapi-out-of-band-no-flux`, have to get `Ready` in the vCluster, and each
+  has an assertion of its main workload there. The test creates the cluster's `<cluster>-cluster-values` stand-in,
+  and the CRDs, kept in `tests/ats/fixtures/crds`, and the `giantswarm-critical` PriorityClass the apps need in the
+  vCluster. For every `HelmRelease`, the chart source, the
+  required `valuesFrom` objects and their keys, the kubeconfig Secret and `dependsOn` have to exist, except what the
+  management cluster creates for clusters the test doesn't have; a missing one fails before any wait. Every source
+  kind now has to get `Ready`, not only `OCIRepository`s. Every `Kustomization` has to get `Ready`, including ones in
+  `GITOPS_IGNORED_OBJECTS`, and the test fails when there's none. Assertions find a kind's resource name through API
+  discovery. See [docs/guides/ci-validation.md](docs/guides/ci-validation.md#validation-option).
 - `tools/test-all-ff validate` now validates Flux and Giant Swarm objects
   against real schemas. kubeconform ran with `-ignore-missing-schemas` and no
   CRD schema source, so it skipped every `HelmRelease`, `OCIRepository` and
