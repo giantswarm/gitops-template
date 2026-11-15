@@ -43,8 +43,10 @@ ConfigMap, which every Giant Swarm management cluster has:
   `giantswarm` namespace with `synchronize: true`, so Kyverno creates the copy in every new organization namespace and
   updates the copies when the original changes. Giant Swarm ships the policy with `kyverno-policies-ux` 0.14.0 and
   newer. On a management cluster with an older `kyverno-policies-ux`, the organization namespaces don't have the
-  ConfigMap, and every cluster `HelmRelease` made from this base fails with `ConfigMap not found`. The entry is
-  required on purpose: a cluster without the management cluster's values must not be installed.
+  ConfigMap, and every cluster `HelmRelease` made from this base fails. Flux reports
+  `could not resolve ConfigMap chart values reference '<namespace>/cluster-app-installation-values' with key
+  'values.yaml': configmaps "cluster-app-installation-values" not found`. The entry is required on purpose: a cluster
+  without the management cluster's values must not be installed.
 
 The ConfigMap isn't in this repository, and you don't create it. Clusters created as App CRs get the same ConfigMap
 through the App's `extraConfigs`.
