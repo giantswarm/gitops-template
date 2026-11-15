@@ -18,4 +18,5 @@ spec:
   sourceRef:
     kind: GitRepository
     name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo for this cluster (might be the same or different than the one used for the MC)
+    namespace: default  # the namespace of that GitRepository; this Kustomization is in the namespace of the kubeconfig Secret
   timeout: 2m

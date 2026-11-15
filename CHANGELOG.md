@@ -7,6 +7,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The kind test reconciles the `-direct` out-of-band example, which CI ignored because it targets a workload
+  cluster. `tests/ats` creates a vCluster in the kind cluster as that workload cluster and puts its kubeconfig in the
+  `mapi-out-of-band-no-flux-kubeconfig` Secret the `Kustomization` reads. The `Kustomization` has to get ready, and
+  the files in `tests/ats/assertions/exists-in-workload-cluster` are checked against the vCluster.
+  The vCluster chart (0.37.6) and its Kubernetes image (v1.36.6) are pinned in `tests/ats/conftest.py`.
+  `gitops_ignored_objects` in `validate.yaml` is empty now. ([#224](https://github.com/giantswarm/gitops-template/issues/224))
 - A CAPA cluster base in `bases/clusters/capa/release` for the `release-aws` chart, and an example workload
   cluster that uses it. The base is an overlay of `bases/clusters/capa/template`. The App's version is the
   Giant Swarm release, taken from the `release` variable, so the release lives in git. Use it for releases that
@@ -314,6 +320,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the suite keeps testing against the CAPI version it already was. Going past
   the `v1beta1` contract needs a newer `clusterctl` than the `1.2.0` the
   workflow installs, plus newer infrastructure providers.
+- The `-direct` out-of-band example `Kustomization` is in the organization namespace, next to the kubeconfig Secret,
+  but referenced the `GitRepository` without a namespace, so Flux looked for it there and never reconciled the
+  example. Its `sourceRef` now sets `namespace: default`, as `docs/add_wc_structure.md` already showed. The kind test
+  found this once it reconciled the example ([#224](https://github.com/giantswarm/gitops-template/issues/224)).
 - The `WC_NAME` example labelled its `App` CRs `giantswarm.io/cluster: WC_NAME`
   instead of the cluster name. App Platform uses this label to find the
   cluster's `<cluster>-cluster-values` ConfigMap and `<cluster>-kubeconfig`

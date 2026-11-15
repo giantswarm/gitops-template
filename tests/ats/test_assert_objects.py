@@ -1,9 +1,10 @@
-"""Checks of the assertion comparison itself; they need no cluster."""
+"""Checks of the assertion comparison and the test configuration; they need no cluster."""
 
 from typing import Any
 
 import pytest
 
+from conftest import parse_ignored_objects
 from test_flux_objects import assert_objects
 
 
@@ -90,3 +91,17 @@ def test_other_lists_ignore_order() -> None:
     expected = helm_release(["base"], {"dependsOn": [{"name": "a"}, {"name": "b"}]})
     actual = helm_release(["base"], {"dependsOn": [{"name": "b"}, {"name": "a"}]})
     assert_objects(expected, FakeObject(actual), "test")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("", []),
+        ("a/x", ["a/x"]),
+        # spaces after the commas, and empty entries
+        ("a/x, b/y", ["a/x", "b/y"]),
+        (" a/x ,, b/y ,", ["a/x", "b/y"]),
+    ],
+)
+def test_parse_ignored_objects(value: str, expected: list[str]) -> None:
+    assert parse_ignored_objects(value) == expected

@@ -41,9 +41,9 @@ jobs:
       # Installs app-operator and chart-operator in the kind test. 0.27.0 is
       # the shared workflow's default too, set here so it is pinned with the rest.
       apptestctl_ver: "0.27.0"
-      # The out-of-band Kustomization targets a workload cluster the kind test
-      # cluster doesn't have, so it never becomes ready. The shared workflow's
-      # default still names it by its old name.
-      gitops_ignored_objects: "org-org-name/mc-name-clusters-mapi-out-of-band-no-flux-direct"
+      # Every Flux Kustomization has to get ready. The -direct out-of-band one
+      # targets a workload cluster; tests/ats creates a vCluster in the kind
+      # cluster for it. Set explicitly, as the shared workflow's default names an object.
+      gitops_ignored_objects: ""
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

@@ -88,14 +88,29 @@ This build step requires additional configuration using the following environmen
   they can be used; as such this variable needs to hold a comma separated list of namespaces, where you want
   to deploy `Kustomization` objects during the test (example: `default,org-org-name`)
 - `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) Flux objects that are expected to have a failed
-  state during the test (example - a Kustomization that targets an external cluster:
-  "org-org-name/mc-name-clusters-mapi-out-of-band-no-flux-direct"). [validate.yaml](../../.github/workflows/validate.yaml)
-  sets it with the `gitops_ignored_objects` input of the shared workflow. Update it there when you rename or add a
-  `Kustomization` that can't become ready in the test cluster.
+  state during the test (example: "org-org-name/my-kustomization"). [validate.yaml](../../.github/workflows/validate.yaml)
+  sets it with the `gitops_ignored_objects` input of the shared workflow, empty in this repository. Update it there
+  when you add a `Kustomization` that can't become ready in the test cluster.
 - `GITOPS_MASTER_GPG_KEY`: this variable needs to be a secret (unless you know what you're doing) and needs to contain
   a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
+
+### The workload cluster of the `-direct` out-of-band example
+
+`WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, through the
+`mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster has for it. The test installs a
+[vCluster](https://www.vcluster.com/) named `mapi-out-of-band-no-flux` in the test cluster and puts its kubeconfig, with
+the vCluster's in-cluster Service as the server, in that Secret, so the `Kustomization` reconciles like on a management
+cluster. Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against the vCluster, the same way
+as the files in `tests/ats/assertions/exists`. Running the test locally needs `helm` in your `$PATH`.
+
+`tests/ats/conftest.py` pins the `vcluster` chart (`VCLUSTER_CHART_VERSION`, 0.37.6) and the vCluster's Kubernetes
+image (`VCLUSTER_KUBERNETES_IMAGE_TAG`, v1.36.6). Keep the image on the Kubernetes minor version of the kind cluster and
+the management clusters when you bump either. A vCluster runs as a pod in the kind cluster, so more workload clusters
+cost a pod each rather than another kind cluster on the runner. In a [comparison](https://github.com/giantswarm/gitops-template/pull/277)
+with a second kind cluster, the vCluster took 29 seconds to set up against 17 (medians of 6 and 15 runs), and the whole
+kind job 254 seconds against 237, less than the spread of about 60 seconds between runs of the same setup.
 
 ## Superseded runs
 
