@@ -428,8 +428,7 @@ EOF
 
 The pool is called `large` and doesn't share a key with the stage's `nodepool0`, so a production cluster gets both
 pools: the stage's and the region's. The dev and staging clusters don't add the node pool component, so they only get
-the chart's default node pools. [tools/validate-helm-values.expect](/tools/validate-helm-values.expect) checks the
-merged node pools of every example cluster in CI.
+the chart's default node pools.
 
 ## Add Workload Clusters based on the environment cluster templates
 
@@ -521,6 +520,12 @@ the order they are listed, so Flux merges the entries in this order:
 The cluster template doesn't append the cluster's own values itself. It is a resource of the cluster's kustomization,
 and kustomize applies the patches of a resource before the components of the kustomization that uses it. A region
 component would then land after the cluster's own values and override them.
+
+> **Note**
+>
+> Always list the `userconfig` component. Without it, the `${cluster_name}-cluster-userconfig` ConfigMap is still
+> created, but nothing reads it: the cluster silently loses its own values and those of its stage. CI doesn't catch
+> this.
 
 Let's take a look at the development environment instance. It runs in `eu-central`.
 

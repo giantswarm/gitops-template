@@ -18,7 +18,8 @@ The values come in layers. Flux merges the entries of the `HelmRelease`'s `value
 - the base's `${cluster_name}-config` ConfigMap holds the defaults of every cluster made from the base
 - the `${cluster_name}-region-config` ConfigMap holds the cluster's region. The base doesn't read it: every cluster
   adds a region component, which creates the ConfigMap and appends it, see [Regions](environments.md#regions). A cluster
-  without a region would be created in the region of its management cluster, so CI fails for it
+  without a region would be created in the region of its management cluster, so CI fails for a `release-aws` cluster
+  without one
 - optionally more layers from components, such as a region's extra node pool
 - a cluster appends its own ConfigMap last, see
   [Creating a cluster from the CAPA cluster base](../add_wc_instance.md#creating-a-cluster-from-the-capa-cluster-base)

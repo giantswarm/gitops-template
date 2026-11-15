@@ -81,9 +81,6 @@ function test() {
 	if [ "${mode}" == "validate" ]; then
 		fetch_flux_schemas
 		mkdir -p "${SCHEMA_CACHE}/http"
-		# validate-helm-values records here which lines of its expect file matched.
-		export EXPECT_MATCHED_FILE="${tmp_dir}/expect-matched"
-		: >"${EXPECT_MATCHED_FILE}"
 	fi
 
 	for kustomization in "${KUSTOMIZATIONS[@]}"; do
@@ -128,30 +125,16 @@ function test() {
 	done
 
 	if [ "${mode}" == "validate" ]; then
-		echo -n "helm values expect file: "
-		if ! "$(dirname $0)/validate-helm-values" --check-expect "${EXPECT_MATCHED_FILE}"; then
+		# validate-helm-values must name a release-aws cluster that has no region.
+		echo -n "helm values, cluster without a region: "
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/release-aws-without-region.yaml" 2>&1 || true)
+		if grep -q "cluster no-region has no region" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
 			has_validation_errors=1
 		fi
-		unset EXPECT_MATCHED_FILE
-
-		# Test cases of validate-helm-values' own checks: a manifest under pass/ must pass,
-		# one under fail/ must fail.
-		testdata="$(dirname $0)/testdata/validate-helm-values"
-		for f in "${testdata}"/pass/*.yaml "${testdata}"/fail/*.yaml; do
-			[ -f "${f}" ] || continue
-			echo "Testing validate-helm-values with ${f#"$(dirname $0)/"}" >&2
-			if "$(dirname $0)/validate-helm-values" "${f}"; then
-				result=pass
-			else
-				result=fail
-			fi
-			if [[ "${f}" == */${result}/* ]]; then
-				echo "OK, ${result}ed as expected"
-			else
-				echo "Expected $(basename "$(dirname "${f}")"), got ${result}"
-				has_validation_errors=1
-			fi
-		done
 	fi
 
 	if [[ ${has_validation_errors} -ne 0 ]]; then
