@@ -42,8 +42,8 @@ jobs:
       # the shared workflow's default too, set here so it is pinned with the rest.
       apptestctl_ver: "0.27.0"
       # Every Flux Kustomization has to get ready. The -direct out-of-band one
-      # targets a workload cluster; tests/ats creates a second kind cluster for
-      # it. Set explicitly, as the shared workflow's default names an object.
+      # targets a workload cluster; tests/ats creates a vCluster in the kind
+      # cluster for it. Set explicitly, as the shared workflow's default names an object.
       gitops_ignored_objects: ""
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

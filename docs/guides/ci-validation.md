@@ -99,11 +99,11 @@ This build step requires additional configuration using the following environmen
 ### The workload cluster of the `-direct` out-of-band example
 
 `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, through the
-`mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster has for it. The test creates a second `kind` cluster
-named `mapi-out-of-band-no-flux` and puts its kubeconfig in that Secret, so the `Kustomization` reconciles like on a
-management cluster. Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against that second
-cluster, the same way as the files in `tests/ats/assertions/exists`. Running the test locally needs `kind` in your
-`$PATH`.
+`mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster has for it. The test installs a
+[vCluster](https://www.vcluster.com/) named `mapi-out-of-band-no-flux` in the test cluster and puts its kubeconfig, with
+the vCluster's in-cluster Service as the server, in that Secret, so the `Kustomization` reconciles like on a management
+cluster. Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against the vCluster, the same way
+as the files in `tests/ats/assertions/exists`. Running the test locally needs `helm` in your `$PATH`.
 
 ## Superseded runs
 
