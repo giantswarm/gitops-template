@@ -1,11 +1,11 @@
-# The main workload of each HelmRelease of the mapi-out-of-band-no-flux cluster, installed into
-# the workload cluster through the mapi-out-of-band-no-flux-kubeconfig Secret.
+# The main workload of each HelmRelease of the out-of-band-no-flux cluster, installed into
+# the workload cluster through the out-of-band-no-flux-kubeconfig Secret.
 # `helmRelease` names the HelmRelease (`namespace/name`) whose main workload the object is. It
 # isn't a field of the object, so the comparison skips it. test_workload_cluster_assertions
 # fails when an H3a HelmRelease has no object here that names it, and checks that every
 # Deployment here is available.
 ---
-helmRelease: org-org-name/mapi-out-of-band-no-flux-hello-world-standalone
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-standalone
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,7 +15,7 @@ metadata:
     meta.helm.sh/release-name: hello-world-standalone
     meta.helm.sh/release-namespace: hello-world
 ---
-helmRelease: org-org-name/mapi-out-of-band-no-flux-hello-world-app-auto
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-app-auto
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,7 +26,7 @@ metadata:
     meta.helm.sh/release-namespace: hello-world-auto
 ---
 # of the hello-web-app-1 app set
-helmRelease: org-org-name/mapi-out-of-band-no-flux-hello-world
+helmRelease: org-org-name/out-of-band-no-flux-hello-world
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,13 +38,13 @@ metadata:
 ---
 # gateway-api-crds runs no workload: a Job of the chart installs the Gateway API CRDs, which
 # are what the release is for
-helmRelease: org-org-name/mapi-out-of-band-no-flux-gateway-api-crds
+helmRelease: org-org-name/out-of-band-no-flux-gateway-api-crds
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: gateways.gateway.networking.k8s.io
 ---
-helmRelease: org-org-name/mapi-out-of-band-no-flux-envoy-gateway
+helmRelease: org-org-name/out-of-band-no-flux-envoy-gateway
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,7 +56,7 @@ metadata:
 ---
 # the Gateway the apps attach their routes to. It only has to exist: kind has no load
 # balancer for the Gateway's Service, so the Gateway can't be Programmed.
-helmRelease: org-org-name/mapi-out-of-band-no-flux-gateway-api-config
+helmRelease: org-org-name/out-of-band-no-flux-gateway-api-config
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

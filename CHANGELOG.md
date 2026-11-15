@@ -9,7 +9,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The kind test reconciles the `-direct` out-of-band example, which CI ignored because it targets a workload
   cluster. `tests/ats` creates a vCluster in the kind cluster as that workload cluster and puts its kubeconfig in the
-  `mapi-out-of-band-no-flux-kubeconfig` Secret the `Kustomization` reads. The `Kustomization` has to get ready, and
+  `out-of-band-no-flux-kubeconfig` Secret the `Kustomization` reads. The `Kustomization` has to get ready, and
   the files in `tests/ats/assertions/exists-in-workload-cluster` are checked against the vCluster.
   The vCluster chart (0.37.6) and its Kubernetes image (v1.36.6) are pinned in `tests/ats/conftest.py`.
   `gitops_ignored_objects` in `validate.yaml` is empty now. ([#224](https://github.com/giantswarm/gitops-template/issues/224))
@@ -46,10 +46,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unchanged in this release; it will be dropped in a follow-up once the
   bot has run on real PRs.
   See [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
-- `tests/ats` asserts the ConfigMaps, `HelmRelease`s and `OCIRepository`s of the `hello-app-prod-us-west` example
+- `tests/ats` asserts the ConfigMaps, `HelmRelease`s and `OCIRepository`s of the `hello-app-prod-usw` example
   cluster, which only had its `Kustomization` checked. Its region values are asserted as they are today, including
   the bugs [#204](https://github.com/giantswarm/gitops-template/issues/204) and
-  [#206](https://github.com/giantswarm/gitops-template/issues/206) will fix, as for `hello-app-prod-eu-central`.
+  [#206](https://github.com/giantswarm/gitops-template/issues/206) will fix, as for `hello-app-prod-euc`.
   The assertions now also check the order of `valuesFrom`, which decides how Helm merges values; other lists are
   still compared without order. ([#223](https://github.com/giantswarm/gitops-template/issues/223))
 
@@ -65,6 +65,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Four example clusters have shorter names, because `release-aws` rejects a cluster name longer than 20 characters:
+  `hello-app-prod-us-west` is `hello-app-prod-usw`, `hello-app-prod-eu-central` is `hello-app-prod-euc`,
+  `mapi-out-of-band-no-flux` is `out-of-band-no-flux` and `mapi-out-of-band-flux-app` is `out-of-band-flux-app`.
+  `tools/validate-helm-values.ignore`, which listed them as known failures, is gone, so CI checks their values,
+  including the region, like those of every other cluster. The getting-started guides state the limit.
+  ([#274](https://github.com/giantswarm/gitops-template/issues/274))
 - CI: the kind test installs only the Cluster API v1.14.4 core CRDs, the CAPI version of the management clusters,
   instead of Cluster API, CAPA and CAPZ with their controllers. Nothing in the template or the tests used them, and
   this repository doesn't test cluster creation. `validate.yaml` no longer sets `clusterctl_ver`.
@@ -307,7 +313,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The kind test's `HelmRelease` check checked nothing: it skipped every `HelmRelease` with a `kubeConfig` or a
   `release-*` chart, which was all 37 of them. It now follows the spec in
   [#219](https://github.com/giantswarm/gitops-template/issues/219). Workload-cluster apps whose kubeconfig Secret
-  exists in the test cluster, the six of `mapi-out-of-band-no-flux`, have to get `Ready` in the vCluster, and each
+  exists in the test cluster, the six of `out-of-band-no-flux`, have to get `Ready` in the vCluster, and each
   has an assertion of its main workload there. The test creates the cluster's `<cluster>-cluster-values` stand-in,
   and the CRDs, kept in `tests/ats/fixtures/crds`, and the `giantswarm-critical` PriorityClass the apps need in the
   vCluster. For every `HelmRelease`, the chart source, the

@@ -77,9 +77,8 @@ Because the stub doesn't set a region, a `release-aws` `HelmRelease` without `gl
 with the chart's own error, "Unable to default the region". On a management cluster, `release-aws` would take the
 region of the management cluster's nodes instead, so the cluster would be created where nobody chose. A cluster sets
 its region with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
-This doesn't cover the clusters listed in `validate-helm-values.ignore`, whose known errors hide the region error, until
-[#274](https://github.com/giantswarm/gitops-template/issues/274) removes that file. `test-all-ff validate` checks
-that the script fails for [testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
+`test-all-ff validate` checks that the script fails for
+[testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
 
 The check leaves out:
 
@@ -89,9 +88,9 @@ The check leaves out:
 
 A `valuesFrom` entry that isn't optional and isn't in the repository fails the check.
 
-[validate-helm-values.ignore](validate-helm-values.ignore) lists `HelmRelease`s whose errors are known. The script still
-renders them and prints the errors, but they don't fail the check. An entry that renders without errors fails the check,
-so the list can't go stale.
+A `validate-helm-values.ignore` file next to the script, one `namespace/name` per line, lists `HelmRelease`s whose
+errors are known. The repository has none today. The script still renders the listed `HelmRelease`s and prints the
+errors, but they don't fail the check. An entry that renders without errors fails the check, so the list can't go stale.
 
 ## `fake-flux`
 

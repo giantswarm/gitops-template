@@ -1,18 +1,18 @@
 ---
 # applied to the workload cluster by WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml, through the
-# mapi-out-of-band-no-flux-kubeconfig Secret, with the Kustomization's variables substituted
+# out-of-band-no-flux-kubeconfig Secret, with the Kustomization's variables substituted
 apiVersion: v1
 data:
   values: |-
     Test ConfigMap.
     Variable substitution still possible here.
-    I am the mapi-out-of-band-no-flux cluster!
+    I am the out-of-band-no-flux cluster!
     I belong to the org-name org!
     Encryption is possible here as well, but I am not encrypted atm.
 kind: ConfigMap
 metadata:
   labels:
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-mapi-out-of-band-no-flux-direct
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-direct
     kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: secret-to-be-created-directly-in-wc
   namespace: default
