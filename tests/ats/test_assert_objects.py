@@ -9,10 +9,12 @@ from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from test_flux_objects import (
     OCIRepositoryCR,
     assert_objects,
+    blocked_helm_releases,
     chart_problems,
     helm_release_problems,
     inventory_objects,
     is_cluster_chart,
+    is_ready,
     parse_inventory_id,
     values_from_problems,
     workload_cluster_names,
@@ -201,6 +203,8 @@ def test_values_from_undecodable_secret_is_a_problem(value: str) -> None:
         ("c1-kubeconfig-admin", {"giantswarm.io/cluster": "c1"}, {"c1"}),
         ("admin", {"cluster.x-k8s.io/cluster-name": "c1"}, {"c1"}),
         ("c1-kubeconfig-admin", {}, set()),
+        # Cluster API's Secret name wins over a label that says otherwise
+        ("c1-kubeconfig", {"giantswarm.io/cluster": "c1x"}, {"c1"}),
     ],
 )
 def test_workload_cluster_names(secret: str, labels: dict, expected: set) -> None:
@@ -227,6 +231,78 @@ def test_cluster_values_skipped_for_custom_kubeconfig_secret() -> None:
         {"giantswarm.io/cluster": "c1"},
     )
     assert values_from_problems(hr, FakeIndex()) == []  # type: ignore[arg-type]
+
+
+def cluster_values_release(name: str) -> dict:
+    return release(
+        {
+            "kubeConfig": {"secretRef": {"name": "c1-kubeconfig"}},
+            "valuesFrom": [{"kind": "ConfigMap", "name": name, "valuesKey": "values"}],
+        }
+    )
+
+
+def test_cluster_values_of_another_cluster_is_reported() -> None:
+    hr = cluster_values_release("c2-cluster-values")
+    assert values_from_problems(hr, FakeIndex()) == [  # type: ignore[arg-type]
+        "ConfigMap 'c2-cluster-values' doesn't exist"
+    ]
+
+
+def test_cluster_values_that_exists_is_checked() -> None:
+    hr = cluster_values_release("c1-cluster-values")
+    index = FakeIndex(("ConfigMap", obj("c1-cluster-values", data={"other": "x"})))
+    assert values_from_problems(hr, index) == [  # type: ignore[arg-type]
+        "ConfigMap 'c1-cluster-values' has no key 'values'"
+    ]
+
+
+def test_null_lists_are_no_references() -> None:
+    hr = release({"valuesFrom": None, "dependsOn": None})
+    index = FakeIndex(("OCIRepository", ready("app")))
+    assert helm_release_problems(hr, index) == []  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "conditions, expected",
+    [
+        ([{"type": "Ready", "status": "True"}], True),
+        ([{"type": "Ready", "status": "Unknown"}], False),
+        # like flux_cr_ready, only the first condition counts; Flux keeps Ready there
+        (
+            [
+                {"type": "Reconciling", "status": "True"},
+                {"type": "Ready", "status": "True"},
+            ],
+            False,
+        ),
+        ([], False),
+    ],
+)
+def test_is_ready(conditions: list, expected: bool) -> None:
+    assert is_ready({"status": {"conditions": conditions}}) is expected
+    assert is_ready({}) is False
+
+
+def dep_release(name: str, *deps: str) -> dict:
+    return {
+        "metadata": {"name": name, "namespace": "ns"},
+        "spec": {"dependsOn": [{"name": d} for d in deps]},
+    }
+
+
+def test_blocked_helm_releases_follow_depends_on() -> None:
+    hrs = {
+        "ns/wc-app": dep_release("wc-app"),
+        "ns/mc-app": dep_release("mc-app", "wc-app"),
+        "ns/mc-app-2": dep_release("mc-app-2", "mc-app"),
+        "ns/free": dep_release("free"),
+    }
+    assert blocked_helm_releases(hrs, {"ns/wc-app"}) == {
+        "ns/wc-app",
+        "ns/mc-app",
+        "ns/mc-app-2",
+    }
 
 
 @pytest.mark.parametrize(
@@ -299,6 +375,17 @@ def test_chart_problems(spec: dict, objects: list, expected: list) -> None:
         (
             {},
             [("OCIRepository", obj("app", spec={"url": "oci://r.io/charts/hello"}))],
+            False,
+        ),
+        # an app whose name only starts with release- isn't a cluster chart
+        (
+            {},
+            [
+                (
+                    "OCIRepository",
+                    obj("app", spec={"url": "oci://r.io/charts/release-operator"}),
+                )
+            ],
             False,
         ),
         # without the OCIRepository the chart is unknown
