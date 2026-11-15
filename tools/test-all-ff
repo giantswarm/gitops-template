@@ -20,15 +20,48 @@ if [ ! -d .git ]; then
 	help
 fi
 
-KUBERNETES_VERSION="master"
+# Schema sources for kubeconform. Every object must match one of them: an object
+# whose schema is in none of them fails validation instead of being skipped.
+#
+# Kubernetes version of the Giant Swarm management clusters, which is where the
+# rendered manifests are applied.
+KUBERNETES_VERSION="1.36.5"
+KUBERNETES_SCHEMA_REF="2bfaff3898a7a4fa4e4760da3d2656211c9b4c71"
+KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/${KUBERNETES_SCHEMA_REF}/v${KUBERNETES_VERSION}-standalone-strict"
 
-KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/${KUBERNETES_VERSION}/"
-GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/main/master"
+# Flux version shipped by the flux-app release on the management clusters
+# (flux-app 1.12.2). The schemas are the ones Flux publishes with each release.
+FLUX_VERSION="2.7.5"
+FLUX_CRD_SCHEMAS_SHA256="63ec8f87d7bbc05c7eb7b75e36540b2897a150cb50c7ee1f28e1e3016dff31a2"
+FLUX_CRD_SCHEMAS_URL="https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/crd-schemas.tar.gz"
 
-GS_SCHEMA_REPOSITORY_CACHE="/tmp/gs-schema-repository-cache"
-mkdir -p "${GS_SCHEMA_REPOSITORY_CACHE}"
+# Giant Swarm CRDs, such as Organization.
+GS_SCHEMA_REF="108ad92b6114d12bb84d20a3e9740bea5b2afbf0"
+GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/${GS_SCHEMA_REF}/master"
+
+SCHEMA_CACHE="${TMPDIR:-/tmp}/gitops-template-schemas"
+FLUX_SCHEMA_DIR="${SCHEMA_CACHE}/flux-v${FLUX_VERSION}"
 
 fakeflux="$(dirname $0)/fake-flux"
+
+##
+# Download and unpack the Flux CRD schemas once, checking the archive's checksum.
+function fetch_flux_schemas() {
+	[ -s "${FLUX_SCHEMA_DIR}/helmrelease-helm-v2.json" ] && return 0
+
+	local archive
+	archive=$(mktemp)
+	echo "Downloading Flux ${FLUX_VERSION} CRD schemas" >&2
+	curl -sSfL -o "${archive}" "${FLUX_CRD_SCHEMAS_URL}"
+	if ! echo "${FLUX_CRD_SCHEMAS_SHA256}  ${archive}" | sha256sum -c --status; then
+		echo "Checksum mismatch for ${FLUX_CRD_SCHEMAS_URL}" >&2
+		rm -f "${archive}"
+		exit 1
+	fi
+	mkdir -p "${FLUX_SCHEMA_DIR}"
+	tar -xzf "${archive}" -C "${FLUX_SCHEMA_DIR}"
+	rm -f "${archive}"
+}
 
 ##
 # Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
@@ -44,6 +77,11 @@ function test() {
 	local mode="$1"
 	local has_validation_errors=0
 	tmp_dir=$(mktemp -d)
+
+	if [ "${mode}" == "validate" ]; then
+		fetch_flux_schemas
+		mkdir -p "${SCHEMA_CACHE}/http"
+	fi
 
 	for kustomization in "${KUSTOMIZATIONS[@]}"; do
 		name=$(cut -d, -f2 <<<${kustomization})
@@ -62,7 +100,13 @@ function test() {
 
 			echo -n "kubeconform: "
 			if ! (
-				kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
+				kubeconform -strict -summary -output text \
+					-kubernetes-version "${KUBERNETES_VERSION}" \
+					-schema-location "${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+					-schema-location "${FLUX_SCHEMA_DIR}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+					-schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+					-cache "${SCHEMA_CACHE}/http" \
+					"$tmp_file"
 			); then
 				has_validation_errors=1
 			else

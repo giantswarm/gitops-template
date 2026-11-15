@@ -246,6 +246,18 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `tools/test-all-ff validate` now validates Flux and Giant Swarm objects
+  against real schemas. kubeconform ran with `-ignore-missing-schemas` and no
+  CRD schema source, so it skipped every `HelmRelease`, `OCIRepository` and
+  `Kustomization`: 83 of the 139 rendered objects. It now uses the Flux 2.7.5
+  CRD schemas (the Flux of `flux-app` 1.12.2 on the management clusters), the
+  Kubernetes 1.36.5 schemas instead of `master`, and `giantswarm/json-schema`
+  for `Organization`, all pinned. An object whose kind has no schema fails,
+  unknown fields fail (`-strict`), and kubeconform errors now fail the job: the
+  error flag was set to `true`, which the final numeric check read as 0. The
+  `validate` workflow pins kubeconform 0.8.0 instead of the shared workflow's
+  default 0.4.13. Closes
+  [#216](https://github.com/giantswarm/gitops-template/issues/216).
 - The black pre-commit hook now formats `tests/ats`. Its `exclude: ''` matched
   every path, so black never checked a file. The Python files in `tests/ats`
   are reformatted with it.
