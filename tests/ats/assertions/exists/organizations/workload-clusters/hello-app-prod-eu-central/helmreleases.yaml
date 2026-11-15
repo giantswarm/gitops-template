@@ -233,7 +233,9 @@ spec:
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-prod-eu-central-region-config
-      optional: true
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-eu-central-region-node-pool-config
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-prod-eu-central-cluster-userconfig

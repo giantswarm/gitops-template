@@ -20,9 +20,11 @@ spec:
 #      its name and base domain. Giant Swarm creates it in the `giantswarm`
 #      namespace, and a Kyverno policy copies it into every `org-*` namespace.
 #   2. ${cluster_name}-config: the values of this base.
-#   3. ${cluster_name}-region-config: the values of a region, when the cluster
-#      uses one. It is optional, so a cluster without a region works as well.
-#   4. A cluster adds its own values by appending a ConfigMap with a patch.
+# A cluster appends the rest, with components and patches in its own kustomization:
+#   3. ${cluster_name}-region-config: the region, from a component in
+#      bases/environments/regions. Every cluster needs one.
+#   4. Optionally more, such as a region's extra node pool.
+#   5. The cluster's own values, last.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -56,8 +58,4 @@ spec:
       valuesKey: values.yaml
     - kind: ConfigMap
       name: ${cluster_name}-config
-      valuesKey: values
-    - kind: ConfigMap
-      name: ${cluster_name}-region-config
-      optional: true
       valuesKey: values

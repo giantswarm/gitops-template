@@ -187,6 +187,18 @@ while IFS=/ read -r ns name; do
 		files+=("${work_dir}/values-inline.yaml")
 	fi
 
+	# A cluster chart needs the cluster's region. Without it, the chart looks up the
+	# region of the management cluster's nodes, so a cluster without a region would be
+	# created in the region of its management cluster. This check doesn't depend on the
+	# ignore file.
+	if [[ "${chart_name}" == release-* ]]; then
+		region=$(yq eval-all -N '. as $f ireduce ({}; . * $f) | .global.providerSpecific.region // ""' "${files[@]}" /dev/null)
+		if [ -z "${region}" ]; then
+			echo "${id}: cluster ${name} has no region, global.providerSpecific.region is not set. Add a region component from bases/environments/regions to the cluster's kustomization."
+			failed=1
+		fi
+	fi
+
 	args=(template "$(yq ".spec.releaseName // \"${name}\"" "${hr}")" "${archive}"
 	--namespace "$(yq ".spec.targetNamespace // \"${ns}\"" "${hr}")"
 	--kube-version "${kube_version}")

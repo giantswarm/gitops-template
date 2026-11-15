@@ -151,6 +151,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `mapi/apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `mapi/cluster` |
 | The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `mapi/cluster` |
+| A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `mapi/cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../guides/environments.md#regions). `kubectl gs gitops` doesn't generate it |
 | A cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER/template` |
 
 Repositories forked before the template used these names can move to them with

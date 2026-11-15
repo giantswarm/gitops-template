@@ -1,10 +1,25 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# The region of the clusters in eu-central-1. A cluster lists this component
+# under `components:`, before the component or patch that appends the cluster's
+# own values. It adds the ${cluster_name}-region-config ConfigMap and appends it
+# to the cluster's HelmRelease `valuesFrom`, after the base values.
 configMapGenerator:
   - files:
-    - values=cluster_config.yaml
+      - values=region_config.yaml
     name: ${cluster_name}-region-config
     namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
-kind: Kustomization
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/valuesFrom/-
+        value:
+          kind: ConfigMap
+          name: ${cluster_name}-region-config
+          valuesKey: values
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \${cluster_name}

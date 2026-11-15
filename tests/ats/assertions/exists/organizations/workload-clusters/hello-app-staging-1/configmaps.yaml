@@ -21,6 +21,17 @@ metadata:
 apiVersion: v1
 data:
   values: |
+    global:
+      providerSpecific:
+        region: eu-central-1
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-region-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
     autoscaling:
       minReplicas: 3
     ingress:

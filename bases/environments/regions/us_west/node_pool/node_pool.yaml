@@ -1,10 +1,10 @@
 global:
   nodePools:
-    xxxxx:
-      additionalSecurityGroups:
-        - id: sg-0xxxxxxxxxxxxxx3f
+    large:
       availabilityZones:
-        - eu-west-1a
+        - us-west-2a
+        - us-west-2b
+        - us-west-2c
       instanceType: m6a.4xlarge
       maxSize: 10
       minSize: 1

@@ -68,9 +68,15 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
 - `cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which holds the
   management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every `org-*`
   namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/template/readme.md).
-- `charts/<chart>.yaml` holds values a chart can't get without the management cluster, such as the region
-  `release-aws` looks up from the management cluster's nodes. It is the first values file, so values from the
-  repository override it.
+- `charts/<chart>.yaml` holds values a chart can't render without the management cluster, such as
+  `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values
+  from the repository override it. It doesn't set the region: a cluster that doesn't set its own must fail.
+
+A `HelmRelease` of a `release-*` chart also fails when its merged values have no `global.providerSpecific.region`.
+Without it, the chart would take the region of the management cluster's nodes, so the cluster would be created in the
+management cluster's region. The message names the cluster. A cluster sets its region with a component from
+`bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions). This check also fails a cluster
+listed in `validate-helm-values.ignore`.
 
 The check leaves out:
 
