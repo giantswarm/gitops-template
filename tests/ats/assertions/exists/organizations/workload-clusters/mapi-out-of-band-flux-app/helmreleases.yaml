@@ -185,3 +185,47 @@ spec:
       name: mapi-out-of-band-flux-app-flux-app-user-secrets
       optional: true
       valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: mapi-out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-mapi-out-of-band-flux-app
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: mapi-out-of-band-flux-app
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: mapi-out-of-band-flux-app
+    namespace: org-org-name
+  install:
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m0s
+  releaseName: mapi-out-of-band-flux-app
+  serviceAccountName: automation
+  storageNamespace: org-org-name
+  targetNamespace: org-org-name
+  timeout: 10m0s
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-region-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: mapi-out-of-band-flux-app-cluster-userconfig
+      valuesKey: values

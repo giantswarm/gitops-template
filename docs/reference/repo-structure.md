@@ -9,6 +9,7 @@
   - [`[organizations]` and `[workload-clusters]`](#organizations-and-workload-clusters)
   - [`mapi` and `[out-of-band]`](#mapi-and-out-of-band)
 - [Flux Kustomizations](#flux-kustomizations)
+- [Objects the management cluster provides](#objects-the-management-cluster-provides)
 
 This page lists the directories and files of the repository and the rules for them. For how Flux turns them into
 clusters, see [How it works](../how-it-works.md).
@@ -149,7 +150,8 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `mapi/apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `mapi/cluster` |
-| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `mapi/cluster` |
+| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `mapi/cluster` of a cluster `kubectl gs gitops add workload-cluster` generates. A cluster made from a cluster template, such as `hello_app_cluster`, lists the template's `userconfig` component instead, which holds the same patch |
+| A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `mapi/cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../guides/environments.md#regions). `kubectl gs gitops` doesn't generate it |
 | A cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER/template` |
 
 Repositories forked before the template used these names can move to them with
@@ -261,3 +263,14 @@ resources:
 
 `WC_NAME.yaml` then applies its `WC_NAME/mapi` directory. It also sets the variables, like `${cluster_name}`, that the
 bases use. See [How it works](../how-it-works.md) for why there are two.
+
+## Objects the management cluster provides
+
+Some objects the repository uses aren't in it, because the management cluster creates them. Don't add them to the
+repository.
+
+| Object | Where it comes from | Used by |
+| --- | --- | --- |
+| ConfigMap `cluster-app-installation-values`, key `values.yaml`, in every `org-*` namespace | Giant Swarm creates it in the `giantswarm` namespace. The Kyverno policy `sync-cluster-app-configmap-to-org-namespaces`, in `kyverno-policies-ux` 0.14.0 and newer, copies it into every organization namespace and keeps the copies in sync. With an older `kyverno-policies-ux` it is missing, and every cluster `HelmRelease` fails because Flux can't resolve that `valuesFrom` entry. See [Values from the management cluster](/bases/clusters/capa/template/readme.md#values-from-the-management-cluster) | The first `valuesFrom` entry of a cluster's `HelmRelease`. On management clusters with `kyverno-policies-ux` 0.15.1 or newer, the `prepend-cluster-app-config-map-hr` policy adds the same entry to a cluster `HelmRelease` that lacks it; the explicit entry is for management clusters without that policy and does no harm next to it |
+| ConfigMap `${cluster_name}-cluster-values` | cluster-apps-operator, once the cluster exists | The `valuesFrom` of the apps of a cluster |
+| Secret `${cluster_name}-kubeconfig` | Cluster API, once the cluster exists | The `kubeConfig` of the apps' `HelmRelease`s and of `WC_NAME-direct.yaml` |

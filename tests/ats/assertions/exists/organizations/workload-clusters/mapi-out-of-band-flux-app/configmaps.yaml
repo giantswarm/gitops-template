@@ -4,3 +4,14 @@ kind: ConfigMap
 metadata:
   name: mapi-out-of-band-flux-app-hello-world-user-values
   namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    global:
+      providerSpecific:
+        region: eu-central-1
+kind: ConfigMap
+metadata:
+  name: mapi-out-of-band-flux-app-region-config
+  namespace: org-org-name

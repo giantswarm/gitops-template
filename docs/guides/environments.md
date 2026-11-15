@@ -303,13 +303,22 @@ We tell Flux to use version `3.2.2` of the `hello-world` app.
 In this example when we sufficiently validated our released changes in the staging environment we update the versions
 in the `Kustomization`, merge the change and let Flux do the work.
 
-#### Region specific settings for the production cluster
+#### Regions
 
-Let's create some bases for our region setup. Relative to root of the repository let's execute the following commands.
+Every cluster runs in a region, and every cluster has to say which. Without `global.providerSpecific.region`, the
+`release-aws` chart takes the region of the management cluster's nodes, so a cluster would quietly be created in the
+region of its management cluster. `tools/validate-helm-values` fails for a cluster without a region.
+
+A region is a [kustomize Component](https://kubectl.docs.kubernetes.io/guides/config_management/components/) in
+`bases/environments/regions`. It creates the `${cluster_name}-region-config` ConfigMap with the region and appends it to
+the cluster's `HelmRelease` `valuesFrom`. A region can also have an extra node pool in its zones, in a second component
+that the clusters which need it add, like the production clusters here.
+
+Relative to root of the repository let's execute the following commands.
 
 ```bash
-mkdir -p bases/environments/regions/eu_central
-mkdir -p bases/environments/regions/us_west
+mkdir -p bases/environments/regions/eu_central/node_pool
+mkdir -p bases/environments/regions/us_west/node_pool
 
 cd bases/environments/regions
 ```
@@ -317,64 +326,109 @@ cd bases/environments/regions
 For the `eu-central` region.
 
 ```bash
-cat <<EOF > eu_central/cluster_config.yaml
+cat <<EOF > eu_central/region_config.yaml
+global:
+  providerSpecific:
+    region: eu-central-1
+EOF
+
+cat <<EOF > eu_central/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+configMapGenerator:
+  - files:
+      - values=region_config.yaml
+    name: \${cluster_name}-region-config
+    namespace: org-\${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/valuesFrom/-
+        value:
+          kind: ConfigMap
+          name: \${cluster_name}-region-config
+          valuesKey: values
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \\\${cluster_name}
+EOF
+```
+
+Its extra node pool spans the region's zones.
+
+```bash
+cat <<EOF > eu_central/node_pool/node_pool.yaml
 global:
   nodePools:
-    xxxxx:
-      additionalSecurityGroups:
-        - id: sg-0xxxxxxxxxxxxxx3f
+    large:
       availabilityZones:
         - eu-central-1a
+        - eu-central-1b
+        - eu-central-1c
       instanceType: m6a.2xlarge
       maxSize: 10
       minSize: 1
 EOF
 
-cat <<EOF > eu_central/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
+cat <<EOF > eu_central/node_pool/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
 configMapGenerator:
   - files:
-    - values=cluster_config.yaml
-    name: \${cluster_name}-region-config
+      - values=node_pool.yaml
+    name: \${cluster_name}-region-node-pool-config
     namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
-kind: Kustomization
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/valuesFrom/-
+        value:
+          kind: ConfigMap
+          name: \${cluster_name}-region-node-pool-config
+          valuesKey: values
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \\\${cluster_name}
 EOF
 ```
 
-And for the `us-west` region.
+For the `us-west` region, the two `kustomization.yaml` files are the same as for `eu-central`. Only the values differ:
+the region is `us-west-2`, the pool's zones are `us-west-2a`, `us-west-2b` and `us-west-2c`, and the pool uses the
+larger `m6a.4xlarge` instances instead of `m6a.2xlarge`.
 
 ```bash
-cat <<EOF > us_west/cluster_config.yaml
+cp eu_central/kustomization.yaml us_west/kustomization.yaml
+cp eu_central/node_pool/kustomization.yaml us_west/node_pool/kustomization.yaml
+
+cat <<EOF > us_west/region_config.yaml
+global:
+  providerSpecific:
+    region: us-west-2
+EOF
+
+cat <<EOF > us_west/node_pool/node_pool.yaml
 global:
   nodePools:
-    xxxxx:
-      additionalSecurityGroups:
-        - id: sg-0xxxxxxxxxxxxxx3f
+    large:
       availabilityZones:
-        - eu-west-1a
+        - us-west-2a
+        - us-west-2b
+        - us-west-2c
       instanceType: m6a.4xlarge
       maxSize: 10
       minSize: 1
 EOF
-
-cat <<EOF > us_west/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-configMapGenerator:
-  - files:
-    - values=cluster_config.yaml
-    name: \${cluster_name}-region-config
-    namespace: org-\${organization}
-generatorOptions:
-  disableNameSuffixHash: true
-kind: Kustomization
-EOF
 ```
 
-We will use these as a second base for our production clusters.
+The pool is called `large` and doesn't share a key with the stage's `nodepool0`, so a production cluster gets both
+pools: the stage's and the region's. The dev and staging clusters don't add the node pool component, so they only get
+the chart's default node pools.
 
 ## Add Workload Clusters based on the environment cluster templates
 
@@ -443,14 +497,37 @@ In our example we create one instance from each cluster environment base:
 - for the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/mapi/cluster/kustomization.yaml)
 
-And for production we will take it one step further by splitting it into multiple data regions using multiple bases.
+The dev and staging clusters run in `eu-central`. Production runs in two regions, and its clusters add their region's
+extra node pool:
 
 - for the production environment we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml)
 - and another one in a different region with some different values for the cluster [HELLO_APP_PROD_CLUSTER_US_WEST](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml)
 
-All of their `kustomization.yaml` look very similar. Let's take a look at the development environment instance.
+Every cluster lists the components that append to its `HelmRelease` `valuesFrom`: its region, optionally the region's
+extra node pool, and last the cluster template's [userconfig](/bases/cluster_templates/hello_app_cluster/userconfig)
+component, which appends the cluster's own `${cluster_name}-cluster-userconfig`. kustomize applies the components in
+the order they are listed, so Flux merges the entries in this order:
+
+1. `cluster-app-installation-values`, the management cluster's values (see the [cluster base](
+   /bases/clusters/capa/template/readme.md#values-from-the-management-cluster))
+1. `${cluster_name}-config`, the base values
+1. `${cluster_name}-region-config`, the region
+1. `${cluster_name}-region-node-pool-config`, the region's extra node pool, for the clusters that add it
+1. `${cluster_name}-cluster-userconfig`, the cluster's own values
+
+The cluster template doesn't append the cluster's own values itself. It is a resource of the cluster's kustomization,
+and kustomize applies the patches of a resource before the components of the kustomization that uses it. A region
+component would then land after the cluster's own values and override them.
+
+> **Note**
+>
+> Always list the `userconfig` component. Without it, the `${cluster_name}-cluster-userconfig` ConfigMap is still
+> created, but nothing reads it: the cluster silently loses its own values and those of its stage. CI doesn't catch
+> this.
+
+Let's take a look at the development environment instance. It runs in `eu-central`.
 
 ```sh
 mkdir -p HELLO_APP_DEV_CLUSTER_1/mapi/cluster
@@ -459,23 +536,17 @@ cat <<EOF > HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
+components:
+  - ../../../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
 EOF
 ```
 
-It basically just references our environment base. But in more complex examples it could do more.
+The staging cluster looks the same with the staging stage.
 
-Think back on the example of having multiple regions where you need to set specific configurations.
-In such a case you would end up with the below setup.
-
-Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
-
-Note that we add the region's values to the cluster's `HelmRelease` as another `valuesFrom` entry. Flux merges the
-entries in order, so the region's values go after the base values and before the cluster's own
-`${cluster_name}-cluster-userconfig`.
-
-And the kustomization for this cluster looks like.
+The production clusters also add their region's extra node pool, between the region and the cluster's own values.
 
 ```bash
 mkdir -p HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster
@@ -483,29 +554,16 @@ cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
-patches:
-  # the region's values go after the base values and before the cluster's own
-  - patch: |
-      - op: add
-        path: /spec/valuesFrom/1
-        value:
-          kind: ConfigMap
-          name: "\${cluster_name}-region-config"
-          valuesKey: values
-    target:
-      group: helm.toolkit.fluxcd.io
-      kind: HelmRelease
-      name: \\\${cluster_name}
-      namespace: org-\\\${organization}
+components:
+  - ../../../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../../bases/environments/regions/eu_central/node_pool
+  - ../../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
-  - ../../../../../../../../bases/environments/regions/eu_central
 EOF
 ```
 
-For the `us-west` region version of the production cluster we need to create the same patch for the cluster's
-`HelmRelease`.
-The resultant `kustomization.yaml` looks like the one below.
+The `us-west` version of the production cluster uses the other region.
 
 ```bash
 mkdir -p HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster
@@ -513,25 +571,21 @@ cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
-patches:
-  # the region's values go after the base values and before the cluster's own
-  - patch: |
-      - op: add
-        path: /spec/valuesFrom/1
-        value:
-          kind: ConfigMap
-          name: "\${cluster_name}-region-config"
-          valuesKey: values
-    target:
-      group: helm.toolkit.fluxcd.io
-      kind: HelmRelease
-      name: \\\${cluster_name}
-      namespace: org-\\\${organization}
+components:
+  - ../../../../../../../../bases/environments/regions/us_west
+  - ../../../../../../../../bases/environments/regions/us_west/node_pool
+  - ../../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
-  - ../../../../../../../../bases/environments/regions/us_west
 EOF
 ```
+
+> **Note**
+>
+> Don't insert the region's ConfigMap with a JSON patch at a fixed position, such as `/spec/valuesFrom/1`. The position
+> is only right as long as the base has a given number of entries before it. When the base gains an entry, the region's
+> values silently move before or after the wrong layer. The components append with `/spec/valuesFrom/-` and get their
+> order from the `components:` list.
 
 ## Tips for developing environments
 

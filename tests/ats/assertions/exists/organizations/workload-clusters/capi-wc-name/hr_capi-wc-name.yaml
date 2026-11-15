@@ -30,7 +30,13 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
       name: capi-wc-name-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: capi-wc-name-region-config
       valuesKey: values
     - kind: ConfigMap
       name: capi-wc-name-cluster-userconfig

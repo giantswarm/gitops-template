@@ -99,6 +99,32 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     `cluster.yaml` with the `OCIRepository` and the `HelmRelease`, with the CLI's field values, and a
     `cluster_config.yaml` with the CLI's defaults. It keeps `global.metadata.description` and leaves out the empty
     `nodepool0` node pool, see its readme. ([#200](https://github.com/giantswarm/gitops-template/issues/200))
+- **Breaking:** every cluster sets its region. Without `global.providerSpecific.region`, `release-aws` takes the
+  region of the management cluster's nodes, so a cluster would be created where its management cluster runs.
+  - A region in `bases/environments/regions` is now a kustomize Component that creates `${cluster_name}-region-config`
+    with the region and appends it to the cluster's `valuesFrom`. `us_west` uses `us-west-2` and its zones instead of
+    `eu-west-1a` ([#204](https://github.com/giantswarm/gitops-template/issues/204)), and each region sets
+    `global.providerSpecific.region` ([#205](https://github.com/giantswarm/gitops-template/issues/205)). The dev,
+    staging, `WC_NAME` and out-of-band example clusters use `eu_central`.
+  - A region's extra node pool, `large` in the region's zones, is a second `node_pool` component that only the prod
+    clusters add, next to the stage's `nodepool0`. The regions no longer have a placeholder security group, and the
+    `WC_NAME` and out-of-band examples name their pool `workers` instead of `xxxxx`.
+  - The `hello_app_cluster` template no longer appends the cluster's own values itself: a cluster lists its region,
+    then the template's `userconfig` component, under `components:`, so its own values come last. No cluster inserts
+    a ConfigMap at a fixed `valuesFrom` position any more.
+  - The `release-aws` stub of `tools/validate-helm-values` no longer sets a region, so a cluster without one fails
+    with the chart's "Unable to default the region". This doesn't cover the clusters listed in
+    `validate-helm-values.ignore` until [#274](https://github.com/giantswarm/gitops-template/issues/274) removes that
+    file. `tools/test-all-ff validate` checks this with `tools/testdata/release-aws-without-region.yaml`. The getting
+    started guides and the cluster in `docs/how-it-works.md` add a region too.
+
+  **Migrating a fork:**
+  - In each cluster's `mapi/cluster/kustomization.yaml`, move the region from `resources:` to `components:`, and add a
+    region to every cluster that has none.
+  - Drop any patch that inserts the region's ConfigMap at `/spec/valuesFrom/1`.
+  - A cluster made from the `hello_app_cluster` template lists, under `components:`, its region, then its region's
+    `node_pool` if it wants the extra pool, and last `bases/cluster_templates/hello_app_cluster/userconfig`. Without
+    the `userconfig` component the cluster loses its own values and those of its stage, and CI doesn't catch it.
 - The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
   repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
   is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported.
@@ -110,9 +136,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   an App CR, like `kubectl gs template cluster` does since kubectl-gs 5.13.0. The release is the `OCIRepository` tag. A
   cluster adds its own values with a ConfigMap and a patch that appends it to the `HelmRelease`'s `valuesFrom`, the same
   layout `kubectl gs gitops add workload-cluster` generates since giantswarm/kubectl-gs#2274. Stages set the release on
-  the `OCIRepository`, and the prod clusters add their region values to `valuesFrom`. `bases/clusters/capa/template`
-  stays an App CR, because the `cluster-aws` chart needs App Platform. Clusters created from the old release base are
-  App CRs, and moving them needs a hand-over that doesn't reinstall them. See
+  the `OCIRepository`, and every cluster adds its region. Clusters created from the old release base are App CRs, and
+  moving them needs a hand-over that doesn't reinstall them. See
   [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
 - The `hello_app_cluster` cluster template and its dev, staging and prod stages build on
   `bases/clusters/capa/release`. Each stage sets the release as the cluster App's version, `36.2.0` in the
@@ -272,6 +297,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The CAPA cluster base reads the management cluster's values, `global.managementCluster` and
+  `global.connectivity.baseDomain`, which `release-aws` requires. Its `HelmRelease` now reads
+  `cluster-app-installation-values` (copied into every `org-*` namespace by a Kyverno policy in
+  `kyverno-policies-ux` 0.14.0 and newer on Giant Swarm management clusters), then `${cluster_name}-config`.
+  `tools/validate-helm-values` and the kind test use a stand-in for `cluster-app-installation-values`.
+  `kubectl gs gitops add base` doesn't add the entry; the base's readme describes the difference.
+  ([#273](https://github.com/giantswarm/gitops-template/issues/273))
 - `tools/test-all-ff validate` now validates Flux and Giant Swarm objects
   against real schemas. kubeconform ran with `-ignore-missing-schemas` and no
   CRD schema source, so it skipped every `HelmRelease`, `OCIRepository` and

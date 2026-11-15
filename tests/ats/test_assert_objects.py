@@ -3,8 +3,9 @@
 from typing import Any
 
 import pytest
+import yaml
 
-from conftest import parse_ignored_objects
+from conftest import installation_values_config_map, parse_ignored_objects
 from test_flux_objects import assert_objects
 
 
@@ -105,3 +106,12 @@ def test_other_lists_ignore_order() -> None:
 )
 def test_parse_ignored_objects(value: str, expected: list[str]) -> None:
     assert parse_ignored_objects(value) == expected
+
+
+def test_installation_values_stand_in() -> None:
+    # The stand-in has to give the cluster charts the values they need from the management cluster.
+    cm = installation_values_config_map(None, "org-org-name")  # type: ignore[arg-type]
+    assert cm.obj["metadata"]["name"] == "cluster-app-installation-values"
+    values = yaml.safe_load(cm.obj["data"]["values.yaml"])
+    assert values["global"]["managementCluster"]
+    assert values["global"]["connectivity"]["baseDomain"]

@@ -59,6 +59,16 @@ VCLUSTER_KUBERNETES_IMAGE_TAG = "v1.36.6"
 VCLUSTER_READY_TIMEOUT_SEC = 300
 WORKLOAD_CLUSTER_KUBECONFIG_NAME = "mapi-out-of-band-no-flux-kubeconfig"
 WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
+# On a Giant Swarm management cluster, the `cluster-app-installation-values` ConfigMap holds the
+# management cluster's values, such as its name and base domain. It exists in the `giantswarm`
+# namespace, and the Kyverno policy `sync-cluster-app-configmap-to-org-namespaces` copies it into
+# every `org-*` namespace. The cluster HelmReleases read it, so the test creates a stand-in in
+# each organization namespace it initialises, with the placeholder values validate-helm-values uses.
+INSTALLATION_VALUES_CONFIG_MAP_NAME = "cluster-app-installation-values"
+INSTALLATION_VALUES_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "../../tools/values-stubs/cluster-app-installation-values.yaml",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +254,24 @@ def app_platform_controllers(kube_config: str) -> None:
         raise Exception("Cannot bootstrap app platform")
 
 
+def installation_values_config_map(
+    api: pykube.HTTPClient, namespace: str
+) -> pykube.ConfigMap:
+    """Return the stand-in for the management cluster's `cluster-app-installation-values`."""
+    with open(INSTALLATION_VALUES_FILE) as f:
+        values = f.read()
+    return pykube.ConfigMap(
+        api,
+        {
+            "metadata": {
+                "name": INSTALLATION_VALUES_CONFIG_MAP_NAME,
+                "namespace": namespace,
+            },
+            "data": {"values.yaml": values},
+        },
+    )
+
+
 @pytest.fixture(scope="module")
 def init_namespaces(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
@@ -308,6 +336,29 @@ def init_namespaces(
         namespace.delete()
     for crb in created_cluster_role_bindings:
         crb.delete()
+
+
+@pytest.fixture(scope="module")
+def installation_values(
+    kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig, init_namespaces: Any
+) -> Iterable[list[pykube.ConfigMap]]:
+    """Create the stand-in `cluster-app-installation-values` in every `org-*` namespace that lacks it.
+
+    Only ConfigMaps the fixture created are deleted afterwards.
+    """
+    created: list[pykube.ConfigMap] = []
+    for ns in gitops_test_config.init_namespaces:
+        if not ns.startswith("org-"):
+            continue
+        cm = installation_values_config_map(kube_cluster.kube_client, ns)
+        if not cm.exists():
+            cm.create()
+            created.append(cm)
+
+    yield created
+
+    for cm in created:
+        cm.delete()
 
 
 @pytest.fixture(scope="module")
@@ -512,6 +563,7 @@ def gitops_environment(
     capi_crds: None,
     app_platform_controllers: None,
     init_namespaces: Any,
+    installation_values: list[pykube.ConfigMap],
     gpg_master_key: Secret,
     workload_cluster: pykube.HTTPClient,
     flux_app_deployment: ConfiguredApp,

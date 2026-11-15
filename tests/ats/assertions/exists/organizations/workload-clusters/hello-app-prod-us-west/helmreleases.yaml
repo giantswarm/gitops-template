@@ -226,10 +226,16 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
       name: hello-app-prod-us-west-config
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-prod-us-west-region-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-us-west-region-node-pool-config
       valuesKey: values
     - kind: ConfigMap
       name: hello-app-prod-us-west-cluster-userconfig

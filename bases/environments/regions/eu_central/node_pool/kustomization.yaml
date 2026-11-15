@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# An extra node pool in the zones of eu-central-1, for clusters that need more
+# capacity there, like the prod clusters. A cluster lists this component after the
+# region and before the component or patch that appends the cluster's own values.
+# It adds the ${cluster_name}-region-node-pool-config ConfigMap and appends it to
+# the cluster's HelmRelease `valuesFrom`.
+configMapGenerator:
+  - files:
+      - values=node_pool.yaml
+    name: ${cluster_name}-region-node-pool-config
+    namespace: org-${organization}
+generatorOptions:
+  disableNameSuffixHash: true
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/valuesFrom/-
+        value:
+          kind: ConfigMap
+          name: ${cluster_name}-region-node-pool-config
+          valuesKey: values
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \${cluster_name}

@@ -22,18 +22,29 @@ apiVersion: v1
 data:
   values: |
     global:
+      providerSpecific:
+        region: eu-central-1
+kind: ConfigMap
+metadata:
+  name: hello-app-prod-eu-central-region-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    global:
       nodePools:
-        xxxxx:
-          additionalSecurityGroups:
-            - id: sg-0xxxxxxxxxxxxxx3f
+        large:
           availabilityZones:
             - eu-central-1a
+            - eu-central-1b
+            - eu-central-1c
           instanceType: m6a.2xlarge
           maxSize: 10
           minSize: 1
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-eu-central-region-config
+  name: hello-app-prod-eu-central-region-node-pool-config
   namespace: org-org-name
 ---
 apiVersion: v1

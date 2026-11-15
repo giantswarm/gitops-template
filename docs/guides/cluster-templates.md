@@ -12,8 +12,16 @@ Swarm release, set by the `${release}` variable.
 
 The values come in layers. Flux merges the entries of the `HelmRelease`'s `valuesFrom` in order, and later entries win:
 
+- the `cluster-app-installation-values` ConfigMap holds the values of the management cluster, such as its name and
+  base domain. You don't create it: a Kyverno policy on the management cluster copies it into every organization
+  namespace, see [Values from the management cluster](/bases/clusters/capa/template/readme.md#values-from-the-management-cluster)
 - the base's `${cluster_name}-config` ConfigMap holds the defaults of every cluster made from the base
-- a cluster appends its own ConfigMap with a patch, see
+- the `${cluster_name}-region-config` ConfigMap holds the cluster's region. The base doesn't read it: every cluster
+  adds a region component, which creates the ConfigMap and appends it, see [Regions](environments.md#regions). A cluster
+  without a region would be created in the region of its management cluster, so CI fails for a `release-aws` cluster
+  without one
+- optionally more layers from components, such as a region's extra node pool
+- a cluster appends its own ConfigMap last, see
   [Creating a cluster from the CAPA cluster base](../add_wc_instance.md#creating-a-cluster-from-the-capa-cluster-base)
 
 The instructions respect the [repository structure](../reference/repo-structure.md).
@@ -22,8 +30,9 @@ The instructions respect the [repository structure](../reference/repo-structure.
 
 [bases/clusters/capa/template](/bases/clusters/capa/template) is the base for CAPA clusters. It has the files
 `kubectl gs gitops add base --provider capa` writes, described [below](#create-a-base-for-another-provider-optional),
-with two deliberate differences in `cluster_config.yaml`: it sets `global.metadata.description` from
-`${cluster_description}`, and it leaves out the empty `nodepool0` node pool. The base's
+with deliberate differences: its `HelmRelease` also reads `cluster-app-installation-values`, and in
+`cluster_config.yaml` it sets `global.metadata.description` from
+`${cluster_description}` and leaves out the empty `nodepool0` node pool. The base's
 [readme](/bases/clusters/capa/template/readme.md#differences-to-kubectl-gs-gitops-add-base) explains why.
 
 ## Choose a base
@@ -54,6 +63,26 @@ It writes `bases/clusters/capz/template` with three files:
 - `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap
 
 Note that it needs kubectl-gs 6.0.0 or newer. Older versions generate an App CR.
+
+The `HelmRelease` it writes only reads `${cluster_name}-config`. Add the `cluster-app-installation-values` entry in front
+of it, as the [CAPA base](/bases/clusters/capa/template/cluster.yaml) does, or the chart misses
+`global.managementCluster` and `global.connectivity.baseDomain`. On management clusters that run
+`kyverno-policies-ux` 0.15.1 or newer, its `prepend-cluster-app-config-map-hr` policy prepends the same entry to a
+`HelmRelease` that lacks it. The explicit entry is for management clusters without that policy, and it does no harm
+next to it: the policy only adds the entry when it is missing. Leave the region out of the base: each cluster adds it
+with a [region component](environments.md#regions). `release-azure` reads the region from
+`global.providerSpecific.location` instead, and the regions in this repository only set the AWS region, so create a
+region component that sets the location for your Azure clusters.
+
+```yaml
+  valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
+      name: ${cluster_name}-config
+      valuesKey: values
+```
 
 ## Create a base with your own defaults (optional)
 

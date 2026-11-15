@@ -65,8 +65,21 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
 
 - `cluster-values.yaml` replaces the `<cluster>-cluster-values` ConfigMap, which cluster-apps-operator creates for
   each workload cluster.
-- `charts/<chart>.yaml` holds values a chart needs from the management cluster, such as `release-aws`'s
-  `global.managementCluster`. It is the first values file, so values from the repository override it.
+- `cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which holds the
+  management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every `org-*`
+  namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/template/readme.md). The
+  kind test creates its stand-in from the same file.
+- `charts/<chart>.yaml` holds values a chart can't render without the management cluster, such as
+  `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values
+  from the repository override it. It doesn't set the region, so that a cluster without one fails.
+
+Because the stub doesn't set a region, a `release-aws` `HelmRelease` without `global.providerSpecific.region` fails
+with the chart's own error, "Unable to default the region". On a management cluster, `release-aws` would take the
+region of the management cluster's nodes instead, so the cluster would be created where nobody chose. A cluster sets
+its region with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
+This doesn't cover the clusters listed in `validate-helm-values.ignore`, whose known errors hide the region error, until
+[#274](https://github.com/giantswarm/gitops-template/issues/274) removes that file. `test-all-ff validate` checks
+that the script fails for [testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
 
 The check leaves out:
 

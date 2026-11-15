@@ -14,8 +14,17 @@ spec:
   timeout: 1m0s
   url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
 ---
-# A cluster adds its own values by appending a ConfigMap to `valuesFrom` with a
-# patch. Later entries win (maps are merged, lists are replaced).
+# Flux merges the `valuesFrom` entries in order. Later entries win (maps are
+# merged, lists are replaced):
+#   1. cluster-app-installation-values: values of the management cluster, such as
+#      its name and base domain. Giant Swarm creates it in the `giantswarm`
+#      namespace, and a Kyverno policy copies it into every `org-*` namespace.
+#   2. ${cluster_name}-config: the values of this base.
+# A cluster appends the rest, with components and patches in its own kustomization:
+#   3. ${cluster_name}-region-config: the region, from a component in
+#      bases/environments/regions. Every cluster needs one.
+#   4. Optionally more, such as a region's extra node pool.
+#   5. The cluster's own values, last.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -44,6 +53,9 @@ spec:
       retries: 10
       strategy: rollback
   valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
     - kind: ConfigMap
       name: ${cluster_name}-config
       valuesKey: values

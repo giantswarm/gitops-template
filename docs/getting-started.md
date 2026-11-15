@@ -270,6 +270,14 @@ Cluster template](./guides/cluster-templates.md).
 >   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
 > ```
 >
+> The CLI doesn't add a region, so add it to the cluster's `kustomization.yaml`, with the `REGION` from the second step
+> below:
+>
+> ```sh
+> yq -i '.components = ["../../../../../../../../bases/environments/regions/" + strenv(REGION)]' \
+>   ${WC_DIR}/mapi/cluster/kustomization.yaml
+> ```
+>
 > Then commit and push, as in the last step below.
 
 1. List the Giant Swarm releases and pick an AWS one from v34.0.0 on. These have a `release-aws` chart:
@@ -284,7 +292,16 @@ Cluster template](./guides/cluster-templates.md).
     export RELEASE_VERSION=36.2.0
     ```
 
-1. Create the cluster definition. It points at the CAPA cluster base. First, create its directory:
+1. Pick the cluster's region from [bases/environments/regions](/bases/environments/regions). Every cluster needs
+   one: without it, the chart creates the cluster in the region of the management cluster's nodes, and
+   `tools/validate-helm-values` fails. To add a region, see [Regions](./guides/environments.md#regions).
+
+    ```sh
+    export REGION=eu_central
+    ```
+
+1. Create the cluster definition. It points at the CAPA cluster base and adds the region as a component. First, create
+   its directory:
 
     ```sh
     mkdir -p ${WC_DIR}/mapi/cluster
@@ -296,6 +313,8 @@ Cluster template](./guides/cluster-templates.md).
     cat <<EOF > ${WC_DIR}/mapi/cluster/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
+    components:
+      - ../../../../../../../../bases/environments/regions/${REGION}
     resources:
       - ../../../../../../../../bases/clusters/capa/template
     EOF

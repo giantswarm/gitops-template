@@ -44,6 +44,14 @@ CLI create them.
     export CLUSTER_PATH=bases/clusters/capa/template
     ```
 
+    Pick the cluster's region from [bases/environments/regions](/bases/environments/regions). Every cluster needs one:
+    without it, the chart takes the region of the Management Cluster's nodes, and CI fails. See
+    [Regions](./guides/environments.md#regions) to add a region.
+
+    ```sh
+    export REGION=eu_central
+    ```
+
     To create a cluster together with a set of apps from an environment template instead, see
     [Add Workload Cluster environments](./guides/environments.md).
 
@@ -115,13 +123,17 @@ CLI create them.
     EOF
     ```
 
-1. Create the `kustomization.yaml` referencing the base and the newly created files:
+1. Create the `kustomization.yaml` referencing the base, the region and the newly created files. kustomize applies
+   the region component before the patch, so the region comes before your values in `valuesFrom`, and yours win. If
+   `kubectl gs gitops add workload-cluster` wrote the file, only add the `components:` list:
 
     ```sh
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     commonLabels:
       giantswarm.io/managed-by: flux
+    components:
+      - ../../../../../../../../bases/environments/regions/${REGION}
     kind: Kustomization
     patches:
       - path: patch_cluster_userconfig.yaml

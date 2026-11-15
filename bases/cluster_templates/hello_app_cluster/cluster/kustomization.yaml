@@ -3,12 +3,9 @@ buildMetadata: [originAnnotations]
 commonLabels:
   giantswarm.io/managed-by: flux
 kind: Kustomization
-patches:
-  - path: patch_cluster_userconfig.yaml
-    target:
-      group: helm.toolkit.fluxcd.io
-      kind: HelmRelease
-      name: \${cluster_name}
+# The cluster's own values come last in the HelmRelease `valuesFrom`, after its
+# region. The cluster appends them with the ../userconfig component, which it
+# lists after its region component.
 resources:
   - ../../../clusters/capa/template
   - cluster_userconfig.yaml
