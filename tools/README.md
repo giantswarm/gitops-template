@@ -63,7 +63,8 @@ A semver range is resolved to the newest matching version, as Flux would resolve
 
 Some values don't exist until the cluster runs. They are replaced by stubs in [values-stubs](values-stubs/). When a
 `valuesFrom` entry names an object that isn't in the repository, the script looks for `values-stubs/<Kind>/<name>.yaml`.
-Objects whose name differs per cluster are mapped to a stub by a glob in the script's `stub_patterns` table.
+Objects whose name differs per cluster are mapped to a stub by the globs in the script's `stub_patterns` list, in
+order: the first match wins.
 
 - `ConfigMap/cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which
   holds the management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every
@@ -80,21 +81,31 @@ errors:
 
 - A cluster without a region. A `HelmRelease` of a cluster chart fails when its merged values have no region. Without
   one, `release-aws` takes the region of the management cluster's nodes and `release-azure` its default location, so
-  the cluster would be created somewhere nobody chose. The table `region_keys` in the script names the key per chart:
+  the cluster would be created somewhere nobody chose. The table `region_keys` in the script names the key, and where
+  to set it, per chart:
   `global.providerSpecific.region` for `release-aws` and `global.providerSpecific.location` for `release-azure`. A
   `release-*` chart that isn't in the table isn't checked, and the script prints a note. An AWS cluster sets its region
   with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions). The message
   for an Azure cluster points to [Add a CAPx Workload Cluster base](/docs/guides/cluster-templates.md) instead.
 - A cluster that doesn't read its own values. A `<cluster>-cluster-userconfig` ConfigMap that no `HelmRelease` in the
-  same build has in its `valuesFrom`, and no App CR names in `spec.userConfig.configMap`, fails, naming the cluster.
-  That happens when a cluster made from a cluster template leaves out the template's userconfig component: the
-  ConfigMap is still created, but the cluster loses its own values and those of its stage. A cluster that is still a
-  `cluster-aws` App CR reads it through the App and passes.
+  same build has in its `valuesFrom`, and that the cluster's own App CR doesn't name in `spec.userConfig.configMap`,
+  fails, naming the cluster. That happens when a cluster made from a cluster template leaves out the template's
+  userconfig component: the ConfigMap is still created, but the cluster loses its own values and those of its stage. A
+  cluster that is still a `cluster-aws` App CR reads it through the App and passes. Only the cluster's own App counts:
+  the App named after the cluster, or one that installs a `cluster-*` chart.
 - A wrong merged value. [validate-helm-values.expect](validate-helm-values.expect) lists a `HelmRelease`, a yq
   expression and its expected output per line, separated by tabs. The script runs the expression on the values the
-  `HelmRelease` gets, merged in `valuesFrom` order, and fails when the output differs. The template uses it to check
-  each example cluster's node pools: a prod cluster gets `nodepool0` from its stage and `large` from its region's
-  `node_pool` component, the other clusters only their own.
+  `HelmRelease` gets, merged in `valuesFrom` order, and fails when the output differs or the expression fails, naming
+  the `HelmRelease` and the line. The template uses it to check each example cluster's node pools: a prod cluster gets
+  `nodepool0` from its stage and `large` from its region's `node_pool` component, the other clusters only their own.
+  `test-all-ff validate` also fails for an expect line that isn't `namespace/name`, an expression and an optional
+  expected output separated by tabs, and for a line whose `HelmRelease` isn't in any build, such as a misspelled name.
+  It collects the matched lines in the file named by `EXPECT_MATCHED_FILE` and then runs
+  `validate-helm-values --check-expect` on it.
+
+[testdata/validate-helm-values](testdata/validate-helm-values) has test cases for these checks that the example
+clusters don't cover, such as a cluster that is still an App CR. `test-all-ff validate` runs `validate-helm-values` on
+every manifest there: the ones under `pass/` must pass, the ones under `fail/` must fail.
 
 The check leaves out:
 

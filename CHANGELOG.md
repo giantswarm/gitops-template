@@ -296,11 +296,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ([#206](https://github.com/giantswarm/gitops-template/issues/206)). The new `tools/validate-helm-values.expect` lists
   yq expressions with their expected output on a `HelmRelease`'s merged values; it checks that each prod cluster gets
   exactly `nodepool0` and `large`, and the other clusters only their own pools. The `WC_NAME` and out-of-band examples
-  name their pool `workers` instead of `xxxxx`.
+  name their pool `workers` instead of `xxxxx`. `test-all-ff validate` fails for an expect line that is malformed or
+  matches no `HelmRelease`, and an expression that fails names its `HelmRelease` and line.
 - `tools/validate-helm-values` fails when a cluster's `<cluster>-cluster-userconfig` ConfigMap isn't read by any
-  `HelmRelease` or App CR, which happens when a cluster leaves out its template's userconfig component. It finds stubs
-  for missing `valuesFrom` objects at `tools/values-stubs/<Kind>/<name>.yaml`, or by a glob for names that differ per
-  cluster, instead of two hard-coded names.
+  `HelmRelease` or the cluster's own App CR, which happens when a cluster leaves out its template's userconfig
+  component. `tools/testdata/validate-helm-values` holds test cases of that check, which `test-all-ff validate` runs.
+  The script finds stubs for missing `valuesFrom` objects at `tools/values-stubs/<Kind>/<name>.yaml`, or by the first
+  matching glob for names that differ per cluster, instead of two hard-coded names.
 - `tools/test-all-ff validate` now validates Flux and Giant Swarm objects
   against real schemas. kubeconform ran with `-ignore-missing-schemas` and no
   CRD schema source, so it skipped every `HelmRelease`, `OCIRepository` and
