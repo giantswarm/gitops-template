@@ -51,6 +51,9 @@ WORKLOAD_CLUSTER_VCLUSTER_NAME = "mapi-out-of-band-no-flux"
 WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE = "vcluster-mapi-out-of-band-no-flux"
 VCLUSTER_CHART_REPO = "https://charts.loft.sh"
 VCLUSTER_CHART_VERSION = "0.37.6"
+# The vCluster's Kubernetes: the chart's default for 0.37.6, set here so it doesn't move with the
+# chart. Keep it on the Kubernetes minor version of the kind cluster and the management clusters.
+VCLUSTER_KUBERNETES_IMAGE_TAG = "v1.36.6"
 VCLUSTER_READY_TIMEOUT_SEC = 300
 WORKLOAD_CLUSTER_KUBECONFIG_NAME = "mapi-out-of-band-no-flux-kubeconfig"
 WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
@@ -372,7 +375,12 @@ def workload_cluster(
     )
     values = {
         "controlPlane": {
-            "distro": {"k8s": {"enabled": True}},
+            "distro": {
+                "k8s": {
+                    "enabled": True,
+                    "image": {"tag": VCLUSTER_KUBERNETES_IMAGE_TAG},
+                }
+            },
             "statefulSet": {
                 "image": {"repository": "loft-sh/vcluster-oss"},
                 "persistence": {"volumeClaim": {"enabled": False}},

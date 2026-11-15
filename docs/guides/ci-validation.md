@@ -105,6 +105,13 @@ the vCluster's in-cluster Service as the server, in that Secret, so the `Kustomi
 cluster. Every file in `tests/ats/assertions/exists-in-workload-cluster` is verified against the vCluster, the same way
 as the files in `tests/ats/assertions/exists`. Running the test locally needs `helm` in your `$PATH`.
 
+`tests/ats/conftest.py` pins the `vcluster` chart (`VCLUSTER_CHART_VERSION`, 0.37.6) and the vCluster's Kubernetes
+image (`VCLUSTER_KUBERNETES_IMAGE_TAG`, v1.36.6). Keep the image on the Kubernetes minor version of the kind cluster and
+the management clusters when you bump either. A vCluster runs as a pod in the kind cluster, so more workload clusters
+cost a pod each rather than another kind cluster on the runner. In a [comparison](https://github.com/giantswarm/gitops-template/pull/277)
+with a second kind cluster, the vCluster took 29 seconds to set up against 17 (medians of 6 and 15 runs), and the whole
+kind job 254 seconds against 237, less than the spread of about 60 seconds between runs of the same setup.
+
 ## Superseded runs
 
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to
