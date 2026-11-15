@@ -1,0 +1,83 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-us-west-gateway-api-crds
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "1.9.1"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-crds
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-us-west-envoy-gateway
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "1.10.3"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-us-west-gateway-api-config
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "1.11.3"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-us-west
+    gitops.giantswarm.io/appSet: hello-web-app
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-us-west-hello-world
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.2
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: hello-app-prod-us-west
+  namespace: org-org-name
+spec:
+  interval: 10m0s
+  provider: generic
+  ref:
+    tag: "36.2.0"
+  timeout: 1m0s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
