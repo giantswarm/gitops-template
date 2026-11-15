@@ -31,8 +31,8 @@ jobs:
       # defaults to 0.4.13, from 2021.
       kubeconform_ver: "0.8.0"
       # Every Flux Kustomization has to get ready. The -direct out-of-band one
-      # targets a workload cluster; tests/ats creates a second kind cluster for
-      # it. Set explicitly, as the shared workflow's default names an object.
+      # targets a workload cluster; tests/ats creates a vCluster in the kind
+      # cluster for it. Set explicitly, as the shared workflow's default names an object.
       gitops_ignored_objects: ""
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

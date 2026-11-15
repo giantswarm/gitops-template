@@ -1,4 +1,5 @@
 import base64
+import copy
 import logging
 import os
 import shutil
@@ -66,10 +67,14 @@ GS_CRDS_URLS = [
 ]
 GITOPS_TOP_DIR = "../../management-clusters"
 
-KIND_URL = "https://kind.sigs.k8s.io/"
-# The second kind cluster stands in for the workload cluster the -direct out-of-band example
-# targets. The Secret is the one its Kustomization reads through `spec.kubeConfig.secretRef`.
-WORKLOAD_CLUSTER_KIND_NAME = "mapi-out-of-band-no-flux"
+HELM_URL = "https://helm.sh/docs/intro/install/"
+# A vCluster inside the test cluster stands in for the workload cluster the -direct out-of-band
+# example targets. The Secret is the one its Kustomization reads through `spec.kubeConfig.secretRef`.
+WORKLOAD_CLUSTER_VCLUSTER_NAME = "mapi-out-of-band-no-flux"
+WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE = "vcluster-mapi-out-of-band-no-flux"
+VCLUSTER_CHART_REPO = "https://charts.loft.sh"
+VCLUSTER_CHART_VERSION = "0.37.6"
+VCLUSTER_READY_TIMEOUT_SEC = 300
 WORKLOAD_CLUSTER_KUBECONFIG_NAME = "mapi-out-of-band-no-flux-kubeconfig"
 WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
 
@@ -417,51 +422,107 @@ def gpg_master_key(
     gpg_master_key.delete()
 
 
-def run_kind(*args: str) -> str:
-    kind_path = shutil.which("kind")
-    if not kind_path:
+def run_helm(*args: str) -> str:
+    helm_path = shutil.which("helm")
+    if not helm_path:
         logger.error(
-            f"You must install `kind` from '{KIND_URL}' and make it available in your $PATH."
+            f"You must install `helm` from '{HELM_URL}' and make it available in your $PATH."
         )
-        raise Exception("`kind` not found")
+        raise Exception("`helm` not found")
     run_res = subprocess.run(  # nosec B603 - fixed arguments, no user input
-        [kind_path, *args], capture_output=True, text=True
+        [helm_path, *args], capture_output=True, text=True
     )
     if run_res.returncode != 0:
-        logger.error(f"`kind {' '.join(args)}` failed: '{run_res.stderr}'")
-        raise Exception(f"`kind {args[0]}` failed")
+        logger.error(f"`helm {' '.join(args)}` failed: '{run_res.stderr}'")
+        raise Exception(f"`helm {args[0]}` failed")
     return run_res.stdout
+
+
+def kubeconfig_with_server(kubeconfig: dict, server: str) -> dict:
+    kubeconfig = copy.deepcopy(kubeconfig)
+    for cluster in kubeconfig["clusters"]:
+        cluster["cluster"]["server"] = server
+    return kubeconfig
 
 
 @pytest.fixture(scope="module")
 def workload_cluster(
-    kube_cluster: Cluster, init_namespaces: Any
+    kube_cluster: Cluster, kube_config: str, init_namespaces: Any
 ) -> Iterable[pykube.HTTPClient]:
-    """A second kind cluster, standing in for the workload cluster of the -direct example.
+    """A vCluster in the test cluster, standing in for the workload cluster of the -direct example.
 
     `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload
     cluster through the kubeconfig Secret a management cluster has for it. The fixture creates
-    that Secret in the test cluster with the second cluster's kubeconfig, so Flux reconciles
-    the example for real. Kind clusters share a Docker network, so the internal kubeconfig
-    (API server addressed by its container name) works from pods in the test cluster.
+    that Secret in the test cluster with the vCluster's kubeconfig, so Flux reconciles the
+    example for real. kustomize-controller reaches the vCluster API server through its Service;
+    the runner reaches it on the Service's node port.
     """
-    # `kind create` writes the new cluster to the kubeconfig and makes it the current context.
-    #  Point it at a file of its own, so the test's kubeconfig keeps pointing at the test cluster.
-    kind_kubeconfig = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".yaml", prefix="kind-wc-", delete=False
-    ).name
-    run_kind(
-        "create",
-        "cluster",
-        "--name",
-        WORKLOAD_CLUSTER_KIND_NAME,
-        "--kubeconfig",
-        kind_kubeconfig,
+    node = next(iter(pykube.Node.objects(kube_cluster.kube_client)))
+    node_ip = next(
+        a["address"]
+        for a in node.obj["status"]["addresses"]
+        if a["type"] == "InternalIP"
     )
+    service_host = (
+        f"{WORKLOAD_CLUSTER_VCLUSTER_NAME}.{WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE}.svc"
+    )
+    values = {
+        "controlPlane": {
+            "distro": {"k8s": {"enabled": True}},
+            "statefulSet": {
+                "image": {"repository": "loft-sh/vcluster-oss"},
+                "persistence": {"volumeClaim": {"enabled": False}},
+            },
+            # nothing in the test runs pods in the vCluster
+            "coredns": {"enabled": False},
+            "proxy": {"extraSANs": [service_host, node_ip]},
+            "service": {"spec": {"type": "NodePort"}},
+        },
+    }
+    values_file = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="vcluster-values-", delete=False
+    )
+    with values_file:
+        yaml.safe_dump(values, values_file)
     try:
-        internal_kubeconfig = run_kind(
-            "get", "kubeconfig", "--internal", "--name", WORKLOAD_CLUSTER_KIND_NAME
+        run_helm(
+            "upgrade",
+            "--install",
+            WORKLOAD_CLUSTER_VCLUSTER_NAME,
+            "vcluster",
+            "--repo",
+            VCLUSTER_CHART_REPO,
+            "--version",
+            VCLUSTER_CHART_VERSION,
+            "--namespace",
+            WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
+            "--create-namespace",
+            "--values",
+            values_file.name,
+            "--wait",
+            "--timeout",
+            f"{VCLUSTER_READY_TIMEOUT_SEC}s",
+            "--kubeconfig",
+            kube_config,
         )
+
+        # vCluster writes its kubeconfig (server https://localhost:8443) into `vc-<name>`
+        vc_secret = wait_for_secret(
+            kube_cluster.kube_client,
+            f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}",
+            WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
+        )
+        vc_kubeconfig = yaml.safe_load(
+            base64.b64decode(vc_secret.obj["data"]["config"]).decode()
+        )
+        service = pykube.Service.objects(kube_cluster.kube_client).get(
+            name=WORKLOAD_CLUSTER_VCLUSTER_NAME,
+            namespace=WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
+        )
+        https_port = next(
+            p for p in service.obj["spec"]["ports"] if p["name"] == "https"
+        )
+
         kubeconfig_secret = pykube.Secret(
             kube_cluster.kube_client,
             {
@@ -470,25 +531,54 @@ def workload_cluster(
                     "namespace": WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
                 },
                 "type": "Opaque",
-                "stringData": {"value": internal_kubeconfig},
+                "stringData": {
+                    "value": yaml.safe_dump(
+                        kubeconfig_with_server(
+                            vc_kubeconfig,
+                            f"https://{service_host}:{https_port['port']}",
+                        )
+                    )
+                },
             },
         )
         kubeconfig_secret.create()
 
-        # the runner reaches the second cluster on its published port, as for the test cluster
-        yield pykube.HTTPClient(pykube.KubeConfig.from_file(kind_kubeconfig))
+        # the runner reaches the vCluster on the node port, at the kind node's address
+        yield pykube.HTTPClient(
+            pykube.KubeConfig(
+                kubeconfig_with_server(
+                    vc_kubeconfig, f"https://{node_ip}:{https_port['nodePort']}"
+                )
+            )
+        )
 
         kubeconfig_secret.delete()
     finally:
-        run_kind(
-            "delete",
-            "cluster",
-            "--name",
-            WORKLOAD_CLUSTER_KIND_NAME,
+        run_helm(
+            "uninstall",
+            WORKLOAD_CLUSTER_VCLUSTER_NAME,
+            "--namespace",
+            WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
+            "--wait",
             "--kubeconfig",
-            kind_kubeconfig,
+            kube_config,
         )
-        os.remove(kind_kubeconfig)
+        os.remove(values_file.name)
+
+
+def wait_for_secret(api: pykube.HTTPClient, name: str, namespace: str) -> pykube.Secret:
+    deadline = time.monotonic() + VCLUSTER_READY_TIMEOUT_SEC
+    while True:
+        secret = (
+            pykube.Secret.objects(api)
+            .filter(namespace=namespace)
+            .get_or_none(name=name)
+        )
+        if secret is not None:
+            return secret
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"Secret '{namespace}/{name}' didn't show up.")
+        time.sleep(2)
 
 
 @pytest.fixture(scope="module")

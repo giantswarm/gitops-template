@@ -184,7 +184,7 @@ def test_workload_cluster_assertions(
     check_kustomizations_successful: None,
 ) -> None:
     # The -direct out-of-band Kustomization applies its manifests to the workload cluster
-    #  through its kubeconfig Secret; the test's second kind cluster stands in for it.
+    #  through its kubeconfig Secret; the test's vCluster stands in for it.
     checked = check_assertions(
         workload_cluster, load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR)
     )
