@@ -21,7 +21,22 @@ FLUX_OBJECTS_NAMESPACE = "default"
 FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secret here
 FLUX_IMPERSONATION_SA_NAME = "automation"
 
-CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
+# Cluster API runs in the test cluster the way it runs on a management cluster:
+# the core provider with the kubeadm bootstrap and control-plane providers, and
+# CAPA and CAPZ as infrastructure providers. The versions are the upstream
+# releases the Giant Swarm forks on the management clusters are built from:
+# cluster-api-app v9.0.4 ships CAPI v1.14.4, cluster-api-provider-aws-app
+# v2.43.1 ships CAPA v2.11.1, and cluster-api-provider-azure-app v4.8.0 ships
+# CAPZ v1.27.0. CAPI v1.14 supports Kubernetes v1.33 to v1.37 as a management
+# cluster (https://cluster-api.sigs.k8s.io/reference/versions), so it runs on
+# the Kubernetes v1.36 kind cluster. The clusterctl binary comes from the
+# `clusterctl_ver` input in .github/workflows/validate.yaml; keep it on the same
+# release as CLUSTER_CTL_CORE_VERSION.
+#
+# CAPA v2.11 and CAPZ v1.27 still declare the v1beta1 contract. clusterctl
+# v1.14 speaks v1beta2 and accepts v1beta1 providers until v1beta1 reaches its
+# end of life; when that happens, the provider pins have to move on as well.
+CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v2.11.1", "azure": "v1.27.0"}
 
 # Every provider is pinned to an explicit release URL, including the ones
 # `clusterctl init` installs implicitly (the core provider and the kubeadm
@@ -31,22 +46,15 @@ CLUSTER_CTL_PROVIDERS_MAP = {"aws": "v1.2.0", "azure": "v1.0.1"}
 # straight out of that path when it builds the repository client -- before it
 # ever looks at what `--core`/`--infrastructure` asked for. Resolving "latest"
 # means: read the newest cluster-api release's metadata.yaml, find the release
-# series serving the v1beta1 contract this clusterctl speaks (1.10), then search
-# for a 1.10.x tag. That search only covers the 30 newest releases, because
-# clusterctl requests the release list with no paging options. cluster-api
-# published its 30th release since v1.10.10 on 2026-08-11, so 1.10.x dropped out
-# of the window and the lookup has returned nothing since, reported as the
-# misleading "failed to find releases tagged with a valid semantic version
-# number". A pinned URL skips the resolution entirely.
-#
-# v1.10.10 is the newest release of the 1.10 series, which is what the "latest"
-# resolution above was picking until 2026-08-11 -- GetReleaseSeriesForContract
-# returns the newest series serving v1beta1, and 1.10 is it. Pinning it keeps
-# this suite on the CAPI version it was already exercising, rather than dropping
-# back to the vintage of the clusterctl binary itself. Going past the v1beta1
-# contract needs a newer clusterctl (the workflow pins 1.2.0) and new enough
-# infrastructure providers, which is a bigger change than this fix.
-CLUSTER_CTL_CORE_VERSION = "v1.10.10"
+# series serving the contract this clusterctl speaks, then search for a tag of
+# that series. That search only covers the 30 newest releases, because
+# clusterctl requests the release list with no paging options, so a series
+# that is still supported but no longer among the 30 newest releases can't be
+# found. clusterctl reports that as the misleading "failed to find releases
+# tagged with a valid semantic version number"; it broke this suite on
+# 2026-08-11. A pinned URL skips the resolution entirely, and keeps the suite on
+# the versions above until someone changes them.
+CLUSTER_CTL_CORE_VERSION = "v1.14.4"
 CLUSTER_CTL_RELEASE_URL = (
     "https://github.com/kubernetes-sigs/{repo}/releases/{version}/{components}"
 )
@@ -66,6 +74,30 @@ GS_CRDS_URLS = [
 GITOPS_TOP_DIR = "../../management-clusters"
 
 logger = logging.getLogger(__name__)
+
+
+def pytest_report_header(config: pytest.Config) -> str:
+    """Print the Kubernetes version of the test cluster at the top of the pytest output.
+
+    The kind node image, and so the Kubernetes version, follows the kind release
+    the workflow installs, so the log shows which version the suite ran on.
+    """
+    # The same sources as pytest-helm-charts' kube_config fixture: the
+    # --kubeconfig option, then the KUBECONFIG environment variable.
+    kube_config = config.getoption("kubeconfig", default=None) or os.getenv(
+        "KUBECONFIG"
+    )
+    if not kube_config:
+        return "kubernetes server: unknown (no kube config)"
+    # The header must never stop the run.
+    try:
+        api = pykube.HTTPClient(pykube.KubeConfig.from_file(kube_config))
+        response = api.get(version="", base="/version")
+        response.raise_for_status()
+        server = response.json()
+    except Exception as e:
+        return f"kubernetes server: unknown ({e})"
+    return f"kubernetes server: {server.get('gitVersion')} ({server.get('platform')})"
 
 
 class GitOpsTestConfig:
@@ -212,11 +244,9 @@ def capi_controllers(kube_config: str) -> Iterable[Any]:
     infra_providers = ",".join(":".join(p) for p in CLUSTER_CTL_PROVIDERS_MAP.items())
     fake_secret = base64.b64encode(b"something")
     env_vars = os.environ | {
+        # The only provider variables without a default: CAPA needs credentials
+        # to create its Secret. CAPZ v1.27 defaults all of its variables.
         "AWS_B64ENCODED_CREDENTIALS": fake_secret,
-        "AZURE_SUBSCRIPTION_ID_B64": fake_secret,
-        "AZURE_TENANT_ID_B64": fake_secret,
-        "AZURE_CLIENT_ID_B64": fake_secret,
-        "AZURE_CLIENT_SECRET_B64": fake_secret,
         "EXP_MACHINE_POOL": "true",
     }
     try:

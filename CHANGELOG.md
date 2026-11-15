@@ -59,6 +59,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- CI: the kind test runs on Kubernetes v1.36, the minor version of the management clusters, instead of v1.23 from
+  2022. `validate.yaml` sets kind v0.32.0 (`kindest/node:v1.36.1`), clusterctl v1.14.4, flux-app 1.12.2 and
+  apptestctl 0.27.0. `tests/ats` installs Cluster API v1.14.4, CAPA v2.11.1 and CAPZ v1.27.0, the upstream releases
+  the management clusters run, instead of v1.10.10, v1.2.0 and v1.0.1. pytest prints the test cluster's Kubernetes
+  version in its header. ([#279](https://github.com/giantswarm/gitops-template/issues/279))
 - CI: `validate.yaml`, `yaml-diff.yaml` and `validate-file-names.yaml` call `giantswarm/github-workflows` at a commit
   SHA with a `# main` comment instead of at `@main`, so a change upstream no longer changes this repository's CI
   without a commit here. Renovate moves the SHA to the head of `main` and automerges it. See
