@@ -69,7 +69,9 @@ of it, as the [CAPA base](/bases/clusters/capa/template/cluster.yaml) does, or t
 `kyverno-policies-ux` 0.15.1 or newer, its `prepend-cluster-app-config-map-hr` policy prepends the same entry to a
 `HelmRelease` that lacks it. The explicit entry is for management clusters without that policy, and it does no harm
 next to it: the policy only adds the entry when it is missing. Leave the region out of the base: each cluster adds it
-with a [region component](environments.md#regions).
+with a [region component](environments.md#regions). `release-azure` reads the region from
+`global.providerSpecific.location` instead, and the regions in this repository only set the AWS region, so create a
+region component that sets the location for your Azure clusters.
 
 ```yaml
   valuesFrom:

@@ -21,8 +21,13 @@
 #
 # SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
 #
-# HelmReleases listed in validate-helm-values.ignore are rendered, but their errors don't
-# fail the check.
+# Two more checks fail independently of rendering:
+#   - A cluster chart (release-*) whose merged values have no region. The table
+#     `region_keys` below names the key per chart.
+#   - A `<cluster>-cluster-userconfig` ConfigMap that no HelmRelease reads.
+#
+# HelmReleases listed in validate-helm-values.ignore are rendered, and Helm's errors for
+# them don't fail the check. The two checks above still do.
 #
 # Usage: validate-helm-values <manifest.yaml>
 set -e -o pipefail
@@ -69,6 +74,14 @@ function pull_chart() {
 	fi
 	ls "${dir}"/*.tgz
 }
+
+# The values key that holds a cluster chart's region, per chart. Only charts whose key
+# was checked against the chart's values.schema.json are listed; other release-* charts
+# aren't region-checked.
+declare -A region_keys=(
+	["release-aws"]=.global.providerSpecific.region
+	["release-azure"]=.global.providerSpecific.location
+)
 
 failed=0
 count=0
@@ -187,15 +200,20 @@ while IFS=/ read -r ns name; do
 		files+=("${work_dir}/values-inline.yaml")
 	fi
 
-	# A cluster chart needs the cluster's region. Without it, the chart looks up the
-	# region of the management cluster's nodes, so a cluster without a region would be
-	# created in the region of its management cluster. This check doesn't depend on the
-	# ignore file.
+	# A cluster chart needs the cluster's region, which the cluster has to set itself.
+	# Without it, release-aws looks up the region of the management cluster's nodes and
+	# release-azure falls back to its default location, so the cluster would be created
+	# somewhere nobody chose. This check doesn't depend on the ignore file.
 	if [[ "${chart_name}" == release-* ]]; then
-		region=$(yq eval-all -N '. as $f ireduce ({}; . * $f) | .global.providerSpecific.region // ""' "${files[@]}" /dev/null)
-		if [ -z "${region}" ]; then
-			echo "${id}: cluster ${name} has no region, global.providerSpecific.region is not set. Add a region component from bases/environments/regions to the cluster's kustomization."
-			failed=1
+		region_key="${region_keys[${chart_name}]:-}"
+		if [ -z "${region_key}" ]; then
+			notes+=("${chart_name} isn't in the region table of $(basename "$0"), region not checked")
+		else
+			region=$(yq eval-all -N ". as \$f ireduce ({}; . * \$f) | ${region_key} // \"\"" "${files[@]}" /dev/null)
+			if [ -z "${region}" ]; then
+				echo "${id}: cluster ${name} has no region, ${region_key#.} is not set. Add a region component from bases/environments/regions to the cluster's kustomization."
+				failed=1
+			fi
 		fi
 	fi
 
@@ -223,6 +241,18 @@ while IFS=/ read -r ns name; do
 		echo "${id}: ${n}"
 	done
 done < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
+
+# A cluster's own values are in a `<cluster>-cluster-userconfig` ConfigMap, which a
+# component or patch appends to the cluster's HelmRelease. If the cluster's kustomization
+# leaves that out, the ConfigMap is created but nothing reads it, and the cluster silently
+# loses its own values and those of its stage. This check doesn't depend on the ignore file.
+while IFS=/ read -r ns cm; do
+	[ -z "${cm}" ] && continue
+	if ! NS="${ns}" CM="${cm}" yq -e 'select(.kind == "HelmRelease" and .metadata.namespace == strenv(NS)) | .spec.valuesFrom[]? | select(.kind == "ConfigMap" and .name == strenv(CM))' "${manifest}" >/dev/null 2>&1; then
+		echo "ConfigMap ${ns}/${cm}: no HelmRelease reads it, so cluster ${cm%-cluster-userconfig} doesn't get its own values. Append it to the cluster's HelmRelease valuesFrom, for a cluster made from a cluster template with the template's userconfig component."
+		failed=1
+	fi
+done < <(yq -N 'select(.kind == "ConfigMap" and (.metadata.name | test("-cluster-userconfig$"))) | .metadata.namespace + "/" + .metadata.name' "${manifest}")
 
 if [ "${failed}" -ne 0 ]; then
 	exit 1

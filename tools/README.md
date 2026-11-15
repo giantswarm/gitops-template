@@ -72,11 +72,19 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
   `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values
   from the repository override it. It doesn't set the region: a cluster that doesn't set its own must fail.
 
-A `HelmRelease` of a `release-*` chart also fails when its merged values have no `global.providerSpecific.region`.
-Without it, the chart would take the region of the management cluster's nodes, so the cluster would be created in the
-management cluster's region. The message names the cluster. A cluster sets its region with a component from
-`bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions). This check also fails a cluster
-listed in `validate-helm-values.ignore`.
+Two more checks fail, also for a `HelmRelease` listed in `validate-helm-values.ignore`, which only excuses Helm's
+errors:
+
+- A cluster without a region. A `HelmRelease` of a cluster chart fails when its merged values have no region. Without
+  one, `release-aws` takes the region of the management cluster's nodes and `release-azure` its default location, so
+  the cluster would be created somewhere nobody chose. The table `region_keys` in the script names the key per chart:
+  `global.providerSpecific.region` for `release-aws` and `global.providerSpecific.location` for `release-azure`. A
+  `release-*` chart that isn't in the table isn't checked, and the script prints a note. An AWS cluster sets its region
+  with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
+- A cluster that doesn't read its own values. A `<cluster>-cluster-userconfig` ConfigMap that no `HelmRelease` in the
+  same build has in its `valuesFrom` fails, naming the cluster. That happens when a cluster made from a cluster
+  template leaves out the template's userconfig component: the ConfigMap is still created, but the cluster loses its
+  own values and those of its stage.
 
 The check leaves out:
 

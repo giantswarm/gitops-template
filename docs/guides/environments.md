@@ -398,8 +398,33 @@ patches:
 EOF
 ```
 
-The `us-west` region has the same files with `us-west-2` and its zones `us-west-2a`, `us-west-2b` and `us-west-2c`, see
-[bases/environments/regions/us_west](/bases/environments/regions/us_west).
+For the `us-west` region, the two `kustomization.yaml` files are the same as for `eu-central`. Only the values differ:
+the region is `us-west-2`, the pool's zones are `us-west-2a`, `us-west-2b` and `us-west-2c`, and the pool uses the
+larger `m6a.4xlarge` instances instead of `m6a.2xlarge`.
+
+```bash
+cp eu_central/kustomization.yaml us_west/kustomization.yaml
+cp eu_central/node_pool/kustomization.yaml us_west/node_pool/kustomization.yaml
+
+cat <<EOF > us_west/region_config.yaml
+global:
+  providerSpecific:
+    region: us-west-2
+EOF
+
+cat <<EOF > us_west/node_pool/node_pool.yaml
+global:
+  nodePools:
+    large:
+      availabilityZones:
+        - us-west-2a
+        - us-west-2b
+        - us-west-2c
+      instanceType: m6a.4xlarge
+      maxSize: 10
+      minSize: 1
+EOF
+```
 
 The pool is called `large` and doesn't share a key with the stage's `nodepool0`, so a production cluster gets both
 pools: the stage's and the region's.

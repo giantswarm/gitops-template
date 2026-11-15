@@ -23,8 +23,8 @@ The cluster appends the rest in its own kustomization:
 
 List the components under `components:` in the kustomization that has the patch with your own values. kustomize applies
 a kustomization's components before its own patches, so the region comes before your values, and the components come in
-the order you list them. `kubectl gs gitops add workload-cluster` writes this kustomization with the patch; add the
-`components:` list to it.
+the order you list them. `kubectl gs gitops add workload-cluster` writes this kustomization, with the patch when you
+pass `--cluster-user-config`, but without a region; add the `components:` list to it.
 
 Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
 v32.3.0 and v33.3.0. Other releases, and Release CRs created by hand, need the `cluster-aws` chart as an App CR, which
@@ -81,8 +81,9 @@ same, but the `HelmRelease` reads more values, see below. `cluster_config.yaml` 
   the table above documents it. Without this line the variable would have no effect.
 - It leaves out `global.nodePools: {nodepool0: {}}`. The chart only uses its default node pools when `global.nodePools`
   is empty, and Flux and Helm merge maps from every `valuesFrom` entry, so an overlay can't take a node pool out that
-  the base puts in. With `nodepool0` in the base, a cluster that defines its own node pools, like the
-  [regions](/bases/environments/regions/) and the `WC_NAME` examples do, would get an extra `nodepool0` as well.
+  the base puts in. With `nodepool0` in the base, a cluster that defines its own node pools, like the regions'
+  [node pool components](/bases/environments/regions/eu_central/node_pool/) and the `WC_NAME` examples do, would get
+  an extra `nodepool0` as well.
 
 The `HelmRelease` differs as well. `kubectl gs gitops add base` (v6.0.4) only reads `${cluster_name}-config`, so a
 cluster made from its base gets no `global.managementCluster` or `global.connectivity.baseDomain`, which `release-aws`

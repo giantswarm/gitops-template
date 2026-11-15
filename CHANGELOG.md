@@ -110,7 +110,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   an App CR, like `kubectl gs template cluster` does since kubectl-gs 5.13.0. The release is the `OCIRepository` tag. A
   cluster adds its own values with a ConfigMap and a patch that appends it to the `HelmRelease`'s `valuesFrom`, the same
   layout `kubectl gs gitops add workload-cluster` generates since giantswarm/kubectl-gs#2274. Stages set the release on
-  the `OCIRepository`, and the prod clusters add their region. `bases/clusters/capa/template`
+  the `OCIRepository`, and every cluster adds its region. `bases/clusters/capa/template`
   stays an App CR, because the `cluster-aws` chart needs App Platform. Clusters created from the old release base are
   App CRs, and moving them needs a hand-over that doesn't reinstall them. See
   [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
