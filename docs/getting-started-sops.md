@@ -41,7 +41,7 @@ Export the names used in all the commands below:
 ```sh
 export MC_NAME=MC_CODENAME           # management cluster codename
 export ORG_NAME=ORGANIZATION         # organization name, without the `org-` prefix
-export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits
+export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits, at most 20 characters
 export GITOPS_REPO=REPO_NAME         # name for the Flux GitRepository, for example `gitops`
 export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
 
@@ -309,8 +309,8 @@ kubectl get namespace org-${ORG_NAME}
 A cluster gets its own `Kustomization`, which applies the `${WC_DIR}/mapi` directory and fills in variables such as
 `${cluster_name}` in the files below. The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart,
 built from the [CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
-the Giant Swarm release, so the release the cluster runs is stored in Git. For other providers, see [Add a CAPx Workload
-Cluster template](./guides/cluster-templates.md).
+the Giant Swarm release, so the release the cluster runs is stored in Git. `release-aws` rejects a cluster name longer
+than 20 characters. For other providers, see [Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
 > creates the same cluster, with the same file and resource names. It needs kubectl-gs 6.0.0 or newer. After you pick a

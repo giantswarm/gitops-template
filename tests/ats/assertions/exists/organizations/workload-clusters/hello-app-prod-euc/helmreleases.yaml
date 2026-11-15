@@ -3,16 +3,16 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-gateway-api-crds
+  name: hello-app-prod-euc-gateway-api-crds
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: hello-app-prod-us-west-gateway-api-crds
+    name: hello-app-prod-euc-gateway-api-crds
     namespace: org-org-name
   install:
     remediation:
@@ -20,7 +20,7 @@ spec:
       retries: -1
   kubeConfig:
     secretRef:
-      name: hello-app-prod-us-west-kubeconfig
+      name: hello-app-prod-euc-kubeconfig
   releaseName: gateway-api-crds
   storageNamespace: kube-system
   targetNamespace: kube-system
@@ -32,17 +32,17 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
-      name: hello-app-prod-us-west-cluster-values
+      name: hello-app-prod-euc-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-gateway-api-crds-values
+      name: hello-app-prod-euc-gateway-api-crds-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-gateway-api-crds-user-values
+      name: hello-app-prod-euc-gateway-api-crds-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: hello-app-prod-us-west-gateway-api-crds-user-secrets
+      name: hello-app-prod-euc-gateway-api-crds-user-secrets
       optional: true
       valuesKey: values
 ---
@@ -50,19 +50,19 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-envoy-gateway
+  name: hello-app-prod-euc-envoy-gateway
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: hello-app-prod-us-west-envoy-gateway
+    name: hello-app-prod-euc-envoy-gateway
     namespace: org-org-name
   dependsOn:
-    - name: hello-app-prod-us-west-gateway-api-crds
+    - name: hello-app-prod-euc-gateway-api-crds
   install:
     createNamespace: true
     remediation:
@@ -70,7 +70,7 @@ spec:
       retries: -1
   kubeConfig:
     secretRef:
-      name: hello-app-prod-us-west-kubeconfig
+      name: hello-app-prod-euc-kubeconfig
   releaseName: envoy-gateway
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
@@ -82,17 +82,17 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
-      name: hello-app-prod-us-west-cluster-values
+      name: hello-app-prod-euc-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-envoy-gateway-values
+      name: hello-app-prod-euc-envoy-gateway-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-envoy-gateway-user-values
+      name: hello-app-prod-euc-envoy-gateway-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: hello-app-prod-us-west-envoy-gateway-user-secrets
+      name: hello-app-prod-euc-envoy-gateway-user-secrets
       optional: true
       valuesKey: values
 ---
@@ -100,26 +100,26 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-gateway-api-config
+  name: hello-app-prod-euc-gateway-api-config
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: hello-app-prod-us-west-gateway-api-config
+    name: hello-app-prod-euc-gateway-api-config
     namespace: org-org-name
   dependsOn:
-    - name: hello-app-prod-us-west-envoy-gateway
+    - name: hello-app-prod-euc-envoy-gateway
   install:
     remediation:
       remediateLastFailure: false
       retries: -1
   kubeConfig:
     secretRef:
-      name: hello-app-prod-us-west-kubeconfig
+      name: hello-app-prod-euc-kubeconfig
   releaseName: gateway-api-config
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
@@ -131,17 +131,17 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
-      name: hello-app-prod-us-west-cluster-values
+      name: hello-app-prod-euc-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-gateway-api-config-values
+      name: hello-app-prod-euc-gateway-api-config-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-gateway-api-config-user-values
+      name: hello-app-prod-euc-gateway-api-config-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: hello-app-prod-us-west-gateway-api-config-user-secrets
+      name: hello-app-prod-euc-gateway-api-config-user-secrets
       optional: true
       valuesKey: values
 ---
@@ -149,16 +149,16 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-hello-world
+  name: hello-app-prod-euc-hello-world
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: hello-app-prod-us-west-hello-world
+    name: hello-app-prod-euc-hello-world
     namespace: org-org-name
   install:
     createNamespace: true
@@ -168,7 +168,7 @@ spec:
   interval: 5m
   kubeConfig:
     secretRef:
-      name: hello-app-prod-us-west-kubeconfig
+      name: hello-app-prod-euc-kubeconfig
   releaseName: hello-world
   storageNamespace: org-org-name
   targetNamespace: org-org-name
@@ -180,17 +180,17 @@ spec:
       strategy: rollback
   valuesFrom:
     - kind: ConfigMap
-      name: hello-app-prod-us-west-cluster-values
+      name: hello-app-prod-euc-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-hello-world-values
+      name: hello-app-prod-euc-hello-world-values
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-hello-world-user-values
+      name: hello-app-prod-euc-hello-world-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: hello-app-prod-us-west-hello-world-user-secrets
+      name: hello-app-prod-euc-hello-world-user-secrets
       optional: true
       valuesKey: values
 ---
@@ -198,23 +198,23 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west
+  name: hello-app-prod-euc
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: hello-app-prod-us-west
+    name: hello-app-prod-euc
     namespace: org-org-name
   install:
     remediation:
       remediateLastFailure: false
       retries: 10
   interval: 5m0s
-  releaseName: hello-app-prod-us-west
+  releaseName: hello-app-prod-euc
   serviceAccountName: automation
   storageNamespace: org-org-name
   targetNamespace: org-org-name
@@ -229,14 +229,14 @@ spec:
       name: cluster-app-installation-values
       valuesKey: values.yaml
     - kind: ConfigMap
-      name: hello-app-prod-us-west-config
+      name: hello-app-prod-euc-config
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-region-config
+      name: hello-app-prod-euc-region-config
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-region-node-pool-config
+      name: hello-app-prod-euc-region-node-pool-config
       valuesKey: values
     - kind: ConfigMap
-      name: hello-app-prod-us-west-cluster-userconfig
+      name: hello-app-prod-euc-cluster-userconfig
       valuesKey: values

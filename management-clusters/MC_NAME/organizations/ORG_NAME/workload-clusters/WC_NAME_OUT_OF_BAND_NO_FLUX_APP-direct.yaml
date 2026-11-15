@@ -1,18 +1,18 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: mc-name-clusters-mapi-out-of-band-no-flux-direct  # TODO: change 'mc-name' to your Management Cluster name and 'mapi-out-of-band-no-flux' to your cluster name; must be a correct k8s resource name (DNS-like)
+  name: mc-name-clusters-out-of-band-no-flux-direct  # TODO: change 'mc-name' to your Management Cluster name and 'out-of-band-no-flux' to your cluster name; must be a correct k8s resource name (DNS-like)
   namespace: org-org-name # Change to the `WC_NAME` for the legacy clusters. The rule of thumb: follow the `kubeconfig` namespace.
 spec:
   interval: 1m
   kubeConfig:
     secretRef:
-      name: mapi-out-of-band-no-flux-kubeconfig  # TODO: make sure to change it to a name of a secret with a kubeconfig to connect to the target cluster
+      name: out-of-band-no-flux-kubeconfig  # TODO: make sure to change it to a name of a secret with a kubeconfig to connect to the target cluster
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band"
   postBuild:
     substitute:
       cluster_description: "description"
-      cluster_name: "mapi-out-of-band-no-flux"
+      cluster_name: "out-of-band-no-flux"
       organization: "org-name"
   prune: false
   sourceRef:

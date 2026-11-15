@@ -50,15 +50,15 @@ GITOPS_TOP_DIR = "../../management-clusters"
 HELM_URL = "https://helm.sh/docs/intro/install/"
 # A vCluster inside the test cluster stands in for the workload cluster the -direct out-of-band
 # example targets. The Secret is the one its Kustomization reads through `spec.kubeConfig.secretRef`.
-WORKLOAD_CLUSTER_VCLUSTER_NAME = "mapi-out-of-band-no-flux"
-WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE = "vcluster-mapi-out-of-band-no-flux"
+WORKLOAD_CLUSTER_VCLUSTER_NAME = "out-of-band-no-flux"
+WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE = "vcluster-out-of-band-no-flux"
 VCLUSTER_CHART_REPO = "https://charts.loft.sh"
 VCLUSTER_CHART_VERSION = "0.37.6"
 # The vCluster's Kubernetes: the chart's default for 0.37.6, set here so it doesn't move with the
 # chart. Keep it on the Kubernetes minor version of the kind cluster and the management clusters.
 VCLUSTER_KUBERNETES_IMAGE_TAG = "v1.36.6"
 VCLUSTER_READY_TIMEOUT_SEC = 300
-WORKLOAD_CLUSTER_KUBECONFIG_NAME = "mapi-out-of-band-no-flux-kubeconfig"
+WORKLOAD_CLUSTER_KUBECONFIG_NAME = "out-of-band-no-flux-kubeconfig"
 WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
 # On a Giant Swarm management cluster, the `cluster-app-installation-values` ConfigMap holds the
 # management cluster's values, such as its name and base domain. It exists in the `giantswarm`

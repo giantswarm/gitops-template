@@ -3,11 +3,11 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-gateway-api-crds
+  name: hello-app-prod-euc-gateway-api-crds
   namespace: org-org-name
 spec:
   provider: generic
@@ -19,11 +19,11 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-envoy-gateway
+  name: hello-app-prod-euc-envoy-gateway
   namespace: org-org-name
 spec:
   provider: generic
@@ -35,11 +35,11 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-gateway-api-config
+  name: hello-app-prod-euc-gateway-api-config
   namespace: org-org-name
 spec:
   provider: generic
@@ -51,11 +51,11 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     gitops.giantswarm.io/appSet: hello-web-app
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west-hello-world
+  name: hello-app-prod-euc-hello-world
   namespace: org-org-name
 spec:
   interval: 10m
@@ -68,11 +68,11 @@ apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   labels:
-    giantswarm.io/cluster: hello-app-prod-us-west
+    giantswarm.io/cluster: hello-app-prod-euc
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-us-west
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: hello-app-prod-us-west
+  name: hello-app-prod-euc
   namespace: org-org-name
 spec:
   interval: 10m0s

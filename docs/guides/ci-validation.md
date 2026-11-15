@@ -139,16 +139,16 @@ This build step requires additional configuration using the following environmen
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
 
-### The workload cluster of the `mapi-out-of-band-no-flux` example
+### The workload cluster of the `out-of-band-no-flux` example
 
 `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, and the cluster's
-`HelmRelease`s install their apps there, through the `mapi-out-of-band-no-flux-kubeconfig` Secret a management cluster
-has for it. The test installs a [vCluster](https://www.vcluster.com/) named `mapi-out-of-band-no-flux` in the test
+`HelmRelease`s install their apps there, through the `out-of-band-no-flux-kubeconfig` Secret a management cluster
+has for it. The test installs a [vCluster](https://www.vcluster.com/) named `out-of-band-no-flux` in the test
 cluster and puts its kubeconfig, with the vCluster's in-cluster Service as the server, in that Secret, so the
 `Kustomization` and the `HelmRelease`s reconcile like on a management cluster. As that Secret exists, the apps have to
 get `Ready`. The test also creates what they need:
 
-- the `mapi-out-of-band-no-flux-cluster-values` ConfigMap, which a management cluster creates for every workload
+- the `out-of-band-no-flux-cluster-values` ConfigMap, which a management cluster creates for every workload
   cluster. Its values are [tools/values-stubs/cluster-values.yaml](../../tools/values-stubs/cluster-values.yaml).
 - in the vCluster, the CRDs that a Giant Swarm workload cluster gets from its default apps and the apps create objects
   of: Cilium's `CiliumNetworkPolicy`, `PodMonitor`, Grafana's `PodLogs`, cert-manager's `Certificate` and `Issuer`,

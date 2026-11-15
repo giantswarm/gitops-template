@@ -9,13 +9,13 @@ data:
       controlPlane: {}
       metadata:
         description: description
-        name: hello-app-prod-us-west
+        name: hello-app-prod-usw
         organization: org-name
         preventDeletion: false
       providerSpecific: {}
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-us-west-config
+  name: hello-app-prod-usw-config
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -26,7 +26,7 @@ data:
         region: us-west-2
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-us-west-region-config
+  name: hello-app-prod-usw-region-config
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -44,7 +44,7 @@ data:
           minSize: 1
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-us-west-region-node-pool-config
+  name: hello-app-prod-usw-region-node-pool-config
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -64,7 +64,7 @@ data:
         - "hello.{{ .Values.baseDomain }}"
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-us-west-hello-world-values
+  name: hello-app-prod-usw-hello-world-values
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -78,7 +78,7 @@ data:
           minSize: 10
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-us-west-cluster-userconfig
+  name: hello-app-prod-usw-cluster-userconfig
   namespace: org-org-name
 ---
 apiVersion: v1
@@ -94,5 +94,5 @@ data:
               - hello
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-us-west-gateway-api-config-user-values
+  name: hello-app-prod-usw-gateway-api-config-user-values
   namespace: org-org-name
