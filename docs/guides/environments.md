@@ -471,9 +471,18 @@ In such a case you would end up with the below setup.
 
 Let's set up a workload cluster both `eu-central` and `us-west` regions that we created some environment bases for.
 
-Note that we add the region's values to the cluster's `HelmRelease` as another `valuesFrom` entry. Flux merges the
-entries in order, so the region's values go after the base values and before the cluster's own
-`${cluster_name}-cluster-userconfig`.
+The region's values reach the cluster's `HelmRelease` without a patch. The [CAPA cluster base](
+/bases/clusters/capa/template/cluster.yaml) already lists a `${cluster_name}-region-config` ConfigMap in its
+`valuesFrom`, marked `optional: true`. Flux merges the entries in order:
+
+1. `cluster-app-installation-values`, the management cluster's values (see the [cluster base](
+   /bases/clusters/capa/template/readme.md#values-from-the-management-cluster))
+1. `${cluster_name}-config`, the base values
+1. `${cluster_name}-region-config`, the region's values
+1. `${cluster_name}-cluster-userconfig`, the cluster's own values, which the cluster template appends with a patch
+
+A cluster that uses a region adds the region's base to its resources, which creates the ConfigMap. A cluster without a
+region has no such ConfigMap, and Flux skips the optional entry. So the dev and staging clusters work unchanged.
 
 And the kustomization for this cluster looks like.
 
@@ -483,29 +492,13 @@ cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
-patches:
-  # the region's values go after the base values and before the cluster's own
-  - patch: |
-      - op: add
-        path: /spec/valuesFrom/1
-        value:
-          kind: ConfigMap
-          name: "\${cluster_name}-region-config"
-          valuesKey: values
-    target:
-      group: helm.toolkit.fluxcd.io
-      kind: HelmRelease
-      name: \\\${cluster_name}
-      namespace: org-\\\${organization}
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../../../bases/environments/regions/eu_central
 EOF
 ```
 
-For the `us-west` region version of the production cluster we need to create the same patch for the cluster's
-`HelmRelease`.
-The resultant `kustomization.yaml` looks like the one below.
+The `us-west` version of the production cluster only uses the other region.
 
 ```bash
 mkdir -p HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster
@@ -513,25 +506,17 @@ cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
-patches:
-  # the region's values go after the base values and before the cluster's own
-  - patch: |
-      - op: add
-        path: /spec/valuesFrom/1
-        value:
-          kind: ConfigMap
-          name: "\${cluster_name}-region-config"
-          valuesKey: values
-    target:
-      group: helm.toolkit.fluxcd.io
-      kind: HelmRelease
-      name: \\\${cluster_name}
-      namespace: org-\\\${organization}
 resources:
   - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
   - ../../../../../../../../bases/environments/regions/us_west
 EOF
 ```
+
+> **Note**
+>
+> Don't insert the region's ConfigMap with a JSON patch at a fixed position, such as `/spec/valuesFrom/1`. The position
+> is only right as long as the base has a given number of entries before it. When the base gains an entry, the region's
+> values silently move before or after the wrong layer.
 
 ## Tips for developing environments
 

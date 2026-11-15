@@ -13,6 +13,9 @@
 # Values that only exist at runtime are replaced by stubs from tools/values-stubs:
 #   - cluster-values.yaml for the `<cluster>-cluster-values` ConfigMap, which is created
 #     when the cluster is.
+#   - cluster-app-installation-values.yaml for the `cluster-app-installation-values`
+#     ConfigMap, which a Kyverno policy copies into every `org-*` namespace of a Giant
+#     Swarm management cluster.
 #   - charts/<chart>.yaml for values a chart needs from the management cluster. They are
 #     the first values file, so values from the repository take precedence.
 #
@@ -143,6 +146,8 @@ while IFS=/ read -r ns name; do
 		if ! obj=$(object "${kind}" "${ns}" "${ref_name}"); then
 			if [[ "${kind}" == "ConfigMap" && "${ref_name}" == *-cluster-values ]]; then
 				files+=("${stubs}/cluster-values.yaml")
+			elif [[ "${kind}" == "ConfigMap" && "${ref_name}" == cluster-app-installation-values ]]; then
+				files+=("${stubs}/cluster-app-installation-values.yaml")
 			elif [ "${optional}" == "true" ]; then
 				:
 			else

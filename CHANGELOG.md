@@ -272,6 +272,15 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The CAPA cluster base reads the management cluster's values, `global.managementCluster` and
+  `global.connectivity.baseDomain`, which `release-aws` requires. Its `HelmRelease` now has the `valuesFrom` entries
+  `cluster-app-installation-values` (copied into every `org-*` namespace by a Kyverno policy on Giant Swarm
+  management clusters), `${cluster_name}-config`, and an optional `${cluster_name}-region-config`, before the
+  cluster's own values. The production clusters no longer insert their region's ConfigMap with a JSON patch at the
+  fixed position `/spec/valuesFrom/1`, which the new first entry would have moved. `tools/validate-helm-values`
+  and the kind test use a stand-in for `cluster-app-installation-values`, and the `release-aws` stub only sets the
+  region. `kubectl gs gitops add base` doesn't add these entries; the base's readme describes the difference.
+  ([#273](https://github.com/giantswarm/gitops-template/issues/273))
 - `tools/test-all-ff validate` now validates Flux and Giant Swarm objects
   against real schemas. kubeconform ran with `-ignore-missing-schemas` and no
   CRD schema source, so it skipped every `HelmRelease`, `OCIRepository` and

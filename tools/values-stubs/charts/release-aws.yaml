@@ -1,11 +1,11 @@
 # Values for the release-aws chart that tools/validate-helm-values cannot get from the
 # repository. They are the first values file, so values from the repository override them.
+# The management cluster's own values, such as `global.managementCluster`, come from the
+# stand-in for the `cluster-app-installation-values` ConfigMap instead.
 global:
-  # Placeholders for the values the management cluster provides.
-  managementCluster: mc-name
-  connectivity:
-    baseDomain: example.com
   providerSpecific:
+    # The chart defaults the region to the one of the management cluster's nodes, with
+    # a lookup that `helm template` can't do.
     region: eu-west-1
 cluster:
   internal:

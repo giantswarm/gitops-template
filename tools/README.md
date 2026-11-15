@@ -65,8 +65,12 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
 
 - `cluster-values.yaml` replaces the `<cluster>-cluster-values` ConfigMap, which cluster-apps-operator creates for
   each workload cluster.
-- `charts/<chart>.yaml` holds values a chart needs from the management cluster, such as `release-aws`'s
-  `global.managementCluster`. It is the first values file, so values from the repository override it.
+- `cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which holds the
+  management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every `org-*`
+  namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/template/readme.md).
+- `charts/<chart>.yaml` holds values a chart can't get without the management cluster, such as the region
+  `release-aws` looks up from the management cluster's nodes. It is the first values file, so values from the
+  repository override it.
 
 The check leaves out:
 

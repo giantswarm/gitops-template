@@ -9,6 +9,7 @@
   - [`[organizations]` and `[workload-clusters]`](#organizations-and-workload-clusters)
   - [`mapi` and `[out-of-band]`](#mapi-and-out-of-band)
 - [Flux Kustomizations](#flux-kustomizations)
+- [Objects the management cluster provides](#objects-the-management-cluster-provides)
 
 This page lists the directories and files of the repository and the rules for them. For how Flux turns them into
 clusters, see [How it works](../how-it-works.md).
@@ -261,3 +262,14 @@ resources:
 
 `WC_NAME.yaml` then applies its `WC_NAME/mapi` directory. It also sets the variables, like `${cluster_name}`, that the
 bases use. See [How it works](../how-it-works.md) for why there are two.
+
+## Objects the management cluster provides
+
+Some objects the repository uses aren't in it, because the management cluster creates them. Don't add them to the
+repository.
+
+| Object | Where it comes from | Used by |
+| --- | --- | --- |
+| ConfigMap `cluster-app-installation-values`, key `values.yaml`, in every `org-*` namespace | Giant Swarm creates it in the `giantswarm` namespace. The Kyverno policy `sync-cluster-app-configmap-to-org-namespaces` copies it into every organization namespace and keeps the copies in sync. See [Values from the management cluster](/bases/clusters/capa/template/readme.md#values-from-the-management-cluster) | The first `valuesFrom` entry of a cluster's `HelmRelease` |
+| ConfigMap `${cluster_name}-cluster-values` | cluster-apps-operator, once the cluster exists | The `valuesFrom` of the apps of a cluster |
+| Secret `${cluster_name}-kubeconfig` | Cluster API, once the cluster exists | The `kubeConfig` of the apps' `HelmRelease`s and of `WC_NAME-direct.yaml` |
