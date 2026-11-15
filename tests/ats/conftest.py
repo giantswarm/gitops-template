@@ -65,8 +65,6 @@ WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
 # every `org-*` namespace. The cluster HelmReleases read it, so the test creates a stand-in in
 # each organization namespace it initialises, with the placeholder values validate-helm-values uses.
 INSTALLATION_VALUES_CONFIG_MAP_NAME = "cluster-app-installation-values"
-# set by Kyverno on every object a generate rule creates
-KYVERNO_GENERATE_POLICY_LABEL = "generate.kyverno.io/policy-name"
 INSTALLATION_VALUES_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "../../tools/values-stubs/cluster-app-installation-values.yaml",
@@ -346,24 +344,16 @@ def installation_values(
 ) -> Iterable[list[pykube.ConfigMap]]:
     """Create the stand-in `cluster-app-installation-values` in every `org-*` namespace that lacks it.
 
-    A copy that Kyverno's generate rule made is left as it is. Any other ConfigMap of that name
-    is a stand-in an interrupted run left behind, and it is refreshed. Only ConfigMaps the
-    fixture created are deleted afterwards.
+    Only ConfigMaps the fixture created are deleted afterwards.
     """
     created: list[pykube.ConfigMap] = []
     for ns in gitops_test_config.init_namespaces:
         if not ns.startswith("org-"):
             continue
         cm = installation_values_config_map(kube_cluster.kube_client, ns)
-        existing = pykube.ConfigMap.objects(
-            kube_cluster.kube_client, namespace=ns
-        ).get_or_none(name=INSTALLATION_VALUES_CONFIG_MAP_NAME)
-        if existing is None:
+        if not cm.exists():
             cm.create()
             created.append(cm)
-        elif KYVERNO_GENERATE_POLICY_LABEL not in existing.labels:
-            existing.obj["data"] = cm.obj["data"]
-            existing.update()
 
     yield created
 
