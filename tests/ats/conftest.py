@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
+import time
 from typing import Iterable, Any
 
 import pykube
@@ -73,6 +74,38 @@ WORKLOAD_CLUSTER_KUBECONFIG_NAME = "mapi-out-of-band-no-flux-kubeconfig"
 WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
 
 logger = logging.getLogger(__name__)
+
+# Experiment instrumentation: how long each fixture's setup and teardown took, printed at the
+#  end of the run.
+FIXTURE_SECONDS: list[tuple[str, str, float]] = []
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_fixture_setup(fixturedef: Any, request: Any) -> Any:
+    teardown_start: list[float] = []
+    # finalizers run last in, first out: this one runs after the fixture's own teardown ...
+    fixturedef.addfinalizer(
+        lambda: (
+            FIXTURE_SECONDS.append(
+                ("teardown", fixturedef.argname, time.monotonic() - teardown_start[0])
+            )
+            if teardown_start
+            else None
+        )
+    )
+    start = time.monotonic()
+    try:
+        return (yield)
+    finally:
+        FIXTURE_SECONDS.append(("setup", fixturedef.argname, time.monotonic() - start))
+        # ... and this one before it
+        fixturedef.addfinalizer(lambda: teardown_start.append(time.monotonic()))
+
+
+def pytest_terminal_summary(terminalreporter: Any) -> None:
+    terminalreporter.write_sep("-", "fixture durations")
+    for phase, name, seconds in FIXTURE_SECONDS:
+        terminalreporter.write_line(f"{seconds:9.2f}s {phase:8} {name}")
 
 
 class GitOpsTestConfig:
