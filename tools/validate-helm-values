@@ -1,0 +1,213 @@
+#!/bin/bash
+# shellcheck disable=SC2016
+#
+# Render the chart of every Flux HelmRelease in a manifest file with the values the
+# HelmRelease would get, and fail if Helm rejects them.
+#
+# The values are assembled the way helm-controller does it: every `valuesFrom` entry in
+# order, then `spec.values`. Helm merges the files the same way Flux merges the entries
+# (maps are merged, lists and scalars are replaced). Helm checks the merged values against
+# the chart's `values.schema.json` before it renders, so a misspelled or misplaced key
+# fails here as it would fail on the cluster.
+#
+# Values that only exist at runtime are replaced by stubs from tools/values-stubs:
+#   - cluster-values.yaml for the `<cluster>-cluster-values` ConfigMap, which is created
+#     when the cluster is.
+#   - charts/<chart>.yaml for values a chart needs from the management cluster. They are
+#     the first values file, so values from the repository take precedence.
+#
+# SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
+#
+# HelmReleases listed in validate-helm-values.ignore are rendered, but their errors don't
+# fail the check.
+#
+# Usage: validate-helm-values <manifest.yaml>
+set -e -o pipefail
+
+manifest="$1"
+if [ -z "${manifest}" ] || [ ! -f "${manifest}" ]; then
+	echo "Usage: $(basename "$0") <manifest.yaml>" >&2
+	exit 1
+fi
+
+stubs="$(dirname "$0")/values-stubs"
+chart_cache="${TMPDIR:-/tmp}/gitops-template-charts"
+kube_version="${KUBERNETES_VERSION:-1.36.5}"
+ignore_file="$(dirname "$0")/validate-helm-values.ignore"
+work_dir=$(mktemp -d)
+trap 'rm -rf "${work_dir}"' EXIT
+
+# Print the object of the given kind, namespace and name from the manifest.
+function object() {
+	KIND="$1" NS="$2" NAME="$3" yq -e 'select(.kind == strenv(KIND) and .metadata.namespace == strenv(NS) and .metadata.name == strenv(NAME))' "${manifest}" 2>/dev/null
+}
+
+# Succeed if the HelmRelease (namespace/name) is listed in the ignore file.
+function ignored() {
+	[ -f "${ignore_file}" ] && sed 's/#.*//' "${ignore_file}" | tr -d '[:blank:]' | grep -qxF "$1"
+}
+
+# Pull a chart once and print the path of the archive.
+# Arguments: chart reference (oci://... or a chart name), version or "", repository URL or "".
+function pull_chart() {
+	local ref="$1" version="$2" repo="$3"
+	local dir
+	dir="${chart_cache}/$(echo "${ref}|${version}|${repo}" | sha256sum | cut -c1-16)"
+	if ! ls "${dir}"/*.tgz >/dev/null 2>&1; then
+		mkdir -p "${dir}"
+		local args=(pull "${ref}" -d "${dir}")
+		[ -n "${version}" ] && args+=(--version "${version}")
+		[ -n "${repo}" ] && args+=(--repo "${repo}")
+		helm "${args[@]}" >/dev/null 2>"${dir}/pull.log" || {
+			cat "${dir}/pull.log" >&2
+			rm -rf "${dir}"
+			return 1
+		}
+	fi
+	ls "${dir}"/*.tgz
+}
+
+failed=0
+count=0
+
+while IFS=/ read -r ns name; do
+	[ -z "${name}" ] && continue
+	count=$((count + 1))
+	id="HelmRelease ${ns}/${name}"
+	hr="${work_dir}/hr.yaml"
+	object HelmRelease "${ns}" "${name}" >"${hr}"
+
+	# Find the chart.
+	ref="" version="" repo=""
+	if [ "$(yq '.spec.chartRef.kind // ""' "${hr}")" == "OCIRepository" ]; then
+		src_ns=$(yq ".spec.chartRef.namespace // \"${ns}\"" "${hr}")
+		src_name=$(yq '.spec.chartRef.name' "${hr}")
+		if ! src=$(object OCIRepository "${src_ns}" "${src_name}"); then
+			echo "${id}: OCIRepository ${src_ns}/${src_name} is not in the same Kustomization"
+			failed=1
+			continue
+		fi
+		ref=$(yq '.spec.url' <<<"${src}")
+		version=$(yq '.spec.ref.tag // .spec.ref.semver // ""' <<<"${src}")
+	elif [ "$(yq '.spec.chart.spec.sourceRef.kind // ""' "${hr}")" == "HelmRepository" ]; then
+		src_ns=$(yq ".spec.chart.spec.sourceRef.namespace // \"${ns}\"" "${hr}")
+		src_name=$(yq '.spec.chart.spec.sourceRef.name' "${hr}")
+		if ! src=$(object HelmRepository "${src_ns}" "${src_name}"); then
+			echo "${id}: HelmRepository ${src_ns}/${src_name} is not in the same Kustomization"
+			failed=1
+			continue
+		fi
+		chart=$(yq '.spec.chart.spec.chart' "${hr}")
+		version=$(yq '.spec.chart.spec.version // ""' "${hr}")
+		if [ "$(yq '.spec.type // ""' <<<"${src}")" == "oci" ]; then
+			ref="$(yq '.spec.url' <<<"${src}")/${chart}"
+		else
+			ref="${chart}"
+			repo=$(yq '.spec.url' <<<"${src}")
+		fi
+	else
+		echo "${id}: unsupported chart source, only OCIRepository and HelmRepository are supported"
+		failed=1
+		continue
+	fi
+	[ "${version}" == "*" ] && version=""
+
+	if ! archive=$(pull_chart "${ref}" "${version}" "${repo}"); then
+		echo "${id}: cannot pull chart ${ref} ${version}"
+		failed=1
+		continue
+	fi
+	chart_name=$(basename "${ref}")
+
+	# Assemble the values files in the order helm-controller merges them.
+	files=()
+	notes=()
+	if [ -f "${stubs}/charts/${chart_name}.yaml" ]; then
+		files+=("${stubs}/charts/${chart_name}.yaml")
+	fi
+
+	entries=$(yq '.spec.valuesFrom // [] | length' "${hr}")
+	for ((i = 0; i < entries; i++)); do
+		entry=$(yq ".spec.valuesFrom[${i}]" "${hr}")
+		kind=$(yq '.kind' <<<"${entry}")
+		ref_name=$(yq '.name' <<<"${entry}")
+		key=$(yq '.valuesKey // "values.yaml"' <<<"${entry}")
+		optional=$(yq '.optional // false' <<<"${entry}")
+		file="${work_dir}/values-${i}.yaml"
+
+		if [ "$(yq '.targetPath // ""' <<<"${entry}")" != "" ]; then
+			notes+=("${kind} ${ref_name}: targetPath is not supported, left out")
+			continue
+		fi
+
+		if ! obj=$(object "${kind}" "${ns}" "${ref_name}"); then
+			if [[ "${kind}" == "ConfigMap" && "${ref_name}" == *-cluster-values ]]; then
+				files+=("${stubs}/cluster-values.yaml")
+			elif [ "${optional}" == "true" ]; then
+				:
+			else
+				echo "${id}: ${kind} ${ns}/${ref_name} from valuesFrom is not in the rendered manifests"
+				failed=1
+			fi
+			continue
+		fi
+
+		if [ "${kind}" == "Secret" ] && [ "$(yq '.sops // "" | length' <<<"${obj}")" != "0" ]; then
+			notes+=("Secret ${ref_name}: SOPS-encrypted, left out")
+			continue
+		fi
+
+		if [ "${kind}" == "Secret" ]; then
+			KEY="${key}" yq '.stringData[strenv(KEY)] // (.data[strenv(KEY)] // "" | @base64d)' <<<"${obj}" >"${file}"
+			# `flux build` replaces the data of SOPS-encrypted Secrets with this marker.
+			if [ "$(cat "${file}")" == "**SOPS**" ]; then
+				notes+=("Secret ${ref_name}: SOPS-encrypted, left out")
+				continue
+			fi
+		else
+			KEY="${key}" yq '.data[strenv(KEY)] // ""' <<<"${obj}" >"${file}"
+		fi
+		if [ ! -s "${file}" ] || [ "$(cat "${file}")" == "" ]; then
+			if [ "${optional}" != "true" ] && ! KEY="${key}" yq -e '(.data // {}) + (.stringData // {}) | has(strenv(KEY))' <<<"${obj}" >/dev/null; then
+				echo "${id}: ${kind} ${ns}/${ref_name} has no key ${key}"
+				failed=1
+			fi
+			continue
+		fi
+		files+=("${file}")
+	done
+
+	if [ "$(yq '.spec.values // {} | length' "${hr}")" != "0" ]; then
+		yq '.spec.values' "${hr}" >"${work_dir}/values-inline.yaml"
+		files+=("${work_dir}/values-inline.yaml")
+	fi
+
+	args=(template "$(yq ".spec.releaseName // \"${name}\"" "${hr}")" "${archive}"
+	--namespace "$(yq ".spec.targetNamespace // \"${ns}\"" "${hr}")"
+	--kube-version "${kube_version}")
+	for f in "${files[@]}"; do
+		args+=(-f "${f}")
+	done
+
+	label="${id} (${chart_name} $(basename "${archive}" .tgz | sed "s/^${chart_name}-//"))"
+	if ! helm "${args[@]}" >/dev/null 2>"${work_dir}/helm.log"; then
+		if ignored "${ns}/${name}"; then
+			echo "${label}: known failure, listed in $(basename "${ignore_file}"):"
+		else
+			echo "${label}:"
+			failed=1
+		fi
+		sed 's/^/  /' "${work_dir}/helm.log"
+	elif ignored "${ns}/${name}"; then
+		echo "${label}: renders now, remove it from $(basename "${ignore_file}")"
+		failed=1
+	fi
+	for n in "${notes[@]}"; do
+		echo "${id}: ${n}"
+	done
+done < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
+
+if [ "${failed}" -ne 0 ]; then
+	exit 1
+fi
+echo "${count} HelmRelease(s) rendered"

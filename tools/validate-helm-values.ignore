@@ -1,0 +1,11 @@
+# HelmReleases whose chart is known to reject their values, one `namespace/name` per line.
+# tools/validate-helm-values still renders them and prints the errors, but they don't fail
+# the check. An entry that renders fine fails the check, so remove it once it's fixed.
+# Give every entry a reason.
+
+# release-aws limits the cluster name (global.metadata.name) to 20 characters, and these
+# example clusters have longer names. Renaming them is an example content fix.
+org-org-name/mapi-out-of-band-no-flux
+org-org-name/mapi-out-of-band-flux-app
+org-org-name/hello-app-prod-us-west
+org-org-name/hello-app-prod-eu-central

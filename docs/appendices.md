@@ -37,6 +37,7 @@ You need the following tools installed to use [test-all-ff](/tools/test-all-ff) 
 - `kubeconform` of [github.com/yannh/kubeconform](https://github.com/yannh/kubeconform); CI uses 0.8.0
 - `curl`, `sha256sum` and `tar`, to fetch the Flux CRD schemas. See [tools](/tools/README.md#test-all-ff) for the
   schema sources and versions.
+- `helm` of [helm.sh](https://helm.sh/docs/intro/install/), to render the chart of every `HelmRelease` with its values
 
 ## Secret store for testing
 
