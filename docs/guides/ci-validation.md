@@ -58,9 +58,9 @@ cluster instead:
   otherwise from the `giantswarm.io/cluster` or `cluster.x-k8s.io/cluster-name` label of the `HelmRelease`.
 
 Any other `HelmRelease` has to become ready, unless one of these checks found a problem with it or it depends, directly
-or not, on a `HelmRelease` that can't get ready. A `release-<provider>` chart (`release-aws`, `release-azure`,
-`release-vsphere` or `release-cloud-director`) is recognised by its name, from `chart.spec.chart`, the `OCIRepository`
-URL or the `HelmChart`.
+or not, on a `HelmRelease` that can't get ready or is in `GITOPS_IGNORED_OBJECTS`. A `release-<provider>` chart
+(`release-aws`, `release-azure`, `release-vsphere` or `release-cloud-director`) is recognised by its name, from
+`chart.spec.chart`, the `OCIRepository` URL or the `HelmChart`.
 
 The Kustomization check waits for the `Kustomization`s the test applies to show up, then lists them again after each
 wait to pick up the ones Flux created meanwhile. It fails if no `Kustomization` shows up, and passes with a warning if

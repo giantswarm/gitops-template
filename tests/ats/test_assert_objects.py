@@ -11,6 +11,7 @@ from test_flux_objects import (
     assert_objects,
     blocked_helm_releases,
     chart_problems,
+    chart_sources_to_wait_for,
     helm_release_problems,
     inventory_objects,
     is_cluster_chart,
@@ -302,6 +303,23 @@ def test_blocked_helm_releases_follow_depends_on() -> None:
         "ns/wc-app",
         "ns/mc-app",
         "ns/mc-app-2",
+    }
+
+
+def test_blocked_by_an_ignored_helm_release() -> None:
+    # An ignored HelmRelease isn't listed, but one that depends on it can't get ready either.
+    hrs = {"ns/app": dep_release("app", "infra-base"), "ns/free": dep_release("free")}
+    assert blocked_helm_releases(hrs, {"ns/infra-base"}) == {"ns/infra-base", "ns/app"}
+
+
+def test_chart_sources_to_wait_for_keep_ignored_oci_repositories() -> None:
+    hrs = [
+        release({"chartRef": {"kind": "OCIRepository", "name": n}})
+        for n in ("waited", "ignored")
+    ] + [release({"chartRef": None, **chart_from("HelmRepository", "repo")})]
+    assert chart_sources_to_wait_for(hrs, {"ns/waited"}) == {
+        ("OCIRepository", "ns", "ignored"),
+        ("HelmRepository", "ns", "repo"),
     }
 
 

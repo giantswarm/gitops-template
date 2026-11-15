@@ -539,17 +539,34 @@ def chart_problems(hr: dict, index: ObjectLookup) -> list[str]:
     return []
 
 
-def wait_for_chart_sources(kube_cluster: Cluster, hrs: list[dict]) -> ClusterIndex:
+def chart_sources_to_wait_for(
+    hrs: list[dict], waited_oci_repositories: set[str]
+) -> set[tuple[str, str, str]]:
+    """The HelmReleases' chart sources, except the OCIRepositories waited for already.
+
+    `oci_repositories_ready` waits for the OCIRepositories that aren't ignored. An ignored
+    one a HelmRelease uses still has to be waited for here.
+    """
+    return {
+        s
+        for s in (chart_source(hr) for hr in hrs)
+        if s
+        and not (
+            s[0] == "OCIRepository" and f"{s[1]}/{s[2]}" in waited_oci_repositories
+        )
+    }
+
+
+def wait_for_chart_sources(
+    kube_cluster: Cluster, hrs: list[dict], waited_oci_repositories: set[str]
+) -> ClusterIndex:
     """Wait for the HelmReleases' chart sources to be ready; return what the last look saw.
 
     Sources fetch from a remote registry or repository, so they may still be reconciling.
     One that doesn't exist won't show up any more: the Kustomizations that create the
-    sources are ready already. So the wait only covers the ones that exist. OCIRepositories
-    are left out, as `oci_repositories_ready` waits for them.
+    sources are ready already. So the wait only covers the ones that exist.
     """
-    sources = {
-        s for s in (chart_source(hr) for hr in hrs) if s and s[0] != "OCIRepository"
-    }
+    sources = chart_sources_to_wait_for(hrs, waited_oci_repositories)
 
     def attempt() -> tuple[bool, ClusterIndex]:
         index = ClusterIndex(kube_cluster.kube_client)
@@ -607,7 +624,7 @@ def check_helm_release_successful(
     gitops_deployment: None,
     gitops_test_config: GitOpsTestConfig,
     check_kustomizations_successful: list[dict],
-    oci_repositories_ready: list[str],
+    oci_repositories_ready: tuple[set[str], list[str]],
 ) -> None:
     # HelmReleases that can get ready in the test cluster have to. The others can't (see
     #  needs_workload_cluster), so for every HelmRelease the test checks what helm-controller needs
@@ -629,7 +646,10 @@ def check_helm_release_successful(
         )
         return
 
-    index = wait_for_chart_sources(kube_cluster, [hr.obj for hr in helm_releases])
+    waited_oci_repositories, _ = oci_repositories_ready
+    index = wait_for_chart_sources(
+        kube_cluster, [hr.obj for hr in helm_releases], waited_oci_repositories
+    )
     cannot_get_ready: set[str] = set()
     for hr in helm_releases:
         hr_problems = helm_release_problems(hr.obj, index)
@@ -638,7 +658,10 @@ def check_helm_release_successful(
             cannot_get_ready.add(obj_key(hr))
     problems.extend(index.unserved_problems())
     by_key = {obj_key(hr): hr.obj for hr in helm_releases}
-    to_wait = set(by_key) - blocked_helm_releases(by_key, cannot_get_ready)
+    # An ignored HelmRelease isn't expected to get ready, so neither is one that depends on it.
+    to_wait = set(by_key) - blocked_helm_releases(
+        by_key, cannot_get_ready | set(ignored)
+    )
     not_ready, _ = wait_until_ready(
         kube_cluster, HelmReleaseCR, to_wait, ignored, FLUX_OBJECTS_READY_TIMEOUT_SEC
     )
@@ -666,8 +689,10 @@ def oci_repositories_ready(
     kube_cluster: Cluster,
     gitops_test_config: GitOpsTestConfig,
     check_kustomizations_successful: list[dict],
-) -> list[str]:
-    """Wait once for the OCIRepositories to be ready, and return the problems; never fail.
+) -> tuple[set[str], list[str]]:
+    """Wait once for the OCIRepositories to be ready; never fail.
+
+    Returns the `namespace/name` of the ones it waited for, and the problems.
 
     Both the OCIRepository check and the HelmRelease check use it, so a broken OCIRepository
     is waited for once, and fails the one without turning the other into a setup error.
@@ -685,27 +710,28 @@ def oci_repositories_ready(
         logger.info(
             "The Kustomizations applied no OCIRepository, there is none to check."
         )
+    waited = {obj_key(r) for r in repos}
     not_ready, _ = wait_until_ready(
         kube_cluster,
         OCIRepositoryCR,
-        {obj_key(r) for r in repos},
+        waited,
         ignored,
         OCI_REPOSITORIES_READY_TIMEOUT_SEC,
     )
-    return problems + [
+    return waited, problems + [
         f"OCIRepository '{k}' isn't ready: {r}" for k, r in not_ready.items()
     ]
 
 
 @pytest.fixture(scope="module")
-def check_oci_repositories_successful(oci_repositories_ready: list[str]) -> None:
-    if oci_repositories_ready:
-        for p in oci_repositories_ready:
+def check_oci_repositories_successful(
+    oci_repositories_ready: tuple[set[str], list[str]],
+) -> None:
+    _, problems = oci_repositories_ready
+    if problems:
+        for p in problems:
             logger.error(p)
-        pytest.fail(
-            f"{len(oci_repositories_ready)} OCIRepository problems:\n"
-            + "\n".join(oci_repositories_ready)
-        )
+        pytest.fail(f"{len(problems)} OCIRepository problems:\n" + "\n".join(problems))
 
 
 def test_oci_repositories_successful(check_oci_repositories_successful: None) -> None:
