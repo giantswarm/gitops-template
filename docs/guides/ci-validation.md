@@ -50,6 +50,22 @@ in the assertions file must be also present (and have exactly the same value) as
 in cluster. Strings are compared as text, so a ConfigMap's `values` has to match line by line. Only trailing whitespace
 is ignored: whether the assertion writes a block as `|` or `|-`, or a line ends in a space, doesn't matter.
 
+### Versions
+
+The test cluster runs the same versions as a Giant Swarm management cluster where it can:
+
+| Component | Version | Set in |
+| --- | --- | --- |
+| Kubernetes | v1.36.1, the default node image of kind v0.32.0 | `kind_ver` in [validate.yaml](../../.github/workflows/validate.yaml) |
+| flux-app | 1.12.2 (Flux v2.7.5) | `gitops_flux_app_version` in validate.yaml |
+| app-operator and chart-operator | installed by apptestctl 0.27.0 | `apptestctl_ver` in validate.yaml |
+| clusterctl | v1.14.4 | `clusterctl_ver` in validate.yaml |
+| Cluster API, CAPA, CAPZ | v1.14.4, v2.11.1, v1.27.0 | `CLUSTER_CTL_CORE_VERSION` and `CLUSTER_CTL_PROVIDERS_MAP` in [conftest.py](../../tests/ats/conftest.py) |
+
+The shared workflow doesn't take a node image, so the Kubernetes patch version is whatever the kind release defaults
+to. pytest prints the version it ran against at the top of its output, as `kubernetes server: v1.36.1 (linux/amd64)`.
+Keep `clusterctl_ver` on the release of `CLUSTER_CTL_CORE_VERSION`.
+
 ### Configuration
 
 This build step requires additional configuration using the following environment variables:

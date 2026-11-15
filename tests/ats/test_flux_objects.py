@@ -1,7 +1,7 @@
 import logging
 import os.path
 import time
-from typing import Any, Type, TypeVar, Iterator, Union
+from typing import Any, Type, TypeVar, Iterable, Iterator, Union
 
 import pykube
 import pytest
@@ -36,6 +36,42 @@ EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
 logger = logging.getLogger(__name__)
 
 
+def cluster_chart_names(
+    kube_cluster: Cluster, namespace: str, helm_releases: Iterable[APIObject]
+) -> set[str]:
+    """Return the names of the OCIRepositories in `namespace` that serve a release-<provider> chart.
+
+    kustomize-controller applies a HelmRelease shortly before the OCIRepository it refers to, so
+    the OCIRepositories can still be missing when the HelmReleases are listed. Wait until every
+    OCIRepository a HelmRelease's `chartRef` names exists, so a cluster HelmRelease isn't taken
+    for one that has to become ready.
+    """
+    wanted = {
+        hr.obj.get("spec", {}).get("chartRef", {}).get("name")
+        for hr in helm_releases
+        if hr.obj.get("spec", {}).get("chartRef", {}).get("kind") == "OCIRepository"
+    }
+    deadline = time.time() + FLUX_OBJECTS_READY_TIMEOUT_SEC
+    while True:
+        repos = list(
+            OCIRepositoryCR.objects(kube_cluster.kube_client)
+            .filter(namespace=namespace)
+            .all()
+        )
+        missing = wanted - {r.name for r in repos}
+        if not missing or time.time() >= deadline:
+            break
+        logger.debug(
+            f"Waiting for the OCIRepositories {sorted(missing)} in '{namespace}' namespace."
+        )
+        time.sleep(5)
+    return {
+        r.name
+        for r in repos
+        if "/charts/giantswarm/release-" in r.obj.get("spec", {}).get("url", "")
+    }
+
+
 def check_flux_objects_successful(
     kube_cluster: Cluster,
     obj_type: Type[TFNS],
@@ -53,17 +89,11 @@ def check_flux_objects_successful(
             ignored_objects = []
         # HelmReleases that deploy to a workload cluster through its kubeconfig can't get ready here,
         #  as the test has no workload clusters. Neither can the ones that create a cluster from a
-        #  release-<provider> chart, as there is no Cluster API. Their existence is still checked by
-        #  the assertions, and their charts by the OCIRepository check.
+        #  release-<provider> chart, as the test has no cloud account to create it in. Their existence
+        #  is still checked by the assertions, and their charts by the OCIRepository check.
         cluster_charts = set()
         if obj_type is HelmReleaseCR:
-            cluster_charts = {
-                r.name
-                for r in OCIRepositoryCR.objects(kube_cluster.kube_client)
-                .filter(namespace=ns.name)
-                .all()
-                if "/charts/giantswarm/release-" in r.obj.get("spec", {}).get("url", "")
-            }
+            cluster_charts = cluster_chart_names(kube_cluster, ns.name, objects)
         obj_names = [
             o.name
             for o in objects

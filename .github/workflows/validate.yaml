@@ -30,6 +30,20 @@ jobs:
       # Pin a current kubeconform for tools/test-all-ff. The shared workflow
       # defaults to 0.4.13, from 2021.
       kubeconform_ver: "0.8.0"
+      # The kind test cluster runs kind's default node image, as the shared
+      # workflow doesn't pass one. kind v0.32.0 defaults to kindest/node:v1.36.1,
+      # the Kubernetes minor version of the management clusters. The shared
+      # workflow defaults to kind 0.12.0, which runs Kubernetes v1.23.
+      kind_ver: "0.32.0"
+      # The clusterctl that installs Cluster API in the kind test. Keep it on
+      # the release of CLUSTER_CTL_CORE_VERSION in tests/ats/conftest.py.
+      clusterctl_ver: "1.14.4"
+      # The flux-app chart the kind test installs: the version on the
+      # management clusters (Flux v2.7.5), as in tools/test-all-ff.
+      gitops_flux_app_version: "1.12.2"
+      # Installs app-operator and chart-operator in the kind test. 0.27.0 is
+      # the shared workflow's default too, set here so it is pinned with the rest.
+      apptestctl_ver: "0.27.0"
       # The out-of-band Kustomization targets a workload cluster the kind test
       # cluster doesn't have, so it never becomes ready. The shared workflow's
       # default still names it by its old name.
