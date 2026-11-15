@@ -46,13 +46,25 @@ By default, this test checks if all the `Kustomization` and `OCIRepository` obje
 chart, can't get ready in the test cluster. For every `HelmRelease` the test checks what Flux needs from the management
 cluster instead:
 
-- the `OCIRepository` in `chartRef` exists and is ready,
+- the chart source exists and, if it reports readiness, is ready: the `OCIRepository` or `HelmChart` in `chartRef`, or
+  the `HelmRepository`, `GitRepository` or `Bucket` in `chart.spec.sourceRef`. An OCI `HelmRepository` has no status,
+  so it only has to exist,
 - every `HelmRelease` in `dependsOn` exists,
-- every `valuesFrom` ConfigMap or Secret that isn't `optional` exists, and every one that exists has its `valuesKey`
-  holding a YAML mapping. The `<cluster>-cluster-values` ConfigMap is the exception: the management cluster creates it.
+- every `valuesFrom` ConfigMap or Secret that isn't `optional` exists and has its `valuesKey`. Without a `targetPath`,
+  the key has to hold a YAML mapping, which Flux merges into the values. With a `targetPath`, it holds a single value,
+  such as a password, so any text will do. The `<cluster>-cluster-values` ConfigMap is the exception: the management
+  cluster creates it. The test takes `<cluster>` from the kubeconfig Secret when it's named `<cluster>-kubeconfig`, as
+  Cluster API names it, and from the `giantswarm.io/cluster` or `cluster.x-k8s.io/cluster-name` label of the
+  `HelmRelease`.
 
-Any other `HelmRelease` has to become ready. Each of these checks waits for objects to show up, lists them again after
-each wait to pick up the ones Flux created meanwhile, and fails if it finds no object to check.
+Any other `HelmRelease` has to become ready, unless one of these checks already found a problem with it.
+
+The Kustomization check waits for the `Kustomization`s the test applies to show up, then lists them again after each
+wait to pick up the ones Flux created meanwhile, and fails if none shows up. Once they're all ready, each one's
+`status.inventory` lists the objects it applied. The `OCIRepository` and `HelmRelease` checks expect exactly the ones
+listed there (and any others they find in the cluster), so a repository without `HelmRelease`s or `OCIRepository`s
+passes them, while one whose objects went missing doesn't. Every check looks at all its objects once more at the end,
+so one that was ready early and failed later is reported.
 
 Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified. Each of these files
 has to contain one or more YAML description of objects of Kubernetes objects you expect to be present in the cluster
