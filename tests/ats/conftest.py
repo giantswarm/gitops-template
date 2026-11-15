@@ -419,9 +419,10 @@ def workload_cluster(
         vc_kubeconfig = yaml.safe_load(
             base64.b64decode(vc_secret.obj["data"]["config"]).decode()
         )
-        service = pykube.Service.objects(kube_cluster.kube_client).get(
-            name=WORKLOAD_CLUSTER_VCLUSTER_NAME,
-            namespace=WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
+        service = (
+            pykube.Service.objects(kube_cluster.kube_client)
+            .filter(namespace=WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE)
+            .get(name=WORKLOAD_CLUSTER_VCLUSTER_NAME)
         )
         https_port = next(
             p for p in service.obj["spec"]["ports"] if p["name"] == "https"
