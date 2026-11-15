@@ -14,7 +14,7 @@ spec:
   timeout: 1m0s
   url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
 ---
-# Helm merges the `valuesFrom` entries in order. Later entries win (maps are
+# Flux merges the `valuesFrom` entries in order. Later entries win (maps are
 # merged, lists are replaced):
 #   1. cluster-app-installation-values: values of the management cluster, such as
 #      its name and base domain. Giant Swarm creates it in the `giantswarm`

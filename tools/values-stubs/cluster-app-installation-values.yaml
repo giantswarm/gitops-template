@@ -1,12 +1,10 @@
 # Stand-in for the `cluster-app-installation-values` ConfigMap (key `values.yaml`) of a
 # Giant Swarm management cluster. It exists in the `giantswarm` namespace, and the Kyverno
 # policy `sync-cluster-app-configmap-to-org-namespaces` copies it into every `org-*`
-# namespace. tools/validate-helm-values uses this file in its place. The keys match the
-# real ConfigMap; the values are placeholders.
+# namespace. tools/validate-helm-values and the kind test use this file in its place. It
+# has the two keys every management cluster sets; some installations add more. The values
+# are placeholders.
 global:
   connectivity:
     baseDomain: mc-name.example.com
   managementCluster: mc-name
-  metadata:
-    labels:
-      giantswarm.io/network-monitoring: "true"

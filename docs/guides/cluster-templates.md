@@ -64,7 +64,10 @@ Note that it needs kubectl-gs 6.0.0 or newer. Older versions generate an App CR.
 
 The `HelmRelease` it writes only reads `${cluster_name}-config`. Add the `cluster-app-installation-values` entry in front
 of it, as the [CAPA base](/bases/clusters/capa/template/cluster.yaml) does, or the chart misses
-`global.managementCluster` and `global.connectivity.baseDomain`. Add the optional `${cluster_name}-region-config` entry
+`global.managementCluster` and `global.connectivity.baseDomain`. On management clusters that run
+`kyverno-policies-ux` 0.15.1 or newer, its `prepend-cluster-app-config-map-hr` policy prepends the same entry to a
+`HelmRelease` that lacks it. The explicit entry is for management clusters without that policy, and it does no harm
+next to it: the policy only adds the entry when it is missing. Add the optional `${cluster_name}-region-config` entry
 after it if you use regions:
 
 ```yaml

@@ -342,22 +342,22 @@ def init_namespaces(
 def installation_values(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig, init_namespaces: Any
 ) -> Iterable[list[pykube.ConfigMap]]:
-    """Create the stand-in `cluster-app-installation-values` in every `org-*` namespace."""
-    config_maps = [
-        installation_values_config_map(kube_cluster.kube_client, ns)
-        for ns in gitops_test_config.init_namespaces
-        if ns.startswith("org-")
-    ]
-    for cm in config_maps:
-        # an interrupted earlier run can leave the ConfigMap behind
-        if cm.exists():
-            cm.update()
-        else:
+    """Create the stand-in `cluster-app-installation-values` in every `org-*` namespace that lacks it.
+
+    A ConfigMap that is already there is left as it is and isn't deleted afterwards.
+    """
+    created: list[pykube.ConfigMap] = []
+    for ns in gitops_test_config.init_namespaces:
+        if not ns.startswith("org-"):
+            continue
+        cm = installation_values_config_map(kube_cluster.kube_client, ns)
+        if not cm.exists():
             cm.create()
+            created.append(cm)
 
-    yield config_maps
+    yield created
 
-    for cm in config_maps:
+    for cm in created:
         cm.delete()
 
 
