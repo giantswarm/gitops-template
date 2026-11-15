@@ -1,0 +1,16 @@
+# Expectations on the merged values of HelmReleases, which tools/validate-helm-values checks.
+# One per line: the HelmRelease as `namespace/name`, a yq expression and the output it must
+# print, separated by tabs. An empty expected output can be left out. The expression runs on
+# the values the HelmRelease gets, merged in the order helm-controller merges them. A
+# mismatch fails the check, also for a HelmRelease listed in validate-helm-values.ignore.
+
+# Node pools. A prod cluster gets two: nodepool0 from its stage, and large from its region's
+# node_pool component. The other clusters only get their own, or none, in which case the
+# chart uses its default node pools.
+org-org-name/hello-app-prod-eu-central	.global.nodePools // {} | keys | sort | join(",")	large,nodepool0
+org-org-name/hello-app-prod-us-west	.global.nodePools // {} | keys | sort | join(",")	large,nodepool0
+org-org-name/hello-app-dev-1	.global.nodePools // {} | keys | sort | join(",")
+org-org-name/hello-app-staging-1	.global.nodePools // {} | keys | sort | join(",")
+org-org-name/capi-wc-name	.global.nodePools // {} | keys | sort | join(",")	workers
+org-org-name/mapi-out-of-band-flux-app	.global.nodePools // {} | keys | sort | join(",")	workers
+org-org-name/mapi-out-of-band-no-flux	.global.nodePools // {} | keys | sort | join(",")	workers

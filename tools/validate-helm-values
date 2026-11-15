@@ -11,23 +11,23 @@
 # fails here as it would fail on the cluster.
 #
 # Values that only exist at runtime are replaced by stubs from tools/values-stubs:
-#   - cluster-values.yaml for the `<cluster>-cluster-values` ConfigMap, which is created
-#     when the cluster is.
-#   - cluster-app-installation-values.yaml for the `cluster-app-installation-values`
-#     ConfigMap, which a Kyverno policy copies into every `org-*` namespace of a Giant
-#     Swarm management cluster.
+#   - <Kind>/<name>.yaml for a `valuesFrom` object of that kind and name that isn't in the
+#     manifest, such as ConfigMap/cluster-app-installation-values.yaml. Objects whose
+#     name differs per cluster are mapped to a stub in `stub_patterns` below.
 #   - charts/<chart>.yaml for values a chart needs from the management cluster. They are
 #     the first values file, so values from the repository take precedence.
 #
 # SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
 #
-# Two more checks fail independently of rendering:
+# Three more checks fail independently of rendering:
 #   - A cluster chart (release-*) whose merged values have no region. The table
 #     `region_keys` below names the key per chart.
-#   - A `<cluster>-cluster-userconfig` ConfigMap that no HelmRelease reads.
+#   - A `<cluster>-cluster-userconfig` ConfigMap that no HelmRelease or App CR reads.
+#   - A line of validate-helm-values.expect whose yq expression, run on a HelmRelease's
+#     merged values, doesn't print the expected result.
 #
 # HelmReleases listed in validate-helm-values.ignore are rendered, and Helm's errors for
-# them don't fail the check. The two checks above still do.
+# them don't fail the check. The three checks above still do.
 #
 # Usage: validate-helm-values <manifest.yaml>
 set -e -o pipefail
@@ -42,6 +42,7 @@ stubs="$(dirname "$0")/values-stubs"
 chart_cache="${TMPDIR:-/tmp}/gitops-template-charts"
 kube_version="${KUBERNETES_VERSION:-1.36.5}"
 ignore_file="$(dirname "$0")/validate-helm-values.ignore"
+expect_file="$(dirname "$0")/validate-helm-values.expect"
 work_dir=$(mktemp -d)
 trap 'rm -rf "${work_dir}"' EXIT
 
@@ -75,12 +76,43 @@ function pull_chart() {
 	ls "${dir}"/*.tgz
 }
 
+# Stubs for `valuesFrom` objects whose name differs per cluster: `<Kind>/<glob>` to the
+# stub file under tools/values-stubs. An object with a stub file of its exact name,
+# tools/values-stubs/<Kind>/<name>.yaml, needs no entry.
+declare -A stub_patterns=(
+	["ConfigMap/*-cluster-values"]=ConfigMap/cluster-values.yaml
+)
+
+# Print the stub file for a `valuesFrom` object that isn't in the manifest, or fail if
+# there is none.
+function stub() {
+	local kind="$1" name="$2" pattern
+	if [ -f "${stubs}/${kind}/${name}.yaml" ]; then
+		echo "${stubs}/${kind}/${name}.yaml"
+		return 0
+	fi
+	for pattern in "${!stub_patterns[@]}"; do
+		# shellcheck disable=SC2053 # the pattern is a glob on purpose
+		if [[ "${kind}/${name}" == ${pattern} ]]; then
+			echo "${stubs}/${stub_patterns[${pattern}]}"
+			return 0
+		fi
+	done
+	return 1
+}
+
 # The values key that holds a cluster chart's region, per chart. Only charts whose key
 # was checked against the chart's values.schema.json are listed; other release-* charts
 # aren't region-checked.
 declare -A region_keys=(
 	["release-aws"]=.global.providerSpecific.region
 	["release-azure"]=.global.providerSpecific.location
+)
+
+# Where to set the region, per chart, for the message when it's missing.
+declare -A region_hints=(
+	["release-aws"]="Add a region component from bases/environments/regions to the cluster's kustomization."
+	["release-azure"]="The regions in bases/environments/regions only set the AWS region; add a component that sets the location, see docs/guides/cluster-templates.md."
 )
 
 failed=0
@@ -157,10 +189,8 @@ while IFS=/ read -r ns name; do
 		fi
 
 		if ! obj=$(object "${kind}" "${ns}" "${ref_name}"); then
-			if [[ "${kind}" == "ConfigMap" && "${ref_name}" == *-cluster-values ]]; then
-				files+=("${stubs}/cluster-values.yaml")
-			elif [[ "${kind}" == "ConfigMap" && "${ref_name}" == cluster-app-installation-values ]]; then
-				files+=("${stubs}/cluster-app-installation-values.yaml")
+			if stub_file=$(stub "${kind}" "${ref_name}"); then
+				files+=("${stub_file}")
 			elif [ "${optional}" == "true" ]; then
 				:
 			else
@@ -211,10 +241,23 @@ while IFS=/ read -r ns name; do
 		else
 			region=$(yq eval-all -N ". as \$f ireduce ({}; . * \$f) | ${region_key} // \"\"" "${files[@]}" /dev/null)
 			if [ -z "${region}" ]; then
-				echo "${id}: cluster ${name} has no region, ${region_key#.} is not set. Add a region component from bases/environments/regions to the cluster's kustomization."
+				echo "${id}: cluster ${name} has no region, ${region_key#.} is not set. ${region_hints[${chart_name}]}"
 				failed=1
 			fi
 		fi
+	fi
+
+	# Expectations on the merged values, from the expect file: `namespace/name`, a yq
+	# expression and the expected output, separated by tabs.
+	if [ -f "${expect_file}" ]; then
+		while IFS=$'\t' read -r expect_id expression expected; do
+			[ "${expect_id}" != "${ns}/${name}" ] && continue
+			actual=$(yq eval-all -N ". as \$f ireduce ({}; . * \$f) | ${expression}" "${files[@]}" /dev/null)
+			if [ "${actual}" != "${expected}" ]; then
+				echo "${id}: expected '${expression}' to be '${expected}', got '${actual}' ($(basename "${expect_file}"))"
+				failed=1
+			fi
+		done < <(grep -v '^[[:space:]]*\(#\|$\)' "${expect_file}")
 	fi
 
 	args=(template "$(yq ".spec.releaseName // \"${name}\"" "${hr}")" "${archive}"
@@ -245,11 +288,19 @@ done < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .me
 # A cluster's own values are in a `<cluster>-cluster-userconfig` ConfigMap, which a
 # component or patch appends to the cluster's HelmRelease. If the cluster's kustomization
 # leaves that out, the ConfigMap is created but nothing reads it, and the cluster silently
-# loses its own values and those of its stage. This check doesn't depend on the ignore file.
+# loses its own values and those of its stage. A cluster that is still an App CR reads it
+# through the App's `spec.userConfig.configMap`. This check doesn't depend on the ignore
+# file.
 while IFS=/ read -r ns cm; do
 	[ -z "${cm}" ] && continue
-	if ! NS="${ns}" CM="${cm}" yq -e 'select(.kind == "HelmRelease" and .metadata.namespace == strenv(NS)) | .spec.valuesFrom[]? | select(.kind == "ConfigMap" and .name == strenv(CM))' "${manifest}" >/dev/null 2>&1; then
-		echo "ConfigMap ${ns}/${cm}: no HelmRelease reads it, so cluster ${cm%-cluster-userconfig} doesn't get its own values. Append it to the cluster's HelmRelease valuesFrom, for a cluster made from a cluster template with the template's userconfig component."
+	if ! NS="${ns}" CM="${cm}" yq -e '
+		select(.kind == "HelmRelease" and .metadata.namespace == strenv(NS)) |
+		.spec.valuesFrom[]? | select(.kind == "ConfigMap" and .name == strenv(CM))' "${manifest}" >/dev/null 2>&1 &&
+		! NS="${ns}" CM="${cm}" yq -e '
+		select(.kind == "App" and (.apiVersion // "" | test("^application\\.giantswarm\\.io/"))) |
+		select(.spec.userConfig.configMap.name == strenv(CM) and
+			(.spec.userConfig.configMap.namespace // .metadata.namespace) == strenv(NS))' "${manifest}" >/dev/null 2>&1; then
+		echo "ConfigMap ${ns}/${cm}: no HelmRelease or App reads it, so cluster ${cm%-cluster-userconfig} doesn't get its own values. Append it to the cluster's HelmRelease valuesFrom, for a cluster made from a cluster template with the template's userconfig component."
 		failed=1
 	fi
 done < <(yq -N 'select(.kind == "ConfigMap" and (.metadata.name | test("-cluster-userconfig$"))) | .metadata.namespace + "/" + .metadata.name' "${manifest}")

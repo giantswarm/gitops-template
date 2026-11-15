@@ -288,8 +288,19 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   placeholder security group. The `hello_app_cluster` template no longer appends the cluster's own values itself: a
   cluster lists its region, then the template's `userconfig` component, under `components:`, so its own values come
   last. No cluster inserts a ConfigMap at a fixed `valuesFrom` position any more. The `release-aws` stub of
-  `tools/validate-helm-values` no longer sets a region, and the script fails for a `release-*` `HelmRelease` without
-  one, naming the cluster.
+  `tools/validate-helm-values` no longer sets a region, and the script fails for a `release-aws` or `release-azure`
+  `HelmRelease` without one (`global.providerSpecific.region` or `global.providerSpecific.location`), naming the
+  cluster ([#205](https://github.com/giantswarm/gitops-template/issues/205)). The getting started guides and the
+  cluster in `docs/how-it-works.md` add a region too.
+- A prod cluster's region node pool is a deliberate extra pool next to the stage's `nodepool0`
+  ([#206](https://github.com/giantswarm/gitops-template/issues/206)). The new `tools/validate-helm-values.expect` lists
+  yq expressions with their expected output on a `HelmRelease`'s merged values; it checks that each prod cluster gets
+  exactly `nodepool0` and `large`, and the other clusters only their own pools. The `WC_NAME` and out-of-band examples
+  name their pool `workers` instead of `xxxxx`.
+- `tools/validate-helm-values` fails when a cluster's `<cluster>-cluster-userconfig` ConfigMap isn't read by any
+  `HelmRelease` or App CR, which happens when a cluster leaves out its template's userconfig component. It finds stubs
+  for missing `valuesFrom` objects at `tools/values-stubs/<Kind>/<name>.yaml`, or by a glob for names that differ per
+  cluster, instead of two hard-coded names.
 - `tools/test-all-ff validate` now validates Flux and Giant Swarm objects
   against real schemas. kubeconform ran with `-ignore-missing-schemas` and no
   CRD schema source, so it skipped every `HelmRelease`, `OCIRepository` and

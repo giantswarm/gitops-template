@@ -427,7 +427,9 @@ EOF
 ```
 
 The pool is called `large` and doesn't share a key with the stage's `nodepool0`, so a production cluster gets both
-pools: the stage's and the region's.
+pools: the stage's and the region's. The dev and staging clusters don't add the node pool component, so they only get
+the chart's default node pools. [tools/validate-helm-values.expect](/tools/validate-helm-values.expect) checks the
+merged node pools of every example cluster in CI.
 
 ## Add Workload Clusters based on the environment cluster templates
 

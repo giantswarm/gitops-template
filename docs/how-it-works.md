@@ -59,11 +59,14 @@ values. The bases use variables like `${cluster_name}` where every cluster needs
 `Kustomization` sets them, so one base works for every cluster.
 
 For example, a cluster made from the CAPA cluster base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
-`cluster_description`, `cluster_name`, `organization` and `release` variables in its Flux `Kustomization`:
+`cluster_description`, `cluster_name`, `organization` and `release` variables in its Flux `Kustomization`. The
+component sets the cluster's region, which every cluster needs, see [Regions](./guides/environments.md#regions):
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+components:
+  - ../../../../../../../../bases/environments/regions/eu_central
 resources:
   - ../../../../../../../../bases/clusters/capa/template
 ```

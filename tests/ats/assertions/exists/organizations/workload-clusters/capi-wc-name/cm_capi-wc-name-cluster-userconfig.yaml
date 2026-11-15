@@ -3,7 +3,7 @@ data:
   values: |
     global:
       nodePools:
-        xxxxx:
+        workers:
           instanceType: m6i.4xlarge
 kind: ConfigMap
 metadata:

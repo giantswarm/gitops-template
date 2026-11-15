@@ -61,18 +61,21 @@ the same way Flux does: maps are merged, and lists and scalars are replaced. The
 the `HelmRelease` references, or from a `HelmRepository`, and is cached under `${TMPDIR:-/tmp}/gitops-template-charts`.
 A semver range is resolved to the newest matching version, as Flux would resolve it.
 
-Some values don't exist until the cluster runs. They are replaced by stubs in [values-stubs](values-stubs/):
+Some values don't exist until the cluster runs. They are replaced by stubs in [values-stubs](values-stubs/). When a
+`valuesFrom` entry names an object that isn't in the repository, the script looks for `values-stubs/<Kind>/<name>.yaml`.
+Objects whose name differs per cluster are mapped to a stub by a glob in the script's `stub_patterns` table.
 
-- `cluster-values.yaml` replaces the `<cluster>-cluster-values` ConfigMap, which cluster-apps-operator creates for
-  each workload cluster.
-- `cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which holds the
-  management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every `org-*`
-  namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/template/readme.md).
+- `ConfigMap/cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which
+  holds the management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every
+  `org-*` namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/template/readme.md).
+  The kind test creates its stand-in from the same file.
+- `ConfigMap/cluster-values.yaml` replaces every `<cluster>-cluster-values` ConfigMap, which cluster-apps-operator
+  creates for each workload cluster. `stub_patterns` maps `ConfigMap/*-cluster-values` to it.
 - `charts/<chart>.yaml` holds values a chart can't render without the management cluster, such as
   `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values
   from the repository override it. It doesn't set the region: a cluster that doesn't set its own must fail.
 
-Two more checks fail, also for a `HelmRelease` listed in `validate-helm-values.ignore`, which only excuses Helm's
+Three more checks fail, also for a `HelmRelease` listed in `validate-helm-values.ignore`, which only excuses Helm's
 errors:
 
 - A cluster without a region. A `HelmRelease` of a cluster chart fails when its merged values have no region. Without
@@ -80,11 +83,18 @@ errors:
   the cluster would be created somewhere nobody chose. The table `region_keys` in the script names the key per chart:
   `global.providerSpecific.region` for `release-aws` and `global.providerSpecific.location` for `release-azure`. A
   `release-*` chart that isn't in the table isn't checked, and the script prints a note. An AWS cluster sets its region
-  with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
+  with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions). The message
+  for an Azure cluster points to [Add a CAPx Workload Cluster base](/docs/guides/cluster-templates.md) instead.
 - A cluster that doesn't read its own values. A `<cluster>-cluster-userconfig` ConfigMap that no `HelmRelease` in the
-  same build has in its `valuesFrom` fails, naming the cluster. That happens when a cluster made from a cluster
-  template leaves out the template's userconfig component: the ConfigMap is still created, but the cluster loses its
-  own values and those of its stage.
+  same build has in its `valuesFrom`, and no App CR names in `spec.userConfig.configMap`, fails, naming the cluster.
+  That happens when a cluster made from a cluster template leaves out the template's userconfig component: the
+  ConfigMap is still created, but the cluster loses its own values and those of its stage. A cluster that is still a
+  `cluster-aws` App CR reads it through the App and passes.
+- A wrong merged value. [validate-helm-values.expect](validate-helm-values.expect) lists a `HelmRelease`, a yq
+  expression and its expected output per line, separated by tabs. The script runs the expression on the values the
+  `HelmRelease` gets, merged in `valuesFrom` order, and fails when the output differs. The template uses it to check
+  each example cluster's node pools: a prod cluster gets `nodepool0` from its stage and `large` from its region's
+  `node_pool` component, the other clusters only their own.
 
 The check leaves out:
 

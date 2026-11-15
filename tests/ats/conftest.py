@@ -69,7 +69,7 @@ INSTALLATION_VALUES_CONFIG_MAP_NAME = "cluster-app-installation-values"
 KYVERNO_GENERATE_POLICY_LABEL = "generate.kyverno.io/policy-name"
 INSTALLATION_VALUES_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "../../tools/values-stubs/cluster-app-installation-values.yaml",
+    "../../tools/values-stubs/ConfigMap/cluster-app-installation-values.yaml",
 )
 
 logger = logging.getLogger(__name__)
