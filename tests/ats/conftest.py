@@ -4,6 +4,8 @@ import logging
 import os
 import shutil
 import subprocess  # nosec B404 - we need to invoke processes
+import tempfile
+import time
 import urllib.request
 from typing import Iterable, Any
 
