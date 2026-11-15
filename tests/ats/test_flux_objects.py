@@ -2,8 +2,20 @@ import base64
 import binascii
 import logging
 import os.path
+import re
 import time
-from typing import Any, Iterator, Optional, Protocol, Type, TypeVar, Union
+from types import SimpleNamespace
+from typing import (
+    Any,
+    Callable,
+    Iterator,
+    Optional,
+    Protocol,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import pykube
 import pytest
@@ -14,11 +26,12 @@ from pykube.objects import APIObject
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
-from pytest_helm_charts.flux.utils import NamespacedFluxCR
+from pytest_helm_charts.flux.utils import NamespacedFluxCR, flux_cr_ready
 
 from conftest import GitOpsTestConfig
 
 TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
+R = TypeVar("R")
 
 
 class OCIRepositoryCR(NamespacedFluxCR):
@@ -68,6 +81,9 @@ FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
 OCI_REPOSITORIES_READY_TIMEOUT_SEC = 180
 FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC = 15
 POLL_INTERVAL_SEC = 5
+HELM_RELEASE_SECRET_TYPE = "helm.sh/release.v1"  # nosec B105 - a Secret type
+# The release-<provider> charts create a workload cluster, see needs_workload_cluster
+CLUSTER_CHART_NAME = re.compile(r"release-[a-z0-9-]+")
 ASSERTIONS_DIR = "assertions"
 EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
 
@@ -79,16 +95,29 @@ def obj_key(obj: Union[APIObject, dict]) -> str:
     return f"{meta.get('namespace', '')}/{meta['name']}"
 
 
-def ready_condition(obj: dict) -> Optional[dict]:
-    for c in obj.get("status", {}).get("conditions", []):
-        if c.get("type") == "Ready":
-            return c
-    return None
+def poll(timeout_sec: int, attempt: Callable[[], tuple[bool, R]]) -> R:
+    """Call `attempt` every few seconds until it says it's done or `timeout_sec` has passed.
+
+    Returns the result of the last attempt. A timeout of 0 makes a single attempt.
+    """
+    deadline = time.time() + timeout_sec
+    while True:
+        done, result = attempt()
+        if done or time.time() >= deadline:
+            return result
+        time.sleep(POLL_INTERVAL_SEC)
 
 
 def is_ready(obj: dict) -> bool:
-    c = ready_condition(obj)
-    return c is not None and c.get("status") == "True"
+    """Whether a Flux object is Ready, by pytest_helm_charts' `flux_cr_ready` like other suites."""
+    return flux_cr_ready(cast(NamespacedFluxCR, SimpleNamespace(obj=obj)))
+
+
+def not_ready_reason(obj: dict) -> str:
+    for c in (obj.get("status") or {}).get("conditions") or []:
+        if c.get("type") == "Ready":
+            return c.get("message") or f"Ready is {c.get('status')}"
+    return "has no Ready condition"
 
 
 def list_flux_objects(
@@ -147,18 +176,19 @@ def wait_for_objects_to_exist(
 ) -> list[TFNS]:
     """Wait for every object in `expected` (`namespace/name`) to exist; return all `obj_type` objects."""
     logger.info(f"The Kustomizations applied {len(expected)} {obj_type.kind} objects.")
-    deadline = time.time() + timeout_sec
-    while True:
+
+    def attempt() -> tuple[bool, list[TFNS]]:
         objects = list_flux_objects(kube_cluster, obj_type, ignored_objects)
-        missing = expected - {obj_key(o) for o in objects}
-        if not missing:
-            return objects
-        if time.time() >= deadline:
-            pytest.fail(
-                f"{len(missing)} {obj_type.kind} objects the Kustomizations applied don't exist "
-                f"after {timeout_sec} s: {sorted(missing)}"
-            )
-        time.sleep(POLL_INTERVAL_SEC)
+        return expected <= {obj_key(o) for o in objects}, objects
+
+    objects = poll(timeout_sec, attempt)
+    missing = expected - {obj_key(o) for o in objects}
+    if missing:
+        pytest.fail(
+            f"{len(missing)} {obj_type.kind} objects the Kustomizations applied don't exist "
+            f"after {timeout_sec} s: {sorted(missing)}"
+        )
+    return objects
 
 
 def wait_until_ready(
@@ -167,33 +197,43 @@ def wait_until_ready(
     keys: set[str],
     ignored_objects: list[str],
     timeout_sec: int,
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, dict]]:
     """Wait for the `obj_type` objects in `keys` to be Ready, listing the kind once per poll.
 
     Every object is evaluated on every poll, including the last one, so an object that was
-    Ready and fails later is reported. Returns `namespace/name` -> reason for the ones that
-    aren't Ready when the timeout is reached. A timeout of 0 checks once.
+    Ready and fails later is reported. An object that's gone is left out: Flux deletes the
+    objects it no longer manages, such as a Kustomization its parent pruned. A timeout of 0
+    checks once.
+
+    Returns `namespace/name` -> reason for the objects that aren't Ready when the timeout is
+    reached, and `namespace/name` -> object for the ones that still exist.
     """
-    deadline = time.time() + timeout_sec
-    while True:
+    if not keys:
+        return {}, {}
+
+    def attempt() -> tuple[bool, tuple[dict[str, str], dict[str, dict]]]:
         current = {
             obj_key(o): o.obj
             for o in list_flux_objects(kube_cluster, obj_type, ignored_objects)
+            if obj_key(o) in keys
         }
-        not_ready: dict[str, str] = {}
-        for k in sorted(keys):
-            if k not in current:
-                not_ready[k] = "doesn't exist any more"
-            elif not is_ready(current[k]):
-                c = ready_condition(current[k]) or {}
-                not_ready[k] = c.get("message") or "has no Ready condition"
-        if not not_ready or time.time() >= deadline:
-            return not_ready
-        logger.debug(
-            f"Waiting for {len(not_ready)} {obj_type.kind} objects to be ready: "
-            f"{sorted(not_ready)}"
-        )
-        time.sleep(POLL_INTERVAL_SEC)
+        not_ready = {
+            k: not_ready_reason(o)
+            for k, o in sorted(current.items())
+            if not is_ready(o)
+        }
+        if not_ready:
+            logger.debug(
+                f"Waiting for {len(not_ready)} {obj_type.kind} objects to be ready: "
+                f"{sorted(not_ready)}"
+            )
+        return not not_ready, (not_ready, current)
+
+    not_ready, current = poll(timeout_sec, attempt)
+    gone = keys - current.keys()
+    if gone:
+        logger.info(f"{obj_type.kind} objects deleted meanwhile: {sorted(gone)}")
+    return not_ready, current
 
 
 def fail_not_ready(obj_type: Type[APIObject], not_ready: dict[str, str]) -> None:
@@ -213,22 +253,30 @@ def fail_not_ready(obj_type: Type[APIObject], not_ready: dict[str, str]) -> None
 def check_kustomizations_successful(
     kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
 ) -> list[dict]:
-    """Wait for every Kustomization to be ready, and return them with their inventories.
+    """Wait for every Kustomization to be ready, and return the ones it waited for.
 
     The test applies the root Kustomizations itself, so at least one has to show up. They
     create the cluster Kustomizations once they're ready, so the check lists the
-    Kustomizations again after each wait until no new one appears.
+    Kustomizations again after each wait until no new one appears. The returned objects come
+    from the last check, so their inventories are the ones of Ready Kustomizations.
     """
     ignored = gitops_test_config.ignored_objects
-    deadline = time.time() + FLUX_OBJECTS_READY_TIMEOUT_SEC
-    objects = list_flux_objects(kube_cluster, KustomizationCR, ignored)
-    while not objects and time.time() < deadline:
-        time.sleep(POLL_INTERVAL_SEC)
-        objects = list_flux_objects(kube_cluster, KustomizationCR, ignored)
-    if not objects:
+
+    def attempt() -> tuple[bool, list[KustomizationCR]]:
+        found = list_flux_objects(kube_cluster, KustomizationCR, [])
+        return bool(found), found
+
+    found = poll(FLUX_OBJECTS_READY_TIMEOUT_SEC, attempt)
+    if not found:
         pytest.fail(
             f"No Kustomization showed up in the cluster in {FLUX_OBJECTS_READY_TIMEOUT_SEC} s."
         )
+    objects = [o for o in found if obj_key(o) not in ignored]
+    if not objects:
+        logger.warning(
+            "Every Kustomization is in GITOPS_IGNORED_OBJECTS, there is none to check."
+        )
+        return []
 
     waited: set[str] = set()
     while True:
@@ -236,29 +284,18 @@ def check_kustomizations_successful(
         if not new:
             break
         waited |= new
-        fail_not_ready(
-            KustomizationCR,
-            wait_until_ready(
-                kube_cluster,
-                KustomizationCR,
-                new,
-                ignored,
-                FLUX_OBJECTS_READY_TIMEOUT_SEC,
-            ),
+        not_ready, _ = wait_until_ready(
+            kube_cluster, KustomizationCR, new, ignored, FLUX_OBJECTS_READY_TIMEOUT_SEC
         )
+        fail_not_ready(KustomizationCR, not_ready)
         objects = list_flux_objects(kube_cluster, KustomizationCR, ignored)
     # Check them all once more: one that was ready early may have failed since.
-    fail_not_ready(
-        KustomizationCR,
-        wait_until_ready(kube_cluster, KustomizationCR, waited, ignored, 0),
+    not_ready, current = wait_until_ready(
+        kube_cluster, KustomizationCR, waited, ignored, 0
     )
-    logger.info(f"{len(waited)} Kustomizations are ready.")
-    return [
-        o.obj
-        for o in KustomizationCR.objects(kube_cluster.kube_client)
-        .filter(namespace=pykube.all)
-        .all()
-    ]
+    fail_not_ready(KustomizationCR, not_ready)
+    logger.info(f"{len(current)} Kustomizations are ready.")
+    return list(current.values())
 
 
 def test_kustomizations_successful(check_kustomizations_successful: list[dict]) -> None:
@@ -288,13 +325,17 @@ class ClusterIndex:
         return self._objects[kind].get((namespace, name))
 
     def _list(self, kind: str) -> dict[tuple[str, str], dict]:
-        try:
-            objects = (
-                REFERENCED_KINDS[kind]
-                .objects(self._client)
-                .filter(namespace=pykube.all)
-                .all()
+        query = REFERENCED_KINDS[kind].objects(self._client)
+        if kind == "Secret":
+            # Helm keeps every revision of every release in a Secret of up to 1 MiB, and
+            # no valuesFrom reference is one of those.
+            query = query.filter(
+                namespace=pykube.all, field_selector=f"type!={HELM_RELEASE_SECRET_TYPE}"
             )
+        else:
+            query = query.filter(namespace=pykube.all)
+        try:
+            objects = query.all()
             return {(o.namespace, o.name): o.obj for o in objects}
         except pykube.exceptions.HTTPError as e:
             # the kind's CRD isn't installed, so none exists
@@ -303,19 +344,52 @@ class ClusterIndex:
             raise
 
 
+CHART_REF_KINDS = ("OCIRepository", "HelmChart")
+CHART_SOURCE_KINDS = ("HelmRepository", "GitRepository", "Bucket")
+
+
+def chart_spec(hr: dict) -> dict:
+    return ((hr["spec"].get("chart") or {}).get("spec")) or {}
+
+
+def chart_source(hr: dict) -> Optional[tuple[str, str, str]]:
+    """`(kind, namespace, name)` of the chart source in `chartRef` or `chart.spec.sourceRef`.
+
+    None if there is none, or it's of a kind the test doesn't check.
+    """
+    kinds: tuple[str, ...] = CHART_REF_KINDS
+    ref = hr["spec"].get("chartRef")
+    if not ref:
+        ref, kinds = chart_spec(hr).get("sourceRef"), CHART_SOURCE_KINDS
+    if not ref or ref.get("kind") not in kinds:
+        return None
+    return ref["kind"], ref.get("namespace", hr["metadata"]["namespace"]), ref["name"]
+
+
+def last_path_segment(path: str) -> str:
+    return path.rstrip("/").rsplit("/", 1)[-1]
+
+
+def chart_name(hr: dict, index: ObjectLookup) -> Optional[str]:
+    """The name of the chart the HelmRelease installs, if the test can tell.
+
+    `chart.spec.chart` names it (a path for a GitRepository or Bucket). For a `chartRef`, the
+    OCIRepository's URL or the HelmChart's `chart` does.
+    """
+    if chart_spec(hr).get("chart"):
+        return last_path_segment(chart_spec(hr)["chart"])
+    source = chart_source(hr)
+    obj = index.get(*source) if source else None
+    if source is None or obj is None:
+        return None
+    field = "url" if source[0] == "OCIRepository" else "chart"
+    return last_path_segment(obj.get("spec", {}).get(field, "")) or None
+
+
 def is_cluster_chart(hr: dict, index: ObjectLookup) -> bool:
     """Whether the HelmRelease creates a workload cluster from a release-<provider> chart."""
-    chart_ref = hr["spec"].get("chartRef", {})
-    if chart_ref.get("kind") != "OCIRepository":
-        return False
-    repo = index.get(
-        "OCIRepository",
-        chart_ref.get("namespace", hr["metadata"]["namespace"]),
-        chart_ref.get("name", ""),
-    )
-    return repo is not None and "/charts/giantswarm/release-" in repo.get(
-        "spec", {}
-    ).get("url", "")
+    name = chart_name(hr, index)
+    return name is not None and CLUSTER_CHART_NAME.fullmatch(name) is not None
 
 
 def needs_workload_cluster(hr: dict, index: ObjectLookup) -> bool:
@@ -421,48 +495,56 @@ def values_problem(kind: str, value: str) -> Optional[str]:
 def source_problems(
     kind: str, namespace: str, name: str, index: ObjectLookup
 ) -> list[str]:
-    """The chart source has to exist and, if it reports readiness, be ready.
+    """The chart source has to exist and be Ready.
 
-    An OCI HelmRepository has no status, so it only has to exist.
+    An OCI HelmRepository is the exception: Flux doesn't reconcile it, so it has no status
+    and only has to exist.
     """
     source = index.get(kind, namespace, name)
     if source is None:
         return [f"{kind} '{namespace}/{name}' doesn't exist"]
-    if ready_condition(source) is not None and not is_ready(source):
-        return [f"{kind} '{namespace}/{name}' isn't ready"]
+    oci_helm_repository = (
+        kind == "HelmRepository" and source.get("spec", {}).get("type") == "oci"
+    )
+    if not oci_helm_repository and not is_ready(source):
+        return [f"{kind} '{namespace}/{name}' isn't ready: {not_ready_reason(source)}"]
     return []
-
-
-CHART_REF_KINDS = ("OCIRepository", "HelmChart")
-CHART_SOURCE_KINDS = ("HelmRepository", "GitRepository", "Bucket")
 
 
 def chart_problems(hr: dict, index: ObjectLookup) -> list[str]:
     """Check the chart source of a HelmRelease, given as `chartRef` or as `chart`."""
-    spec, namespace = hr["spec"], hr["metadata"]["namespace"]
-    chart_ref = spec.get("chartRef")
-    if chart_ref:
-        kind = chart_ref.get("kind")
-        if kind not in CHART_REF_KINDS:
-            logger.warning(
-                f"HelmRelease '{obj_key(hr)}': chartRef kind '{kind}' isn't checked."
-            )
-            return []
-        return source_problems(
-            kind, chart_ref.get("namespace", namespace), chart_ref["name"], index
-        )
-    source_ref = (spec.get("chart") or {}).get("spec", {}).get("sourceRef")
-    if not source_ref:
+    ref = hr["spec"].get("chartRef") or chart_spec(hr).get("sourceRef")
+    if not ref:
         return ["has neither chartRef nor chart.spec.sourceRef"]
-    kind = source_ref.get("kind")
-    if kind not in CHART_SOURCE_KINDS:
+    source = chart_source(hr)
+    if source is None:
         logger.warning(
-            f"HelmRelease '{obj_key(hr)}': sourceRef kind '{kind}' isn't checked."
+            f"HelmRelease '{obj_key(hr)}': chart source kind '{ref.get('kind')}' "
+            "isn't checked."
         )
         return []
-    return source_problems(
-        kind, source_ref.get("namespace", namespace), source_ref["name"], index
-    )
+    return source_problems(*source, index)
+
+
+def wait_for_chart_sources(kube_cluster: Cluster, hrs: list[dict]) -> ClusterIndex:
+    """Wait for the HelmReleases' chart sources to be ready; return what the last look saw.
+
+    Sources fetch from a remote registry or repository, so they may still be reconciling.
+    One that doesn't exist won't show up any more: the Kustomizations that create the
+    sources are ready already. So the wait only covers the ones that exist.
+    """
+    sources = {s for s in (chart_source(hr) for hr in hrs) if s}
+
+    def attempt() -> tuple[bool, ClusterIndex]:
+        index = ClusterIndex(kube_cluster.kube_client)
+        pending = [
+            s
+            for s in sources
+            if index.get(*s) is not None and source_problems(*s, index)
+        ]
+        return not pending, index
+
+    return poll(OCI_REPOSITORIES_READY_TIMEOUT_SEC, attempt)
 
 
 def helm_release_problems(hr: dict, index: ObjectLookup) -> list[str]:
@@ -485,13 +567,14 @@ def check_helm_release_successful(
     gitops_deployment: None,
     gitops_test_config: GitOpsTestConfig,
     check_kustomizations_successful: list[dict],
-    check_oci_repositories_successful: None,
 ) -> None:
     # HelmReleases that can get ready in the test cluster have to. The others can't (see
     #  needs_workload_cluster), so for every HelmRelease the test checks what helm-controller needs
     #  from the management cluster before it gets to the workload cluster: the chart source, the
     #  HelmReleases it depends on, and the values. A HelmRelease with a problem there can't get
-    #  ready, so the problem is reported instead of waiting for it.
+    #  ready, so the problem is reported instead of waiting for it. The chart sources are waited
+    #  for here rather than through the OCIRepository check, so a broken OCIRepository fails
+    #  that test and is reported here with the other problems, instead of skipping this check.
     ignored = gitops_test_config.ignored_objects
     expected = inventory_objects(
         check_kustomizations_successful, HelmReleaseCR, ignored
@@ -505,7 +588,7 @@ def check_helm_release_successful(
         )
         return
 
-    index = ClusterIndex(kube_cluster.kube_client)
+    index = wait_for_chart_sources(kube_cluster, [hr.obj for hr in helm_releases])
     problems: list[str] = []
     to_wait: set[str] = set()
     for hr in helm_releases:
@@ -513,7 +596,7 @@ def check_helm_release_successful(
         problems.extend(f"HelmRelease '{obj_key(hr)}': {p}" for p in hr_problems)
         if not hr_problems and not needs_workload_cluster(hr.obj, index):
             to_wait.add(obj_key(hr))
-    not_ready = wait_until_ready(
+    not_ready, _ = wait_until_ready(
         kube_cluster, HelmReleaseCR, to_wait, ignored, FLUX_OBJECTS_READY_TIMEOUT_SEC
     )
     problems.extend(f"HelmRelease '{k}' isn't ready: {r}" for k, r in not_ready.items())
@@ -556,16 +639,14 @@ def check_oci_repositories_successful(
             "The Kustomizations applied no OCIRepository, there is none to check."
         )
         return
-    fail_not_ready(
+    not_ready, _ = wait_until_ready(
+        kube_cluster,
         OCIRepositoryCR,
-        wait_until_ready(
-            kube_cluster,
-            OCIRepositoryCR,
-            {obj_key(r) for r in repos},
-            ignored,
-            OCI_REPOSITORIES_READY_TIMEOUT_SEC,
-        ),
+        {obj_key(r) for r in repos},
+        ignored,
+        OCI_REPOSITORIES_READY_TIMEOUT_SEC,
     )
+    fail_not_ready(OCIRepositoryCR, not_ready)
 
 
 def test_oci_repositories_successful(check_oci_repositories_successful: None) -> None:

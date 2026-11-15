@@ -12,6 +12,7 @@ from test_flux_objects import (
     chart_problems,
     helm_release_problems,
     inventory_objects,
+    is_cluster_chart,
     parse_inventory_id,
     values_from_problems,
     workload_cluster_names,
@@ -236,7 +237,7 @@ def test_cluster_values_skipped_for_custom_kubeconfig_secret() -> None:
         (
             {},
             [("OCIRepository", ready("app", "False"))],
-            ["OCIRepository 'ns/app' isn't ready"],
+            ["OCIRepository 'ns/app' isn't ready: Ready is False"],
         ),
         ({}, [], ["OCIRepository 'ns/app' doesn't exist"]),
         # chartRef to a HelmChart in another namespace
@@ -265,12 +266,81 @@ def test_cluster_values_skipped_for_custom_kubeconfig_secret() -> None:
         (
             {"chartRef": None, **chart_from("Bucket", "b")},
             [("Bucket", ready("b", "False"))],
-            ["Bucket 'ns/b' isn't ready"],
+            ["Bucket 'ns/b' isn't ready: Ready is False"],
+        ),
+        (
+            # a HelmRepository that isn't OCI has to be Ready, a status is on its way
+            {"chartRef": None, **chart_from("HelmRepository", "new")},
+            [("HelmRepository", obj("new", spec={"url": "https://example.com"}))],
+            ["HelmRepository 'ns/new' isn't ready: has no Ready condition"],
         ),
     ],
 )
 def test_chart_problems(spec: dict, objects: list, expected: list) -> None:
     assert chart_problems(release(spec), FakeIndex(*objects)) == expected  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "spec, objects, expected",
+    [
+        # chartRef: the OCIRepository's URL names the chart
+        (
+            {},
+            [
+                (
+                    "OCIRepository",
+                    obj(
+                        "app", spec={"url": "oci://r.io/charts/giantswarm/release-aws"}
+                    ),
+                )
+            ],
+            True,
+        ),
+        (
+            {},
+            [("OCIRepository", obj("app", spec={"url": "oci://r.io/charts/hello"}))],
+            False,
+        ),
+        # without the OCIRepository the chart is unknown
+        ({}, [], False),
+        # chart.spec.chart names it, also through an OCI HelmRepository or a path
+        ({"chartRef": None, **chart_from("HelmRepository", "r")}, [], False),
+        (
+            {
+                "chartRef": None,
+                "chart": {
+                    "spec": {
+                        "chart": "release-aws",
+                        "sourceRef": {"kind": "HelmRepository", "name": "r"},
+                    }
+                },
+            },
+            [],
+            True,
+        ),
+        (
+            {
+                "chartRef": None,
+                "chart": {
+                    "spec": {
+                        "chart": "./charts/release-cloud-director/",
+                        "sourceRef": {"kind": "GitRepository", "name": "g"},
+                    }
+                },
+            },
+            [],
+            True,
+        ),
+        # chartRef to a HelmChart
+        (
+            {"chartRef": {"kind": "HelmChart", "name": "c"}},
+            [("HelmChart", obj("c", spec={"chart": "release-azure"}))],
+            True,
+        ),
+    ],
+)
+def test_is_cluster_chart(spec: dict, objects: list, expected: bool) -> None:
+    assert is_cluster_chart(release(spec), FakeIndex(*objects)) is expected  # type: ignore[arg-type]
 
 
 def test_missing_chart_source_is_reported() -> None:

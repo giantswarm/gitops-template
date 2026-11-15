@@ -46,9 +46,9 @@ By default, this test checks if all the `Kustomization` and `OCIRepository` obje
 chart, can't get ready in the test cluster. For every `HelmRelease` the test checks what Flux needs from the management
 cluster instead:
 
-- the chart source exists and, if it reports readiness, is ready: the `OCIRepository` or `HelmChart` in `chartRef`, or
-  the `HelmRepository`, `GitRepository` or `Bucket` in `chart.spec.sourceRef`. An OCI `HelmRepository` has no status,
-  so it only has to exist,
+- the chart source exists and gets ready within 180 s: the `OCIRepository` or `HelmChart` in `chartRef`, or the
+  `HelmRepository`, `GitRepository` or `Bucket` in `chart.spec.sourceRef`. An OCI `HelmRepository` has no status, so it
+  only has to exist,
 - every `HelmRelease` in `dependsOn` exists,
 - every `valuesFrom` ConfigMap or Secret that isn't `optional` exists and has its `valuesKey`. Without a `targetPath`,
   the key has to hold a YAML mapping, which Flux merges into the values. With a `targetPath`, it holds a single value,
@@ -57,14 +57,18 @@ cluster instead:
   Cluster API names it, and from the `giantswarm.io/cluster` or `cluster.x-k8s.io/cluster-name` label of the
   `HelmRelease`.
 
-Any other `HelmRelease` has to become ready, unless one of these checks already found a problem with it.
+Any other `HelmRelease` has to become ready, unless one of these checks already found a problem with it. A
+`release-<provider>` chart is recognised by its name, from `chart.spec.chart`, the `OCIRepository` URL or the
+`HelmChart`.
 
 The Kustomization check waits for the `Kustomization`s the test applies to show up, then lists them again after each
-wait to pick up the ones Flux created meanwhile, and fails if none shows up. Once they're all ready, each one's
-`status.inventory` lists the objects it applied. The `OCIRepository` and `HelmRelease` checks expect exactly the ones
-listed there (and any others they find in the cluster), so a repository without `HelmRelease`s or `OCIRepository`s
-passes them, while one whose objects went missing doesn't. Every check looks at all its objects once more at the end,
-so one that was ready early and failed later is reported.
+wait to pick up the ones Flux created meanwhile. It fails if no `Kustomization` shows up, and passes with a warning if
+all of them are in `GITOPS_IGNORED_OBJECTS`. Once they're all ready, each one's `status.inventory` lists the objects it
+applied. The `OCIRepository` and `HelmRelease` checks check every object of their kind in the cluster, except the ignored
+ones, and fail if an object listed in an inventory doesn't exist. So a repository without `HelmRelease`s or
+`OCIRepository`s passes them, while one whose objects went missing doesn't. Every check looks at all its objects once
+more at the end, so one that was ready early and failed later is reported. An object Flux deleted meanwhile, such as a
+`Kustomization` its parent pruned, is left out.
 
 Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified. Each of these files
 has to contain one or more YAML description of objects of Kubernetes objects you expect to be present in the cluster
