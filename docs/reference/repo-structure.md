@@ -130,7 +130,8 @@ Note that layers recorded without a structure version can't be upgraded. If you 
 with, set their `structureVersion` by hand. Otherwise, remove their entries and run
 `kubectl gs gitops check --adopt`.
 
-If your `kubectl-gs` doesn't have the `check` and `upgrade` commands, update it with `kubectl gs selfupdate`.
+`check` and `upgrade` need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../appendices.md#kubectl-gs-version).
+If yours is older, update it with `kubectl gs selfupdate`.
 
 ## Naming
 

@@ -24,7 +24,8 @@ The values come in layers. Flux merges the entries of the `HelmRelease`'s `value
 - a cluster appends its own ConfigMap last, see
   [Creating a cluster from the CAPA cluster base](../add_wc_instance.md#creating-a-cluster-from-the-capa-cluster-base)
 
-The instructions respect the [repository structure](../reference/repo-structure.md).
+The instructions respect the [repository structure](../reference/repo-structure.md). The `kubectl gs` commands in this
+guide need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../appendices.md#kubectl-gs-version).
 
 ## Example
 
@@ -61,8 +62,6 @@ It writes `bases/clusters/capz/template` with three files:
 - `cluster.yaml` with the `OCIRepository` of the `release-azure` chart and the `HelmRelease`
 - `cluster_config.yaml` with the default values
 - `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap
-
-Note that it needs kubectl-gs 6.0.0 or newer. Older versions generate an App CR.
 
 The `HelmRelease` it writes only reads `${cluster_name}-config`. Add the `cluster-app-installation-values` entry in front
 of it, as the [CAPA base](/bases/clusters/capa/template/cluster.yaml) does, or the chart misses

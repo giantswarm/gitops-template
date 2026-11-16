@@ -75,6 +75,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `FLUX_VERSION` in `tools/test-all-ff`, and `CAPI_VERSION` and `VCLUSTER_CHART_VERSION` in `tests/ats/conftest.py`.
   Each has a `# renovate:` comment naming its datasource, read by a regex manager in `renovate.json5`.
   ([#228](https://github.com/giantswarm/gitops-template/issues/228))
+- The docs state that their `kubectl gs` commands need kubectl-gs 6.0.0 or newer. A table in
+  [Appendices](docs/appendices.md#kubectl-gs-version) lists the version that added each command and flag the docs
+  use, and the guides link to it. ([#236](https://github.com/giantswarm/gitops-template/issues/236))
 - Four example clusters have shorter names, because `release-aws` rejects a cluster name longer than 20 characters:
   `hello-app-prod-us-west` is `hello-app-prod-usw`, `hello-app-prod-eu-central` is `hello-app-prod-euc`,
   `mapi-out-of-band-no-flux` is `out-of-band-no-flux` and `mapi-out-of-band-flux-app` is `out-of-band-flux-app`.

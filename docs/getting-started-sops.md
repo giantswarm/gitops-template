@@ -26,7 +26,8 @@ follow [Getting started](./getting-started.md) instead.
 You need:
 
 - the tools listed in [Appendices](./appendices.md): `git`, `kubectl`,
-  [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/), `flux`, `gpg`, `sops` and `yq`,
+  [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/) 6.0.0 or newer, see
+  [kubectl-gs version](./appendices.md#kubectl-gs-version), `flux`, `gpg`, `sops` and `yq`,
 - access to the management cluster, see
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
@@ -313,8 +314,8 @@ the Giant Swarm release, so the release the cluster runs is stored in Git. `rele
 than 20 characters. For other providers, see [Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> creates the same cluster, with the same file and resource names. It needs kubectl-gs 6.0.0 or newer. After you pick a
-> release in the first step below, run:
+> creates the same cluster, with the same file and resource names. After you pick a release in the first step below,
+> run:
 >
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
@@ -477,8 +478,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 > **Shortcut:** [`kubectl gs deploy chart`](https://docs.giantswarm.io/reference/kubectl-gs/deploy-chart/) with
 > `--dry-run` writes the `OCIRepository` and the `HelmRelease` for you. It checks that the chart version exists, then
 > prints the resources instead of applying them. Always pass `--dry-run` here. Without it, the command applies the
-> resources to the management cluster directly, outside of Git. Note that `:values` in `--values-from` needs
-> kubectl-gs 5.12.0 or newer. After the first step below, run:
+> resources to the management cluster directly, outside of Git. After the first step below, run:
 >
 > ```sh
 > kubectl gs deploy chart --chart-name hello-world --version 3.2.3 \

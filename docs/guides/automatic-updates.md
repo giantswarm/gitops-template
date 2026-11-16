@@ -51,7 +51,8 @@ export APP_NAME=APP_NAME
     yq -i '.spec.ref = {"semver": ">=3.0.0 <4.0.0"}' oci-repository.yaml
     ```
 
-    `kubectl gs gitops add automatic-update` makes the same change. Run it from the repository root:
+    `kubectl gs gitops add automatic-update` makes the same change. It needs kubectl-gs 6.0.0 or newer, see
+    [kubectl-gs version](../appendices.md#kubectl-gs-version). Run it from the repository root:
 
     ```sh
     kubectl gs gitops add automatic-update --management-cluster ${MC_NAME} --organization ${ORG_NAME} \

@@ -24,7 +24,7 @@ none. They need the `cluster-aws` chart as an App CR, which this repository no l
 
 The steps below write `cluster_userconfig.yaml`, `patch_cluster_userconfig.yaml` and a `${cluster_name}-cluster-userconfig`
 ConfigMap, the same names `kubectl gs gitops add workload-cluster --cluster-user-config` uses, so you can also let the
-CLI create them.
+CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./appendices.md#kubectl-gs-version).
 
 1. Export environment variables:
 

@@ -67,7 +67,7 @@ export ORG_NAME=ORGANIZATION
     EOF
     ```
 
-    or with `kubectl gs`:
+    or with `kubectl gs`, 6.0.0 or newer, see [kubectl-gs version](./appendices.md#kubectl-gs-version):
 
     ```sh
     kubectl gs template organization --name ${ORG_NAME} > ${ORG_NAME}.yaml

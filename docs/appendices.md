@@ -5,6 +5,7 @@
     - [Core utilities](#core-utilities)
     - [Working with YAML files](#working-with-yaml-files)
     - [Encryption and Kubernetes tooling](#encryption-and-kubernetes-tooling)
+    - [kubectl-gs version](#kubectl-gs-version)
     - [Validating yaml files in the repository](#validating-yaml-files-in-the-repository)
   - [Secret store for testing](#secret-store-for-testing)
 
@@ -28,6 +29,24 @@ For `yq` the [github.com/mikefarah/yq](https://github.com/mikefarah/yq/) version
 - `kubectl gs` of [github.com/giantswarm/kubectl-gs](https://github.com/giantswarm/kubectl-gs) to template
   Giant Swarm resources
 - `flux` of [github.com/fluxcd/flux2](https://github.com/fluxcd/flux2) to render and inspect Flux `Kustomizations`
+
+### kubectl-gs version
+
+The `kubectl gs` commands in these docs need kubectl-gs 6.0.0 or newer. Check yours with `kubectl gs --version`, and
+update it with `kubectl gs selfupdate`. Older versions lack some of the commands and flags, and an older binary prints
+the help text for a command it doesn't know instead of an error, so the command seems to do nothing.
+
+| Command or flag | Added in | Note |
+| --- | --- | --- |
+| `kubectl gs gitops add` (`management-cluster`, `organization`, `workload-cluster`, `automatic-update`), with `--gen-master-key` and `--cluster-user-config` | 2.20.0 | Before 6.0.0 they generate App CRs and repository structure version 1. This repository uses Flux `HelmRelease`s, structure version 2 |
+| `kubectl gs gitops add base` | 2.30.0 | As above |
+| `kubectl gs gitops add management-cluster --skip-encryption` | 5.12.0 | |
+| `kubectl gs gitops add automatic-update --version-range` | 6.0.0 | |
+| `kubectl gs gitops check`, with `--adopt` | 5.8.0 | Before 6.0.0 it only knows structure version 1 |
+| `kubectl gs gitops upgrade` | 5.13.0 | Before 6.0.0 it only knows structure version 1, so there is nothing to upgrade to |
+| `kubectl gs deploy chart` | 5.1.0 | `--values-from` with a key and `optional`, as in `ConfigMap/NAME:values`, needs 5.12.0 |
+| `kubectl gs template cluster` printing a Flux `OCIRepository` and `HelmRelease` | 5.13.0 | |
+| `kubectl gs selfupdate` | 1.47.0 | |
 
 ### Validating yaml files in the repository
 
