@@ -125,7 +125,9 @@ CLI create them.
 
 1. Create the `kustomization.yaml` referencing the base, the region and the newly created files. kustomize applies
    the region component before the patch, so the region comes before your values in `valuesFrom`, and yours win. If
-   `kubectl gs gitops add workload-cluster` wrote the file, only add the `components:` list:
+   `kubectl gs gitops add workload-cluster` wrote the file, only add the `components:` list. kubectl-gs still writes
+   the deprecated `commonLabels`; to match the example, move its labels under `labels:` as one `- pairs:` entry.
+   `kustomize edit fix` converts it too, but also sets `includeSelectors: true`:
 
     ```sh
     cat <<EOF > kustomization.yaml

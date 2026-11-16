@@ -2,7 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 # The region. kustomize applies components before this kustomization's own
 # patches, so the region comes before the cluster's own values in `valuesFrom`.
-# `kubectl gs gitops add workload-cluster` writes the rest of this file.
+# `kubectl gs gitops add workload-cluster` writes the rest of this file, but
+# with the deprecated `commonLabels`. Move its labels to the `labels` list
+# below; `kustomize edit fix` would also add `includeSelectors: true`.
 components:
   - ../../../../../../../../bases/environments/regions/eu_central
 kind: Kustomization
