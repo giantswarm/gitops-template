@@ -65,6 +65,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The example `kustomization.yaml` files, and the one in [Add Workload Cluster instance](docs/add_wc_instance.md),
+  set their labels with `labels` instead of `commonLabels`, which kustomize v5 deprecates. None of the objects they
+  build has a selector or a pod template, so the rendered manifests are unchanged. `kubectl gs gitops add
+  workload-cluster` still writes `commonLabels`; the guide says how to move them to `labels`.
+  ([#213](https://github.com/giantswarm/gitops-template/issues/213))
 - Four example clusters have shorter names, because `release-aws` rejects a cluster name longer than 20 characters:
   `hello-app-prod-us-west` is `hello-app-prod-usw`, `hello-app-prod-eu-central` is `hello-app-prod-euc`,
   `mapi-out-of-band-no-flux` is `out-of-band-no-flux` and `mapi-out-of-band-flux-app` is `out-of-band-flux-app`.
