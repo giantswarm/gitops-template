@@ -22,4 +22,25 @@
   "pre-commit": {
     "enabled": true,
   },
+  // Versions pinned in plain variables: the shared workflow's version inputs
+  // in the hand-authored workflows, and the constants in `tools/test-all-ff`
+  // and `tests/ats/conftest.py`. Each one has a comment on the line before it:
+  //   # renovate: datasource=<datasource> depName=<name> [versioning=<v>] [registryUrl=<url>] [extractVersion=<regex>]
+  // with the optional fields in that order, followed by `NAME: "x"`,
+  // `NAME="x"` or `NAME = "x"`.
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Versions annotated with a `# renovate:` comment",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/",
+        "/^tools/test-all-ff$/",
+        "/^tests/ats/conftest\\.py$/",
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?(?: registryUrl=(?<registryUrl>\\S+))?(?: extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*[A-Za-z_][A-Za-z0-9_]*\\s*[:=]\\s*\"(?<currentValue>[^\"]+)\"",
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
+    },
+  ],
 }

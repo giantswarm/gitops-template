@@ -26,20 +26,25 @@ jobs:
     with:
       # Matches [requires] python_version in tests/ats/Pipfile. The shared
       # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
+      # renovate: datasource=python-version depName=python versioning=python
       python_version: "3.12"
       # Pin a current kubeconform for tools/test-all-ff. The shared workflow
       # defaults to 0.4.13, from 2021.
+      # renovate: datasource=github-releases depName=yannh/kubeconform extractVersion=^v(?<version>.+)$
       kubeconform_ver: "0.8.0"
       # The kind test cluster runs kind's default node image, as the shared
       # workflow doesn't pass one. kind v0.32.0 defaults to kindest/node:v1.36.1,
       # the Kubernetes minor version of the management clusters. The shared
       # workflow defaults to kind 0.12.0, which runs Kubernetes v1.23.
+      # renovate: datasource=github-releases depName=kubernetes-sigs/kind extractVersion=^v(?<version>.+)$
       kind_ver: "0.32.0"
       # The flux-app chart the kind test installs: the version on the
       # management clusters (Flux v2.7.5), as in tools/test-all-ff.
+      # renovate: datasource=helm depName=flux-app registryUrl=https://giantswarm.github.io/giantswarm-catalog/
       gitops_flux_app_version: "1.12.2"
       # Installs app-operator and chart-operator in the kind test. 0.27.0 is
       # the shared workflow's default too, set here so it is pinned with the rest.
+      # renovate: datasource=github-releases depName=giantswarm/apptestctl extractVersion=^v(?<version>.+)$
       apptestctl_ver: "0.27.0"
       # Every Flux Kustomization has to get ready. The -direct out-of-band one
       # targets a workload cluster; tests/ats creates a vCluster in the kind
