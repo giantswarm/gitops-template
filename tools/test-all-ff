@@ -25,12 +25,14 @@ fi
 #
 # Kubernetes version of the Giant Swarm management clusters, which is where the
 # rendered manifests are applied.
+# renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
 KUBERNETES_VERSION="1.36.5"
 KUBERNETES_SCHEMA_REF="2bfaff3898a7a4fa4e4760da3d2656211c9b4c71"
 KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/${KUBERNETES_SCHEMA_REF}/v${KUBERNETES_VERSION}-standalone-strict"
 
 # Flux version shipped by the flux-app release on the management clusters
 # (flux-app 1.12.2). The schemas are the ones Flux publishes with each release.
+# renovate: datasource=github-releases depName=fluxcd/flux2 extractVersion=^v(?<version>.+)$
 FLUX_VERSION="2.7.5"
 FLUX_CRD_SCHEMAS_SHA256="63ec8f87d7bbc05c7eb7b75e36540b2897a150cb50c7ee1f28e1e3016dff31a2"
 FLUX_CRD_SCHEMAS_URL="https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/crd-schemas.tar.gz"

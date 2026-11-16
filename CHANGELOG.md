@@ -70,6 +70,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   build has a selector or a pod template, so the rendered manifests are unchanged. `kubectl gs gitops add
   workload-cluster` still writes `commonLabels`; the guide says how to move them to `labels`.
   ([#213](https://github.com/giantswarm/gitops-template/issues/213))
+- Renovate updates the versions CI pins in plain variables: the shared workflow's version inputs in
+  `.github/workflows/validate.yaml` (Python, kubeconform, kind, flux-app, apptestctl), `KUBERNETES_VERSION` and
+  `FLUX_VERSION` in `tools/test-all-ff`, and `CAPI_VERSION` and `VCLUSTER_CHART_VERSION` in `tests/ats/conftest.py`.
+  Each has a `# renovate:` comment naming its datasource, read by a regex manager in `renovate.json5`.
+  ([#228](https://github.com/giantswarm/gitops-template/issues/228))
 - Four example clusters have shorter names, because `release-aws` rejects a cluster name longer than 20 characters:
   `hello-app-prod-us-west` is `hello-app-prod-usw`, `hello-app-prod-eu-central` is `hello-app-prod-euc`,
   `mapi-out-of-band-no-flux` is `out-of-band-no-flux` and `mapi-out-of-band-flux-app` is `out-of-band-flux-app`.
