@@ -162,10 +162,10 @@ examples.
   fake-flux build 1 apps/athena
   ```
 
-- Build all by name and select the HelmRelease named athena
+- Build all by name and select the athena HelmRelease, whose name ends in -athena
 
   ```bash
-  fake-flux build prod-cluster 'select(.kind == "HelmRelease" and .metadata.name == "athena")'
+  fake-flux build prod-cluster 'select(.kind == "HelmRelease" and (.metadata.name | test("-athena$")))'
   ```
 
 - Build only the athena app and select its HelmRelease
@@ -174,13 +174,13 @@ examples.
   fake-flux build 1 apps/athena 'select(.kind == "HelmRelease")'
   ```
 
-- Build only the athena app and select its HelmRelease, turning off output coloring
+- Build only the athena app and select its HelmRelease, turning off output colouring
 
   ```bash
   fake-flux build 1 apps/athena -M 'select(.kind == "HelmRelease")'
   ```
 
-- Build only the athena app and select its HelmRelease, turning off output coloring. Use kustomize for rendering, not flux
+- Build only the athena app and select its HelmRelease, turning off output colouring. Use kustomize for rendering, not flux
 
   ```bash
   fake-flux build 1 apps/athena --use-kustomize -M 'select(.kind == "HelmRelease")'
