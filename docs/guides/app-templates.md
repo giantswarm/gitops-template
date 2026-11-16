@@ -164,6 +164,13 @@ directory of its own with a `helm-release.yaml` and an `oci-repository.yaml`, an
 `kustomization.yaml`. Every file then holds a single resource, as the files `kubectl gs gitops` writes do, so commands
 like `yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` change only the chart you mean.
 
+When a chart needs something another `HelmRelease` installs first, such as its CRDs, list that `HelmRelease` in
+`dependsOn` instead of retrying the install until it succeeds. helm-controller then installs the chart only once the
+other release is `Ready`, and a broken install still fails after its retries. The charts of the envoy-gateway App
+Template depend on each other this way, and [hello-world](/bases/apps/hello-world/helm-release.yaml), whose `HTTPRoute`
+needs the Gateway API CRDs, depends on `${cluster_name}-gateway-api-crds`. The `HelmRelease` named in `dependsOn` has to
+exist, so hello-world needs the envoy-gateway App Template installed for the same cluster.
+
 ## Recommended next steps
 
 - [Add a new App to a Workload Cluster](./add-app.md)
