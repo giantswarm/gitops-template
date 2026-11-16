@@ -26,19 +26,22 @@
   // flux manager reads them with the `docker` datasource, taking the `url`
   // without `oci://` as the dependency, but by default only in
   // `gotk-components.yaml`. The test assertions are included on purpose: they
-  // repeat the tags, and one PR updates every file with the same dependency.
-  // A tag that is a postBuild variable, such as `${release}`, is skipped; the
-  // release is annotated where the variable is set (see below).
+  // repeat the tags, and Renovate puts every pin of one dependency in one PR.
+  // The manager doesn't see a tag set by a kustomize patch, or one that is a
+  // postBuild variable such as `${release}`; those pins need a `# renovate:`
+  // comment for the regex manager below, with the same `depName`, or the PR
+  // leaves them behind.
   "flux": {
     "managerFilePatterns": ["/\\.ya?ml$/"],
   },
   // Versions pinned in plain variables: the shared workflow's version inputs
   // in the hand-authored workflows, the constants in `tools/test-all-ff` and
-  // `tests/ats/conftest.py`, and the Giant Swarm release where the `release`
-  // variable is set and where a stage patches it in. The release is the tag
-  // of the `release-aws` chart, so it uses the same dependency as the flux
-  // manager finds in the test assertions, and one PR updates both. Each one
-  // has a comment on the line before it:
+  // `tests/ats/conftest.py`, the Giant Swarm release where the `release`
+  // variable is set, and the chart tags kustomize patches set (the release in
+  // each stage, hello-world in the app set and in prod). The release is the
+  // tag of the `release-aws` chart, so these use the same dependency as the
+  // flux manager finds in the manifests and test assertions, and one PR
+  // updates them all. Each one has a comment on the line before it:
   //   # renovate: datasource=<datasource> depName=<name> [versioning=<v>] [registryUrl=<url>] [extractVersion=<regex>]
   // with the optional fields in that order, followed by `NAME: "x"`,
   // `NAME="x"` or `NAME = "x"`.

@@ -9,11 +9,14 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce the app versions that we want in prod
+# (optional) here we can enforce the app versions that we want in prod. Prod pins
+# its own versions here; Renovate proposes each bump in a pull request for review,
+# in the same one as the bases it overrides.
 patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
         value: "3.2.2"
     target:
       kind: OCIRepository
