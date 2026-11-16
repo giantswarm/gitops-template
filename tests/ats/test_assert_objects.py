@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+import pytest_helm_charts.utils
 import requests
 import yaml
 from pytest_helm_charts.flux.utils import flux_cr_ready
@@ -776,10 +777,10 @@ def test_run_tool_not_in_path(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_run_tool(
     monkeypatch: pytest.MonkeyPatch, returncode: int, stdout: str, error: str | None
 ) -> None:
-    calls: list[list[str]] = []
+    calls: list[tuple[list[str], dict[str, Any]]] = []
 
     def run(args: list[str], **kwargs: Any) -> conftest.subprocess.CompletedProcess:
-        calls.append(args)
+        calls.append((args, kwargs))
         return conftest.subprocess.CompletedProcess(args, returncode, stdout, "err")
 
     monkeypatch.setattr(conftest.shutil, "which", lambda name: f"/bin/{name}")
@@ -792,4 +793,60 @@ def test_run_tool(
             conftest.run_tool("tool", "https://example.com/tool", "sub", "--flag")
             == stdout
         )
-    assert calls == [["/bin/tool", "sub", "--flag"]]
+    # stdout comes back as text, and stderr is captured for the error log
+    assert calls == [
+        (["/bin/tool", "sub", "--flag"], {"capture_output": True, "text": True})
+    ]
+
+
+class FakeSecret:
+    """Stands in for pykube.Secret in wait_for_objects_condition: it shows up after `misses`
+    lookups, and records the namespace and name it was looked up by."""
+
+    misses = 0
+    lookups: list[tuple[str, str]] = []
+
+    @classmethod
+    def objects(cls, api: Any) -> Any:
+        return SimpleNamespace(
+            filter=lambda namespace: SimpleNamespace(
+                get_by_name=lambda name: cls.get(namespace, name)
+            )
+        )
+
+    @classmethod
+    def get(cls, namespace: str, name: str) -> Any:
+        cls.lookups.append((namespace, name))
+        if len(cls.lookups) <= cls.misses:
+            raise conftest.pykube.exceptions.ObjectDoesNotExist()
+        return SimpleNamespace(namespace=namespace, name=name)
+
+
+@pytest.fixture
+def fake_secret(monkeypatch: pytest.MonkeyPatch) -> type[FakeSecret]:
+    monkeypatch.setattr(conftest.pykube, "Secret", FakeSecret)
+    monkeypatch.setattr(FakeSecret, "lookups", [])
+    monkeypatch.setattr(pytest_helm_charts.utils.time, "sleep", lambda s: None)
+    return FakeSecret
+
+
+def test_vcluster_kubeconfig_secret(
+    monkeypatch: pytest.MonkeyPatch, fake_secret: type[FakeSecret]
+) -> None:
+    # vCluster writes `vc-<name>` in its namespace some time after the install
+    monkeypatch.setattr(fake_secret, "misses", 2)
+    secret = conftest.vcluster_kubeconfig_secret(None, 5)  # type: ignore[arg-type]
+    expected = ("vcluster-out-of-band-no-flux", "vc-out-of-band-no-flux")
+    assert (secret.namespace, secret.name) == expected
+    assert fake_secret.lookups == [expected] * 3
+
+
+def test_vcluster_kubeconfig_secret_names_the_secret_on_timeout(
+    monkeypatch: pytest.MonkeyPatch, fake_secret: type[FakeSecret]
+) -> None:
+    monkeypatch.setattr(fake_secret, "misses", 10)
+    with pytest.raises(
+        TimeoutError, match="vcluster-out-of-band-no-flux/vc-out-of-band-no-flux"
+    ):
+        conftest.vcluster_kubeconfig_secret(None, 3)  # type: ignore[arg-type]
+    assert len(fake_secret.lookups) == 3

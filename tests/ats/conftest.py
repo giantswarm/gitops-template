@@ -495,15 +495,9 @@ def workload_cluster(
         )
 
         # vCluster writes its kubeconfig (server https://localhost:8443) into `vc-<name>`
-        vc_secret = wait_for_objects_condition(
-            kube_cluster.kube_client,
-            pykube.Secret,
-            [f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}"],
-            WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
-            lambda _: True,
-            VCLUSTER_READY_TIMEOUT_SEC,
-            missing_ok=True,
-        )[0]
+        vc_secret = vcluster_kubeconfig_secret(
+            kube_cluster.kube_client, VCLUSTER_READY_TIMEOUT_SEC
+        )
         vc_kubeconfig = yaml.safe_load(
             base64.b64decode(vc_secret.obj["data"]["config"]).decode()
         )
@@ -565,6 +559,33 @@ def workload_cluster(
         yield vcluster_api
     finally:
         remove_workload_cluster(created, kube_config, values_file.name)
+
+
+def vcluster_kubeconfig_secret(
+    api: pykube.HTTPClient, timeout_polls: int
+) -> pykube.Secret:
+    """Wait for the Secret vCluster writes its kubeconfig in, `vc-<name>`, and return it.
+
+    `wait_for_objects_condition` polls `timeout_polls` times, a second apart, so the wait takes
+    at least that many seconds plus the time of the API calls.
+    """
+    name = f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}"
+    namespace = WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE
+    logger.info(f"Waiting for Secret '{namespace}/{name}'")
+    try:
+        return wait_for_objects_condition(
+            api,
+            pykube.Secret,
+            [name],
+            namespace,
+            lambda _: True,
+            timeout_polls,
+            missing_ok=True,
+        )[0]
+    except TimeoutError as e:
+        raise TimeoutError(
+            f"Secret '{namespace}/{name}' didn't show up in {timeout_polls} polls."
+        ) from e
 
 
 def remove_workload_cluster(
