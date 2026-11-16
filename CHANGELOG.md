@@ -65,6 +65,17 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Each example workload cluster with encrypted files has its own SOPS key and its own `.sops.yaml` rule for its
+  `mapi/` directory, as `kubectl gs gitops add encryption --workload-cluster <WC> --target mapi/` creates, instead of
+  one rule for every workload cluster. The examples reuse the existing demo keys rather than the tool's per-cluster
+  names: `WC_NAME_OUT_OF_BAND_FLUX_APP` keeps the `WC_NAME` key, and `WC_NAME_OUT_OF_BAND_NO_FLUX_APP` uses the
+  `FROM_TEMPLATE_WC_NAME` key, which nothing used before. Its `secret.enc.yaml` is encrypted with that key, with the
+  same values, and its `Kustomization` decrypts with `sops-gpg-from-template-wc-name`. `WC_NAME` and the
+  `HELLO_APP_*` clusters have no rule now: encrypting a file for one of them fails with "no matching creation rules
+  found" until you add its key and rule as the
+  [WC structure guide](docs/add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step) describes. The
+  [add an App](docs/guides/add-app.md) and [automatic updates](docs/guides/automatic-updates.md) guides point there.
+  ([#212](https://github.com/giantswarm/gitops-template/issues/212))
 - The example `kustomization.yaml` files, and the one in [Add Workload Cluster instance](docs/add_wc_instance.md),
   set their labels with `labels` instead of `commonLabels`, which kustomize v5 deprecates. None of the objects they
   build has a selector or a pod template, so the rendered manifests are unchanged. `kubectl gs gitops add
