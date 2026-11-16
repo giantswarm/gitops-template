@@ -52,7 +52,7 @@ function fetch_flux_schemas() {
 	[ -s "${FLUX_SCHEMA_DIR}/helmrelease-helm-v2.json" ] && return 0
 
 	local archive
-	archive=$(mktemp)
+	archive=$(mktemp "${tmp_dir}/flux-crd-schemas.XXXXXX")
 	echo "Downloading Flux ${FLUX_VERSION} CRD schemas" >&2
 	curl -sSfL -o "${archive}" "${FLUX_CRD_SCHEMAS_URL}"
 	if ! echo "${FLUX_CRD_SCHEMAS_SHA256}  ${archive}" | sha256sum -c --status; then
@@ -78,7 +78,10 @@ export KUSTOMIZATIONS=(
 function test() {
 	local mode="$1"
 	local has_validation_errors=0
+	# Every temporary file goes into tmp_dir, which is removed when the script exits,
+	# whether the checks pass or fail.
 	tmp_dir=$(mktemp -d)
+	trap 'rm -rf "${tmp_dir}"' EXIT
 
 	if [ "${mode}" == "validate" ]; then
 		fetch_flux_schemas
@@ -94,7 +97,7 @@ function test() {
 			# A Kustomization that doesn't build, for example because it leaves a variable
 			# unset, has nothing to check. Report it and go on to the next one. The error goes
 			# to stdout, which is what CI posts to the pull request.
-			echo -n "build: "
+			echo -n "build ${name}:${namespace}: "
 			if ! build_errors=$(${fakeflux} build ${name}:${namespace} -M 2>&1 >"${tmp_file}"); then
 				echo "${build_errors}"
 				echo ""
