@@ -22,9 +22,27 @@
   "pre-commit": {
     "enabled": true,
   },
+  // Chart tags pinned in a Flux `OCIRepository`'s `spec.ref.tag`. Renovate's
+  // flux manager reads them with the `docker` datasource, taking the `url`
+  // without `oci://` as the dependency, but by default only in
+  // `gotk-components.yaml`. The test assertions are included on purpose: they
+  // repeat the tags, and Renovate puts the pins of one dependency in one PR
+  // (one for prod, see `packageRules`). The manager doesn't see a tag set by a
+  // kustomize patch, or one that is a postBuild variable such as
+  // `${release}`; those pins need a `# renovate:` comment for the regex
+  // manager below, with the same `depName`, or the PR leaves them behind.
+  "flux": {
+    "managerFilePatterns": ["/\\.ya?ml$/"],
+  },
   // Versions pinned in plain variables: the shared workflow's version inputs
-  // in the hand-authored workflows, and the constants in `tools/test-all-ff`
-  // and `tests/ats/conftest.py`. Each one has a comment on the line before it:
+  // in the hand-authored workflows, the constants in `tools/test-all-ff` and
+  // `tests/ats/conftest.py`, the Giant Swarm release where the `release`
+  // variable is set, and the chart tags kustomize patches set (the release in
+  // each stage, hello-world in the app set and in prod). The release is the
+  // tag of the `release-aws` chart. The manifests only ever set it through
+  // these comments; the flux manager finds `release-aws` only in the test
+  // assertions and `tools/testdata`, which name the same dependency so that
+  // they move in the same PR. Each one has a comment on the line before it:
   //   # renovate: datasource=<datasource> depName=<name> [versioning=<v>] [registryUrl=<url>] [extractVersion=<regex>]
   // with the optional fields in that order, followed by `NAME: "x"`,
   // `NAME="x"` or `NAME = "x"`.
@@ -33,7 +51,7 @@
       "customType": "regex",
       "description": "Versions annotated with a `# renovate:` comment",
       "managerFilePatterns": [
-        "/^\\.github/workflows/[^/]+\\.ya?ml$/",
+        "/\\.ya?ml$/",
         "/^tools/test-all-ff$/",
         "/^tests/ats/conftest\\.py$/",
       ],
@@ -41,6 +59,33 @@
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?(?: registryUrl=(?<registryUrl>\\S+))?(?: extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*[A-Za-z_][A-Za-z0-9_]*\\s*[:=]\\s*\"(?<currentValue>[^\"]+)\"",
       ],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
+    },
+  ],
+  "packageRules": [
+    {
+      // Prod gets its own PR for each version its stage pins (hello-world and
+      // the release), on a `renovate/prod-*` branch. The other PR moves the
+      // bases, the app set, dev, staging and the out-of-band examples; prod's
+      // stage patches keep the old version until this one is merged, after
+      // staging has run the new one. The files are prod's stage and the kind
+      // test's assertions for the two prod clusters. Charts prod takes from
+      // the bases unpatched, such as envoy-gateway, are not prod pins: their
+      // prod assertions stay in the other PR, which changes what prod renders.
+      // A new prod patch needs its dependency added here.
+      "description": "Update prod's own pins in a separate PR, merged by hand after staging",
+      "matchDepNames": [
+        "gsoci.azurecr.io/charts/giantswarm/hello-world",
+        "gsoci.azurecr.io/charts/giantswarm/release-aws",
+      ],
+      "matchFileNames": [
+        "bases/environments/stages/prod/**",
+        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-prod-euc/**",
+        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-prod-usw/**",
+      ],
+      "additionalBranchPrefix": "prod-",
+      "commitMessageSuffix": "in prod",
+      // The preset automerges patch updates; prod waits for staging.
+      "automerge": false,
     },
   ],
 }

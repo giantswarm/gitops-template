@@ -9,11 +9,15 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce the app versions that we want in prod
+# (optional) pin the hello-world version and the Giant Swarm release that prod
+# runs. Renovate updates prod's pins in a pull request of its own (a
+# `renovate/prod-*` branch), apart from the one for the bases, dev and staging.
+# Merge it after staging has run the new version.
 patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
         value: "3.2.2"
     target:
       kind: OCIRepository
@@ -22,6 +26,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
         value: "36.2.0"
     target:
       kind: OCIRepository
