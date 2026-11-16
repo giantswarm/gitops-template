@@ -303,9 +303,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- The notes on the demo GPG public keys in `management-clusters/MC_NAME/.sops.keys` said nothing was encrypted with
-  them. They now say which example files each key encrypts and where its private key is: CI reads the master key from
-  the `GITOPS_MASTER_GPG_KEY` secret, and the workload cluster keys are in the `secrets` directory, encrypted with it.
+- The notes on the master and `WC_NAME` demo GPG keys in `management-clusters/MC_NAME/.sops.keys` said nothing was
+  encrypted with them and that they had no private key; the `FROM_TEMPLATE_WC_NAME` key had no note. Each key now says
+  what uses it and where its private key is: CI creates the `sops-gpg-master` Secret from the `GITOPS_MASTER_GPG_KEY`
+  secret, and the workload cluster keys are in the `secrets` directory, encrypted with the master key.
 - The CAPA cluster base reads the management cluster's values, `global.managementCluster` and
   `global.connectivity.baseDomain`, which `release-aws` requires. Its `HelmRelease` now reads
   `cluster-app-installation-values` (copied into every `org-*` namespace by a Kyverno policy in
