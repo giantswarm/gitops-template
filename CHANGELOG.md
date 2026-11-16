@@ -65,6 +65,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Each example workload cluster with encrypted files has its own SOPS key, as `kubectl gs gitops add encryption`
+  sets up. `.sops.yaml` has a rule per cluster instead of one for every workload cluster:
+  `WC_NAME_OUT_OF_BAND_FLUX_APP` keeps the `WC_NAME` key, and `WC_NAME_OUT_OF_BAND_NO_FLUX_APP` uses the
+  `FROM_TEMPLATE_WC_NAME` key, which nothing used before. Its `secret.enc.yaml` is encrypted with that key, with the
+  same values, and its `Kustomization` decrypts with `sops-gpg-from-template-wc-name`.
+  ([#212](https://github.com/giantswarm/gitops-template/issues/212))
 - The example `kustomization.yaml` files, and the one in [Add Workload Cluster instance](docs/add_wc_instance.md),
   set their labels with `labels` instead of `commonLabels`, which kustomize v5 deprecates. None of the objects they
   build has a selector or a pod template, so the rendered manifests are unchanged. `kubectl gs gitops add
