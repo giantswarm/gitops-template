@@ -87,8 +87,9 @@ same, but the `HelmRelease` reads more values, see below. `cluster_config.yaml` 
 
 The `HelmRelease` differs as well. `kubectl gs gitops add base` (6.0.0 and newer) only reads
 `${cluster_name}-config`, so a cluster made from its base gets no `global.managementCluster` or
-`global.connectivity.baseDomain`, which `release-aws` requires. This base adds `cluster-app-installation-values` before it, with the [values from the management
-cluster](#values-from-the-management-cluster). The region isn't in the base: each cluster adds it with a component.
+`global.connectivity.baseDomain`, which `release-aws` requires. This base adds `cluster-app-installation-values`
+before it, with the [values from the management cluster](#values-from-the-management-cluster). The region isn't
+in the base: each cluster adds it with a component.
 
 If you create a base with `kubectl gs gitops add base`, add the entry to its `HelmRelease`, see
 [Create a base for another provider](/docs/guides/cluster-templates.md#create-a-base-for-another-provider-optional).
