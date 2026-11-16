@@ -198,10 +198,15 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   examples), `cert-manager-app` and `flux-app`. Only the cluster App CRs
   (`cluster-aws`, from `bases/clusters/capa/template`) still use App Platform.
   Converted from [#153](https://github.com/giantswarm/gitops-template/pull/153).
-  - Installs of `cert-manager-app` and `flux-app` retry 10 times, as the
-    converter emits for a migrated App CR. `hello-world` retries until it
-    succeeds like envoy-gateway, as its HTTPRoute needs the Gateway API CRDs
-    the envoy-gateway App Template installs.
+  - Installs of `cert-manager-app`, `flux-app` and `hello-world` retry 10
+    times, as the converter emits for a migrated App CR. `hello-world`'s
+    HTTPRoute needs the Gateway API CRDs the envoy-gateway App Template
+    installs. Instead of retrying its install forever, every install and
+    upgrade of `hello-world` waits until `<cluster>-gateway-api-crds` is ready:
+    the `hello_app_cluster` cluster template and the out-of-band examples add
+    it to the `HelmRelease`'s `dependsOn`. The App Template leaves it out, so
+    it still works in a cluster without envoy-gateway.
+    ([#209](https://github.com/giantswarm/gitops-template/issues/209))
   - Values come in the same four `valuesFrom` layers everywhere, the cluster
     values first. App Platform used to add those to an App CR, a `HelmRelease`
     has to list them; `hello-world`'s hostname is built from `baseDomain`.

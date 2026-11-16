@@ -15,11 +15,13 @@ spec:
     kind: OCIRepository
     name: out-of-band-flux-app-hello-world
     namespace: org-org-name
+  dependsOn:
+    - name: out-of-band-flux-app-gateway-api-crds
   install:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: -1
+      retries: 10
   interval: 5m
   kubeConfig:
     secretRef:
@@ -64,11 +66,13 @@ spec:
     kind: OCIRepository
     name: out-of-band-flux-app-hello-world-standalone
     namespace: org-org-name
+  dependsOn:
+    - name: out-of-band-flux-app-gateway-api-crds
   install:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: -1
+      retries: 10
   interval: 5m
   kubeConfig:
     secretRef:
@@ -110,11 +114,13 @@ spec:
     kind: OCIRepository
     name: out-of-band-flux-app-hello-world-app-auto
     namespace: org-org-name
+  dependsOn:
+    - name: out-of-band-flux-app-gateway-api-crds
   install:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: -1
+      retries: 10
   interval: 5m
   kubeConfig:
     secretRef:

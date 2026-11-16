@@ -198,10 +198,24 @@ their names, so Flux updates them in place instead of reinstalling the app.
       disableNameSuffixHash: true
     kind: Kustomization
     namespace: org-${organization}
+    patches:
+      - patch: |-
+          - op: add
+            path: /spec/dependsOn
+            value:
+              - name: ${cluster_name}-gateway-api-crds
+        target:
+          kind: HelmRelease
+          name: \${cluster_name}-hello-world
     resources:
       - ../../../../../../../../../bases/app_sets/hello-web-app
     EOF
     ```
+
+    The patch makes every install and upgrade of `hello-world` wait until the cluster's `gateway-api-crds` release is
+    `Ready`, as its `HTTPRoute` needs the Gateway API CRDs. It needs the
+    [envoy-gateway](/bases/apps/envoy-gateway/) App Template in the same cluster; leave it out if the cluster doesn't
+    have it. See [App Templates](./app-templates.md) for why the App Template doesn't set it itself.
 
     There is no list to update: the `mapi` directory has no `kustomization.yaml`, so Flux picks up every directory
     with a `kustomization.yaml` below it, including the new one.

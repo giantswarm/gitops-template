@@ -160,11 +160,13 @@ spec:
     kind: OCIRepository
     name: hello-app-prod-usw-hello-world
     namespace: org-org-name
+  dependsOn:
+    - name: hello-app-prod-usw-gateway-api-crds
   install:
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      retries: -1
+      retries: 10
   interval: 5m
   kubeConfig:
     secretRef:

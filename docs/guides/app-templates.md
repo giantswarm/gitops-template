@@ -164,6 +164,29 @@ directory of its own with a `helm-release.yaml` and an `oci-repository.yaml`, an
 `kustomization.yaml`. Every file then holds a single resource, as the files `kubectl gs gitops` writes do, so commands
 like `yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` change only the chart you mean.
 
+When a chart needs something another `HelmRelease` installs first, such as its CRDs, list that `HelmRelease` in
+`dependsOn`. helm-controller checks `dependsOn` on every reconciliation, so every install and upgrade of the chart
+waits until the other release is `Ready`, and the install retries can stay bounded, so a broken install still fails.
+A `HelmRelease` that `dependsOn` names has to exist, or the release waits forever. So an App Template that can be
+used on its own leaves the dependency out, and the layer that installs it together with the other App Template adds
+it. [hello-world](/bases/apps/hello-world/helm-release.yaml) is an example: its `HTTPRoute` needs the Gateway API CRDs
+that the envoy-gateway App Template installs, and the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster/)
+cluster template, which installs both, adds the dependency with a patch:
+
+```yaml
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/dependsOn
+        value:
+          - name: ${cluster_name}-gateway-api-crds
+    target:
+      kind: HelmRelease
+      name: \${cluster_name}-hello-world
+```
+
+The `$` of the target name is escaped, as `kustomize` reads the name as a regular expression.
+
 ## Recommended next steps
 
 - [Add a new App to a Workload Cluster](./add-app.md)

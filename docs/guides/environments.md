@@ -74,6 +74,11 @@ the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-a
 Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository doesn't
 have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
 
+The cluster template also orders hello-world after the Gateway API CRDs: a patch in its `kustomization.yaml` adds
+`${cluster_name}-gateway-api-crds` to the hello-world `HelmRelease`'s `dependsOn`, so every install and upgrade of
+hello-world waits until that envoy-gateway release is `Ready`. When you compose your own cluster template from these
+App Templates, add the same patch; see [App Templates](./app-templates.md).
+
 ```sh
 mkdir -p bases/environments/stages/dev/hello_app_cluster
 mkdir -p bases/environments/stages/staging/hello_app_cluster

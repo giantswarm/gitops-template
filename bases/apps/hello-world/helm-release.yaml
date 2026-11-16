@@ -19,14 +19,17 @@ spec:
     kind: OCIRepository
     name: ${cluster_name}-hello-world
     namespace: org-${organization}
+  # The HTTPRoute needs the Gateway API CRDs. This App Template doesn't list
+  # them in `dependsOn`, so it works without envoy-gateway; a layer that
+  # installs it together with the envoy-gateway App Template adds
+  # `dependsOn: [{name: ${cluster_name}-gateway-api-crds}]`, see
+  # bases/cluster_templates/hello_app_cluster.
   install:
     # the target namespace does not exist in a new workload cluster
     createNamespace: true
     remediation:
       remediateLastFailure: false
-      # retry until it succeeds, as the cluster chart does for its default apps:
-      # the HTTPRoute needs the Gateway API CRDs installed by envoy-gateway
-      retries: -1
+      retries: 10
   interval: 5m
   # the workload cluster this release is installed into; drop this block to
   # install into the cluster Flux itself runs in
