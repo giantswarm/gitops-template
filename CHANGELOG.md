@@ -78,8 +78,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ([#212](https://github.com/giantswarm/gitops-template/issues/212))
 - `tools/fake-flux` runs `flux build` with `--strict-substitute`, so `tools/test-all-ff validate` fails when a
   `Kustomization`'s manifests use a variable that its `spec.postBuild.substitute` doesn't set. Flux replaces such a
-  variable with an empty string, so a cluster without `release` would get no chart version. `test-all-ff validate`
-  checks this with the fixture in `tools/testdata/unset-variable`, which discovery leaves out. [How it
+  variable with an empty string: a cluster without `release` gets an `OCIRepository` with no tag, which Flux resolves
+  to the chart's `latest` tag. `test-all-ff validate` checks this with the fixture in
+  `tools/testdata/unset-variable`, which discovery leaves out. A `Kustomization` that doesn't build no longer stops
+  `test-all-ff validate`: it is reported, and the others are still checked. [How it
   works](docs/how-it-works.md#bases-and-variables) lists the variables the bases use.
   ([#250](https://github.com/giantswarm/gitops-template/issues/250))
 - The example `kustomization.yaml` files, and the one in [Add Workload Cluster instance](docs/add_wc_instance.md),

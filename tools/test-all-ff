@@ -91,7 +91,17 @@ function test() {
 		if [ "${mode}" == "validate" ]; then
 			echo "Testing kustomization ${name} from namespace ${namespace}" >&2
 			tmp_file="${tmp_dir}/manifest.yaml"
-			${fakeflux} build ${name}:${namespace} -M >"${tmp_file}"
+			# A Kustomization that doesn't build, for example because it leaves a variable
+			# unset, has nothing to check. Report it and go on to the next one. The error goes
+			# to stdout, which is what CI posts to the pull request.
+			echo -n "build: "
+			if ! build_errors=$(${fakeflux} build ${name}:${namespace} -M 2>&1 >"${tmp_file}"); then
+				echo "${build_errors}"
+				echo ""
+				has_validation_errors=1
+				continue
+			fi
+			echo "OK"
 
 			echo -n "yamllint: "
 			if ! (yamllint "$tmp_file"); then
