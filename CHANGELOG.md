@@ -213,6 +213,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `tools/test-all-ff`: kubeconform errors now fail the `validate` job. Before, the
+  script stored the error as `true`, which Bash compares as 0, so the job passed.
+  Part of [giantswarm/roadmap#4439](https://github.com/giantswarm/roadmap/issues/4439).
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.

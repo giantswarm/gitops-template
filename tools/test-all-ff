@@ -39,7 +39,7 @@ export KUSTOMIZATIONS=(
 
 function test() {
 	local mode="$1"
-	local has_validation_errors=false
+	local has_validation_errors=0
 	tmp_dir=$(mktemp -d)
 
 	for kustomization in "${KUSTOMIZATIONS[@]}"; do
@@ -61,7 +61,7 @@ function test() {
 			if ! (
 				kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
 			); then
-				has_validation_errors=true
+				has_validation_errors=1
 			else
 				echo "OK"
 			fi
