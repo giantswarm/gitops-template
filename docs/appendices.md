@@ -38,14 +38,24 @@ the help text for a command it doesn't know instead of an error, so the command 
 
 | Command or flag | Added in | Note |
 | --- | --- | --- |
-| `kubectl gs gitops add` (`management-cluster`, `organization`, `workload-cluster`, `automatic-update`), with `--gen-master-key` and `--cluster-user-config` | 2.20.0 | Before 6.0.0 they generate App CRs and repository structure version 1. This repository uses Flux `HelmRelease`s, structure version 2 |
-| `kubectl gs gitops add base` | 2.30.0 | As above |
+| `kubectl gs --version` | 0.6.1 | |
+| `kubectl gs login` | 0.5.3 | |
+| `kubectl gs login --workload-cluster`, with `--organization` | 1.44.0 | |
+| `kubectl gs get clusters`, with `-n` | 0.6.0 | |
+| `kubectl gs template organization`, with `--name` | 1.39.0 | |
+| `kubectl gs template cluster` printing a Flux `OCIRepository` and `HelmRelease` | 5.13.0 | |
+| `kubectl gs gitops add management-cluster`, with `--name`, `--repository-name` and `--gen-master-key` | 2.20.0 | |
 | `kubectl gs gitops add management-cluster --skip-encryption` | 5.12.0 | |
+| `kubectl gs gitops add organization`, with `--name` and `--management-cluster` | 2.20.0 | |
+| `kubectl gs gitops add workload-cluster`, with `--name`, `--organization`, `--management-cluster`, `--repository-name`, `--base` and `--cluster-user-config` | 2.20.0 | Before 6.0.0 it generates the cluster as an App CR, in repository structure version 1. This repository uses Flux `HelmRelease`s, structure version 2 |
+| `kubectl gs gitops add workload-cluster --release` | 4.0.0 | Replaced `--cluster-release`. Sets the cluster app version and the `release` since 5.12.0 |
+| `kubectl gs gitops add base`, with `--provider` | 2.30.0 | Before 6.0.0 it generates an App CR, in repository structure version 1 |
+| `kubectl gs gitops add automatic-update`, with `--management-cluster`, `--organization`, `--workload-cluster` and `--app` | 2.20.0 | Before 6.0.0 it generates Flux image automation instead of a version range on the app's `OCIRepository` |
 | `kubectl gs gitops add automatic-update --version-range` | 6.0.0 | |
+| `--dry-run` on the `kubectl gs gitops` commands | 2.20.0 | |
 | `kubectl gs gitops check`, with `--adopt` | 5.8.0 | Before 6.0.0 it only knows structure version 1 |
 | `kubectl gs gitops upgrade` | 5.13.0 | Before 6.0.0 it only knows structure version 1, so there is nothing to upgrade to |
-| `kubectl gs deploy chart` | 5.1.0 | `--values-from` with a key and `optional`, as in `ConfigMap/NAME:values`, needs 5.12.0 |
-| `kubectl gs template cluster` printing a Flux `OCIRepository` and `HelmRelease` | 5.13.0 | |
+| `kubectl gs deploy chart`, with `--chart-name`, `--version`, `--organization`, `--target-cluster`, `--target-namespace`, `--values-from` and `--dry-run` | 5.1.0 | `--values-from` with a key and `optional`, as in `ConfigMap/NAME:values`, needs 5.12.0 |
 | `kubectl gs selfupdate` | 1.47.0 | |
 
 ### Validating yaml files in the repository
