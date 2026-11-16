@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${cluster_name}-release
+  namespace: default
+data:
+  release: "${release}"

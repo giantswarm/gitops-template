@@ -6,7 +6,9 @@
 # to the cluster.
 #
 # As part of the build, it will extract any substitutions found in `spec.postBuild` and apply these to the
-# parsed manifests using envsubst.
+# parsed manifests using envsubst. With `flux build`, the default, a variable that the manifests use
+# without a default value and that `spec.postBuild.substitute` doesn't set fails the build
+# (`--strict-substitute`) instead of becoming an empty string.
 #
 # All manifests are then provided to `yq` for optional filtering.
 set -e -o pipefail
@@ -79,7 +81,7 @@ EOF
 # Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
 export KUSTOMIZATIONS=(
 	$(
-		for f in $(find . -name '*.yaml' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
 			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
 		done
 	)
@@ -239,7 +241,7 @@ function build() {
 	fi
 
 	if ! $use_kustomize; then
-		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run | yq $yqflags "$*"
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | yq $yqflags "$*"
 		return $?
 	fi
 

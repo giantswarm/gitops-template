@@ -16,7 +16,10 @@ The workflow offers the following jobs:
   through a YAML and Kubernetes objects linters to make sure that your code is valid YAML and produces final
   manifests understandable to Kubernetes. It also renders the chart of every `HelmRelease` with its merged values
   (see [validate-helm-values](../../tools/README.md#validate-helm-values)), so values the chart's schema rejects fail
-  the job. It attaches a validation report as a comment to your PR.
+  the job. A variable that a `Kustomization`'s manifests use but its `spec.postBuild.substitute` doesn't set fails the
+  job, where Flux would replace it with an empty string. `flux build` doesn't read `spec.postBuild.substituteFrom`, so
+  a variable set only there fails the job too, although Flux sets it on the cluster. It attaches a validation report as
+  a comment to your PR.
 - `get_diff`: it templates your changed manifests and compares them to a templated version without your changes,
   then it generates and saves a diff between the two and attaches it to your PR
 - `test on kind`: deploys a full `flux` installation to a test `kind` cluster, then deploys your `Kustomizations`
