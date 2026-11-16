@@ -21,6 +21,8 @@ KUBERNETES_VERSION="master"
 
 KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/${KUBERNETES_VERSION}/"
 GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/main/master"
+# Schemas for CRDs such as Flux and Cluster API objects. Without them, kubeconform can't check those objects.
+CRDS_CATALOG_SCHEMA_LOCATION="https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json"
 
 GS_SCHEMA_REPOSITORY_CACHE="/tmp/gs-schema-repository-cache"
 mkdir -p "${GS_SCHEMA_REPOSITORY_CACHE}"
@@ -59,7 +61,7 @@ function test() {
 
 			echo -n "kubeconform: "
 			if ! (
-				kubeconform -ignore-missing-schemas -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
+				kubeconform -schema-location="${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" -schema-location "${CRDS_CATALOG_SCHEMA_LOCATION}" -cache "${GS_SCHEMA_REPOSITORY_CACHE}" -output text "$tmp_file"
 			); then
 				has_validation_errors=1
 			else

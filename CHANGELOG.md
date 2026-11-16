@@ -43,6 +43,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `tools/test-all-ff`: kubeconform now checks Flux and Cluster API objects against
+  schemas from the [CRDs-catalog](https://github.com/datreeio/CRDs-catalog), and fails
+  when an object has no schema. Before, it skipped every HelmRelease, OCIRepository
+  and Kustomization. CI uses kubeconform 0.7.0 instead of 0.4.13.
+  Part of [giantswarm/roadmap#4439](https://github.com/giantswarm/roadmap/issues/4439).
 - The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
   repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
   is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported.

@@ -16,5 +16,6 @@ jobs:
       # Matches [requires] python_version in tests/ats/Pipfile. The shared
       # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
       python_version: "3.12"
+      kubeconform_ver: "0.7.0"
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
