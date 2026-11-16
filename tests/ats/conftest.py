@@ -255,30 +255,10 @@ def capi_crds(kube_cluster: Cluster) -> None:
 
 @pytest.fixture(scope="module")
 def app_platform_controllers(kube_config: str) -> None:
-    apptestctl_path = shutil.which("apptestctl")
-
-    if not apptestctl_path:
-        logger.error(
-            f"You must install `apptestctl` tool from '{APPTESTCTL_URL}' and make it available "
-            f"in your $PATH."
-        )
-        raise Exception("`apptestctl` not found")
-
-    logger.debug(f"Using '{apptestctl_path}' to bootstrap app platform controllers")
-    run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
-        [
-            apptestctl_path,
-            "bootstrap",
-            "--kubeconfig-path",
-            kube_config,
-        ],
-        capture_output=True,
+    logger.debug("Bootstrapping app platform controllers with `apptestctl`")
+    run_tool(
+        "apptestctl", APPTESTCTL_URL, "bootstrap", "--kubeconfig-path", kube_config
     )
-    if run_res.returncode != 0:
-        logger.error(
-            f"Error bootstrapping app platform on test cluster: '{run_res.stderr}'"  # type: ignore
-        )
-        raise Exception("Cannot bootstrap app platform")
 
 
 def installation_values_config_map(
@@ -413,19 +393,24 @@ def gpg_master_key(
     gpg_master_key.delete()
 
 
-def run_helm(*args: str) -> str:
-    helm_path = shutil.which("helm")
-    if not helm_path:
+def run_tool(name: str, url: str, *args: str) -> str:
+    """Run `name` from the $PATH with `args`, and return its output.
+
+    It fails if the tool isn't in the $PATH, saying to install it from `url`, or if it fails.
+    """
+    path = shutil.which(name)
+    if not path:
         logger.error(
-            f"You must install `helm` from '{HELM_URL}' and make it available in your $PATH."
+            f"You must install `{name}` from '{url}' and make it available in your $PATH."
         )
-        raise Exception("`helm` not found")
+        raise Exception(f"`{name}` not found")
+    logger.debug(f"Running '{path}' with {list(args)}")
     run_res = subprocess.run(  # nosec B603 - fixed arguments, no user input
-        [helm_path, *args], capture_output=True, text=True
+        [path, *args], capture_output=True, text=True
     )
     if run_res.returncode != 0:
-        logger.error(f"`helm {' '.join(args)}` failed: '{run_res.stderr}'")
-        raise Exception(f"`helm {args[0]}` failed")
+        logger.error(f"`{name} {' '.join(args)}` failed: '{run_res.stderr}'")
+        raise Exception(f"`{name} {args[0]}` failed")
     return run_res.stdout
 
 
@@ -485,7 +470,9 @@ def workload_cluster(
     # what the fixture created in the test cluster, deleted again in the end
     created: list[pykube.objects.APIObject] = []
     try:
-        run_helm(
+        run_tool(
+            "helm",
+            HELM_URL,
             "upgrade",
             "--install",
             WORKLOAD_CLUSTER_VCLUSTER_NAME,
@@ -583,7 +570,9 @@ def remove_workload_cluster(
     try:
         for obj in reversed(created):
             obj.delete()
-        run_helm(
+        run_tool(
+            "helm",
+            HELM_URL,
             "uninstall",
             WORKLOAD_CLUSTER_VCLUSTER_NAME,
             # the install may have failed before the release existed; keep its error the one shown

@@ -748,10 +748,48 @@ def test_remove_workload_cluster_removes_the_values_file_when_the_uninstall_fail
     values_file = tmp_path / "vcluster-values-test.yaml"
     values_file.write_text("{}\n")
 
-    def failing_helm(*args: str) -> str:
+    def failing_helm(name: str, url: str, *args: str) -> str:
         raise Exception("`helm uninstall` failed")
 
-    monkeypatch.setattr(conftest, "run_helm", failing_helm)
+    monkeypatch.setattr(conftest, "run_tool", failing_helm)
     with pytest.raises(Exception, match="`helm uninstall` failed"):
         conftest.remove_workload_cluster([], "kubeconfig", str(values_file))
     assert not values_file.exists()
+
+
+def test_run_tool_not_in_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(conftest.shutil, "which", lambda name: None)
+    monkeypatch.setattr(
+        conftest.subprocess, "run", lambda *a, **kw: pytest.fail("ran a tool")
+    )
+    with pytest.raises(Exception, match="`tool` not found"):
+        conftest.run_tool("tool", "https://example.com/tool", "arg")
+
+
+@pytest.mark.parametrize(
+    "returncode, stdout, error",
+    [
+        (0, "output", None),
+        (1, "", "`tool sub` failed"),
+    ],
+)
+def test_run_tool(
+    monkeypatch: pytest.MonkeyPatch, returncode: int, stdout: str, error: str | None
+) -> None:
+    calls: list[list[str]] = []
+
+    def run(args: list[str], **kwargs: Any) -> conftest.subprocess.CompletedProcess:
+        calls.append(args)
+        return conftest.subprocess.CompletedProcess(args, returncode, stdout, "err")
+
+    monkeypatch.setattr(conftest.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(conftest.subprocess, "run", run)
+    if error:
+        with pytest.raises(Exception, match=error):
+            conftest.run_tool("tool", "https://example.com/tool", "sub", "--flag")
+    else:
+        assert (
+            conftest.run_tool("tool", "https://example.com/tool", "sub", "--flag")
+            == stdout
+        )
+    assert calls == [["/bin/tool", "sub", "--flag"]]
