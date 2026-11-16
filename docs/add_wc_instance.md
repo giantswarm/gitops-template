@@ -130,11 +130,12 @@ CLI create them.
     ```sh
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
-    commonLabels:
-      giantswarm.io/managed-by: flux
     components:
       - ../../../../../../../../bases/environments/regions/${REGION}
     kind: Kustomization
+    labels:
+      - pairs:
+          giantswarm.io/managed-by: flux
     patches:
       - path: patch_cluster_userconfig.yaml
         target:

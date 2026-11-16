@@ -1,13 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-commonLabels:
-  giantswarm.io/managed-by: flux
 # The region. kustomize applies components before this kustomization's own
 # patches, so the region comes before the cluster's own values in `valuesFrom`.
 # `kubectl gs gitops add workload-cluster` writes the rest of this file.
 components:
   - ../../../../../../../../bases/environments/regions/eu_central
 kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/managed-by: flux
 patches:
   - path: patch_cluster_userconfig.yaml
     target:
