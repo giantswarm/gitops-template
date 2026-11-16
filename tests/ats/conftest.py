@@ -18,6 +18,7 @@ from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
+from pytest_helm_charts.utils import wait_for_objects_condition
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
@@ -255,30 +256,10 @@ def capi_crds(kube_cluster: Cluster) -> None:
 
 @pytest.fixture(scope="module")
 def app_platform_controllers(kube_config: str) -> None:
-    apptestctl_path = shutil.which("apptestctl")
-
-    if not apptestctl_path:
-        logger.error(
-            f"You must install `apptestctl` tool from '{APPTESTCTL_URL}' and make it available "
-            f"in your $PATH."
-        )
-        raise Exception("`apptestctl` not found")
-
-    logger.debug(f"Using '{apptestctl_path}' to bootstrap app platform controllers")
-    run_res = subprocess.run(  # nosec B603 - no user provided config except of kube.config path
-        [
-            apptestctl_path,
-            "bootstrap",
-            "--kubeconfig-path",
-            kube_config,
-        ],
-        capture_output=True,
+    logger.debug("Bootstrapping app platform controllers with `apptestctl`")
+    run_tool(
+        "apptestctl", APPTESTCTL_URL, "bootstrap", "--kubeconfig-path", kube_config
     )
-    if run_res.returncode != 0:
-        logger.error(
-            f"Error bootstrapping app platform on test cluster: '{run_res.stderr}'"  # type: ignore
-        )
-        raise Exception("Cannot bootstrap app platform")
 
 
 def installation_values_config_map(
@@ -413,19 +394,24 @@ def gpg_master_key(
     gpg_master_key.delete()
 
 
-def run_helm(*args: str) -> str:
-    helm_path = shutil.which("helm")
-    if not helm_path:
+def run_tool(name: str, url: str, *args: str) -> str:
+    """Run `name` from the $PATH with `args`, and return its output.
+
+    It fails if the tool isn't in the $PATH, saying to install it from `url`, or if it fails.
+    """
+    path = shutil.which(name)
+    if not path:
         logger.error(
-            f"You must install `helm` from '{HELM_URL}' and make it available in your $PATH."
+            f"You must install `{name}` from '{url}' and make it available in your $PATH."
         )
-        raise Exception("`helm` not found")
+        raise Exception(f"`{name}` not found")
+    logger.debug(f"Running '{path}' with {list(args)}")
     run_res = subprocess.run(  # nosec B603 - fixed arguments, no user input
-        [helm_path, *args], capture_output=True, text=True
+        [path, *args], capture_output=True, text=True
     )
     if run_res.returncode != 0:
-        logger.error(f"`helm {' '.join(args)}` failed: '{run_res.stderr}'")
-        raise Exception(f"`helm {args[0]}` failed")
+        logger.error(f"`{name} {' '.join(args)}` failed: '{run_res.stderr}'")
+        raise Exception(f"`{name} {args[0]}` failed")
     return run_res.stdout
 
 
@@ -485,7 +471,9 @@ def workload_cluster(
     # what the fixture created in the test cluster, deleted again in the end
     created: list[pykube.objects.APIObject] = []
     try:
-        run_helm(
+        run_tool(
+            "helm",
+            HELM_URL,
             "upgrade",
             "--install",
             WORKLOAD_CLUSTER_VCLUSTER_NAME,
@@ -507,10 +495,8 @@ def workload_cluster(
         )
 
         # vCluster writes its kubeconfig (server https://localhost:8443) into `vc-<name>`
-        vc_secret = wait_for_secret(
-            kube_cluster.kube_client,
-            f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}",
-            WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
+        vc_secret = vcluster_kubeconfig_secret(
+            kube_cluster.kube_client, VCLUSTER_READY_TIMEOUT_SEC
         )
         vc_kubeconfig = yaml.safe_load(
             base64.b64decode(vc_secret.obj["data"]["config"]).decode()
@@ -572,9 +558,47 @@ def workload_cluster(
 
         yield vcluster_api
     finally:
+        remove_workload_cluster(created, kube_config, values_file.name)
+
+
+def vcluster_kubeconfig_secret(
+    api: pykube.HTTPClient, timeout_polls: int
+) -> pykube.Secret:
+    """Wait for the Secret vCluster writes its kubeconfig in, `vc-<name>`, and return it.
+
+    `wait_for_objects_condition` polls `timeout_polls` times, a second apart, so the wait takes
+    at least that many seconds plus the time of the API calls.
+    """
+    name = f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}"
+    namespace = WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE
+    logger.info(f"Waiting for Secret '{namespace}/{name}'")
+    try:
+        return wait_for_objects_condition(
+            api,
+            pykube.Secret,
+            [name],
+            namespace,
+            lambda _: True,
+            timeout_polls,
+            missing_ok=True,
+        )[0]
+    except TimeoutError as e:
+        raise TimeoutError(
+            f"Secret '{namespace}/{name}' didn't show up in {timeout_polls} polls."
+        ) from e
+
+
+def remove_workload_cluster(
+    created: list[pykube.objects.APIObject], kube_config: str, values_file: str
+) -> None:
+    """Undo the `workload_cluster` fixture: delete what it created in the test cluster, uninstall
+    the vCluster and remove its values file."""
+    try:
         for obj in reversed(created):
             obj.delete()
-        run_helm(
+        run_tool(
+            "helm",
+            HELM_URL,
             "uninstall",
             WORKLOAD_CLUSTER_VCLUSTER_NAME,
             # the install may have failed before the release existed; keep its error the one shown
@@ -585,7 +609,9 @@ def workload_cluster(
             "--kubeconfig",
             kube_config,
         )
-        os.remove(values_file.name)
+    finally:
+        # the uninstall can fail, for example on a `--wait` timeout
+        os.remove(values_file)
 
 
 def wait_for_api(api: pykube.HTTPClient, timeout_sec: int) -> None:
@@ -641,21 +667,6 @@ def install_crds(api: pykube.HTTPClient, directory: str) -> None:
     logger.info(
         f"Installed {len(names)} CRDs in {time.monotonic() - started:.1f} s: {names}"
     )
-
-
-def wait_for_secret(api: pykube.HTTPClient, name: str, namespace: str) -> pykube.Secret:
-    deadline = time.monotonic() + VCLUSTER_READY_TIMEOUT_SEC
-    while True:
-        secret = (
-            pykube.Secret.objects(api)
-            .filter(namespace=namespace)
-            .get_or_none(name=name)
-        )
-        if secret is not None:
-            return secret
-        if time.monotonic() > deadline:
-            raise TimeoutError(f"Secret '{namespace}/{name}' didn't show up.")
-        time.sleep(2)
 
 
 @pytest.fixture(scope="module")
