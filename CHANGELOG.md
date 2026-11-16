@@ -323,7 +323,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The kind test removes the vCluster's temporary `vcluster-values-*.yaml` file even when `helm uninstall` fails, for
   example on a `--wait` timeout. [docs/guides/ci-validation.md](docs/guides/ci-validation.md) now says that a local run
-  has to reach kind's Docker network, so it doesn't work on Docker Desktop for macOS or Windows.
+  has to reach kind's Docker network, so it works where Docker runs natively on the host, like the GitHub runner, and
+  not where Docker runs in a VM, such as Docker Desktop.
 - The notes on the master and `WC_NAME` demo GPG keys in `management-clusters/MC_NAME/.sops.keys` said nothing was
   encrypted with them and that they had no private key; the `FROM_TEMPLATE_WC_NAME` key had no note. Each key now says
   what uses it and where its private key is: CI creates the `sops-gpg-master` Secret from the `GITOPS_MASTER_GPG_KEY`
