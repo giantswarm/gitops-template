@@ -171,7 +171,10 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
   its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
 
-Running the test locally needs `helm` in your `$PATH`.
+Running the test locally needs `helm` in your `$PATH`. pytest reaches the vCluster at the kind node's IP address,
+on a node port of the vCluster's Service, so it has to run where it can route to kind's Docker network: on a Linux
+host, like the GitHub runner, and not on Docker Desktop for macOS or Windows, or in a container outside that network.
+There the setup of the vCluster times out.
 
 `tests/ats/conftest.py` pins the `vcluster` chart (`VCLUSTER_CHART_VERSION`, 0.37.6) and the vCluster's Kubernetes
 image (`VCLUSTER_KUBERNETES_IMAGE_TAG`, v1.36.6). Keep the image on the Kubernetes minor version of the kind cluster and
