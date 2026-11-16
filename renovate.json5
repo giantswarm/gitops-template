@@ -22,9 +22,23 @@
   "pre-commit": {
     "enabled": true,
   },
+  // Chart tags pinned in a Flux `OCIRepository`'s `spec.ref.tag`. Renovate's
+  // flux manager reads them with the `docker` datasource, taking the `url`
+  // without `oci://` as the dependency, but by default only in
+  // `gotk-components.yaml`. The test assertions are included on purpose: they
+  // repeat the tags, and one PR updates every file with the same dependency.
+  // A tag that is a postBuild variable, such as `${release}`, is skipped; the
+  // release is annotated where the variable is set (see below).
+  "flux": {
+    "managerFilePatterns": ["/\\.ya?ml$/"],
+  },
   // Versions pinned in plain variables: the shared workflow's version inputs
-  // in the hand-authored workflows, and the constants in `tools/test-all-ff`
-  // and `tests/ats/conftest.py`. Each one has a comment on the line before it:
+  // in the hand-authored workflows, the constants in `tools/test-all-ff` and
+  // `tests/ats/conftest.py`, and the Giant Swarm release where the `release`
+  // variable is set and where a stage patches it in. The release is the tag
+  // of the `release-aws` chart, so it uses the same dependency as the flux
+  // manager finds in the test assertions, and one PR updates both. Each one
+  // has a comment on the line before it:
   //   # renovate: datasource=<datasource> depName=<name> [versioning=<v>] [registryUrl=<url>] [extractVersion=<regex>]
   // with the optional fields in that order, followed by `NAME: "x"`,
   // `NAME="x"` or `NAME = "x"`.
@@ -33,7 +47,7 @@
       "customType": "regex",
       "description": "Versions annotated with a `# renovate:` comment",
       "managerFilePatterns": [
-        "/^\\.github/workflows/[^/]+\\.ya?ml$/",
+        "/\\.ya?ml$/",
         "/^tools/test-all-ff$/",
         "/^tests/ats/conftest\\.py$/",
       ],
