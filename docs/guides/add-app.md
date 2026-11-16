@@ -273,7 +273,8 @@ Workload Cluster's GPG key, see
     ```
 
 1. Import the regular GPG public key of the Workload Cluster and encrypt the `secret.enc.yaml` file. The SOPS rule
-   for the cluster picks the key:
+   for the cluster picks the key; if the cluster has none in `.sops.yaml` yet, add its key and rule with
+   [the WC structure guide](../add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step) first:
 
     ```sh
     gpg --import "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc"

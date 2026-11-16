@@ -148,7 +148,9 @@ credentials to read it.
     -o yaml > pullsecret.enc.yaml
     ```
 
-1. Import the Workload Cluster's GPG public key and encrypt the Kubernetes Secret with it:
+1. Import the Workload Cluster's GPG public key and encrypt the Kubernetes Secret with it. The SOPS rule for the
+   cluster picks the key; if the cluster has none in `.sops.yaml` yet, add its key and rule with
+   [the WC structure guide](../add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step) first:
 
     ```sh
     gpg --import "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc"
