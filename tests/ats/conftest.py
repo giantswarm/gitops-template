@@ -18,6 +18,7 @@ from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
+from pytest_helm_charts.utils import wait_for_objects_condition
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
@@ -494,11 +495,15 @@ def workload_cluster(
         )
 
         # vCluster writes its kubeconfig (server https://localhost:8443) into `vc-<name>`
-        vc_secret = wait_for_secret(
+        vc_secret = wait_for_objects_condition(
             kube_cluster.kube_client,
-            f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}",
+            pykube.Secret,
+            [f"vc-{WORKLOAD_CLUSTER_VCLUSTER_NAME}"],
             WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE,
-        )
+            lambda _: True,
+            VCLUSTER_READY_TIMEOUT_SEC,
+            missing_ok=True,
+        )[0]
         vc_kubeconfig = yaml.safe_load(
             base64.b64decode(vc_secret.obj["data"]["config"]).decode()
         )
@@ -641,21 +646,6 @@ def install_crds(api: pykube.HTTPClient, directory: str) -> None:
     logger.info(
         f"Installed {len(names)} CRDs in {time.monotonic() - started:.1f} s: {names}"
     )
-
-
-def wait_for_secret(api: pykube.HTTPClient, name: str, namespace: str) -> pykube.Secret:
-    deadline = time.monotonic() + VCLUSTER_READY_TIMEOUT_SEC
-    while True:
-        secret = (
-            pykube.Secret.objects(api)
-            .filter(namespace=namespace)
-            .get_or_none(name=name)
-        )
-        if secret is not None:
-            return secret
-        if time.monotonic() > deadline:
-            raise TimeoutError(f"Secret '{namespace}/{name}' didn't show up.")
-        time.sleep(2)
 
 
 @pytest.fixture(scope="module")
