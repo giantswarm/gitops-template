@@ -37,7 +37,8 @@ export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
 ## Flux GPG master key pair
 
 **Note**, `kubectl gs gitops add management-cluster --gen-master-key` can generate the master key pair together with
-the directory tree, see `kubectl gs gitops add management-cluster --help`. The steps below do it by hand.
+the directory tree, see `kubectl gs gitops add management-cluster --help`. It needs kubectl-gs 6.0.0 or newer, see
+[kubectl-gs version](./appendices.md#kubectl-gs-version). The steps below do it by hand.
 
 A master GPG keypair is used for en- and decryption of other GPG keys kept in this repository, that are in turn used to
 en- and decrypt real user-related data.

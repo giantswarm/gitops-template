@@ -32,6 +32,8 @@ the files of the cluster base, so renaming those is optional and only makes your
 
 ## Before you start
 
+You need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../appendices.md#kubectl-gs-version).
+
 Start from a clean clone of your repository, on a new branch:
 
 ```sh
