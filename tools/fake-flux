@@ -60,14 +60,14 @@ Examples:
     $(basename $0) build prod:org-example
   - Build all by index but target the apps/athena subpath
     $(basename $0) build 1 apps/athena
-  - Build all by name and select all apps with the name athena
-    $(basename $0) build prod-cluster 'select(.kind == "App" and .metadata.name == "athena")'
-  - Build only the athena app and select the App CR
-    $(basename $0) build 1 apps/athena 'select(.kind == "App")'
-  - Build only the athena app and select the App CR, turning off output coloring
-    $(basename $0) build 1 apps/athena -M 'select(.kind == "App")'
-  - Build only the athena app and select the App CR, turning off output coloring. Use kustomize for rendering, not flux
-    $(basename $0) build 1 apps/athena --use-kustomize -M 'select(.kind == "App")'
+  - Build all by name and select the HelmRelease named athena
+    $(basename $0) build prod-cluster 'select(.kind == "HelmRelease" and .metadata.name == "athena")'
+  - Build only the athena app and select its HelmRelease
+    $(basename $0) build 1 apps/athena 'select(.kind == "HelmRelease")'
+  - Build only the athena app and select its HelmRelease, turning off output coloring
+    $(basename $0) build 1 apps/athena -M 'select(.kind == "HelmRelease")'
+  - Build only the athena app and select its HelmRelease, turning off output coloring. Use kustomize for rendering, not flux
+    $(basename $0) build 1 apps/athena --use-kustomize -M 'select(.kind == "HelmRelease")'
 EOF
 }
 
