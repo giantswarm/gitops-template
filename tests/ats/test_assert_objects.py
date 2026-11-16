@@ -739,3 +739,19 @@ def test_install_crds_from_the_fixtures_directory(
         "podlogs.monitoring.grafana.com",
         "podmonitors.monitoring.coreos.com",
     ]
+
+
+def test_remove_workload_cluster_removes_the_values_file_when_the_uninstall_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    # A failed `helm uninstall`, such as a `--wait` timeout, mustn't leave the values file behind.
+    values_file = tmp_path / "vcluster-values-test.yaml"
+    values_file.write_text("{}\n")
+
+    def failing_helm(*args: str) -> str:
+        raise Exception("`helm uninstall` failed")
+
+    monkeypatch.setattr(conftest, "run_helm", failing_helm)
+    with pytest.raises(Exception, match="`helm uninstall` failed"):
+        conftest.remove_workload_cluster([], "kubeconfig", str(values_file))
+    assert not values_file.exists()

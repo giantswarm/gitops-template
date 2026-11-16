@@ -572,6 +572,15 @@ def workload_cluster(
 
         yield vcluster_api
     finally:
+        remove_workload_cluster(created, kube_config, values_file.name)
+
+
+def remove_workload_cluster(
+    created: list[pykube.objects.APIObject], kube_config: str, values_file: str
+) -> None:
+    """Undo the `workload_cluster` fixture: delete what it created in the test cluster, uninstall
+    the vCluster and remove its values file."""
+    try:
         for obj in reversed(created):
             obj.delete()
         run_helm(
@@ -585,7 +594,9 @@ def workload_cluster(
             "--kubeconfig",
             kube_config,
         )
-        os.remove(values_file.name)
+    finally:
+        # the uninstall can fail, for example on a `--wait` timeout
+        os.remove(values_file)
 
 
 def wait_for_api(api: pykube.HTTPClient, timeout_sec: int) -> None:
