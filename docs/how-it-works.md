@@ -58,6 +58,18 @@ A cluster's directory points at bases in its `kustomization.yaml` and only adds 
 values. The bases use variables like `${cluster_name}` where every cluster needs its own name. The cluster's Flux
 `Kustomization` sets them, so one base works for every cluster.
 
+The bases use these variables, set in `spec.postBuild.substitute` of the cluster's Flux `Kustomization`:
+
+| Variable | What it's for |
+| --- | --- |
+| `cluster_name` | The workload cluster's name. It names the cluster's resources and its apps, such as `${cluster_name}-hello-world`, and the `<cluster>-kubeconfig` Secret and `<cluster>-cluster-values` ConfigMap the apps read. |
+| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace. |
+| `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa/template`. |
+| `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa/template`. |
+
+Set every variable the cluster's bases use. Flux replaces a variable that isn't set with an empty string; CI fails on
+it instead, see [CI validation](./guides/ci-validation.md).
+
 For example, a cluster made from the CAPA cluster base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
 `cluster_description`, `cluster_name`, `organization` and `release` variables in its Flux `Kustomization`. The
 component sets the cluster's region, which every cluster needs, see [Regions](./guides/environments.md#regions):

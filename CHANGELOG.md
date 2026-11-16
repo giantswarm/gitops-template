@@ -76,6 +76,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [WC structure guide](docs/add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step) describes. The
   [add an App](docs/guides/add-app.md) and [automatic updates](docs/guides/automatic-updates.md) guides point there.
   ([#212](https://github.com/giantswarm/gitops-template/issues/212))
+- `tools/fake-flux` runs `flux build` with `--strict-substitute`, so `tools/test-all-ff validate` fails when a
+  `Kustomization`'s manifests use a variable that its `spec.postBuild.substitute` doesn't set. Flux replaces such a
+  variable with an empty string, so a cluster without `release` would get no chart version. `test-all-ff validate`
+  checks this with the fixture in `tools/testdata/unset-variable`, which discovery leaves out. [How it
+  works](docs/how-it-works.md#bases-and-variables) lists the variables the bases use.
+  ([#250](https://github.com/giantswarm/gitops-template/issues/250))
 - The example `kustomization.yaml` files, and the one in [Add Workload Cluster instance](docs/add_wc_instance.md),
   set their labels with `labels` instead of `commonLabels`, which kustomize v5 deprecates. None of the objects they
   build has a selector or a pod template, so the rendered manifests are unchanged. `kubectl gs gitops add

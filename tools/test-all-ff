@@ -69,7 +69,7 @@ function fetch_flux_schemas() {
 # Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
 export KUSTOMIZATIONS=(
 	$(
-		for f in $(find . -name '*.yaml' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
 			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
 		done
 	)
@@ -132,6 +132,26 @@ function test() {
 		status=0
 		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/release-aws-without-region.yaml" 2>&1) || status=$?
 		if [ "${status}" -ne 0 ] && grep -q "Unable to default the region" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
+		# fake-flux must fail for a cluster whose Kustomization doesn't set a variable its
+		# manifests use. It runs in a copy, as fake-flux only builds the Kustomizations it
+		# finds below the current directory, and the ones in tools/testdata are left out.
+		echo -n "fake-flux, cluster with an unset variable: "
+		fixture_dir="${tmp_dir}/unset-variable"
+		mkdir -p "${fixture_dir}/.git"
+		cp -r "$(dirname $0)/testdata/unset-variable/." "${fixture_dir}"
+		fakeflux_path=$(realpath "${fakeflux}")
+		status=0
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build unset-variable:default -M 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q 'variable not set (strict mode): "release"' <<<"${output}"; then
 			echo "OK, reported"
 		else
 			echo "not reported:"
