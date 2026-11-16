@@ -102,9 +102,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reads every YAML file, not only `gotk-components.yaml`. It doesn't see tags set by kustomize patches or postBuild
   variables, so those have a `# renovate:` comment: the release (the `release-aws` chart's tag) where the `release`
   variable is set in the `WC_NAME*.yaml` Kustomizations and where each stage patches it in, and hello-world where the
-  `hello-web-app` app set and the prod stage patch it. Prod still pins its own versions, and Renovate proposes each
-  bump for review in the same PR as the bases. The test assertions repeat these versions, and Renovate updates them in
-  the same PR. The release's TODO comment no longer names the version, which Renovate would leave behind.
+  `hello-web-app` app set and the prod stage patch it. The test assertions repeat these versions, and Renovate updates
+  them in the same PR as the files they check. Prod's own pins, hello-world and the release in
+  `bases/environments/stages/prod` and in the prod clusters' assertions, get a separate PR on a `renovate/prod-*`
+  branch that isn't automerged: merge it after staging has run the new version. Until then prod's patches keep the old
+  version. The release's TODO comment no longer names the version, which Renovate would leave behind.
   ([#226](https://github.com/giantswarm/gitops-template/issues/226))
 - Four example clusters have shorter names, because `release-aws` rejects a cluster name longer than 20 characters:
   `hello-app-prod-us-west` is `hello-app-prod-usw`, `hello-app-prod-eu-central` is `hello-app-prod-euc`,

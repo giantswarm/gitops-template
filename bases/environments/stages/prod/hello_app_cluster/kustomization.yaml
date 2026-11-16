@@ -9,9 +9,10 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
-# (optional) here we can enforce the app versions that we want in prod. Prod pins
-# its own versions here; Renovate proposes each bump in a pull request for review,
-# in the same one as the bases it overrides.
+# (optional) pin the hello-world version and the Giant Swarm release that prod
+# runs. Renovate updates prod's pins in a pull request of its own (a
+# `renovate/prod-*` branch), apart from the one for the bases, dev and staging.
+# Merge it after staging has run the new version.
 patches:
   - patch: |-
       - op: replace
