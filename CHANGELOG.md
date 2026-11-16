@@ -201,9 +201,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Installs of `cert-manager-app`, `flux-app` and `hello-world` retry 10
     times, as the converter emits for a migrated App CR. `hello-world`'s
     HTTPRoute needs the Gateway API CRDs the envoy-gateway App Template
-    installs, so its `HelmRelease` lists `<cluster>-gateway-api-crds` in
-    `dependsOn` and is installed only once that release is ready, instead of
-    retrying its install forever.
+    installs. Instead of retrying its install forever, every install and
+    upgrade of `hello-world` waits until `<cluster>-gateway-api-crds` is ready:
+    the `hello_app_cluster` cluster template and the out-of-band examples add
+    it to the `HelmRelease`'s `dependsOn`. The App Template leaves it out, so
+    it still works in a cluster without envoy-gateway.
     ([#209](https://github.com/giantswarm/gitops-template/issues/209))
   - Values come in the same four `valuesFrom` layers everywhere, the cluster
     values first. App Platform used to add those to an App CR, a `HelmRelease`

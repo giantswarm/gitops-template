@@ -1,6 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
+# hello-world's HTTPRoute needs the Gateway API CRDs, which the envoy-gateway App
+# Template installs: every install and upgrade of hello-world waits until its
+# gateway-api-crds release is ready. The `$` of the target name is escaped, as
+# kustomize reads the name as a regular expression.
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/dependsOn
+        value:
+          - name: ${cluster_name}-gateway-api-crds
+    target:
+      kind: HelmRelease
+      name: \${cluster_name}-hello-world
 resources:
   - app_sets/hello-web-app/
   - apps/

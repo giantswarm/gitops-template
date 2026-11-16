@@ -10,8 +10,8 @@ spec:
     kind: OCIRepository
     name: ${cluster_name}-hello-world-app-auto
     namespace: org-${organization}
-  # the HTTPRoute needs the Gateway API CRDs: install only once the
-  # gateway-api-crds release of the envoy-gateway App Template is ready
+  # the HTTPRoute needs the Gateway API CRDs: every install and upgrade waits
+  # until the gateway-api-crds release of the envoy-gateway App Template is ready
   dependsOn:
     - name: ${cluster_name}-gateway-api-crds
   install:

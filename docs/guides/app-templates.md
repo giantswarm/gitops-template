@@ -165,11 +165,27 @@ directory of its own with a `helm-release.yaml` and an `oci-repository.yaml`, an
 like `yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` change only the chart you mean.
 
 When a chart needs something another `HelmRelease` installs first, such as its CRDs, list that `HelmRelease` in
-`dependsOn` instead of retrying the install until it succeeds. helm-controller then installs the chart only once the
-other release is `Ready`, and a broken install still fails after its retries. The charts of the envoy-gateway App
-Template depend on each other this way, and [hello-world](/bases/apps/hello-world/helm-release.yaml), whose `HTTPRoute`
-needs the Gateway API CRDs, depends on `${cluster_name}-gateway-api-crds`. The `HelmRelease` named in `dependsOn` has to
-exist, so hello-world needs the envoy-gateway App Template installed for the same cluster.
+`dependsOn`. helm-controller checks `dependsOn` on every reconciliation, so every install and upgrade of the chart
+waits until the other release is `Ready`, and the install retries can stay bounded, so a broken install still fails.
+A `HelmRelease` that `dependsOn` names has to exist, or the release waits forever. So an App Template that can be
+used on its own leaves the dependency out, and the layer that installs it together with the other App Template adds
+it. [hello-world](/bases/apps/hello-world/helm-release.yaml) is an example: its `HTTPRoute` needs the Gateway API CRDs
+that the envoy-gateway App Template installs, and the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster/)
+cluster template, which installs both, adds the dependency with a patch:
+
+```yaml
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/dependsOn
+        value:
+          - name: ${cluster_name}-gateway-api-crds
+    target:
+      kind: HelmRelease
+      name: \${cluster_name}-hello-world
+```
+
+The `$` of the target name is escaped, as `kustomize` reads the name as a regular expression.
 
 ## Recommended next steps
 
