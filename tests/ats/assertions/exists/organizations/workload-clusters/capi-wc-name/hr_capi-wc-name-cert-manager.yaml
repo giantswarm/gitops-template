@@ -15,6 +15,7 @@ spec:
     namespace: org-org-name
   install:
     createNamespace: true
+    disableTakeOwnership: true
     remediation:
       remediateLastFailure: false
       retries: 10
@@ -27,6 +28,7 @@ spec:
   targetNamespace: cert-manager
   timeout: 10m
   upgrade:
+    disableTakeOwnership: true
     remediation:
       remediateLastFailure: true
       retries: 10
