@@ -68,7 +68,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `hello-world` base in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
   install into their own namespace in the workload cluster, `hello-world` and `cert-manager`, with Helm storage in
   the same namespace. They used `org-${organization}`, which created an organisation namespace in the workload
-  cluster. The `HelmRelease`s stay in the organisation namespace on the management cluster.
+  cluster. The `HelmRelease`s stay in the organisation namespace on the management cluster. The `cert-manager` app no
+  longer installs the cert-manager CRDs (`cert-manager.crds.enabled: false`): the Giant Swarm release installs them.
   ([#207](https://github.com/giantswarm/gitops-template/issues/207))
   If you upgrade a cluster that runs one of these apps:
   - Flux uninstalls a release whose target or storage namespace changes and installs it again in the new namespace,

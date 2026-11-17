@@ -17,9 +17,6 @@ spec:
       remediateLastFailure: false
       retries: 10
   interval: 5m
-  # Don't use this HelmRelease on a cluster where cert-manager is already managed
-  # elsewhere, for example installed by the default apps of the Giant Swarm release.
-  # Configure that installation instead, so only one controller reconciles the chart.
   releaseName: cert-manager
   storageNamespace: cert-manager
   targetNamespace: cert-manager
@@ -29,6 +26,11 @@ spec:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  values:
+    cert-manager:
+      crds:
+        # CRDs installed by the release
+        enabled: false
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-cluster-values

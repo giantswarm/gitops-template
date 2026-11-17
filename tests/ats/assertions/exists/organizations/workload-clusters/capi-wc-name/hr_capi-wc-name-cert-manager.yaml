@@ -31,6 +31,10 @@ spec:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  values:
+    cert-manager:
+      crds:
+        enabled: false
   valuesFrom:
     - kind: ConfigMap
       name: capi-wc-name-cluster-values
