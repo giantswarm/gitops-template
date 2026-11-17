@@ -65,6 +65,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The `hello-world` App Template in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
+  install into their own namespace in the workload cluster, `hello-world` and `cert-manager`, with Helm storage in
+  the same namespace. They used `org-${organization}`, which created an organisation namespace in the workload
+  cluster. The `HelmRelease`s stay in the organisation namespace on the management cluster. Flux uninstalls a release
+  whose target or storage namespace changes and installs it again in the new namespace.
+  ([#207](https://github.com/giantswarm/gitops-template/issues/207))
 - Each example workload cluster with encrypted files has its own SOPS key and its own `.sops.yaml` rule for its
   `mapi/` directory, as `kubectl gs gitops add encryption --workload-cluster <WC> --target mapi/` creates, instead of
   one rule for every workload cluster. The examples reuse the existing demo keys rather than the tool's per-cluster

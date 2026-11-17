@@ -27,8 +27,8 @@ spec:
     secretRef:
       name: out-of-band-no-flux-kubeconfig
   releaseName: hello-world
-  storageNamespace: org-org-name
-  targetNamespace: org-org-name
+  storageNamespace: hello-world
+  targetNamespace: hello-world
   timeout: 10m
   upgrade:
     remediation:

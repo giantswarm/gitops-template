@@ -31,10 +31,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
-  namespace: org-org-name
+  namespace: hello-world
   annotations:
     meta.helm.sh/release-name: hello-world
-    meta.helm.sh/release-namespace: org-org-name
+    meta.helm.sh/release-namespace: hello-world
 ---
 # gateway-api-crds runs no workload: a Job of the chart installs the Gateway API CRDs, which
 # are what the release is for

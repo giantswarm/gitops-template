@@ -23,8 +23,8 @@ spec:
     secretRef:
       name: capi-wc-name-kubeconfig
   releaseName: cert-manager
-  storageNamespace: org-org-name
-  targetNamespace: org-org-name
+  storageNamespace: cert-manager
+  targetNamespace: cert-manager
   timeout: 10m
   upgrade:
     remediation:

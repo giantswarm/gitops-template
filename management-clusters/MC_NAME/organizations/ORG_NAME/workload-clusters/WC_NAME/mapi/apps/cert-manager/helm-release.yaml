@@ -18,8 +18,8 @@ spec:
       retries: 10
   interval: 5m
   releaseName: cert-manager
-  storageNamespace: org-${organization}
-  targetNamespace: org-${organization}
+  storageNamespace: cert-manager
+  targetNamespace: cert-manager
   timeout: 10m
   upgrade:
     remediation:
