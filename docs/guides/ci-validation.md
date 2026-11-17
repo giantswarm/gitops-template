@@ -102,6 +102,13 @@ in the assertions file must be also present (and have exactly the same value) as
 in cluster. Strings are compared as text, so a ConfigMap's `values` has to match line by line. Only trailing whitespace
 is ignored: whether the assertion writes a block as `|` or `|-`, or a line ends in a space, doesn't matter.
 
+A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its `HelmRelease`, so no single assertion
+shows them. `tests/ats/test_node_pools.py` merges each example cluster's values from its assertion files the way
+helm-controller does, maps merged and anything else replaced, and checks the node pools in the result: a production
+cluster gets the stage's `nodepool0` and its region's extra pool, and the other clusters only their own. As the
+assertions are checked against the cluster, the result is the one the repository renders. If you add a cluster, or
+change its node pools, update `EXPECTED_NODE_POOLS` in that file.
+
 ### Versions
 
 The test cluster runs the same versions as a Giant Swarm management cluster where it can:
