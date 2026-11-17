@@ -68,10 +68,12 @@
       // bases, the app set, dev, staging and the out-of-band examples; prod's
       // stage patches keep the old version until this one is merged, after
       // staging has run the new one. The files are prod's stage and the kind
-      // test's assertions for the two prod clusters. Charts prod takes from
-      // the bases unpatched, such as envoy-gateway, are not prod pins: their
-      // prod assertions stay in the other PR, which changes what prod renders.
-      // A new prod patch needs its dependency added here.
+      // test's assertions for every `hello-app-prod-*` cluster. Charts prod
+      // takes from the bases unpatched, such as envoy-gateway, are not prod
+      // pins: their prod assertions stay in the other PR, which changes what
+      // prod renders. A new prod patch needs its dependency added to
+      // `matchDepNames`, and a prod cluster or prod pin in another path needs
+      // that path added to `matchFileNames`.
       "description": "Update prod's own pins in a separate PR, merged by hand after staging",
       "matchDepNames": [
         "gsoci.azurecr.io/charts/giantswarm/hello-world",
@@ -79,12 +81,20 @@
       ],
       "matchFileNames": [
         "bases/environments/stages/prod/**",
-        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-prod-euc/**",
-        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-prod-usw/**",
+        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-prod-*/**",
       ],
       "additionalBranchPrefix": "prod-",
       "commitMessageSuffix": "in prod",
       // The preset automerges patch updates; prod waits for staging.
+      "automerge": false,
+    },
+    {
+      // A Giant Swarm release update rolls the cluster's nodes, which must
+      // not happen unattended. Its PRs, prod's and the others, are never
+      // automerged, whatever the update type. Chart updates keep the preset's
+      // behaviour: patch updates automerge.
+      "description": "Never automerge a Giant Swarm release update: it rolls nodes",
+      "matchDepNames": ["gsoci.azurecr.io/charts/giantswarm/release-aws"],
       "automerge": false,
     },
   ],

@@ -10,9 +10,12 @@ generatorOptions:
   disableNameSuffixHash: true
 kind: Kustomization
 # (optional) pin the hello-world version and the Giant Swarm release that prod
-# runs. Renovate updates prod's pins in a pull request of its own (a
-# `renovate/prod-*` branch), apart from the one for the bases, dev and staging.
-# Merge it after staging has run the new version.
+# runs; the hello-world patch overrides the app set's. Renovate updates these
+# pins in a pull request of their own, on a `renovate/prod-*` branch. The other
+# pull request for the same update changes what the out-of-band clusters render
+# for hello-world (dev and staging follow a semver range instead), and what the
+# WC_NAME* clusters, dev and staging render for the release. Prod renders the
+# new version once this one is merged: merge it after staging has run it.
 patches:
   - patch: |-
       - op: replace

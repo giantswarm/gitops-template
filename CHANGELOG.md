@@ -104,9 +104,15 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   variable is set in the `WC_NAME*.yaml` Kustomizations and where each stage patches it in, and hello-world where the
   `hello-web-app` app set and the prod stage patch it. The test assertions repeat these versions, and Renovate updates
   them in the same PR as the files they check. Prod's own pins, hello-world and the release in
-  `bases/environments/stages/prod` and in the prod clusters' assertions, get a separate PR on a `renovate/prod-*`
-  branch that isn't automerged: merge it after staging has run the new version. Until then prod's patches keep the old
-  version. The release's TODO comment no longer names the version, which Renovate would leave behind.
+  `bases/environments/stages/prod` and in the `hello-app-prod-*` clusters' assertions, get a separate PR on a
+  `renovate/prod-*` branch that isn't automerged: merge it after staging has run the new version. For hello-world, the
+  other PR changes what the out-of-band clusters render (dev and staging follow a semver range instead), and prod's
+  patch overrides the app set's. For the release, it changes what the `WC_NAME*` clusters, dev and staging render.
+  Prod renders the new version only once its own PR is merged. The prod split gates only hello-world and the Giant
+  Swarm release: the charts prod takes from the bases unpatched (envoy-gateway, gateway-api-config,
+  gateway-api-crds) follow the bases in a single PR, and outside prod's own PR, patch updates of charts automerge.
+  Giant Swarm release updates never automerge, in any PR, because they roll the cluster's nodes. The release's TODO
+  comment no longer names the version, which Renovate would leave behind.
   ([#226](https://github.com/giantswarm/gitops-template/issues/226))
 - Four example clusters have shorter names, because `release-aws` rejects a cluster name longer than 20 characters:
   `hello-app-prod-us-west` is `hello-app-prod-usw`, `hello-app-prod-eu-central` is `hello-app-prod-euc`,
