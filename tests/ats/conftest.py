@@ -1,6 +1,5 @@
 import base64
 import copy
-import json
 import logging
 import os
 import shutil
@@ -8,8 +7,6 @@ import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
 import time
 import urllib.request
-from collections.abc import Mapping
-from pathlib import Path
 from typing import Iterable, Any
 
 import pykube
@@ -23,9 +20,12 @@ from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.utils import wait_for_objects_condition
 
+import ci_context
+
+# Its hooks skip the tests that need the cluster in a fork without the GPG key.
+pytest_plugins = ["ci_context"]
+
 FLUX_GIT_REPO_NAME = "your-repo"
-# Holds the master private GPG key that Flux decrypts the SOPS secrets with.
-GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
 
 FLUX_OBJECTS_NAMESPACE = "default"
 FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secret here
@@ -106,85 +106,12 @@ class PriorityClass(pykube.objects.APIObject):
 logger = logging.getLogger(__name__)
 
 
-def running_in_fork(event_path: str | None) -> bool:
-    """Whether the GitHub Actions run is in a fork, or for a pull request from one.
-
-    `event_path` is the run's event payload, `GITHUB_EVENT_PATH`. A fork has none of the
-    repository's secrets until its owner adds them, and GitHub never gives a pull request from
-    a fork the secrets of the repository it targets. Without a readable payload, such as
-    outside GitHub Actions, the run isn't in a fork.
-    """
-    if not event_path:
-        return False
-    try:
-        with Path(event_path).open() as f:
-            event = json.load(f)
-    except (OSError, ValueError):
-        return False
-    if (event.get("repository") or {}).get("fork"):
-        return True
-    pull_request = event.get("pull_request")
-    if not pull_request:
-        return False
-    # The head repository is null when the fork was deleted after the pull request was opened.
-    head_repo = (pull_request.get("head") or {}).get("repo")
-    return head_repo is None or bool(head_repo.get("fork"))
-
-
-def missing_secrets_skip_reason(environ: Mapping[str, str]) -> str | None:
-    """The reason to skip the tests that need a cluster, or None to run them.
-
-    They're skipped only in a fork without the GITOPS_MASTER_GPG_KEY secret. Anywhere else, a
-    missing key is a broken setup, and GitOpsTestConfig fails the tests.
-    """
-    if environ.get(GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME):
-        return None
-    if not running_in_fork(environ.get("GITHUB_EVENT_PATH")):
-        return None
-    return (
-        f"The kind test is skipped: this run is in a fork, or for a pull request from one, and"
-        f" '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' is empty, so Flux can't decrypt"
-        f" the SOPS secrets. GitHub doesn't pass secrets to pull requests from forks. To run it"
-        f" in your fork, add your master GPG key as its repository secret"
-        f" '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' (see docs/guides/ci-validation.md)."
-    )
-
-
-def skip_cluster_tests(items: list[pytest.Item], reason: str) -> None:
-    """Skip the tests that need the test configuration, and with it the cluster and the key.
-
-    The checks that need no cluster still run.
-    """
-    for item in items:
-        if "gitops_test_config" in item.fixturenames:  # type: ignore[attr-defined]
-            item.add_marker(pytest.mark.skip(reason=reason))
-
-
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
-    reason = missing_secrets_skip_reason(os.environ)
-    if reason:
-        skip_cluster_tests(items, reason)
-
-
-def pytest_report_header(config: pytest.Config) -> list[str]:
-    """Print the Kubernetes version of the test cluster at the top of the pytest output, and
-    why the tests that need it are skipped, if they are.
+def pytest_report_header(config: pytest.Config) -> str:
+    """Print the Kubernetes version of the test cluster at the top of the pytest output.
 
     The kind node image, and so the Kubernetes version, follows the kind release
-    the workflow installs, so the log shows which version the suite ran on. The reason for a
-    skip is a GitHub Actions warning, so it shows on the run's summary page.
+    the workflow installs, so the log shows which version the suite ran on.
     """
-    header = [kubernetes_server(config)]
-    reason = missing_secrets_skip_reason(os.environ)
-    if reason:
-        header.append(f"::warning title=Kind test skipped::{reason}")
-    return header
-
-
-def kubernetes_server(config: pytest.Config) -> str:
-    """The Kubernetes version of the test cluster, for the pytest header."""
     # The same sources as pytest-helm-charts' kube_config fixture: the
     # --kubeconfig option, then the KUBECONFIG environment variable.
     kube_config = config.getoption("kubeconfig", default=None) or os.getenv(
@@ -207,7 +134,6 @@ class GitOpsTestConfig:
     _GITOPS_REPO_URL_ENV_VAR_NAME = "GITOPS_REPO_URL"
     _GITOPS_REPO_BRANCH_ENV_VAR_NAME = "GITOPS_REPO_BRANCH"
     _FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
-    _GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME
     _FLUX_APP_VERSION = "GITOPS_FLUX_APP_VERSION"
     _IGNORED_OBJECTS = "GITOPS_IGNORED_OBJECTS"
 
@@ -219,14 +145,7 @@ class GitOpsTestConfig:
             namespaces = ["default"]
         self.init_namespaces = namespaces
 
-        self.master_private_key = os.environ[self._GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME]
-        if not self.master_private_key:
-            logger.error(
-                f"In order to bootstrap the repository, armor-encoded master private GPG key for the gitops"
-                f" repo has to be set in '{self._GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' environment variable"
-                f" (base64 encoded)."
-            )
-            raise Exception("master gpg key missing")
+        self.master_private_key = ci_context.master_gpg_key(os.environ)
 
         self.gitops_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
         if not validators.url(self.gitops_repo_url):
