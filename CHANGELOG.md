@@ -65,7 +65,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The `hello-world` App Template in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
+- The `hello-world` base in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
   install into their own namespace in the workload cluster, `hello-world` and `cert-manager`, with Helm storage in
   the same namespace. They used `org-${organization}`, which created an organisation namespace in the workload
   cluster. The `HelmRelease`s stay in the organisation namespace on the management cluster.
@@ -79,7 +79,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - The cert-manager CRDs, and with them the `Certificate`s and `ClusterIssuer`s, survive the uninstall only because
     `cert-manager-app` keeps its CRDs by default (`cert-manager.crds.keep: true`). With `keep` off, or for a chart
     whose CRDs don't have the `helm.sh/resource-policy: keep` annotation, the uninstall deletes the CRDs and every
-    resource of them.
+    resource of those kinds.
   - cert-manager reads the Secrets of `ClusterIssuer`s from its own namespace (`--cluster-resource-namespace`). Before
     you upgrade, copy the ACME account key, and any CA key pairs or credentials you created yourself, from
     `org-<organisation>` to `cert-manager` in the workload cluster. Otherwise the `ClusterIssuer`s aren't ready and

@@ -13,22 +13,18 @@ spec:
   install:
     # the target namespace does not exist in a new workload cluster
     createNamespace: true
-    # cert-manager-app names its CRDs, ClusterRoles and webhook configurations the same
-    # whatever the release. Without this, Helm would take over those of a cert-manager-app
-    # already in the cluster, such as Giant Swarm's default cert-manager app; with it, the
-    # install fails with "exists and cannot be imported into the current release"
-    disableTakeOwnership: true
     remediation:
       remediateLastFailure: false
       retries: 10
   interval: 5m
+  # Don't use this HelmRelease on a cluster where cert-manager is already managed
+  # elsewhere, for example installed by the default apps of the Giant Swarm release.
+  # Configure that installation instead, so only one controller reconciles the chart.
   releaseName: cert-manager
   storageNamespace: cert-manager
   targetNamespace: cert-manager
   timeout: 10m
   upgrade:
-    # see install.disableTakeOwnership
-    disableTakeOwnership: true
     remediation:
       remediateLastFailure: true
       retries: 10
