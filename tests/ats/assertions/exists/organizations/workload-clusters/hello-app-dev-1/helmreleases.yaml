@@ -199,6 +199,8 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
