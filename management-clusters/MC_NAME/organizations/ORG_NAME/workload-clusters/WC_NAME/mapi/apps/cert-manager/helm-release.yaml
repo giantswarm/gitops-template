@@ -3,12 +3,12 @@ kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/cluster: ${cluster_name}
-  name: ${cluster_name}-cert-manager
+  name: ${cluster_name}-cert-manager-standalone
   namespace: org-${organization}
 spec:
   chartRef:
     kind: OCIRepository
-    name: ${cluster_name}-cert-manager
+    name: ${cluster_name}-cert-manager-standalone
     namespace: org-${organization}
   install:
     # the target namespace does not exist in a new workload cluster
@@ -18,23 +18,28 @@ spec:
       retries: 10
   interval: 5m
   releaseName: cert-manager
-  storageNamespace: org-${organization}
-  targetNamespace: org-${organization}
+  storageNamespace: cert-manager
+  targetNamespace: cert-manager
   timeout: 10m
   upgrade:
     remediation:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  values:
+    cert-manager:
+      crds:
+        # CRDs installed by the release
+        enabled: false
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: ${cluster_name}-cert-manager-user-values
+      name: ${cluster_name}-cert-manager-standalone-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: ${cluster_name}-cert-manager-user-secrets
+      name: ${cluster_name}-cert-manager-standalone-user-secrets
       optional: true
       valuesKey: values

@@ -37,8 +37,8 @@ spec:
     secretRef:
       name: ${cluster_name}-kubeconfig
   releaseName: hello-world
-  storageNamespace: org-${organization}
-  targetNamespace: org-${organization}
+  storageNamespace: hello-world
+  targetNamespace: hello-world
   timeout: 10m
   upgrade:
     remediation:
