@@ -6,7 +6,7 @@ metadata:
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
-  name: capi-wc-name-cert-manager
+  name: capi-wc-name-cert-manager-standalone
   namespace: org-org-name
 spec:
   interval: 10m

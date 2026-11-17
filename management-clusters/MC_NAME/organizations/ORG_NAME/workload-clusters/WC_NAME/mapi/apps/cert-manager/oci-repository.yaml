@@ -3,7 +3,7 @@ kind: OCIRepository
 metadata:
   labels:
     giantswarm.io/cluster: ${cluster_name}
-  name: ${cluster_name}-cert-manager
+  name: ${cluster_name}-cert-manager-standalone
   namespace: org-${organization}
 spec:
   interval: 10m
