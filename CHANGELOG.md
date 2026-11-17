@@ -68,9 +68,23 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `hello-world` App Template in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
   install into their own namespace in the workload cluster, `hello-world` and `cert-manager`, with Helm storage in
   the same namespace. They used `org-${organization}`, which created an organisation namespace in the workload
-  cluster. The `HelmRelease`s stay in the organisation namespace on the management cluster. Flux uninstalls a release
-  whose target or storage namespace changes and installs it again in the new namespace.
+  cluster. The `HelmRelease`s stay in the organisation namespace on the management cluster.
   ([#207](https://github.com/giantswarm/gitops-template/issues/207))
+  If you upgrade a cluster that runs one of these apps:
+  - Flux uninstalls a release whose target or storage namespace changes and installs it again in the new namespace,
+    in separate reconciliations. Until the new install is ready, the app isn't running: `hello-world` has no Service
+    or `HTTPRoute`, and cert-manager has no controller or webhook, so changes to `Certificate`s fail.
+  - The cert-manager CRDs, and with them the `Certificate`s and `ClusterIssuer`s, survive the uninstall only because
+    `cert-manager-app` keeps its CRDs by default (`cert-manager.crds.keep: true`). With `keep` off, or for a chart
+    whose CRDs don't have the `helm.sh/resource-policy: keep` annotation, the uninstall deletes the CRDs and every
+    resource of them.
+  - cert-manager reads the Secrets of `ClusterIssuer`s from its own namespace (`--cluster-resource-namespace`). Before
+    you upgrade, copy the ACME account keys, DNS01 credentials and CA key pairs from `org-<organisation>` to
+    `cert-manager` in the workload cluster, or set `cert-manager.clusterResourceNamespace` to the old namespace.
+    Otherwise the `ClusterIssuer`s aren't ready and renewals fail, and a missing ACME account key registers a new
+    account.
+  - The `org-<organisation>` namespace in the workload cluster isn't part of the release, so nothing deletes it.
+    Delete it once it holds nothing you need.
 - Each example workload cluster with encrypted files has its own SOPS key and its own `.sops.yaml` rule for its
   `mapi/` directory, as `kubectl gs gitops add encryption --workload-cluster <WC> --target mapi/` creates, instead of
   one rule for every workload cluster. The examples reuse the existing demo keys rather than the tool's per-cluster

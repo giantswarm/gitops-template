@@ -18,6 +18,10 @@ spec:
       retries: 10
   interval: 5m
   releaseName: cert-manager
+  # cert-manager-app names its CRDs, ClusterRoles and webhook configurations the same
+  # whatever the release, so the install fails ("exists and cannot be imported") on a
+  # cluster where cert-manager-app is already installed, such as Giant Swarm's default
+  # cert-manager app
   storageNamespace: cert-manager
   targetNamespace: cert-manager
   timeout: 10m
