@@ -17,7 +17,7 @@ spec:
       organization: "org-name"  # TODO: change 'org-name' to your organization name
       # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
       release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
-  prune: false
+  prune: true
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository

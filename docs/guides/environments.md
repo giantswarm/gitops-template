@@ -464,7 +464,7 @@ spec:
       cluster_description: "description"
       cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
       organization: "${ORG_NAME}"
-  prune: false
+  prune: true
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
@@ -481,19 +481,12 @@ yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"
 
 > **Note**
 >
-> In this example, we specifically set the `prune` value to `false`.
->
-> This is to ensure that in the event of accidental deletion or modification of
-> the Kustomiation resource, clusters are not automatically deleted as part of
-> the cleanup action carried out by Flux.
->
-> It is recommended, and considered good practice that this remains `false`
-> until such time that a cluster is specifically being deleted.
->
-> In this instance, two commits should be made.
->
-> 1. To explicitly set `prune: true` along with a commit message detailing why.
-> 1. To delete the Kustomization controlling this cluster.
+> With `prune: true`, Flux deletes what you delete from the cluster's files, and
+> everything the `Kustomization` applied when the `Kustomization` itself goes. It
+> doesn't delete the cluster: the cluster's `HelmRelease`, from the CAPA cluster
+> base, has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. To
+> delete the cluster, delete its `HelmRelease` by hand, see
+> [How it works](../how-it-works.md).
 
 In our example we create one instance from each cluster environment base:
 

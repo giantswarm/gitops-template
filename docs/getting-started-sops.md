@@ -71,6 +71,12 @@ repository, and a `Kustomization` that tells it which directory to apply.
 > yq '.data[]' ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml | base64 -d | gpg --import
 > ```
 >
+> The `Kustomization` it writes has `prune: false`. Set `prune: true`, as in step 2:
+>
+> ```sh
+> yq -i '.spec.prune = true' ${MC_DIR}/${MC_NAME}.yaml
+> ```
+>
 > Then set `KEY_FP` as in step 4, and continue with step 7.
 
 1. Create the management cluster's directory:
@@ -95,7 +101,7 @@ repository, and a `Kustomization` that tells it which directory to apply.
           name: sops-gpg-master
       interval: 1m
       path: ./management-clusters/${MC_NAME}
-      prune: false
+      prune: true
       serviceAccountName: automation
       sourceRef:
         kind: GitRepository
@@ -259,10 +265,16 @@ An organization groups clusters and owns the `org-${ORG_NAME}` namespace they li
 exists, these steps bring it under GitOps.
 
 > **Shortcut:** [`kubectl gs gitops add organization`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-org/)
-> creates the same files:
+> creates the same files, but without the annotation of the `Organization` below:
 >
 > ```sh
 > kubectl gs gitops add organization --name ${ORG_NAME} --management-cluster ${MC_NAME}
+> ```
+>
+> Add it:
+>
+> ```sh
+> yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${ORG_DIR}/${ORG_NAME}.yaml
 > ```
 
 First, create the organization's directory:
@@ -271,13 +283,16 @@ First, create the organization's directory:
 mkdir -p ${ORG_DIR}/workload-clusters
 ```
 
-Create the `Organization`:
+Create the `Organization`. Deleting it deletes the `org-${ORG_NAME}` namespace, with every cluster in it, so the
+annotation keeps Flux from deleting it when its file is deleted:
 
 ```sh
 cat <<EOF > ${ORG_DIR}/${ORG_NAME}.yaml
 apiVersion: security.giantswarm.io/v1alpha1
 kind: Organization
 metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   name: ${ORG_NAME}
 spec: {}
 EOF
@@ -329,6 +344,12 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 > ```sh
 > yq -i '.components = ["../../../../../../../../bases/environments/regions/" + strenv(REGION)]' \
 >   ${WC_DIR}/mapi/cluster/kustomization.yaml
+> ```
+>
+> The cluster's `Kustomization` it writes has `prune: false`. Set `prune: true`, as below:
+>
+> ```sh
+> yq -i '.spec.prune = true' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
 > ```
 >
 > Then commit and push, as in the last step below.
@@ -396,8 +417,9 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     EOF
     ```
 
-1. Create the cluster's `Kustomization`. Note that `prune: false` keeps Flux from deleting the cluster if the file is
-   removed by mistake:
+1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files.
+   It never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
@@ -415,7 +437,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
           cluster_name: "${WC_NAME}"
           organization: "${ORG_NAME}"
           release: "${RELEASE_VERSION}"
-      prune: false
+      prune: true
       serviceAccountName: automation
       sourceRef:
         kind: GitRepository
@@ -649,25 +671,13 @@ example, `semver: 3.2.x` installs every new patch version.
 
 ## 6. Delete the cluster (optional)
 
-Skip this step to keep the cluster. Deleting it takes two pushes, so that a mistake can't remove a cluster:
+Skip this step to keep the cluster. When you delete the cluster's files, Flux deletes its `Kustomization`, its apps and
+its configuration, but not the cluster: its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled`
+annotation, so Flux keeps it. You delete it by hand at the end. See [How it works](./how-it-works.md).
 
-1. Allow the cluster's `Kustomization` to delete what it created:
-
-    ```sh
-    yq -i '.spec.prune = true' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
-    ```
-
-    Commit and push:
-
-    ```sh
-    git commit -am "Allow deletion of ${WC_NAME}" && git push
-    ```
-
-1. Wait until the cluster's `Kustomization` shows the new revision:
-
-    ```sh
-    flux get kustomizations ${MC_NAME}-clusters-${WC_NAME} -n default
-    ```
+> **Warning:** `kubectl gs` doesn't write the annotation yet. The `Organization` that `kubectl gs gitops add
+> organization` writes doesn't have it, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add base`
+> writes. Add it by hand before you rely on Flux to keep them when their files are deleted.
 
 1. Remove the cluster from the organization's list:
 
@@ -687,14 +697,18 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
     ```
 
-    Finally, delete the cluster's `Kustomization`. Flux then deletes the cluster and its apps:
+    Flux deletes the cluster's `Kustomization`, which deletes the cluster's apps and configuration first. Wait until
+    it's gone:
 
     ```sh
-    kubectl delete kustomization ${MC_NAME}-clusters-${WC_NAME} -n default
+    kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME} -n default --timeout=10m
     ```
 
-    Note that you delete it by hand because the management cluster's `Kustomization` has `prune: false`. It doesn't
-    delete the cluster's `Kustomization` by itself.
+1. Finally, delete the cluster's `HelmRelease`. This deletes the cluster:
+
+    ```sh
+    kubectl delete helmrelease ${WC_NAME} -n org-${ORG_NAME}
+    ```
 
 ## Next steps
 

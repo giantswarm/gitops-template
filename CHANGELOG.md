@@ -92,6 +92,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     renewals fail, and a missing ACME account key registers a new account.
   - The `org-<organisation>` namespace in the workload cluster isn't part of the release, so nothing deletes it.
     Delete it once it holds nothing you need.
+- Every Flux `Kustomization` has `prune: true`, so deleting a file from Git deletes what it created, such as an app.
+  The objects whose deletion would delete a cluster, the cluster `HelmRelease` in
+  `bases/clusters/capa/template` and the `Organization`, have the
+  `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so Flux keeps them and they have to be deleted by hand.
+  `docs/how-it-works.md` explains what is deleted and what is kept, and the guides use `prune: true`, add the
+  annotation where `kubectl gs` doesn't yet, and delete a cluster by deleting its `HelmRelease` by hand. The kind
+  test checks both. ([#208](https://github.com/giantswarm/gitops-template/issues/208))
 - Each example workload cluster with encrypted files has its own SOPS key and its own `.sops.yaml` rule for its
   `mapi/` directory, as `kubectl gs gitops add encryption --workload-cluster <WC> --target mapi/` creates, instead of
   one rule for every workload cluster. The examples reuse the existing demo keys rather than the tool's per-cluster

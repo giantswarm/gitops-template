@@ -28,6 +28,10 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  annotations:
+    # Deleting this HelmRelease deletes the cluster. Flux doesn't delete it when
+    # its file is deleted from Git; delete it by hand to delete the cluster.
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: ${cluster_name}
   name: ${cluster_name}

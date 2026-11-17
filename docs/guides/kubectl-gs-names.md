@@ -109,9 +109,10 @@ Nothing changes in the clusters: Flux applies the same resources from the new fi
     Rename what it finds by hand, for example the `WC_NAME-user-config` ConfigMaps in `tests/ats/assertions` if your
     repository runs the [CI validation](./ci-validation.md).
 
-Flux creates the new ConfigMap and points the cluster's `HelmRelease` at it. The merged values stay the same. The
-workload cluster `Kustomization`s have `prune: false`, so the old `-user-config` ConfigMap stays on the management
-cluster. Delete it once the cluster's `HelmRelease` is `Ready` again:
+Flux creates the new ConfigMap and points the cluster's `HelmRelease` at it. The merged values stay the same. If the
+workload cluster `Kustomization`s have `prune: true`, as in this template, Flux deletes the old `-user-config` ConfigMap
+too. If they have `prune: false`, as in earlier versions, it stays on the management cluster. Delete it once the
+cluster's `HelmRelease` is `Ready` again:
 
 ```sh
 kubectl delete configmap WC_NAME-user-config -n org-ORG_NAME
@@ -119,11 +120,14 @@ kubectl delete configmap WC_NAME-user-config -n org-ORG_NAME
 
 ## Rename the workload cluster Kustomizations (optional)
 
-Renaming a Flux `Kustomization` creates a new one and leaves the old one behind, because the management cluster's
-`Kustomization` has `prune: false`. Both apply the same resources until you delete the old one.
+Renaming a Flux `Kustomization` creates a new one. If the management cluster's `Kustomization` has `prune: true`, as
+in this template, Flux deletes the old one. If it has `prune: false`, as in earlier versions, the old one stays, and
+both apply the same resources until you delete it.
 
 > **Warning:** check that the old workload cluster `Kustomization` has `prune: false` before you go on. Deleting a
-> `Kustomization` with `prune: true` deletes everything it applied, the cluster included.
+> `Kustomization` with `prune: true` deletes what it applied, such as the cluster's apps, before the new one takes it
+> over. The cluster's `HelmRelease` stays only if it has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation,
+> see [How it works](../how-it-works.md).
 
 1. Check the `prune` setting of the old `Kustomization`:
 
@@ -139,11 +143,14 @@ Renaming a Flux `Kustomization` creates a new one and leaves the old one behind,
    `.github/workflows/validate.yaml` and in the `kustomize.toolkit.fluxcd.io/name` labels of `tests/ats/assertions`
    too.
 
-1. After you merge and Flux has created the new `Kustomization`, delete the old one:
+1. After you merge, Flux creates the new `Kustomization`. If the management cluster's `Kustomization` has
+   `prune: false`, delete the old one by hand:
 
     ```sh
     kubectl delete kustomization clusters-WC_NAME -n default
     ```
+
+1. If you set `prune: false` in the first step, set `prune: true` again in the renamed file, and push.
 
 ## Align the CAPA cluster base (optional)
 
