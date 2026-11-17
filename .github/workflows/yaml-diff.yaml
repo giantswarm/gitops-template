@@ -8,5 +8,22 @@ permissions:
   pull-requests: write
 
 jobs:
+  # The diff is only ever posted as a pull request comment. A pull request from
+  # a fork gets a read-only token, so the comment can't be posted: the job runs
+  # only for pull requests from a branch of this repository.
   yaml-diff:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@ea1fd69471b840a8f3eb85bf5c8b58a416f111ea # main
+
+  # Says why the diff comment is missing on a pull request from a fork.
+  skipped-for-fork:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Say why there is no YAML diff comment
+        run: >-
+          echo "::notice title=YAML diff skipped::This pull request comes from a fork,
+          and GitHub gives pull requests from forks a read-only token, so the YAML
+          source diff can't be posted as a comment. The changed files are in the
+          pull request's Files changed tab."

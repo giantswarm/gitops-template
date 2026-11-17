@@ -51,4 +51,6 @@ jobs:
       # cluster for it. Set explicitly, as the shared workflow's default names an object.
       gitops_ignored_objects: ""
     secrets:
+      # Empty in a fork that hasn't added it, and on a pull request from a
+      # fork. tests/ats then skips the tests that need the kind cluster.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

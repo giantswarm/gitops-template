@@ -36,6 +36,11 @@ checks `main` as it is after a merge, which no pull request run has tested when 
 other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
 `on.push.branches`.
 
+A pull request from a fork gets a read-only token, so no workflow can comment on it. `yaml-diff.yaml` skips its diff
+comment there and leaves a notice on the run saying why. The shared workflow behind `validate.yaml` doesn't skip its
+comments yet: on such a pull request, its `validate` job fails at the comment step after the validation itself has
+run, and the jobs after it don't run.
+
 ## `test-on-kind` validation step - additional information
 
 This validation step offers some broader possibilities for validation, but also requires extra configuration.
@@ -141,6 +146,9 @@ This build step requires additional configuration using the following environmen
   a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
   and `-----END...` header and footer) for your `sops` configuration. It is recommended
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
+  In a fork without this secret, and for a pull request from a fork, which GitHub never passes secrets to, the test
+  skips every test that needs the cluster and says so in a warning on the run; the checks that need no cluster still
+  run. Anywhere else, an empty key fails the test.
 
 ### The workload cluster of the `out-of-band-no-flux` example
 

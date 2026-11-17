@@ -1,6 +1,8 @@
 """Checks of the assertion comparison, the HelmRelease checks and the test configuration;
 they need no cluster."""
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -850,3 +852,125 @@ def test_vcluster_kubeconfig_secret_names_the_secret_on_timeout(
     ):
         conftest.vcluster_kubeconfig_secret(None, 3)  # type: ignore[arg-type]
     assert len(fake_secret.lookups) == 3
+
+
+# Forks: the kind test needs the GITOPS_MASTER_GPG_KEY secret, which a fork doesn't have.
+
+
+def write_event(tmp_path: Path, event: dict) -> str:
+    path = tmp_path / "event.json"
+    path.write_text(json.dumps(event))
+    return str(path)
+
+
+FORK_REPO = {"full_name": "someone/gitops", "fork": True}
+UPSTREAM_REPO = {"full_name": "giantswarm/gitops-template", "fork": False}
+
+
+@pytest.mark.parametrize(
+    "event, expected",
+    [
+        # a push or a pull request in a fork of the template
+        ({"repository": FORK_REPO}, True),
+        (
+            {"repository": FORK_REPO, "pull_request": {"head": {"repo": FORK_REPO}}},
+            True,
+        ),
+        # a pull request from a fork into the repository it was forked from
+        (
+            {
+                "repository": UPSTREAM_REPO,
+                "pull_request": {"head": {"repo": FORK_REPO}},
+            },
+            True,
+        ),
+        # a pull request from a fork that has been deleted since
+        ({"repository": UPSTREAM_REPO, "pull_request": {"head": {"repo": None}}}, True),
+        # a pull request or a push in a repository that isn't a fork
+        (
+            {
+                "repository": UPSTREAM_REPO,
+                "pull_request": {"head": {"repo": UPSTREAM_REPO}},
+            },
+            False,
+        ),
+        ({"repository": UPSTREAM_REPO}, False),
+    ],
+)
+def test_running_in_fork(tmp_path: Path, event: dict, expected: bool) -> None:
+    assert conftest.running_in_fork(write_event(tmp_path, event)) is expected
+
+
+def test_running_in_fork_without_an_event(tmp_path: Path) -> None:
+    # Outside GitHub Actions, or with an event file that can't be read, it isn't a fork, so a
+    #  missing key still fails the test.
+    assert conftest.running_in_fork(None) is False
+    assert conftest.running_in_fork(str(tmp_path / "missing.json")) is False
+
+
+def test_skip_reason_in_a_fork_without_the_key(tmp_path: Path) -> None:
+    event = write_event(tmp_path, {"repository": FORK_REPO})
+    for env in (
+        {"GITHUB_EVENT_PATH": event, "GITOPS_MASTER_GPG_KEY": ""},
+        {"GITHUB_EVENT_PATH": event},
+    ):
+        reason = conftest.missing_secrets_skip_reason(env)
+        assert reason is not None
+        assert "GITOPS_MASTER_GPG_KEY" in reason
+        assert "fork" in reason
+
+
+def test_no_skip_reason_with_the_key(tmp_path: Path) -> None:
+    event = write_event(tmp_path, {"repository": FORK_REPO})
+    env = {"GITHUB_EVENT_PATH": event, "GITOPS_MASTER_GPG_KEY": "a2V5"}
+    assert conftest.missing_secrets_skip_reason(env) is None
+
+
+def test_no_skip_reason_outside_a_fork(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Outside a fork, a missing key is a broken setup: the test fails, as before.
+    event = write_event(tmp_path, {"repository": UPSTREAM_REPO})
+    env = {"GITHUB_EVENT_PATH": event, "GITOPS_MASTER_GPG_KEY": ""}
+    assert conftest.missing_secrets_skip_reason(env) is None
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    with pytest.raises(Exception, match="master gpg key missing"):
+        conftest.GitOpsTestConfig()
+
+
+class FakeItem:
+    def __init__(self, fixturenames: list[str]) -> None:
+        self.fixturenames = fixturenames
+        self.markers: list[pytest.MarkDecorator] = []
+
+    def add_marker(self, marker: pytest.MarkDecorator) -> None:
+        self.markers.append(marker)
+
+
+def test_skip_cluster_tests() -> None:
+    # Only the tests that need the test configuration, and so the cluster and the key, are
+    #  skipped; the checks that need no cluster still run.
+    cluster_test = FakeItem(["kube_cluster", "gitops_test_config", "request"])
+    unit_test = FakeItem(["monkeypatch", "request"])
+    conftest.skip_cluster_tests([cluster_test, unit_test], "no key")  # type: ignore[list-item]
+    assert [(m.name, m.kwargs["reason"]) for m in cluster_test.markers] == [
+        ("skip", "no key")
+    ]
+    assert unit_test.markers == []
+
+
+def test_report_header_warns_about_the_skip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The reason shows as a warning annotation on the run, not only in the pytest output.
+    monkeypatch.setenv(
+        "GITHUB_EVENT_PATH", write_event(tmp_path, {"repository": FORK_REPO})
+    )
+    monkeypatch.setenv("GITOPS_MASTER_GPG_KEY", "")
+    monkeypatch.delenv("KUBECONFIG", raising=False)
+    config = SimpleNamespace(getoption=lambda name, default=None: None)
+    header = conftest.pytest_report_header(config)  # type: ignore[arg-type]
+    warnings = [line for line in header if line.startswith("::warning ")]
+    assert len(warnings) == 1
+    assert "GITOPS_MASTER_GPG_KEY" in warnings[0]
