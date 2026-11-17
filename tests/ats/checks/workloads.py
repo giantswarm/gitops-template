@@ -4,8 +4,8 @@ import time
 
 import pykube
 
+from checks import waits
 from checks.conditions import condition_true, obj_key
-from checks.waits import POLL_INTERVAL_SEC
 
 # workloads in the workload cluster, once their HelmReleases are ready
 WORKLOADS_AVAILABLE_TIMEOUT_SEC = 120
@@ -52,4 +52,4 @@ def unavailable_deployments(
         ]
         if not unavailable or time.time() >= deadline:
             return unavailable
-        time.sleep(POLL_INTERVAL_SEC)
+        time.sleep(waits.POLL_INTERVAL_SEC)
