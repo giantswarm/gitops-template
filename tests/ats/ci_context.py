@@ -1,10 +1,12 @@
-"""The kind test's master GPG key, and where the test runs: a pytest plugin that skips the
-tests that need the cluster in a fork without the GITOPS_MASTER_GPG_KEY secret.
+"""The kind test's master GPG key, and a pytest plugin that skips the tests that need the
+cluster on a pull request from a fork, which GitHub gives none of the repository's secrets.
 
-A fork has none of the repository's secrets until its owner adds them, and GitHub never gives
-a pull request from a fork the secrets of the repository it targets. Without the key, Flux
-can't decrypt the SOPS secrets, so the tests that need the cluster can't pass. Anywhere else,
-a missing key is a broken setup, and `master_gpg_key` fails the tests.
+Without the GITOPS_MASTER_GPG_KEY secret, Flux can't decrypt the SOPS secrets, so the tests
+that need the cluster can't pass. Anywhere else, including the runs in a fork itself, a missing
+key is a broken setup, and `master_gpg_key` fails the tests.
+
+The module has no asserts to rewrite, and conftest.py imports it before pytest loads it as a
+plugin: PYTEST_DONT_REWRITE.
 """
 
 import json
@@ -18,6 +20,8 @@ import pytest
 GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
 # The fixture every test that needs the cluster, and so the key, depends on.
 CLUSTER_TEST_FIXTURE = "gitops_test_config"
+# Why the tests that need the cluster are skipped in this session, or None.
+SKIP_REASON = pytest.StashKey[str | None]()
 
 logger = logging.getLogger(__name__)
 
@@ -55,31 +59,33 @@ def read_event(event_path: str | None) -> dict:
     return event if isinstance(event, dict) else {}
 
 
-def running_in_fork(event_path: str | None) -> bool:
-    """Whether the GitHub Actions run is in a fork, or for a pull request from one."""
-    event = read_event(event_path)
-    if (event.get("repository") or {}).get("fork"):
-        return True
+def pull_request_from_fork(event: dict) -> bool:
+    """Whether the `pull_request` event payload `event` is of a pull request from a repository
+    other than the one it targets, a fork."""
     pull_request = event.get("pull_request")
     if not pull_request:
         return False
     # The head repository is null when the fork was deleted after the pull request was opened.
     head_repo = (pull_request.get("head") or {}).get("repo")
-    return head_repo is None or bool(head_repo.get("fork"))
+    base_repo = event.get("repository") or {}
+    return head_repo is None or head_repo.get("full_name") != base_repo.get("full_name")
 
 
 def missing_secrets_skip_reason(environ: Mapping[str, str]) -> str | None:
-    """The reason to skip the tests that need the cluster, or None to run them."""
+    """The reason to skip the tests that need the cluster, or None to run them: only a
+    `pull_request` run from a fork without the key skips them."""
     if environ.get(GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME):
         return None
-    if not running_in_fork(environ.get("GITHUB_EVENT_PATH")):
+    if environ.get("GITHUB_EVENT_NAME") != "pull_request":
+        return None
+    if not pull_request_from_fork(read_event(environ.get("GITHUB_EVENT_PATH"))):
         return None
     return (
-        "The kind test is skipped: this run is in a fork, or for a pull request from one, and"
-        f" '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' is empty, so Flux can't decrypt"
-        " the SOPS secrets. GitHub doesn't pass secrets to pull requests from forks. To run it"
-        " in your fork, add your master GPG key as its repository secret"
-        f" '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' (see docs/guides/ci-validation.md)."
+        "The kind test is skipped: this pull request comes from a fork, and GitHub gives pull"
+        " requests from forks none of the repository's secrets, so"
+        f" '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' is empty and Flux can't decrypt the SOPS"
+        " secrets. The checks that need no cluster still run. The kind test runs on pull"
+        " requests from a branch of the repository itself (see docs/guides/ci-validation.md)."
     )
 
 
@@ -90,15 +96,21 @@ def skip_cluster_tests(items: list[pytest.Item], reason: str) -> None:
             item.add_marker(pytest.mark.skip(reason=reason))
 
 
-# pytest passes a hook only the arguments it names.
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    reason = missing_secrets_skip_reason(os.environ)
+def pytest_configure(config: pytest.Config) -> None:
+    """Decide once per session, so the header and the skips can't disagree."""
+    config.stash[SKIP_REASON] = missing_secrets_skip_reason(os.environ)
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    reason = config.stash[SKIP_REASON]
     if reason:
         skip_cluster_tests(items, reason)
 
 
-def pytest_report_header() -> list[str]:
+def pytest_report_header(config: pytest.Config) -> list[str]:
     """Say why the tests that need the cluster are skipped, if they are, as a GitHub Actions
     warning, so it shows on the run's summary page too."""
-    reason = missing_secrets_skip_reason(os.environ)
+    reason = config.stash[SKIP_REASON]
     return [f"::warning title=Kind test skipped::{reason}"] if reason else []

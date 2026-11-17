@@ -20,9 +20,9 @@ from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.utils import wait_for_objects_condition
 
-import ci_context
+from ci_context import master_gpg_key
 
-# Its hooks skip the tests that need the cluster in a fork without the GPG key.
+# Its hooks skip the tests that need the cluster on a pull request from a fork.
 pytest_plugins = ["ci_context"]
 
 FLUX_GIT_REPO_NAME = "your-repo"
@@ -145,7 +145,7 @@ class GitOpsTestConfig:
             namespaces = ["default"]
         self.init_namespaces = namespaces
 
-        self.master_private_key = ci_context.master_gpg_key(os.environ)
+        self.master_private_key = master_gpg_key(os.environ)
 
         self.gitops_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
         if not validators.url(self.gitops_repo_url):

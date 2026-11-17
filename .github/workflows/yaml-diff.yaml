@@ -11,6 +11,8 @@ jobs:
   # The diff is only ever posted as a pull request comment. A pull request from
   # a fork gets a read-only token, so the comment can't be posted: the job runs
   # only for pull requests from a branch of this repository.
+  # Temporary: remove this check and the skipped-for-fork job once the shared
+  # workflow skips the comment itself (the github-workflows issue).
   yaml-diff:
     if: github.event.pull_request.head.repo.full_name == github.repository
     uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@ea1fd69471b840a8f3eb85bf5c8b58a416f111ea # main
