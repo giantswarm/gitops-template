@@ -103,11 +103,12 @@ in cluster. Strings are compared as text, so a ConfigMap's `values` has to match
 is ignored: whether the assertion writes a block as `|` or `|-`, or a line ends in a space, doesn't matter.
 
 A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its `HelmRelease`, so no single assertion
-shows them. `tests/ats/test_node_pools.py` merges each example cluster's values from its assertion files the way
-helm-controller does, maps merged and anything else replaced, and checks the node pools in the result: a production
-cluster gets the stage's `nodepool0` and its region's extra pool, and the other clusters only their own. As the
-assertions are checked against the cluster, the result is the one the repository renders. If you add a cluster, or
-change its node pools, update `EXPECTED_NODE_POOLS` in that file.
+shows them. For every `HelmRelease` that creates a workload cluster, the test reads the `HelmRelease` and its
+ConfigMaps from the test cluster, merges the values the way helm-controller does, `spec.values` included, and compares
+the node pools with `EXPECTED_NODE_POOLS` in [node_pools.py](../../tests/ats/node_pools.py). A production cluster gets
+the stage's `nodepool0` and its region's extra pool. Dev and staging have no pools of their own and get the chart's
+defaults. The test fails for a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or
+change its node pools, update that table.
 
 ### Versions
 

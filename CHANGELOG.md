@@ -7,9 +7,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `tests/ats/test_node_pools.py` merges the `valuesFrom` of each example cluster's `HelmRelease` the way
-  helm-controller does and checks its node pools: the production clusters get the stage's `nodepool0` and their
-  region's extra pool, the other clusters only their own. ([#206](https://github.com/giantswarm/gitops-template/issues/206))
+- The kind test checks the node pools of every workload cluster. It merges the values of each cluster's
+  `HelmRelease` as Flux applied it, `valuesFrom` and `spec.values`, the way helm-controller does, and compares the
+  node pools with `EXPECTED_NODE_POOLS` in `tests/ats/node_pools.py`: the production clusters get the stage's
+  `nodepool0` and their region's extra pool, dev and staging have no pools of their own and get the chart's defaults,
+  and the `WC_NAME` and out-of-band clusters get `workers`. ([#206](https://github.com/giantswarm/gitops-template/issues/206))
 - The kind test reconciles the `-direct` out-of-band example, which CI ignored because it targets a workload
   cluster. `tests/ats` creates a vCluster in the kind cluster as that workload cluster and puts its kubeconfig in the
   `out-of-band-no-flux-kubeconfig` Secret the `Kustomization` reads. The `Kustomization` has to get ready, and
