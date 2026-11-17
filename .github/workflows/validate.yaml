@@ -51,4 +51,9 @@ jobs:
       # cluster for it. Set explicitly, as the shared workflow's default names an object.
       gitops_ignored_objects: ""
     secrets:
+      # Empty on a pull request from a fork. The shared workflow requires it,
+      # so GitHub fails such a run before any job starts ("Secret
+      # GITOPS_MASTER_GPG_KEY is required, but not provided while calling").
+      # Once the shared workflow makes it optional, tests/ats skips the tests
+      # that need the kind cluster there instead.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}

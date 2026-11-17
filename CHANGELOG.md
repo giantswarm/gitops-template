@@ -357,6 +357,15 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Pull requests from forks, which GitHub gives no secrets and a read-only token, get part of the way to working CI.
+  `yaml-diff.yaml` skips its diff comment there, which it can't post, and leaves a notice saying why. `tests/ats`
+  skips the tests that need the kind cluster with a warning when `GITOPS_MASTER_GPG_KEY` is empty on such a pull
+  request, instead of failing with "master gpg key missing"; anywhere else, also in a fork's own runs, a missing key
+  still fails it. `validate.yaml` still fails on such a pull request before any job starts: the shared
+  `gitops-validate.yaml` declares the secret `required: true`, and GitHub rejects the empty value with "Secret
+  GITOPS_MASTER_GPG_KEY is required, but not provided while calling". The skip takes effect once
+  `giantswarm/github-workflows` makes the secret optional and skips its own comments on such pull requests.
+  ([#225](https://github.com/giantswarm/gitops-template/issues/225))
 - The kind test removes the vCluster's temporary `vcluster-values-*.yaml` file even when `helm uninstall` fails, for
   example on a `--wait` timeout. [docs/guides/ci-validation.md](docs/guides/ci-validation.md) now says that a local run
   has to reach kind's Docker network, so it works where Docker runs natively on the host, like the GitHub runner, and

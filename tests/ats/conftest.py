@@ -20,6 +20,11 @@ from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.utils import wait_for_objects_condition
 
+from ci_context import master_gpg_key
+
+# Its hooks skip the tests that need the cluster on a pull request from a fork.
+pytest_plugins = ["ci_context"]
+
 FLUX_GIT_REPO_NAME = "your-repo"
 
 FLUX_OBJECTS_NAMESPACE = "default"
@@ -129,7 +134,6 @@ class GitOpsTestConfig:
     _GITOPS_REPO_URL_ENV_VAR_NAME = "GITOPS_REPO_URL"
     _GITOPS_REPO_BRANCH_ENV_VAR_NAME = "GITOPS_REPO_BRANCH"
     _FLUX_INIT_NAMESPACES_ENV_VAR_NAME = "GITOPS_INIT_NAMESPACES"
-    _GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME = "GITOPS_MASTER_GPG_KEY"
     _FLUX_APP_VERSION = "GITOPS_FLUX_APP_VERSION"
     _IGNORED_OBJECTS = "GITOPS_IGNORED_OBJECTS"
 
@@ -141,14 +145,7 @@ class GitOpsTestConfig:
             namespaces = ["default"]
         self.init_namespaces = namespaces
 
-        self.master_private_key = os.environ[self._GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME]
-        if not self.master_private_key:
-            logger.error(
-                f"In order to bootstrap the repository, armor-encoded master private GPG key for the gitops"
-                f" repo has to be set in '{self._GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' environment variable"
-                f" (base64 encoded)."
-            )
-            raise Exception("master gpg key missing")
+        self.master_private_key = master_gpg_key(os.environ)
 
         self.gitops_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
         if not validators.url(self.gitops_repo_url):
