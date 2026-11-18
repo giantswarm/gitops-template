@@ -297,6 +297,26 @@ Name the cluster in `healthChecks` with its name and namespace written out, such
 `kubectl gs gitops add workload-cluster` still writes a single `WC_NAME.yaml` that applies all of `mapi`, so its apps
 don't wait for the cluster; split it as above to make them wait.
 
+### Reconcile intervals
+
+A change doesn't wait for these intervals. Flux applies a new commit as soon as the `GitRepository` has fetched it,
+installs a new chart as soon as its `OCIRepository` has, and applies a change to a values ConfigMap or Secret at once,
+as they carry the `reconcile.fluxcd.io/watch: Enabled` label. The intervals set how often Flux checks a source for
+changes, and how often it reapplies what hasn't changed, to undo drift:
+
+| Object | `interval` | `retryInterval` | Why |
+| --- | --- | --- | --- |
+| `GitRepository` | 1m | | How soon Flux sees a push. A [`Receiver`][flux-receiver] makes it immediate. |
+| Management cluster `Kustomization`, `MC_NAME.yaml` | 10m | 1m | Only undoes drift, the same as `flux bootstrap` sets. It also applies the Organizations. |
+| Workload cluster `Kustomization`s, `WC_NAME.yaml`, `WC_NAME-apps.yaml` and `-direct` | 10m | 1m | Two or three per cluster, each building and applying its whole directory. |
+| `OCIRepository` | 10m | | How soon a `semver` range picks up a new chart. |
+| `HelmRelease` | 5m | | Checks the Helm release and remediates a failed one, without building anything. |
+
+`retryInterval` retries a failed `Kustomization` after a minute instead of the next `interval`. An apps `Kustomization`
+whose cluster isn't ready yet checks again every 30 seconds whatever its interval, as `dependsOn` does.
+
+[flux-receiver]: https://fluxcd.io/flux/components/notification/receivers/
+
 ## Objects the management cluster provides
 
 Some objects the repository uses aren't in it, because the management cluster creates them. Don't add them to the

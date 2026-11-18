@@ -8,7 +8,7 @@ spec:
   # cluster is up, see WC_NAME.yaml
   dependsOn:
     - name: mc-name-clusters-capi-wc-name  # TODO: the name of WC_NAME.yaml's Kustomization
-  interval: 1m
+  interval: 10m
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi"
   postBuild:
     substitute:
@@ -18,6 +18,7 @@ spec:
       # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
       release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
   prune: true
+  retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository

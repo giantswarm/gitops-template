@@ -12,7 +12,7 @@ spec:
   # cluster is up, see WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
   dependsOn:
     - name: mc-name-clusters-out-of-band-flux-app  # TODO: the name of WC_NAME_OUT_OF_BAND_FLUX_APP.yaml's Kustomization
-  interval: 1m
+  interval: 10m
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi"
   postBuild:
     substitute:
@@ -22,6 +22,7 @@ spec:
       # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
       release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
   prune: true
+  retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository

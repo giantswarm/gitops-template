@@ -387,6 +387,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI: a new commit on a pull request cancels the `validate` run for the commit it replaces, so the kind test no
   longer runs in parallel for the same pull request. Runs for pushes to a branch are not cancelled.
   ([#229](https://github.com/giantswarm/gitops-template/issues/229))
+- The management cluster's and the workload clusters' `Kustomization`s reconcile every 10 minutes instead of every
+  minute, with a `retryInterval` of 1 minute so a failure is still retried promptly. A new commit is applied as soon
+  as the `GitRepository` fetches it, so the interval only sets how often Flux undoes drift. The guides' examples
+  match. [Reconcile intervals](docs/reference/repo-structure.md#reconcile-intervals) gives the interval of each kind
+  of Flux object and why. ([#214](https://github.com/giantswarm/gitops-template/issues/214))
 
 ### Removed
 
