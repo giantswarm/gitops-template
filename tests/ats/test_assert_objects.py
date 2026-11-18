@@ -4,29 +4,25 @@ they need no cluster."""
 from types import SimpleNamespace
 from typing import Any
 
+import conftest
 import pytest
 import pytest_helm_charts.utils
 import requests
 import yaml
-from pytest_helm_charts.flux.utils import flux_cr_ready
-
-import test_flux_objects
-import conftest
-from conftest import installation_values_config_map, parse_ignored_objects
-from test_flux_objects import (
-    Lookup,
-    assert_objects,
+from checks import assertion_files, flux_readiness, helm_releases, waits
+from checks.assertions import resource_name
+from checks.comparison import assert_objects
+from checks.conditions import is_ready, not_ready_reason, ready
+from checks.helm_release_classes import (
     classify,
     depends_on_keys,
-    deployment_available,
     helm_releases_to_wait_for,
-    is_ready,
-    not_ready_reason,
-    ready,
-    reference_problems,
-    releases_without_assertion,
-    resource_name,
 )
+from checks.helm_release_references import reference_problems
+from checks.helm_release_sources import Lookup
+from checks.workloads import deployment_available, releases_without_assertion
+from conftest import installation_values_config_map, parse_ignored_objects
+from pytest_helm_charts.flux.utils import flux_cr_ready
 
 
 class FakeObject:
@@ -503,7 +499,7 @@ def test_assertion_keys_outside_the_object_are_not_compared() -> None:
 
 
 class FakeCluster:
-    """Stands in for `list_objects` and `wait_for_ready` of test_flux_objects."""
+    """Stands in for `list_objects` and `wait_for_ready` of `checks.waits`."""
 
     def __init__(self, objects: dict[str, list[dict[str, dict]]]) -> None:
         # kind -> what each listing returns, the last one repeated
@@ -541,9 +537,9 @@ def test_check_kustomizations_waits_for_ignored_ones_too(
             ]
         }
     )
-    monkeypatch.setattr(test_flux_objects, "list_objects", cluster.list_objects)
-    monkeypatch.setattr(test_flux_objects, "wait_for_ready", cluster.wait_for_ready)
-    test_flux_objects.check_kustomizations(None)  # type: ignore[arg-type]
+    monkeypatch.setattr(waits, "list_objects", cluster.list_objects)
+    monkeypatch.setattr(waits, "wait_for_ready", cluster.wait_for_ready)
+    flux_readiness.check_kustomizations(None)  # type: ignore[arg-type]
     assert cluster.waited == [{"default/root"}, {"org/ignored"}]
 
 
@@ -552,9 +548,9 @@ def test_check_kustomizations_fails_without_any(
 ) -> None:
     # E2
     cluster = FakeCluster({})
-    monkeypatch.setattr(test_flux_objects, "list_objects", cluster.list_objects)
+    monkeypatch.setattr(waits, "list_objects", cluster.list_objects)
     with pytest.raises(pytest.fail.Exception, match="no Kustomization"):
-        test_flux_objects.check_kustomizations(None)  # type: ignore[arg-type]
+        flux_readiness.check_kustomizations(None)  # type: ignore[arg-type]
 
 
 def test_check_sources(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -568,10 +564,10 @@ def test_check_sources(monkeypatch: pytest.MonkeyPatch) -> None:
             "Bucket": [{"ns/bucket": ready_obj()}],
         }
     )
-    monkeypatch.setattr(test_flux_objects, "list_objects", cluster.list_objects)
-    monkeypatch.setattr(test_flux_objects, "SOURCES_READY_TIMEOUT_SEC", 0)
+    monkeypatch.setattr(waits, "list_objects", cluster.list_objects)
+    monkeypatch.setattr(flux_readiness, "SOURCES_READY_TIMEOUT_SEC", 0)
     with pytest.raises(pytest.fail.Exception) as failure:
-        test_flux_objects.check_sources(None, ["ns/ignored"])  # type: ignore[arg-type]
+        flux_readiness.check_sources(None, ["ns/ignored"])  # type: ignore[arg-type]
     assert str(failure.value).splitlines() == [
         "1 sources aren't ready:",
         "HelmChart 'ns/chart' isn't ready: has no conditions",
@@ -589,8 +585,8 @@ def test_check_sources_none(monkeypatch: pytest.MonkeyPatch) -> None:
     # E1. A regression guard for the refactored check: passing without sources isn't new
     #  in this PR.
     cluster = FakeCluster({})
-    monkeypatch.setattr(test_flux_objects, "list_objects", cluster.list_objects)
-    test_flux_objects.check_sources(None, [])  # type: ignore[arg-type]
+    monkeypatch.setattr(waits, "list_objects", cluster.list_objects)
+    flux_readiness.check_sources(None, [])  # type: ignore[arg-type]
 
 
 def patch_helm_releases(
@@ -599,10 +595,10 @@ def patch_helm_releases(
     cluster = FakeCluster(
         {"HelmRelease": [{f"ns/{hr['metadata']['name']}": hr for hr in hrs}]}
     )
-    monkeypatch.setattr(test_flux_objects, "list_objects", cluster.list_objects)
-    monkeypatch.setattr(test_flux_objects, "wait_for_ready", cluster.wait_for_ready)
+    monkeypatch.setattr(waits, "list_objects", cluster.list_objects)
+    monkeypatch.setattr(waits, "wait_for_ready", cluster.wait_for_ready)
     monkeypatch.setattr(
-        test_flux_objects, "cluster_lookup", lambda api: lookup_for(hrs, *objects)
+        helm_releases, "cluster_lookup", lambda api: lookup_for(hrs, *objects)
     )
     return cluster
 
@@ -617,7 +613,7 @@ def test_check_helm_releases_fails_before_waiting(
         KUBECONFIG,
     )
     with pytest.raises(pytest.fail.Exception, match="ConfigMap 'typo' doesn't exist"):
-        test_flux_objects.check_helm_releases(None, [])  # type: ignore[arg-type]
+        helm_releases.check_helm_releases(None, [])  # type: ignore[arg-type]
     assert cluster.waited == []
 
 
@@ -637,7 +633,7 @@ def test_check_helm_releases(monkeypatch: pytest.MonkeyPatch) -> None:
         KUBECONFIG,
         ("Secret", "other-kubeconfig", {"data": {"value": "eA=="}}),
     )
-    assert test_flux_objects.check_helm_releases(None, []) == {  # type: ignore[arg-type]
+    assert helm_releases.check_helm_releases(None, []) == {  # type: ignore[arg-type]
         "ns/h3a": h3a,
         "ns/h3a-other": h3a_other,
         "ns/h3a-h5": h3a_h5,
@@ -649,7 +645,7 @@ def test_check_helm_releases_none(monkeypatch: pytest.MonkeyPatch) -> None:
     # E1. A regression guard for the refactored check: passing without HelmReleases isn't
     #  new in this PR.
     cluster = patch_helm_releases(monkeypatch, [])
-    assert test_flux_objects.check_helm_releases(None, []) == {}  # type: ignore[arg-type]
+    assert helm_releases.check_helm_releases(None, []) == {}  # type: ignore[arg-type]
     assert cluster.waited == []
 
 
@@ -660,7 +656,7 @@ def test_load_assertions(tmp_path: Any) -> None:
         "# header\n---\nkind: ConfigMap\nmetadata:\n  name: a\n---\n"
     )
     (tmp_path / "notes.txt").write_text("not an assertion")
-    assertions = test_flux_objects.load_assertions(str(tmp_path))
+    assertions = assertion_files.load_assertions(str(tmp_path))
     expected = {
         str(tmp_path / "a.yaml"): [{"kind": "ConfigMap", "metadata": {"name": "a"}}]
     }
