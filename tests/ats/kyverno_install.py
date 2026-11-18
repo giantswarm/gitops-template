@@ -5,13 +5,16 @@ the repository: test_flux_objects.py requests the `kyverno` fixture before any o
 
 The charts are the ones Giant Swarm ships, from team Shield's kyverno-app and kyverno-crds, at
 the versions on the management clusters. kyverno-app leaves the CRDs to kyverno-crds, so that
-chart goes first.
+chart goes first. kyverno-app puts its PolicyExceptions in the `giantswarm` namespace, which
+every management cluster has, so the fixture creates it first.
 """
 
 from pathlib import Path
 
+import pykube
 import pytest
-from conftest import HELM_URL, run_tool
+from conftest import HELM_URL, apply, run_tool
+from pytest_helm_charts.clusters import Cluster
 
 CHARTS = "oci://gsoci.azurecr.io/charts/giantswarm"
 # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno-crds
@@ -19,6 +22,8 @@ KYVERNO_CRDS_CHART_VERSION = "1.19.2"
 # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno
 KYVERNO_CHART_VERSION = "0.26.1"
 KYVERNO_NAMESPACE = "kyverno"
+# where kyverno-app puts its PolicyExceptions
+GIANTSWARM_NAMESPACE = "giantswarm"
 KYVERNO_READY_TIMEOUT_SEC = 300
 # turns off what needs CRDs the kind cluster doesn't have; the file says which
 KYVERNO_VALUES_FILE = (
@@ -50,11 +55,21 @@ def install_chart(kube_config: str, name: str, version: str, *args: str) -> None
 
 
 @pytest.fixture(scope="module")
-def kyverno(kube_config: str) -> None:
+def kyverno(kube_cluster: Cluster, kube_config: str) -> None:
     """Install the Kyverno CRDs, then Kyverno.
 
     It isn't uninstalled: the test cluster goes away with it.
     """
+    apply(
+        pykube.Namespace(
+            kube_cluster.kube_client,
+            {
+                "apiVersion": "v1",
+                "kind": "Namespace",
+                "metadata": {"name": GIANTSWARM_NAMESPACE},
+            },
+        )
+    )
     install_chart(kube_config, "kyverno-crds", KYVERNO_CRDS_CHART_VERSION)
     install_chart(
         kube_config,
