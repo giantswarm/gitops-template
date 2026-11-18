@@ -436,9 +436,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
      the paths change. Wait until Flux has applied it.
   1. Then, in one commit, move what's in `mapi` up into the cluster's directory with `git mv`, take one `../` off each
      path out of the cluster's directory in the moved files, such as the paths to `bases`, and drop `mapi/` from the
-     `spec.path` of the cluster's `Kustomization`s and from the cluster's `.sops.yaml` rule. A cluster with a single
-     `Kustomization` gets a `kustomization.yaml` in its directory that lists `cluster/`, `apps/` and, if it has App
-     Sets, `app_sets/`. Neither kind of cluster lists `out-of-band/` there.
+     `spec.path` of the cluster's `Kustomization`s. In the cluster's `.sops.yaml` rule, replace `mapi/` with
+     `(cluster|apps|app_sets)/`, so the rule doesn't match `out-of-band`, where the cluster's key can't decrypt. A
+     cluster with a single `Kustomization` had no `mapi/kustomization.yaml`, so Flux applied every YAML file and
+     directory in `mapi`: it gets a `kustomization.yaml` in its directory that lists every one of them that exists,
+     such as `cluster/` and, if the cluster has them, `apps/` and `app_sets/`. Anything left out stops being applied
+     and, with the annotation, stays on the management cluster unmanaged. Neither kind of cluster lists `out-of-band/`
+     there.
   1. Remove the annotation in Git again once the cluster's `Kustomization`s are `Ready` at that commit. Keep it on the
      objects that carry it anyway, such as the cluster's `HelmRelease`.
 

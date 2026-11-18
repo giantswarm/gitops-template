@@ -143,7 +143,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     touch .sops.yaml
     yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
-      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/.*\\.enc\\.yaml",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/(cluster|apps|app_sets)/.*\\.enc\\.yaml",
       "pgp": "'"${KEY_FP}"'"
     }]' .sops.yaml
     ```

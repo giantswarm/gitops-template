@@ -105,7 +105,7 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/(cluster|apps|app_sets)/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/(cluster|apps|app_sets)/.*\.enc\.yaml
