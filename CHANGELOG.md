@@ -420,15 +420,16 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   automerged, so a new version reaches staging and prod only when its PR is merged. The
   [environments guide](docs/guides/environments.md#promote-a-change-from-dev-to-prod) describes the promotion.
   ([#255](https://github.com/giantswarm/gitops-template/issues/255))
-- **Breaking:** workload clusters no longer have a `mapi` directory. What was in it, `cluster`, `apps`, `app_sets` and
-  `kustomization.yaml`, moves up into the cluster's directory, next to `out-of-band`. The cluster's `Kustomization`
-  applies `WC_NAME/cluster`, and the apps `Kustomization` applies `WC_NAME` through `WC_NAME/kustomization.yaml`, which
-  lists `apps/` and `app_sets/`, never `cluster/` or `out-of-band/`. The `HELLO_APP_*` clusters keep a single
-  `Kustomization`, which applies the cluster's directory through a new `kustomization.yaml` that lists `cluster/`, so
-  an `out-of-band` directory next to it is never applied to the management cluster. The `.sops.yaml` rules of the
-  out-of-band examples match the cluster's directory. A new test pins the `spec.path` of every example cluster
-  `Kustomization`. `kubectl gs gitops add workload-cluster` still generates `mapi`, see
-  `docs/reference/repo-structure.md` for how to move what it writes.
+- **Breaking:** the structure version goes from 2 to 3: workload clusters no longer have a `mapi` directory. What
+  was in it, `cluster`, `apps`, `app_sets` and `kustomization.yaml`, moves up into the cluster's directory, next to
+  `out-of-band`. The cluster's `Kustomization` applies `WC_NAME/cluster`, and the apps `Kustomization` applies
+  `WC_NAME` through `WC_NAME/kustomization.yaml`, which lists `apps/` and `app_sets/`, never `cluster/` or
+  `out-of-band/`. The `HELLO_APP_*` clusters keep a single `Kustomization`, which applies the cluster's directory
+  through a new `kustomization.yaml` that lists `cluster/`, so an `out-of-band` directory next to it is never applied
+  to the management cluster. The `.sops.yaml` rules of the out-of-band examples and of `WC_NAME` match the cluster's
+  `cluster`, `apps` and `app_sets` directories. A new test pins the `spec.path` of every example cluster `Kustomization`.
+  `kubectl gs gitops add workload-cluster` still generates `mapi`, and `kubectl gs gitops upgrade` has no migration to
+  structure version 3: see `docs/reference/repo-structure.md` for how to move what it writes.
   ([#298](https://github.com/giantswarm/gitops-template/issues/298))
   To move a running cluster:
   1. In Git, add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation to every object under `mapi`, including

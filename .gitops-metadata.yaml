@@ -11,5 +11,5 @@
 # behind this structure.
 apiVersion: gitops.giantswarm.io/v1alpha1
 kind: RepositoryMetadata
-structureVersion: 2
+structureVersion: 3
 layers: []
