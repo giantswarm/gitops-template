@@ -22,15 +22,15 @@ To encrypt files of a workload cluster, add a key pair for it:
 - Its private key goes into the `WC_NAME.gpgkey.enc.yaml` Secret in the management cluster's `secrets` directory,
   encrypted with the master key.
 
-The `WC_NAME.yaml` Kustomization references that Secret in `spec.decryption` and uses it to decrypt what it applies,
-the `WC_NAME/mapi` directory.
+The cluster's two Kustomizations reference that Secret in `spec.decryption` and use it to decrypt what they apply:
+`WC_NAME.yaml` the `WC_NAME/mapi/cluster` directory, and `WC_NAME-apps.yaml` the rest of `WC_NAME/mapi`.
 
 ```text
                 MC_NAME.yaml
                      |
                  (creates) <---(decrypts with)--- MC_NAME.gpgkey.enc.yaml
                      |
-  OTHER_RESOURCES <--+--> WC_NAME.yaml
+  OTHER_RESOURCES <--+--> WC_NAME.yaml, WC_NAME-apps.yaml
                                |
                            (creates) <---(decrypts with)--- WC_NAME.gpgkey.enc.yaml
                                |
@@ -48,9 +48,9 @@ age key like the GPG keys:
 - Its private key goes into the `WC_NAME.agekey.enc.yaml` Secret in the management cluster's `secrets` directory,
   under a key that ends in `.agekey`, encrypted with the master key.
 
-The cluster's Kustomization names that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
-uses an age key: `WC_NAME-apps.yaml` decrypts `mapi/apps/cert-manager/secret.enc.yaml` with the
-`sops-age-wc-name` Secret. For the steps, see
+The cluster's Kustomizations name that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
+uses an age key: `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with the `sops-age-wc-name` Secret, and
+`WC_NAME-apps.yaml` decrypts `mapi/apps/cert-manager/secret.enc.yaml` with it. For the steps, see
 [Create an age key pair](../add_wc_structure.md#create-an-age-key-pair-optional-step).
 
 A Kustomization reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.

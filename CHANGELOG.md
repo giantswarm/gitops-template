@@ -84,9 +84,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - SOPS age keys for workload clusters, next to GPG keys. `docs/add_wc_structure.md` shows how to create one and
   `docs/reference/sops-keys.md` how it fits with the GPG keys, `.sops.yaml` example included. The example `WC_NAME`
   cluster has a demo age key: its public key is in `.sops.keys/.sops.WC_NAME.agekey.pub`, its private key in the
-  `sops-age-wc-name` Secret, encrypted with the master key, and `WC_NAME-apps.yaml` decrypts the cert-manager values
-  Secret with it. The kind test checks the decrypted Secret. GPG keys and the `kubectl gs` commands are unchanged.
-  ([#257](https://github.com/giantswarm/gitops-template/issues/257))
+  `sops-age-wc-name` Secret, encrypted with the master key. `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with it,
+  and `WC_NAME-apps.yaml` decrypts the cert-manager values Secret. The kind test checks the decrypted Secret. GPG
+  keys and the `kubectl gs` commands are unchanged. ([#257](https://github.com/giantswarm/gitops-template/issues/257))
 
 ### Changed
 
