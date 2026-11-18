@@ -11,7 +11,8 @@ your checks pass. Without Renovate, move the SHA yourself when you want a fix fr
 
 The workflow offers the following jobs:
 
-- `check_pre_commit`: it runs all the `pre-commit` validation checks,
+- `check_pre_commit`: it runs all the `pre-commit` validation checks, including
+  [check-kustomization-paths](#check-kustomization-paths),
 - `validate`: templates all your `Kustomizations` available in `workload_clusters` and passes the output
   through a YAML and Kubernetes objects linters to make sure that your code is valid YAML and produces final
   manifests understandable to Kubernetes. It also renders the chart of every `HelmRelease` with its merged values
@@ -26,12 +27,38 @@ The workflow offers the following jobs:
   there to verify if they are deployed fine. It checks if all the `Kustomizations` are reconciled as expected
   and additionally if all the statements present in `tests/ats/assertions` are also available in objects in the
   cluster.
-  Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster: it leaves an app set and the
-  organization out of the `GitRepository` with `spec.ignore`, then deletes the cluster's `Kustomization`. The app
-  and everything the `Kustomization` applied have to go, and the `Organization` and the cluster's `HelmRelease` have
-  to stay. It deletes what the other tests check, so it runs last and fails if they didn't run before it.
+  Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster. It leaves the organization out of
+  the `GitRepository` with `spec.ignore`, and drops an App Set from what the cluster's apps `Kustomization` builds with
+  `$patch: delete` patches in its `spec.patches`, as `app_sets/kustomization.yaml` lists the App Set and `spec.ignore`
+  can't change that list. Then it deletes the cluster's two `Kustomization`s. The App Set and everything the
+  `Kustomization`s applied have to go, and the `Organization` and the cluster's `HelmRelease` have to stay. It deletes
+  what the other tests check, so it runs last and fails if they didn't run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
+
+## check-kustomization-paths
+
+[tools/check-kustomization-paths](../../tools/check-kustomization-paths) runs as a `pre-commit` hook. For every Flux
+`Kustomization` (`kustomize.toolkit.fluxcd.io/v1`, or the older `v1beta2`) that applies this repository, outside of
+`tools/testdata`, it checks that `spec.path` exists and builds. This repository's `GitRepository` is the `sourceRef` of
+the management cluster's own `Kustomization`, the one whose path is the directory of its file, such as
+`MC_NAME.yaml`. A `Kustomization` with another source reads another repository, so it's left out. The hook builds a
+path that has a `kustomization.yaml`, `kustomization.yml` or `Kustomization` with `kustomize build`, or with
+`kubectl kustomize` if `kustomize` isn't installed. A path without one it builds the way Flux does, from the YAML files
+and the directories with a kustomization file below it, and such a path must not be empty. It fails when it finds no
+`Kustomization`, no management cluster `Kustomization` or when `yq` can't read them, rather than pass without
+checking anything. Otherwise it fails, naming the `Kustomization`, its file and its path, when:
+
+- the path doesn't exist: restore the directory, or delete the `Kustomization`, its file and its entry in the
+  `kustomization.yaml` that lists it;
+- the path is empty: delete the `Kustomization` the same way;
+- a `kustomization.yaml` lists something that's gone, for example the `app_sets/` of a cluster whose last App Set you
+  removed: remove the entry, or restore what it names.
+
+On a cluster, each of these stops Flux applying the `Kustomization` until it's fixed, and it doesn't delete what the
+`Kustomization` applied before. `tools/test-all-ff validate` checks that the hook fails on the fixture in
+`tools/testdata/gone-path`, leaving out its `Kustomization` with another source, and on a directory without any
+`Kustomization`.
 
 ## When the workflow runs
 
@@ -139,6 +166,14 @@ Cluster API controllers and no infrastructure providers such as CAPA or CAPZ, so
 A test can create one, for example a stand-in `Cluster`, and set its status itself. Use `v1beta2`, the version the
 objects are stored in: the CRDs are installed without their conversion webhook, so other versions are served without
 conversion.
+
+The test does that for every cluster whose apps wait for it, as listed in `GATES` in
+[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with `Available` `False`.
+The cluster's `Kustomization` still has to apply the base apps, while the apps `Kustomization` has to report
+`DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization` has to
+get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
+`Kustomization`s only get `Ready` once their `Cluster` is `Available`. When you add a cluster with apps, add it to
+`GATES`: a test without the cluster compares the list with the `Kustomization`s in the repository.
 
 The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 

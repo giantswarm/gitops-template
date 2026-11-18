@@ -20,3 +20,4 @@ patches:
 resources:
   - ../../../../../../../../bases/clusters/capa/template
   - cluster_userconfig.yaml
+  - apps/

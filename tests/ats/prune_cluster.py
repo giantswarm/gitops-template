@@ -1,8 +1,9 @@
-"""P3: deleting a cluster's Kustomization deletes what it applied, except the cluster.
+"""P3: deleting a cluster's Kustomizations deletes what they applied, except the cluster.
 
-When a cluster's Kustomization goes, because its file is deleted from Git or by hand as the
-getting-started guides do, Flux deletes everything it applied, except what has
-`kustomize.toolkit.fluxcd.io/prune: disabled`: the cluster's HelmRelease stays.
+When a cluster's Kustomizations go, the cluster's and the one of its secondary apps, because
+their files are deleted from Git or by hand as the getting-started guides do, Flux deletes
+everything they applied, except what has `kustomize.toolkit.fluxcd.io/prune: disabled`: the
+cluster's HelmRelease stays.
 """
 
 import pykube
@@ -11,30 +12,34 @@ from checks.conditions import obj_key
 from flux_inventory import inventory_keys
 from flux_reconcile import suspend, wait_until
 from prune_objects import (
-    CLUSTER_KUSTOMIZATION,
+    CLUSTER_KUSTOMIZATIONS,
     PRUNE_TIMEOUT_SEC,
     ROOT_KUSTOMIZATION,
 )
 from prune_source import kustomization
 
 
-def delete_cluster_kustomization(api: pykube.HTTPClient) -> set[tuple[str, str, str]]:
-    """Delete the cluster's Kustomization and wait until it's gone; return what it applied.
+def delete_cluster_kustomizations(
+    api: pykube.HTTPClient,
+) -> set[tuple[str, str, str]]:
+    """Delete the cluster's Kustomizations and wait until they're gone; return what they
+    applied.
 
-    The management cluster's Kustomization is suspended first, so it doesn't create it again.
+    The management cluster's Kustomization is suspended first, so it doesn't create them again.
     """
     suspend(kustomization(api, ROOT_KUSTOMIZATION))
-    cluster = kustomization(api, CLUSTER_KUSTOMIZATION)
-    applied = inventory_keys(cluster.obj)
-    cluster.delete()
+    kustomizations = [kustomization(api, k) for k in CLUSTER_KUSTOMIZATIONS]
+    applied = set().union(*(inventory_keys(k.obj) for k in kustomizations))
+    for k in kustomizations:
+        k.delete()
     wait_until(
-        lambda: (
-            [f"Kustomization '{obj_key(cluster.obj)}' exists"]
-            if cluster.exists()
-            else []
-        ),
+        lambda: [
+            f"Kustomization '{obj_key(k.obj)}' exists"
+            for k in kustomizations
+            if k.exists()
+        ],
         PRUNE_TIMEOUT_SEC,
-        "the cluster's Kustomization wasn't deleted",
+        "the cluster's Kustomizations weren't deleted",
     )
     return applied
 

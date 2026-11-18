@@ -4,7 +4,7 @@ metadata:
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name-apps
     kustomize.toolkit.fluxcd.io/namespace: default
   name: capi-wc-name-cert-manager-standalone
   namespace: org-org-name

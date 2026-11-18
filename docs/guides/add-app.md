@@ -19,13 +19,22 @@ points at the chart. Its values come in layers, listed in the `HelmRelease`'s `s
 the App Template defaults (only for apps created from a template), and two optional per-cluster overrides, the
 `-user-values` ConfigMap and the `-user-secrets` Secret.
 
+An app goes into one of two directories of the cluster. A base app, one the cluster needs from the start, goes into
+`mapi/cluster/apps` and installs with the cluster: the cluster's Kustomization, `WC_NAME.yaml`, applies it. A
+secondary app goes into `mapi/apps`, which the cluster's apps Kustomization, `WC_NAME-apps.yaml`, applies once the
+cluster is ready, because its `dependsOn` waits for the cluster's Kustomization. The steps below add a secondary app;
+for a base app, use `mapi/cluster/apps` and list it in its `kustomization.yaml`. See
+[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) to split a cluster that has a single
+Kustomization for all of `mapi`.
+
 ## Examples
 
 Examples of creating apps are available in following locations:
 
 - An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world/)
 - An example of an app created from an App Template, with plain and SOPS-encrypted (`secret.enc.yaml`) overrides, is
-  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/envoy-gateway-from-template/).
+  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/cluster/apps/envoy-gateway-from-template/).
+  It's a base app.
 
 ## Common steps
 

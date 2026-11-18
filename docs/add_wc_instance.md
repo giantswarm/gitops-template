@@ -179,6 +179,32 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     Note that without `release`, the `OCIRepository` has no chart version to pull and the cluster doesn't install. To
     upgrade the cluster later, change `release` to a newer release.
 
+1. If the cluster gets apps, make them wait for it, as the
+   [WC_NAME](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) example does. Set
+   the Kustomization's `path` to `mapi/cluster`, its `timeout` to `30m`, and add a health check of the cluster:
+
+    ```yaml
+    spec:
+      healthCheckExprs:
+        - apiVersion: cluster.x-k8s.io/v1beta2
+          kind: Cluster
+          current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
+      healthChecks:
+        - apiVersion: cluster.x-k8s.io/v1beta2
+          kind: Cluster
+          name: demo0
+          namespace: org-gitops-demo
+    ```
+
+    Base apps, which install with the cluster, go into `mapi/cluster/apps`, listed in `mapi/cluster/kustomization.yaml`.
+    If the cluster has App Sets, add `mapi/app_sets/kustomization.yaml`, listing each App Set's directory: without it,
+    `mapi/app_sets` doesn't build. Then add `mapi/kustomization.yaml`, listing `apps/` and, if the cluster has App Sets,
+    `app_sets/`, and add
+    `${WC_NAME}-apps.yaml` for `mapi`, with the same `postBuild` and the cluster's Kustomization in `dependsOn`, as in
+    [WC_NAME-apps.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME-apps.yaml). List
+    it in `kustomization.yaml`. See [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations) for the
+    order. `kubectl gs gitops add workload-cluster` still writes a single Kustomization for all of `mapi`.
+
 1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
 you have just created.
 

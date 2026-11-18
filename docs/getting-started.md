@@ -272,9 +272,12 @@ kubectl get namespace org-${ORG_NAME}
 
 ## 3. Create a workload cluster
 
-A cluster gets its own `Kustomization`, which applies the `${WC_DIR}/mapi` directory and fills in variables such as
-`${cluster_name}` in the files below. The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart,
-built from the [CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
+A cluster gets two `Kustomization`s, which fill in variables such as `${cluster_name}` in the files below. The
+cluster's `Kustomization` applies the `${WC_DIR}/mapi/cluster` directory and gets `Ready` once the cluster is up. The
+apps' `Kustomization` applies the rest of `${WC_DIR}/mapi` only after that, so the apps install into a cluster that
+exists.
+The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart, built from the
+[CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
 the Giant Swarm release, so the release the cluster runs is stored in Git. `release-aws` rejects a cluster name longer
 than 20 characters. For other providers, see [Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
 
@@ -301,6 +304,9 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 > ```sh
 > yq -i '.spec.prune = true' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
 > ```
+>
+> The CLI still writes a single `Kustomization` that applies all of `${WC_DIR}/mapi`, so the apps don't wait for the
+> cluster. To make them wait, replace it with the two `Kustomization`s of the last step below.
 >
 > Then commit and push, as in the last step below.
 
@@ -367,9 +373,22 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     EOF
     ```
 
+    Then list it in `${WC_DIR}/mapi/kustomization.yaml`, which leaves out `cluster`, as the cluster has a
+    `Kustomization` of its own:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/mapi/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - apps/
+    EOF
+    ```
+
 1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files.
    It never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
-   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label:
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label. Its health
+   check waits until Cluster API reports the cluster `Available`, which takes up to its `timeout` of 30 minutes:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
@@ -379,6 +398,45 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
       name: ${MC_NAME}-clusters-${WC_NAME}
       namespace: default
     spec:
+      healthCheckExprs:
+        - apiVersion: cluster.x-k8s.io/v1beta2
+          kind: Cluster
+          current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
+      healthChecks:
+        - apiVersion: cluster.x-k8s.io/v1beta2
+          kind: Cluster
+          name: ${WC_NAME}
+          namespace: org-${ORG_NAME}
+      interval: 1m
+      path: ./${WC_DIR}/mapi/cluster
+      postBuild:
+        substitute:
+          cluster_description: "${WC_NAME} managed by GitOps"
+          cluster_name: "${WC_NAME}"
+          organization: "${ORG_NAME}"
+          release: "${RELEASE_VERSION}"
+      prune: true
+      serviceAccountName: automation
+      sourceRef:
+        kind: GitRepository
+        name: ${GITOPS_REPO}
+      timeout: 30m
+    EOF
+    ```
+
+1. Create the apps' `Kustomization`. It has the cluster's `Kustomization` in `dependsOn`, so Flux applies nothing of
+   it until the cluster's is `Ready`:
+
+    ```sh
+    cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: ${MC_NAME}-clusters-${WC_NAME}-apps
+      namespace: default
+    spec:
+      dependsOn:
+        - name: ${MC_NAME}-clusters-${WC_NAME}
       interval: 1m
       path: ./${WC_DIR}/mapi
       postBuild:
@@ -396,10 +454,10 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     EOF
     ```
 
-    Add it to the organization's list of clusters:
+    Add both to the organization's list of clusters:
 
     ```sh
-    yq -i '.resources += ["'"${WC_NAME}"'.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
+    yq -i '.resources += ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'-apps.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
     Finally, commit and push:
@@ -408,16 +466,16 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     git add ${ORG_DIR} && git commit -m "Add workload cluster ${WC_NAME}" && git push
     ```
 
-**Check:** the cluster's `Kustomization` is `Ready`:
-
-```sh
-flux get kustomizations ${MC_NAME}-clusters-${WC_NAME} -n default
-```
-
-The cluster takes 15 to 20 minutes to come up. Watch it with:
+**Check:** the cluster takes 15 to 20 minutes to come up. Watch it with:
 
 ```sh
 kubectl gs get clusters -n org-${ORG_NAME}
+```
+
+Once it's up, the cluster's `Kustomization` is `Ready`, and the apps' `Kustomization` after it:
+
+```sh
+flux get kustomizations -n default | grep ${MC_NAME}-clusters-${WC_NAME}
 ```
 
 Once the cluster is up, log in to it:
@@ -686,8 +744,8 @@ example, `semver: 3.2.x` installs every new patch version.
 
 ## 6. Delete the cluster (optional)
 
-Skip this step to keep the cluster. When you delete the cluster's files, Flux deletes its `Kustomization`, its apps and
-its configuration, but not the cluster: its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled`
+Skip this step to keep the cluster. When you delete the cluster's files, Flux deletes its `Kustomization`s, its apps
+and its configuration, but not the cluster: its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled`
 annotation, so Flux keeps it, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label
 is removed. You remove the label and delete it by hand at the end. See [How it works](./how-it-works.md).
 
@@ -698,13 +756,14 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
 1. Remove the cluster from the organization's list:
 
     ```sh
-    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
+    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml" or . == "'"${WC_NAME}"'-apps.yaml"))' \
+      ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
     Remove its files, then commit and push:
 
     ```sh
-    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml && git commit -am "Delete workload cluster ${WC_NAME}" && git push
+    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml && git commit -am "Delete workload cluster ${WC_NAME}" && git push
     ```
 
 1. Make Flux read the change right away:
@@ -713,11 +772,12 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
     ```
 
-    Flux deletes the cluster's `Kustomization`, which deletes the cluster's apps and configuration first. Wait until
-    it's gone:
+    Flux deletes the cluster's `Kustomization`s, which delete the cluster's apps and configuration first. Wait until
+    they're gone:
 
     ```sh
-    kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME} -n default --timeout=10m
+    kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME} \
+      kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n default --timeout=10m
     ```
 
 1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
@@ -725,7 +785,7 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
-        -l kustomize.toolkit.fluxcd.io/name=${MC_NAME}-clusters-${WC_NAME},kustomize.toolkit.fluxcd.io/namespace=default \
+        -l 'kustomize.toolkit.fluxcd.io/name in ('"${MC_NAME}-clusters-${WC_NAME},${MC_NAME}-clusters-${WC_NAME}-apps"'),kustomize.toolkit.fluxcd.io/namespace=default' \
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 

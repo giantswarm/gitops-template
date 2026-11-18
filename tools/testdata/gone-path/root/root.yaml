@@ -1,0 +1,15 @@
+# The fixture's management cluster Kustomization: it applies its own directory, so its
+# GitRepository is the repository's, and check-kustomization-paths checks the Kustomizations
+# with the same source. It has no namespace, so Flux applies it in the default namespace, the
+# namespace of the Kustomizations it's compared with.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: root
+spec:
+  interval: 1m
+  path: ./root
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo

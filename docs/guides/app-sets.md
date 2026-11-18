@@ -219,8 +219,23 @@ their names, so Flux updates them in place instead of reinstalling the app.
     [envoy-gateway](/bases/apps/envoy-gateway/) App Template in the same cluster; leave it out if the cluster doesn't
     have it. See [App Templates](./app-templates.md) for why the App Template doesn't set it itself.
 
-    There is no list to update: the `mapi` directory has no `kustomization.yaml`, so Flux picks up every directory
-    with a `kustomization.yaml` below it, including the new one.
+1. Add the App Set to the cluster's list of App Sets, `mapi/app_sets/kustomization.yaml`:
+
+    ```sh
+    cd .. && yq -i '.resources += ["hello-web-app-1/"]' kustomization.yaml
+    ```
+
+    If the cluster doesn't have that file yet, create it first, with `kind: Kustomization` and a `resources:` listing
+    every App Set directory already in `mapi/app_sets`. Flux found them by itself until now: an App Set the list leaves
+    out stops being applied, and Flux deletes it and its apps. If
+    the cluster is split into a cluster and an apps Kustomization, as in the examples, also add `app_sets/` to the
+    `resources:` of its `mapi/kustomization.yaml`. The apps Kustomization, `WC_NAME-apps.yaml`, applies `mapi`
+    without `mapi/cluster`, so the App Sets install once the cluster is ready, like the secondary apps. See
+    [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). A cluster with a single
+    Kustomization for all of `mapi`, such as one `kubectl gs gitops add workload-cluster` writes, has no
+    `mapi/kustomization.yaml` and needs nothing more: Flux picks up `app_sets` by itself. Don't create a
+    `mapi/kustomization.yaml` there, as Flux would then stop applying, and delete, everything in `mapi` it doesn't
+    list.
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set
 Template. The `${cluster_name}-hello-world-user-values` ConfigMap is the optional user layer the app's `HelmRelease`
@@ -229,3 +244,9 @@ whole config, but only YAML keys we need to change. The namespace has to stay th
 `HelmRelease` finds its kubeconfig Secret, cluster values and `OCIRepository` there; the namespace the app is
 installed into on the workload cluster is its `spec.targetNamespace`. If you want to learn more about how config
 overrides work, please consult our [docs about creating apps](./add-app.md), as in general App Set is just a bundle of them.
+
+To remove an App Set, delete its directory and its entry in `mapi/app_sets/kustomization.yaml`, and Flux deletes what
+it applied. When you remove the cluster's last App Set, delete `mapi/app_sets` and, in a split cluster, its entry in
+`mapi/kustomization.yaml` too: a list that names a directory that's gone doesn't build, and Flux stops applying the
+cluster's apps until it does. The `check-kustomization-paths` pre-commit hook catches that before you push, see
+[CI validation](./ci-validation.md#check-kustomization-paths).
