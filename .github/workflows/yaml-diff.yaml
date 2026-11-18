@@ -15,7 +15,7 @@ jobs:
   # workflow skips the comment itself (the github-workflows issue).
   yaml-diff:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@ea1fd69471b840a8f3eb85bf5c8b58a416f111ea # main
+    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@01751540d4610548c37fe0b63aa719d68be3704f # main
 
   # Says why the diff comment is missing on a pull request from a fork.
   skipped-for-fork:

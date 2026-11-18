@@ -436,15 +436,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Actions' `on:` key passes `truthy`. If your fork relied on the empty `.yamllint`, expect findings when you merge
   this. `tools/fake-flux build` no longer writes empty documents, so `tools/test-all-ff validate` lints the build output
   as it is. ([#217](https://github.com/giantswarm/gitops-template/issues/217))
-- Pull requests from forks, which GitHub gives no secrets and a read-only token, get part of the way to working CI.
-  `yaml-diff.yaml` skips its diff comment there, which it can't post, and leaves a notice saying why. `tests/ats`
+- Pull requests from forks, which GitHub gives no secrets and a read-only token, get working CI. `validate.yaml` and
+  `yaml-diff.yaml` skip their comments there, which they can't post, and leave a notice saying why. `tests/ats`
   skips the tests that need the kind cluster with a warning when `GITOPS_MASTER_GPG_KEY` is empty on such a pull
   request, instead of failing with "master gpg key missing"; anywhere else, also in a fork's own runs, a missing key
-  still fails it. `validate.yaml` still fails on such a pull request before any job starts: the shared
-  `gitops-validate.yaml` declares the secret `required: true`, and GitHub rejects the empty value with "Secret
-  GITOPS_MASTER_GPG_KEY is required, but not provided while calling". The skip takes effect once
-  `giantswarm/github-workflows` makes the secret optional and skips its own comments on such pull requests.
-  ([#225](https://github.com/giantswarm/gitops-template/issues/225))
+  still fails it. CI calls `giantswarm/github-workflows` at `0175154`, where the secret is optional and the shared
+  workflows skip their comments on such pull requests; its tool defaults are current too.
+  ([#225](https://github.com/giantswarm/gitops-template/issues/225), [#228](https://github.com/giantswarm/gitops-template/issues/228))
 - The kind test removes the vCluster's temporary `vcluster-values-*.yaml` file even when `helm uninstall` fails, for
   example on a `--wait` timeout. [docs/guides/ci-validation.md](docs/guides/ci-validation.md) now says that a local run
   has to reach kind's Docker network, so it works where Docker runs natively on the host, like the GitHub runner, and

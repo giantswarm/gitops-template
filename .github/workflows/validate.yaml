@@ -22,20 +22,17 @@ permissions:
 
 jobs:
   validate:
-    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@ea1fd69471b840a8f3eb85bf5c8b58a416f111ea # main
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@01751540d4610548c37fe0b63aa719d68be3704f # main
     with:
-      # Matches [requires] python_version in tests/ats/Pipfile. The shared
-      # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
+      # Matches [requires] python_version in tests/ats/Pipfile.
       # renovate: datasource=python-version depName=python versioning=python
       python_version: "3.12"
-      # Pin a current kubeconform for tools/test-all-ff. The shared workflow
-      # defaults to 0.4.13, from 2021.
+      # The kubeconform of tools/test-all-ff.
       # renovate: datasource=github-releases depName=yannh/kubeconform extractVersion=^v(?<version>.+)$
       kubeconform_ver: "0.8.0"
       # The kind test cluster runs kind's default node image, as the shared
       # workflow doesn't pass one. kind v0.32.0 defaults to kindest/node:v1.36.1,
-      # the Kubernetes minor version of the management clusters. The shared
-      # workflow defaults to kind 0.12.0, which runs Kubernetes v1.23.
+      # the Kubernetes minor version of the management clusters.
       # renovate: datasource=github-releases depName=kubernetes-sigs/kind extractVersion=^v(?<version>.+)$
       kind_ver: "0.32.0"
       # The flux-app chart the kind test installs: the version on the
@@ -51,9 +48,6 @@ jobs:
       # cluster for it. Set explicitly, as the shared workflow's default names an object.
       gitops_ignored_objects: ""
     secrets:
-      # Empty on a pull request from a fork. The shared workflow requires it,
-      # so GitHub fails such a run before any job starts ("Secret
-      # GITOPS_MASTER_GPG_KEY is required, but not provided while calling").
-      # Once the shared workflow makes it optional, tests/ats skips the tests
-      # that need the kind cluster there instead.
+      # Empty on a pull request from a fork, where tests/ats skips the tests
+      # that need the kind cluster.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
