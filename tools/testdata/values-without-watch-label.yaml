@@ -6,17 +6,19 @@ data:
   values: |
     global:
       metadata:
-        name: no-region
+        name: no-watch-label
         organization: demo
+      providerSpecific:
+        region: eu-central-1
 kind: ConfigMap
 metadata:
-  name: no-region-config
+  name: no-watch-label-config
   namespace: org-demo
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: no-region
+  name: no-watch-label
   namespace: org-demo
 spec:
   interval: 10m0s
@@ -30,12 +32,12 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: no-region
+  name: no-watch-label
   namespace: org-demo
 spec:
   chartRef:
     kind: OCIRepository
-    name: no-region
+    name: no-watch-label
     namespace: org-demo
   interval: 5m0s
   valuesFrom:
@@ -43,5 +45,5 @@ spec:
       name: cluster-app-installation-values
       valuesKey: values.yaml
     - kind: ConfigMap
-      name: no-region-config
+      name: no-watch-label-config
       valuesKey: values

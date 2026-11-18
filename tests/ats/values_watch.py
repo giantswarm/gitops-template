@@ -16,8 +16,9 @@ from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 
 NAMESPACE = "org-org-name"
-HELM_RELEASE = "hello-app-dev-1-hello-world"
-VALUES_CONFIG_MAP = "hello-app-dev-1-hello-world-values"
+# installs into the test's vCluster, so helm-controller reconciles it in the kind test
+HELM_RELEASE = "out-of-band-no-flux-hello-world"
+VALUES_CONFIG_MAP = "out-of-band-no-flux-hello-world-values"
 # a tenth of the HelmRelease's interval of 5m, so a scheduled reconcile rarely lands in it
 WATCH_TIMEOUT_SEC = 30
 # the upgrade with the changed values, once helm-controller has picked them up
@@ -45,12 +46,24 @@ def wait_for_reconcile(hr: HelmReleaseCR, digest: str, what: str) -> None:
         what,
     )
     wait_until(
-        lambda: (
-            [] if is_ready(hr.obj) else [f"HelmRelease '{obj_key(hr.obj)}' isn't Ready"]
-        ),
+        lambda: upgrade_problems(hr),
         UPGRADE_TIMEOUT_SEC,
         f"{what}: the upgrade didn't finish",
     )
+
+
+def upgrade_problems(hr: HelmReleaseCR) -> list[str]:
+    """Why the HelmRelease isn't Ready with the values helm-controller last attempted: the
+    latest release in its history has to be deployed with them."""
+    hr.reload()
+    status = hr.obj.get("status") or {}
+    latest = (status.get("history") or [{}])[0]
+    if not is_ready(hr.obj):
+        return [f"HelmRelease '{obj_key(hr.obj)}' isn't Ready"]
+    attempted = status.get("lastAttemptedConfigDigest")
+    if latest.get("status") != "deployed" or latest.get("configDigest") != attempted:
+        return [f"HelmRelease '{obj_key(hr.obj)}' hasn't deployed the attempted values"]
+    return []
 
 
 def owning_kustomization(api: pykube.HTTPClient, obj: dict) -> KustomizationCR:
