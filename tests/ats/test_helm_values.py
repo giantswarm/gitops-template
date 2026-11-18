@@ -97,6 +97,13 @@ def test_optional_entry_without_values_is_skipped(objects: dict) -> None:
         ({("ConfigMap", "cm"): STAGE}, ref("cm", targetPath="a.b"), "targetPath"),
         ({("ConfigMap", "cm"): config_map("[1]")}, ref("cm"), "aren't a map"),
         ({}, ref("cm", kind="Bucket"), "only ConfigMaps and Secrets"),
+        ({("ConfigMap", "cm"): config_map("a: [")}, ref("cm"), "aren't valid YAML"),
+        (
+            {("Secret", "s"): config_map(base64.b64encode(b"\xff").decode())},
+            ref("s", kind="Secret"),
+            "can't be decoded",
+        ),
+        ({}, {"kind": "ConfigMap"}, "has no name"),
     ],
 )
 def test_entry_that_cant_be_read_fails(

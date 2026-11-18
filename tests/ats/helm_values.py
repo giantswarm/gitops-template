@@ -7,6 +7,7 @@ was there. An optional entry whose object or key is missing is skipped.
 """
 
 import base64
+import binascii
 from typing import Any
 
 import yaml
@@ -53,13 +54,15 @@ def values_from_entry(entry: dict, namespace: str, lookup: Lookup) -> dict:
         raise ValuesSourceError(
             entry, namespace, "only ConfigMaps and Secrets hold values"
         )
+    if not entry.get("name"):
+        raise ValuesSourceError(entry, namespace, "the entry has no name")
     if entry.get("targetPath"):
         # helm-controller sets the text at that path with Helm's --set syntax; nothing here
         #  uses it, so it isn't modelled.
         raise ValuesSourceError(
             entry, namespace, "targetPath isn't supported by this test"
         )
-    text = values_text(entry, lookup(entry["kind"], namespace, entry["name"]))
+    text = read_values_text(entry, namespace, lookup)
     if text is None:
         if entry.get("optional"):
             return {}
@@ -67,7 +70,27 @@ def values_from_entry(entry: dict, namespace: str, lookup: Lookup) -> dict:
         raise ValuesSourceError(
             entry, namespace, f"the object or its key '{key}' is missing"
         )
-    values = yaml.safe_load(text)
+    return parse_values(entry, namespace, text)
+
+
+def read_values_text(entry: dict, namespace: str, lookup: Lookup) -> str | None:
+    """The entry's text, as values_text reads it, with decoding errors as ValuesSourceError."""
+    try:
+        return values_text(entry, lookup(entry["kind"], namespace, entry["name"]))
+    except (binascii.Error, UnicodeDecodeError) as e:
+        raise ValuesSourceError(
+            entry, namespace, f"the values can't be decoded: {e}"
+        ) from e
+
+
+def parse_values(entry: dict, namespace: str, text: str) -> dict:
+    """The values map in the entry's `text`."""
+    try:
+        values = yaml.safe_load(text)
+    except yaml.YAMLError as e:
+        raise ValuesSourceError(
+            entry, namespace, f"the values aren't valid YAML: {e}"
+        ) from e
     if values is None:
         return {}
     if not isinstance(values, dict):

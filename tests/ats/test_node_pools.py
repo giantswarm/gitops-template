@@ -7,6 +7,7 @@ from helm_values import ValuesSourceError
 from node_pools import (
     EXPECTED_NODE_POOLS,
     node_pool_problems,
+    node_pool_problems_in_cluster,
     node_pools,
     workload_cluster_node_pools,
 )
@@ -52,9 +53,26 @@ def test_workload_cluster_node_pools_reports_each_unreadable_cluster(
         "ns/good": {"name": "good"},
         "ns/bad2": {"name": "bad2"},
     }
-    pools, problems = workload_cluster_node_pools(hrs, lambda *_: None)
+    pools, unreadable = workload_cluster_node_pools(hrs, lambda *_: None)
     assert pools == {"ns/good": {"workers"}}
-    assert [p.split(":")[0] for p in problems] == [
-        "workload cluster 'ns/bad1'",
-        "workload cluster 'ns/bad2'",
+    assert sorted(unreadable) == ["ns/bad1", "ns/bad2"]
+
+
+def test_unreadable_expected_cluster_is_reported_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unreadable = "org-org-name/hello-app-dev-1"
+    pools = {k: v for k, v in EXPECTED_NODE_POOLS.items() if k != unreadable}
+    monkeypatch.setattr(node_pools_module, "cluster_lookup", lambda api: None)
+    monkeypatch.setattr(
+        node_pools_module,
+        "workload_cluster_node_pools",
+        lambda hrs, lookup: (
+            pools,
+            {unreadable: f"workload cluster '{unreadable}': x"},
+        ),
+    )
+    monkeypatch.setattr(node_pools_module.waits, "list_objects", lambda *_: {})
+    assert node_pool_problems_in_cluster(None, ()) == [  # type: ignore[arg-type]
+        f"workload cluster '{unreadable}': x"
     ]

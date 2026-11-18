@@ -63,19 +63,19 @@ def node_pool_problems(
 
 def workload_cluster_node_pools(
     hrs: dict[str, dict], lookup: Lookup
-) -> tuple[dict[str, set[str]], list[str]]:
-    """The node pools of each HelmRelease in `hrs` that creates a workload cluster, and the
-    clusters whose values can't be read, so that one doesn't hide the others."""
+) -> tuple[dict[str, set[str]], dict[str, str]]:
+    """The node pools of each HelmRelease in `hrs` that creates a workload cluster, and why the
+    values of the others can't be read, so that one doesn't hide the others."""
     pools: dict[str, set[str]] = {}
-    problems: list[str] = []
+    unreadable: dict[str, str] = {}
     for k, hr in hrs.items():
         if classify(hr, lookup) != "H2":
             continue
         try:
             pools[k] = node_pools(merged_values(hr, lookup))
         except (ValuesSourceError, AttributeError, TypeError) as e:
-            problems.append(f"workload cluster '{k}': can't read its node pools: {e}")
-    return pools, problems
+            unreadable[k] = f"workload cluster '{k}': can't read its node pools: {e}"
+    return pools, unreadable
 
 
 def node_pool_problems_in_cluster(
@@ -84,5 +84,8 @@ def node_pool_problems_in_cluster(
     """How the node pools of the workload clusters' HelmReleases in `api` differ from the
     expected ones. The `ignored` HelmReleases aren't checked."""
     hrs = waits.list_objects(api, HelmReleaseCR, ignored)
-    pools, problems = workload_cluster_node_pools(hrs, cluster_lookup(api))
-    return problems + node_pool_problems(pools, ignored)
+    pools, unreadable = workload_cluster_node_pools(hrs, cluster_lookup(api))
+    # an unreadable cluster has a HelmRelease: it isn't missing
+    return list(unreadable.values()) + node_pool_problems(
+        pools, [*ignored, *unreadable]
+    )
