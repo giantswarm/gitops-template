@@ -1,0 +1,9 @@
+# THIS IS A DEMO KEY
+# The WC_NAME age key of the example tree, used by this repository's CI. The
+# .sops.yaml rule for WC_NAME encrypts that cluster's mapi/ *.enc.yaml files
+# with it, and the WC_NAME-apps.yaml Kustomization decrypts them with its
+# sops-age-wc-name Secret. Its private key is never committed in plain text:
+# it's in management-clusters/MC_NAME/secrets/WC_NAME.agekey.enc.yaml,
+# encrypted with the master key. Don't use it for your own secrets: create
+# your own key.
+age1caxqewcznafndw75462qmycsvlyc5djy58430dsfptg0uk927eesjt4smq

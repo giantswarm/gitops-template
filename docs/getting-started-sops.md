@@ -797,7 +797,8 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
 
 - Keep secrets in a secret manager instead, with External Secrets Operator: [Getting started](./getting-started.md).
 - Keep secrets in the repository, encrypted with SOPS: create a
-  [key for the cluster](./add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step), then
+  [GPG key](./add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step) or
+  [age key](./add_wc_structure.md#create-an-age-key-pair-optional-step) for the cluster, then
   [provide encrypted values](./guides/add-app.md#providing-encrypted-values).
 - Reuse an app's configuration across clusters: [App Templates](./guides/app-templates.md) and
   [App Sets](./guides/app-sets.md).

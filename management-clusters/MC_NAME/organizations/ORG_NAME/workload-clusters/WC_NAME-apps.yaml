@@ -4,6 +4,11 @@ metadata:
   name: mc-name-clusters-capi-wc-name-apps  # TODO: change 'mc-name' to your Management Cluster name and 'capi-wc-name' to your cluster name; must stay a DNS-like k8s resource name
   namespace: default
 spec:
+  # the age key that decrypts the *.enc.yaml files in mapi, see docs/reference/sops-keys.md
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age-wc-name
   # the secondary apps, in mapi/apps and mapi/app_sets, install once the
   # cluster is up, see WC_NAME.yaml
   dependsOn:

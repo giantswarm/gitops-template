@@ -1,8 +1,8 @@
 # SOPS keys
 
-If you keep secrets in the repository, you encrypt them with [SOPS](https://github.com/getsops/sops) and GPG keys,
-and Flux decrypts them when it applies them. This page explains which keys there are, where they live and which
-files each one decrypts. For the steps, see [Getting started with SOPS](../getting-started-sops.md).
+If you keep secrets in the repository, you encrypt them with [SOPS](https://github.com/getsops/sops) and GPG or
+[age](https://github.com/FiloSottile/age) keys, and Flux decrypts them when it applies them. This page explains which
+keys there are, where they live and which files each one decrypts. For the steps, see [Getting started with SOPS](../getting-started-sops.md).
 
 ## The master key
 
@@ -38,10 +38,27 @@ the `WC_NAME/mapi` directory.
                          OTHER_RESOURCES
 ```
 
+## age keys
+
+A workload cluster key can be an age key instead of a GPG key; age keys are simpler to create and handle. The
+master key stays a GPG key, because `kubectl gs gitops add management-cluster` creates one, and it encrypts the
+age key like the GPG keys:
+
+- Its public key goes into `.sops.keys` as `.sops.WC_NAME.agekey.pub`, unencrypted.
+- Its private key goes into the `WC_NAME.agekey.enc.yaml` Secret in the management cluster's `secrets` directory,
+  under a key that ends in `.agekey`, encrypted with the master key.
+
+The cluster's Kustomization names that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
+uses an age key: `WC_NAME-apps.yaml` decrypts `mapi/apps/cert-manager/secret.enc.yaml` with the
+`sops-age-wc-name` Secret. For the steps, see
+[Create an age key pair](../add_wc_structure.md#create-an-age-key-pair-optional-step).
+
+A Kustomization reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.
+
 ## Encryption rules
 
 `.sops.yaml` at the repository root tells SOPS which key encrypts which files. With one key for the management
-cluster and one for a workload cluster, it looks like this:
+cluster, a GPG key for one workload cluster and an age key for another, it looks like this:
 
 ```yaml
 creation_rules:
@@ -51,6 +68,9 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/mapi/.*\.enc\.yaml
+    age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 ```
 
 ## More keys

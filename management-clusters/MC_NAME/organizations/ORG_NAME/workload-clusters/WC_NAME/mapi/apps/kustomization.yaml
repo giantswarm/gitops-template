@@ -13,3 +13,5 @@ patches:
 resources:
   - cert-manager/helm-release.yaml
   - cert-manager/oci-repository.yaml
+  # config you would rather not keep in plain text, encrypted with the cluster's age key
+  - cert-manager/secret.enc.yaml
