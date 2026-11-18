@@ -8,6 +8,11 @@ To add your own values, add a ConfigMap with a `values` key next to the base, an
 `HelmRelease`'s `valuesFrom`. See the [WC_NAME](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/) example.
 
+The `OCIRepository` and the `HelmRelease` carry the `giantswarm.io/prevent-deletion` label, and the base sets
+`global.metadata.preventDeletion`, so that the chart puts it on the `Cluster` too. None of them can be deleted by
+mistake, for example by a Flux `Kustomization` that prunes them. To delete a cluster, remove the label first, see
+[Delete the cluster](/docs/getting-started.md#6-delete-the-cluster-optional).
+
 Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
 v32.3.0 and v33.3.0. Other releases, and Release CRs created by hand, need the `cluster-aws` chart as an App CR, which
 this repository no longer supports.

@@ -3,3 +3,4 @@ global:
     description: ${cluster_description}
     name: ${cluster_name}
     organization: ${organization}
+    preventDeletion: true
