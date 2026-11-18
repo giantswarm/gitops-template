@@ -7,5 +7,7 @@ data:
           instanceType: m6i.4xlarge
 kind: ConfigMap
 metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
   name: ${cluster_name}-cluster-userconfig
   namespace: org-${organization}

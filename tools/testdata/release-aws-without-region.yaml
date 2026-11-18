@@ -11,6 +11,8 @@ data:
         organization: demo
 kind: ConfigMap
 metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
   name: no-region-config
   namespace: org-demo
 ---

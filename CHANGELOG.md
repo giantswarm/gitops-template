@@ -7,6 +7,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Every ConfigMap and Secret that a `HelmRelease` lists in `valuesFrom` carries the
+  `reconcile.fluxcd.io/watch: Enabled` label, the generated ones included, so helm-controller applies a change to the
+  values as soon as it's made instead of at the `HelmRelease`'s next `interval`. The guides' examples carry it too.
+  `tools/validate-helm-values` fails for such an object without the label, and the kind test checks that a change to
+  a values ConfigMap is reconciled within 90 seconds. ([#251](https://github.com/giantswarm/gitops-template/issues/251))
 - The kind test checks the node pools of every workload cluster. It merges the values of each cluster's
   `HelmRelease` as Flux applied it, `valuesFrom` and `spec.values`, the way helm-controller does, and compares the
   node pools with `EXPECTED_NODE_POOLS` in `tests/ats/node_pools.py`: the production clusters get the stage's

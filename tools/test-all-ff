@@ -154,6 +154,20 @@ function test() {
 	fi
 
 	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must fail for a valuesFrom ConfigMap without the watch label.
+		echo -n "helm values, ConfigMap without the watch label: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/values-without-watch-label.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "has no label reconcile.fluxcd.io/watch: Enabled" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
 		# fake-flux must fail for a cluster whose Kustomization doesn't set a variable its
 		# manifests use. It runs in a copy, as fake-flux only builds the Kustomizations it
 		# finds below the current directory, and the ones in tools/testdata are left out.

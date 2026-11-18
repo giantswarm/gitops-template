@@ -6,6 +6,9 @@ configMapGenerator:
     name: ${cluster_name}-gateway-api-config-user-values
 generatorOptions:
   disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
 resources:
   - ../../../../apps/envoy-gateway

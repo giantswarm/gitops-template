@@ -150,6 +150,8 @@ registry.
         name: \${cluster_name}-${APP_NAME}-values
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     kind: Kustomization
     resources:
       - helm-release.yaml

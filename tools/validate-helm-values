@@ -21,7 +21,11 @@
 #     are the first values file, so values from the repository take precedence. They don't
 #     set the region, so that a cluster without one fails.
 #
-# SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
+# Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the
+# label `reconcile.fluxcd.io/watch: Enabled`, so that helm-controller applies a change to it
+# straight away instead of at the HelmRelease's next interval.
+#
+# The values of SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
 #
 # HelmReleases listed in validate-helm-values.ignore are rendered, but their errors don't
 # fail the check.
@@ -50,6 +54,16 @@ function object() {
 # Succeed if the HelmRelease (namespace/name) is listed in the ignore file.
 function ignored() {
 	[ -f "${ignore_file}" ] && sed 's/#.*//' "${ignore_file}" | tr -d '[:blank:]' | grep -qxF "$1"
+}
+
+# Fail unless the valuesFrom object (YAML) has the reconcile.fluxcd.io/watch: Enabled label, so
+# helm-controller reconciles its HelmRelease when it changes. Uses the loop's id, kind, ns and
+# ref_name.
+function check_watch_label() {
+	if [ "$(yq '.metadata.labels["reconcile.fluxcd.io/watch"] // ""' <<<"$1")" != "Enabled" ]; then
+		echo "${id}: ${kind} ${ns}/${ref_name} from valuesFrom has no label reconcile.fluxcd.io/watch: Enabled"
+		failed=1
+	fi
 }
 
 # Pull a chart once and print the path of the archive.
@@ -141,6 +155,10 @@ while IFS=/ read -r ns name; do
 		file="${work_dir}/values-${i}.yaml"
 
 		if [ "$(yq '.targetPath // ""' <<<"${entry}")" != "" ]; then
+			# its values aren't merged, but helm-controller still watches the object
+			if obj=$(object "${kind}" "${ns}" "${ref_name}"); then
+				check_watch_label "${obj}"
+			fi
 			notes+=("${kind} ${ref_name}: targetPath is not supported, left out")
 			continue
 		fi
@@ -158,6 +176,8 @@ while IFS=/ read -r ns name; do
 			fi
 			continue
 		fi
+
+		check_watch_label "${obj}"
 
 		if [ "${kind}" == "Secret" ] && [ "$(yq '.sops // "" | length' <<<"${obj}")" != "0" ]; then
 			notes+=("Secret ${ref_name}: SOPS-encrypted, left out")

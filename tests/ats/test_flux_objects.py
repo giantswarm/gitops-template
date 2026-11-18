@@ -17,6 +17,7 @@ from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
+from values_watch import check_values_change_applied
 
 
 @pytest.fixture(scope="module")
@@ -111,6 +112,13 @@ def test_node_pools(
         kube_cluster.kube_client, gitops_test_config.ignored_objects
     )
     assert not problems, "\n".join(problems)
+
+
+def test_values_change_applied_at_once(
+    kube_cluster: Cluster,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    check_values_change_applied(kube_cluster.kube_client)
 
 
 # must stay last: it deletes what the tests above check

@@ -135,6 +135,8 @@ that replaces the `${cluster_name}-config` ConfigMap.
         namespace: org-${organization}
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     kind: Kustomization
     resources:
       - ../template

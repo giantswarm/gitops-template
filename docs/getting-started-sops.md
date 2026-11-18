@@ -608,6 +608,8 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
           - values=values.yaml
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     resources:
       - oci-repository.yaml
       - helm-release.yaml

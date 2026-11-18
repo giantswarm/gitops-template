@@ -165,6 +165,8 @@ template uses, for example `hello-world` for [bases/apps/hello-world](/bases/app
         name: \${cluster_name}-${APP_NAME}-user-values
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     kind: Kustomization
     namespace: org-\${organization}
     resources:
@@ -212,6 +214,8 @@ path to the directory in an env variable:
         name: \${cluster_name}-${APP_NAME}-user-values
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     ## CONFIGURATION OVERRIDE BLOCK END
     kind: Kustomization
     namespace: org-\${organization}
@@ -264,6 +268,8 @@ Workload Cluster's GPG key, see
     apiVersion: v1
     kind: Secret
     metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
       name: \${cluster_name}-${APP_NAME}-user-secrets
       namespace: org-\${organization}
     stringData:

@@ -557,6 +557,8 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
           - values=values.yaml
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     resources:
       - oci-repository.yaml
       - helm-release.yaml
@@ -594,6 +596,10 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
         name: ${SECRET_STORE}
       target:
         name: \${cluster_name}-hello-world-user-secrets
+        template:
+          metadata:
+            labels:
+              reconcile.fluxcd.io/watch: Enabled
       data:
         - secretKey: values
           remoteRef:
@@ -673,7 +679,7 @@ kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
 
 To change a secret value, change it in your secret manager. ESO copies it within the `refreshInterval`, and Flux
-upgrades the release at its next `interval`.
+upgrades the release as soon as the Secret changes.
 
 To let Flux install new chart versions by itself, replace `tag` with a `semver` range in the `OCIRepository`. For
 example, `semver: 3.2.x` installs every new patch version.
