@@ -203,6 +203,19 @@ function test() {
 			has_validation_errors=1
 		fi
 
+		# It must take the repository's GitRepository from a Kustomization that applies the
+		# repository root, `./`.
+		echo -n "check-kustomization-paths, root Kustomization at ./: "
+		status=0
+		output=$("$(dirname $0)/check-kustomization-paths" "$(dirname $0)/testdata/root-path" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "default/gone-path in root.yaml: spec.path 'mapi' doesn't exist" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+
 		# It must fail, not pass, when it finds nothing to check.
 		echo -n "check-kustomization-paths, no Kustomization: "
 		mkdir -p "${tmp_dir}/no-kustomization"

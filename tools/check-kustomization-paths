@@ -98,7 +98,8 @@ function check() {
 }
 
 # Every Flux Kustomization, one per line: file,namespace/name,path,source. v1beta2 is the API
-#  version Flux 2.0 replaced with v1; Flux still reads Kustomizations written with it.
+#  version Flux 2.0 replaced with v1; Flux still reads Kustomizations written with it. One
+#  without a namespace is applied in the default namespace.
 files=($(find . \( -name '*.yaml' -o -name '*.yml' \) -not -path './tools/testdata/*' -not -path './.git/*' \
 	-exec grep -l '^apiVersion: kustomize.toolkit.fluxcd.io/' {} + | sort || true))
 if [ ${#files[@]} -eq 0 ]; then
@@ -108,7 +109,7 @@ fi
 if ! kustomizations=$(yq --no-doc '
 	select((.apiVersion == "kustomize.toolkit.fluxcd.io/v1" or .apiVersion == "kustomize.toolkit.fluxcd.io/v1beta2")
 		and .kind == "Kustomization") |
-	(.metadata.namespace // "") as $ns |
+	(.metadata.namespace // "default") as $ns |
 	[filename, $ns + "/" + .metadata.name, .spec.path // "",
 		.spec.sourceRef.kind + "/" + (.spec.sourceRef.namespace // $ns) + "/" + .spec.sourceRef.name] |
 	join(",")' "${files[@]}"); then
@@ -121,7 +122,8 @@ sources=()
 for k in ${kustomizations}; do
 	IFS=, read -r file name path source <<<"${k}"
 	path="${path#./}"
-	if [ "$(dirname "${file#./}")" == "${path%/}" ] && [[ "${source}" == GitRepository/* ]]; then
+	path="${path%/}"
+	if [ "$(dirname "${file#./}")" == "${path:-.}" ] && [[ "${source}" == GitRepository/* ]]; then
 		sources+=("${source}")
 	fi
 done

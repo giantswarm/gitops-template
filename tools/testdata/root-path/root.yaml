@@ -1,0 +1,29 @@
+# Fixture for tools/check-kustomization-paths, which tools/test-all-ff runs on this
+# directory. The repository's own Kustomization applies the repository root, `./`, so its
+# GitRepository is the repository's, and the Kustomization below has to be reported.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: root
+  namespace: default
+spec:
+  interval: 1m
+  path: ./
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gone-path
+  namespace: default
+spec:
+  interval: 1m
+  # this directory has been deleted
+  path: ./mapi
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
