@@ -15,8 +15,9 @@ import pykube
 from checks import waits
 from checks.helm_release_classes import classify
 from checks.helm_release_sources import Lookup, cluster_lookup
-from helm_values import ValuesSourceError, merged_values
+from helm_values import merged_values
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
+from values_sources import ValuesSourceError
 
 # The node pools in the values of each workload cluster's HelmRelease, by `namespace/name`.
 #  Every cluster has to be listed. Production clusters get the stage's `nodepool0` and their
