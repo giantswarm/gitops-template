@@ -1,13 +1,9 @@
-"""P1, P2: the files test_prune removes from the source, and the objects in them.
-
-prune_checks imports this module, which imports test_flux_objects, which imports prune_checks on
-its last line: import test_flux_objects, not this module.
-"""
+"""P1, P2: the files test_prune removes from the source, and the objects in them."""
 
 import pykube
+from checks.kinds import REFERENCED_KINDS
 from conftest import FLUX_OBJECTS_NAMESPACE
 from pykube.objects import APIObject
-from test_flux_objects import REFERENCED_KINDS
 
 
 class OrganizationCR(APIObject):

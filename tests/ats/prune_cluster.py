@@ -6,6 +6,8 @@ getting-started guides do, Flux deletes everything it applied, except what has
 """
 
 import pykube
+from checks.assertion_files import WORKLOAD_CLUSTER_ASSERTIONS_DIR, load_assertions
+from checks.conditions import obj_key
 from flux_inventory import inventory_keys
 from flux_reconcile import suspend, wait_until
 from prune_objects import (
@@ -14,7 +16,6 @@ from prune_objects import (
     ROOT_KUSTOMIZATION,
 )
 from prune_source import kustomization
-from test_flux_objects import WORKLOAD_CLUSTER_ASSERTIONS_DIR, load_assertions, obj_key
 
 
 def delete_cluster_kustomization(api: pykube.HTTPClient) -> set[tuple[str, str, str]]:

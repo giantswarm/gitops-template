@@ -3,14 +3,10 @@
 import time
 from collections.abc import Callable
 
+from checks import waits
+from checks.conditions import is_ready, not_ready_reason, obj_key
+from checks.waits import fail_on_problems
 from pykube.objects import APIObject
-from test_flux_objects import (
-    POLL_INTERVAL_SEC,
-    fail_on_problems,
-    is_ready,
-    not_ready_reason,
-    obj_key,
-)
 
 
 def request_reconcile(obj: APIObject) -> None:
@@ -36,7 +32,7 @@ def wait_until(check: Callable[[], list[str]], timeout_sec: int, what: str) -> N
             return
         if time.monotonic() >= deadline:
             fail_on_problems(problems, f"{what} after {timeout_sec} s")
-        time.sleep(POLL_INTERVAL_SEC)
+        time.sleep(waits.POLL_INTERVAL_SEC)
 
 
 def repo_problems(repo: APIObject) -> list[str]:

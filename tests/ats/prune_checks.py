@@ -1,14 +1,14 @@
 """P1-P3: what Flux deletes when files are deleted from Git, and what it keeps.
 
 test_prune removes objects the other kind tests check, so it has to run after them, and it
-needs their environment, which is module-scoped like every pytest-helm-charts fixture. It is
-defined here and imported on the last line of test_flux_objects, so pytest collects it in that
-module, after the tests defined there. As the modules import each other, other modules import
-test_flux_objects, not this one; flux_inventory holds what can be checked without a cluster.
+needs their environment, which is module-scoped like every pytest-helm-charts fixture. So it is
+the last test of test_flux_objects and calls `check_prune` from here; flux_inventory holds what
+can be checked without a cluster.
 """
 
 import pykube
 import pytest
+from checks.waits import fail_on_problems
 from flux_reconcile import wait_until
 from prune_cluster import delete_cluster_kustomization, workload_problems
 from prune_objects import (
@@ -23,8 +23,6 @@ from prune_objects import (
     kept_problems,
 )
 from prune_source import remove_from_source, restore_source
-from pytest_helm_charts.clusters import Cluster
-from test_flux_objects import fail_on_problems
 
 
 def tests_not_run_before(request: pytest.FixtureRequest) -> list[str]:
@@ -87,11 +85,10 @@ def check_removed_cluster(
     fail_on_problems(kept_problems(api, [PROTECTED_CLUSTER]), "the cluster wasn't kept")
 
 
-def test_prune(
+def check_prune(
     request: pytest.FixtureRequest,
-    kube_cluster: Cluster,
+    api: pykube.HTTPClient,
     workload_cluster: pykube.HTTPClient,
-    check_helm_release_successful: dict[str, dict],
 ) -> None:
     """P1-P3 on the out-of-band-no-flux cluster, whose apps run in the test's vCluster."""
     not_run = tests_not_run_before(request)
@@ -100,7 +97,6 @@ def test_prune(
             f"test_prune deletes what other tests check, so it runs after them: {not_run} "
             "don't run before it. Run the whole module, in file order."
         )
-    api = kube_cluster.kube_client
     try:
         check_removed_files(api, workload_cluster)
         check_removed_cluster(api, workload_cluster)

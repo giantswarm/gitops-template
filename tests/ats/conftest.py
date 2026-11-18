@@ -20,8 +20,8 @@ from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.utils import wait_for_objects_condition
 
-from flux_teardown import delete_without_prune
 from ci_context import master_gpg_key
+from flux_teardown import delete_without_prune
 
 # Its hooks skip the tests that need the cluster on a pull request from a fork.
 pytest_plugins = ["ci_context"]

@@ -5,6 +5,7 @@ files out of the artifact Flux applies instead, as if they were deleted from Git
 """
 
 import pykube
+from checks.conditions import obj_key
 from conftest import FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE
 from flux_inventory import inventory_keys
 from flux_reconcile import repo_problems, request_reconcile, wait_until
@@ -18,7 +19,6 @@ from prune_objects import (
 from pykube.objects import APIObject
 from pytest_helm_charts.flux.git_repository import GitRepositoryCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
-from test_flux_objects import obj_key
 
 
 def git_repository(api: pykube.HTTPClient) -> APIObject:
