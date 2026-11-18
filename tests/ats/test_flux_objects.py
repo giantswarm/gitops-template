@@ -15,11 +15,12 @@ from checks.assertions import check_assertions
 from checks.flux_readiness import check_kustomizations, check_sources
 from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
-from cluster_gate import check_cluster_gate, stand_in_clusters
+from cluster_gate import check_cluster_gate
 from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
+from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
 
 

@@ -1,0 +1,29 @@
+# Fixture for tools/check-kustomization-paths, which tools/test-all-ff runs on a
+# copy of this directory: both Kustomizations have to be reported.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: lists-a-gone-directory
+  namespace: default
+spec:
+  interval: 1m
+  # mapi/kustomization.yaml lists app_sets/, which has been deleted
+  path: ./mapi
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gone-path
+  namespace: default
+spec:
+  interval: 1m
+  # this directory has been deleted
+  path: ./mapi/apps
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo

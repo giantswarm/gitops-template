@@ -1,6 +1,6 @@
 """P3: deleting a cluster's Kustomizations deletes what they applied, except the cluster.
 
-When a cluster's Kustomizations go, the cluster's and the ones of its apps and app sets, because
+When a cluster's Kustomizations go, the cluster's and the one of its secondary apps, because
 their files are deleted from Git or by hand as the getting-started guides do, Flux deletes
 everything they applied, except what has `kustomize.toolkit.fluxcd.io/prune: disabled`: the
 cluster's HelmRelease stays.

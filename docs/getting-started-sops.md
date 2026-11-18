@@ -331,7 +331,8 @@ kubectl get namespace org-${ORG_NAME}
 
 A cluster gets two `Kustomization`s, which fill in variables such as `${cluster_name}` in the files below. The
 cluster's `Kustomization` applies the `${WC_DIR}/mapi/cluster` directory and gets `Ready` once the cluster is up. The
-apps' `Kustomization` applies `${WC_DIR}/mapi/apps` only after that, so the apps install into a cluster that exists.
+apps' `Kustomization` applies the rest of `${WC_DIR}/mapi` only after that, so the apps install into a cluster that
+exists.
 The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart, built from the
 [CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
 the Giant Swarm release, so the release the cluster runs is stored in Git. `release-aws` rejects a cluster name longer
@@ -429,6 +430,18 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     EOF
     ```
 
+    Then list it in `${WC_DIR}/mapi/kustomization.yaml`, which leaves out `cluster`, as the cluster has a
+    `Kustomization` of its own:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/mapi/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - apps/
+    EOF
+    ```
+
 1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files.
    It never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label. Its health
@@ -445,7 +458,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
       healthCheckExprs:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
-          current: status.conditions.filter(c, c.type == 'Available').all(c, c.status == 'True')
+          current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
       healthChecks:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
@@ -482,7 +495,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
       dependsOn:
         - name: ${MC_NAME}-clusters-${WC_NAME}
       interval: 1m
-      path: ./${WC_DIR}/mapi/apps
+      path: ./${WC_DIR}/mapi
       postBuild:
         substitute:
           cluster_description: "${WC_NAME} managed by GitOps"

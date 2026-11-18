@@ -49,6 +49,16 @@ repos:
       hooks:
           - id: markdownlint
 
+    # every Flux Kustomization's path exists and builds, see docs/guides/ci-validation.md
+    - repo: local
+      hooks:
+          - id: check-kustomization-paths
+            name: Flux Kustomization paths exist and build
+            entry: tools/check-kustomization-paths
+            language: script
+            pass_filenames: false
+            always_run: true
+
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v6.0.0
       hooks:

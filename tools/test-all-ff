@@ -187,6 +187,22 @@ function test() {
 		fi
 	fi
 
+	if [ "${mode}" == "validate" ]; then
+		# check-kustomization-paths must fail for a Kustomization whose path is gone, and for
+		# one whose kustomization.yaml lists a directory that's gone.
+		echo -n "check-kustomization-paths, gone paths: "
+		status=0
+		output=$("$(dirname $0)/check-kustomization-paths" "$(dirname $0)/testdata/gone-path" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "default/gone-path in cluster.yaml: spec.path 'mapi/apps' doesn't exist" <<<"${output}" &&
+			grep -q "default/lists-a-gone-directory in cluster.yaml: spec.path 'mapi' doesn't build" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
 	if [[ ${has_validation_errors} -ne 0 ]]; then
 		echo "There are validation errors, please check the above output!"
 		exit 2

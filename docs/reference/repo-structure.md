@@ -47,7 +47,6 @@ management-clusters
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
                 ├── [WC_NAME_APPS.yaml]
-                ├── [WC_NAME_APP_SETS.yaml]
                 ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
@@ -150,7 +149,8 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | --- | --- |
 | Management cluster Flux `Kustomization` | `MC_NAME-gitops`, in `MC_NAME.yaml` |
 | Workload cluster Flux `Kustomization` | `MC_NAME-clusters-WC_NAME`, in `WC_NAME.yaml` |
-| Flux `Kustomization`s of a workload cluster's apps and app sets | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME_APPS.yaml`, and `MC_NAME-clusters-WC_NAME-app-sets`, in `WC_NAME_APP_SETS.yaml`. `kubectl gs gitops` doesn't generate them, see [Flux Kustomizations](#flux-kustomizations) |
+| Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME_APPS.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux Kustomizations](#flux-kustomizations) |
+| An app's `HelmRelease` and `OCIRepository` when it's a base app, installed with the cluster | the same files, in `mapi/cluster/apps/APP_NAME` |
 | Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `mapi/apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `mapi/cluster` |
@@ -251,13 +251,15 @@ management-clusters
             └── workload-clusters
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml            # applies WC_NAME/mapi/cluster/
-                ├── WC_NAME_APPS.yaml       # applies WC_NAME/mapi/apps/, once the cluster is ready
-                ├── WC_NAME_APP_SETS.yaml   # applies WC_NAME/mapi/app_sets/, once the cluster is ready
+                ├── WC_NAME_APPS.yaml       # applies WC_NAME/mapi/, once the cluster is ready
                 └── WC_NAME
                     └── mapi
-                        ├── app_sets
-                        ├── apps
+                        ├── kustomization.yaml   # lists apps and app_sets, not cluster
+                        ├── [app_sets]
+                        ├── apps                 # the secondary apps
                         └── cluster
+                            ├── kustomization.yaml
+                            └── [apps]           # the base apps
 ```
 
 `MC_NAME.yaml` applies everything in `MC_NAME/` but stops at the workload clusters. The `kustomization.yaml` in
@@ -269,18 +271,20 @@ resources:
   - WC_NAME_APPS.yaml
 ```
 
-Each of them applies one directory of `WC_NAME/mapi` and sets the variables, like `${cluster_name}`, that the bases
-use. See [How it works](../how-it-works.md) for why the management cluster's and the clusters' Kustomizations are
-separate.
+Both set the variables, like `${cluster_name}`, that the bases use. See [How it works](../how-it-works.md) for why the
+management cluster's and the clusters' Kustomizations are separate.
 
-A cluster's apps install into the cluster, so they wait for it:
+A cluster with apps has two Kustomizations:
 
-1. `WC_NAME.yaml` applies `mapi/cluster`, the cluster's `HelmRelease`. Its `healthChecks` name the Cluster API
-   `Cluster` it creates, and its `healthCheckExprs` count the `Cluster` as ready once its `Available` condition is
-   `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster coming up.
-1. `WC_NAME_APPS.yaml` applies `mapi/apps`, and `WC_NAME_APP_SETS.yaml` applies `mapi/app_sets`. Both have the
-   cluster's Kustomization in `dependsOn`, so Flux applies nothing of them until it's `Ready`. Until then, they report
-   `DependencyNotReady`.
+1. `WC_NAME.yaml` applies `mapi/cluster`: the cluster's `HelmRelease` and its base apps, in `mapi/cluster/apps`.
+   Base apps are the ones the cluster needs from the start, such as the Gateway API stack of
+   [envoy-gateway](/bases/apps/envoy-gateway/) in the out-of-band examples. Flux applies them with the cluster, and
+   their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name the
+   Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available` condition
+   is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster coming up.
+1. `WC_NAME_APPS.yaml` applies the rest of `mapi`: the secondary apps in `mapi/apps` and the App Sets in
+   `mapi/app_sets`, which `mapi/kustomization.yaml` lists. It has the cluster's Kustomization in `dependsOn`, so Flux
+   applies none of them until the cluster is `Available`. Until then, it reports `DependencyNotReady`.
 
 Name the cluster in `healthChecks` with its name and namespace written out, such as `capi-wc-name` and
 `org-org-name`: Flux doesn't substitute variables in a Kustomization's own spec. A cluster without apps, such as the

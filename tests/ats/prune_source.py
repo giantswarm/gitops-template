@@ -1,7 +1,9 @@
-"""P1, P2: removing files from the source the kind test reads, without a push.
+"""P1, P2: removing files from what the kind test applies, without a push.
 
 The kind test reads a branch it can't push to. The GitRepository's `spec.ignore` leaves the
-files out of the artifact Flux applies instead, as if they were deleted from Git.
+files out of the artifact Flux applies instead, as if they were deleted from Git. A file that a
+kustomization.yaml lists can't be left out that way, as the list would name a file that's gone:
+`$patch: delete` patches in the Kustomization's `spec.patches` drop its objects instead.
 """
 
 import pykube
@@ -10,7 +12,7 @@ from conftest import FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE
 from flux_inventory import inventory_keys
 from flux_reconcile import repo_problems, request_reconcile, wait_until
 from prune_objects import (
-    APP_SETS_KUSTOMIZATION,
+    APPS_KUSTOMIZATION,
     PROTECTED_OBJECTS,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
@@ -48,12 +50,15 @@ def inventory_problems(kustomizations: list[APIObject]) -> list[str]:
     return problems
 
 
-def remove_from_source(api: pykube.HTTPClient, ignore: str) -> None:
+def remove_from_source(
+    api: pykube.HTTPClient, ignore: str, patches: list[dict]
+) -> None:
     """Leave the files `ignore` matches out of the GitRepository's artifact, as if they were
-    deleted from Git, and wait until the Kustomizations that applied them have applied the
-    new artifact.
+    deleted from Git, drop what `patches` delete from what the apps Kustomization builds, and
+    wait until the Kustomizations that applied them have applied the change.
     """
     repo = git_repository(api)
+    kustomization(api, APPS_KUSTOMIZATION).patch({"spec": {"patches": patches}})
     repo.patch({"spec": {"ignore": ignore}})
     request_reconcile(repo)
     wait_until(
@@ -64,7 +69,7 @@ def remove_from_source(api: pykube.HTTPClient, ignore: str) -> None:
     #  kustomize-controller only reacts to a new revision by itself. Without the request, the
     #  Kustomizations would apply it at their next interval.
     kustomizations = [
-        kustomization(api, k) for k in (ROOT_KUSTOMIZATION, APP_SETS_KUSTOMIZATION)
+        kustomization(api, k) for k in (ROOT_KUSTOMIZATION, APPS_KUSTOMIZATION)
     ]
     for k in kustomizations:
         request_reconcile(k)
@@ -82,3 +87,9 @@ def restore_source(api: pykube.HTTPClient) -> None:
     repo = git_repository(api)
     repo.patch({"spec": {"ignore": None}})
     request_reconcile(repo)
+    namespace, name = APPS_KUSTOMIZATION
+    apps = (
+        KustomizationCR.objects(api).filter(namespace=namespace).get_or_none(name=name)
+    )
+    if apps is not None:
+        apps.patch({"spec": {"patches": None}})

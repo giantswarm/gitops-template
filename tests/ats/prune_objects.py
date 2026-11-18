@@ -1,4 +1,4 @@
-"""P1, P2: the files test_prune removes from the source, and the objects in them."""
+"""P1, P2: what test_prune removes from what Flux applies, and the objects in it."""
 
 import pykube
 from checks.kinds import REFERENCED_KINDS
@@ -18,28 +18,29 @@ class OrganizationCR(APIObject):
 #  matches a file under a Kustomization's path here.
 PRUNE_IGNORE = "\n".join(
     [
-        # P1: an app, the hello-web-app-1 app set of the out-of-band-no-flux cluster
-        "/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/"
-        "WC_NAME_OUT_OF_BAND_NO_FLUX_APP/mapi/app_sets/hello-web-app-1/",
         # P2: the organization
         "/management-clusters/MC_NAME/organizations/ORG_NAME/ORG_NAME.yaml",
     ]
 )
 # the Kustomization of the management cluster, which applies the organization
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
-# the Kustomization of the out-of-band-no-flux cluster's app sets, which applies the app set
-APP_SETS_KUSTOMIZATION = (
+# the Kustomization of the out-of-band-no-flux cluster's secondary apps, which applies the app set
+APPS_KUSTOMIZATION = (
     FLUX_OBJECTS_NAMESPACE,
-    "mc-name-clusters-out-of-band-no-flux-app-sets",
+    "mc-name-clusters-out-of-band-no-flux-apps",
 )
 # the Kustomizations of the out-of-band-no-flux cluster: the cluster's, which applies the
-#  cluster's HelmRelease, and the ones of its apps and app sets
+#  cluster's HelmRelease and its base apps, and the one of its secondary apps
 CLUSTER_KUSTOMIZATIONS = [
     (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
-    (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux-apps"),
-    APP_SETS_KUSTOMIZATION,
+    APPS_KUSTOMIZATION,
 ]
-# (kind, namespace, name) of the objects in the removed files that Flux deletes: the app
+# P1: an app, the hello-web-app-1 app set of the out-of-band-no-flux cluster. spec.ignore can't
+#  leave its directory out of the source as P2 does: app_sets/kustomization.yaml lists it, so the
+#  apps Kustomization wouldn't build, while deleting it from Git deletes that entry too. Instead,
+#  `$patch: delete` patches in the apps Kustomization's `spec.patches` drop its objects from
+#  what the Kustomization builds, as deleting the directory and its entry does.
+# (kind, namespace, name) of the objects of the removed app that Flux deletes
 PRUNED_OBJECTS = [
     ("HelmRelease", "org-org-name", "out-of-band-no-flux-hello-world"),
     ("OCIRepository", "org-org-name", "out-of-band-no-flux-hello-world"),

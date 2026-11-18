@@ -13,4 +13,3 @@ resources:
   - hello-world/oci-repository.yaml
   - hello-world-automatic-updates/helm-release.yaml
   - hello-world-automatic-updates/oci-repository.yaml
-  - envoy-gateway-from-template/

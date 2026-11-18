@@ -1,53 +1,16 @@
-"""Checks of how cluster_gate judges the apps Kustomizations, and that its list of them matches
-the repository; they need no cluster."""
+"""Checks that the clusters cluster_gates lists match the repository, and of the stand-in
+`Cluster`'s condition; they need no cluster."""
 
 from pathlib import Path
 
 import yaml
-from cluster_gate import (
-    GATED_KUSTOMIZATIONS,
-    available_condition,
-    held_problems,
-    opened_problems,
-)
+from cluster_gates import GATES
+from stand_in_clusters import available_condition
 
 WORKLOAD_CLUSTERS_DIR = (
     Path(__file__).resolve().parent
     / "../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters"
 )
-KEY = "default/apps"
-
-
-def kustomization(reason: str, status: str = "False", inventory: bool = False) -> dict:
-    entries = [{"id": "org-org-name_wc-app_helm.toolkit.fluxcd.io_HelmRelease"}]
-    return {
-        "status": {
-            "conditions": [{"type": "Ready", "status": status, "reason": reason}],
-            "inventory": {"entries": entries if inventory else []},
-        }
-    }
-
-
-def test_held_problems() -> None:
-    assert held_problems(KEY, kustomization("DependencyNotReady")) == []
-    assert held_problems(KEY, None) == ["Kustomization 'default/apps' doesn't exist"]
-    assert held_problems(KEY, kustomization("ReconciliationSucceeded", "True")) == [
-        "Kustomization 'default/apps' isn't waiting for its dependency: "
-        "Ready is True, ReconciliationSucceeded"
-    ]
-    assert held_problems(KEY, kustomization("DependencyNotReady", inventory=True)) == [
-        "Kustomization 'default/apps' applied [('HelmRelease', 'org-org-name', 'wc-app')] "
-        "before the cluster was Available"
-    ]
-
-
-def test_opened_problems() -> None:
-    ready = kustomization("ReconciliationSucceeded", "True", inventory=True)
-    assert opened_problems(KEY, ready) == []
-    assert opened_problems(KEY, kustomization("DependencyNotReady")) == [
-        "Kustomization 'default/apps' isn't ready after the cluster was Available: "
-        "DependencyNotReady: "
-    ]
 
 
 def test_available_condition_has_a_message() -> None:
@@ -58,9 +21,9 @@ def test_available_condition_has_a_message() -> None:
     assert condition["message"] == ""
 
 
-def gates_in_repository() -> dict[str, list[str]]:
-    """The `Cluster` each cluster Kustomization health-checks, and the Kustomizations that
-    depend on it."""
+def gates_in_repository() -> dict[str, list[tuple[str, str]]]:
+    """For the `Cluster` each Kustomization health-checks: that Kustomization, then the ones
+    that depend on it, as `(name, path)`."""
     kustomizations = []
     for file in sorted(WORKLOAD_CLUSTERS_DIR.glob("*.yaml")):
         if file.name != "kustomization.yaml":
@@ -72,13 +35,26 @@ def gates_in_repository() -> dict[str, list[str]]:
         for check in k["spec"].get("healthChecks") or []
         if check["kind"] == "Cluster"
     }
-    gates: dict[str, list[str]] = {name: [] for name in clusters.values()}
+    gates: dict[str, list[tuple[str, str]]] = {name: [] for name in clusters.values()}
     for k in kustomizations:
+        name = k["metadata"]["name"]
+        if name in clusters:
+            gates[clusters[name]].insert(0, (name, k["spec"]["path"]))
         for dependency in k["spec"].get("dependsOn") or []:
-            gates[clusters[dependency["name"]]].append(k["metadata"]["name"])
-    return {name: sorted(deps) for name, deps in gates.items()}
+            gates[clusters[dependency["name"]]].append((name, k["spec"]["path"]))
+    return gates
 
 
-def test_gated_kustomizations_match_the_repository() -> None:
-    expected = {name: sorted(deps) for name, deps in GATED_KUSTOMIZATIONS.items()}
-    assert gates_in_repository() == expected
+def test_gates_match_the_repository() -> None:
+    gates = gates_in_repository()
+    assert {
+        cluster: [name for name, _ in kustomizations]
+        for cluster, kustomizations in gates.items()
+    } == {
+        cluster: [gate.cluster_kustomization, gate.apps_kustomization]
+        for cluster, gate in GATES.items()
+    }
+    # the cluster's Kustomization applies mapi/cluster, the apps one the rest of mapi
+    for (_, cluster_path), (_, apps_path) in gates.values():
+        assert cluster_path == apps_path + "/cluster"
+        assert apps_path.endswith("/mapi")

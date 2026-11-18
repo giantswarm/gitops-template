@@ -8,13 +8,13 @@ spec:
     provider: sops
     secretRef:
       name: sops-gpg-from-template-wc-name
-  # Ready once Cluster API reports the cluster Available. The _APPS and
-  # _APP_SETS Kustomizations depend on this one, so the apps install once the
-  # cluster is up.
+  # Applies the cluster and its base apps, in mapi/cluster. Ready once Cluster
+  # API reports the cluster Available. The Kustomization in WC_NAME_OUT_OF_BAND_NO_FLUX_APP_APPS.yaml
+  # depends on this one, so the secondary apps install once the cluster is up.
   healthCheckExprs:
     - apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
-      current: status.conditions.filter(c, c.type == 'Available').all(c, c.status == 'True')
+      current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
   healthChecks:
     - apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster

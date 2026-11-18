@@ -4,12 +4,13 @@ metadata:
   name: mc-name-clusters-capi-wc-name  # TODO: change 'mc-name' to your Management Cluster name and 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
   namespace: default
 spec:
-  # Ready once Cluster API reports the cluster Available. WC_NAME_APPS.yaml
-  # depends on this Kustomization, so the apps install once the cluster is up.
+  # Applies the cluster and its base apps, in mapi/cluster. Ready once Cluster
+  # API reports the cluster Available. The Kustomization in WC_NAME_APPS.yaml
+  # depends on this one, so the secondary apps install once the cluster is up.
   healthCheckExprs:
     - apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
-      current: status.conditions.filter(c, c.type == 'Available').all(c, c.status == 'True')
+      current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
   healthChecks:
     - apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster

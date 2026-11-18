@@ -1,0 +1,96 @@
+#!/bin/bash
+# shellcheck disable=SC2207
+set -euo pipefail
+
+function help() {
+	echo -e "
+Check that the spec.path of every Flux Kustomization exists and builds. Must be run from
+the repository root, or from the directory given as the only argument.
+
+Usage: $0 [dir]
+
+A path with a kustomization.yaml is built with kustomize. A path without one is built the
+way Flux builds it, from the YAML files and the directories with a kustomization.yaml below
+it, and must not be empty. The Kustomizations in tools/testdata are left out.
+"
+	exit 1
+}
+
+[ $# -gt 1 ] && help
+cd "${1:-.}" || help
+
+# kustomize if it's installed, otherwise the one built into kubectl
+if command -v kustomize >/dev/null; then
+	kustomize=(kustomize build --load-restrictor=LoadRestrictionsNone)
+else
+	kustomize=(kubectl kustomize --load-restrictor=LoadRestrictionsNone)
+fi
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "${tmp_dir}"' EXIT
+
+##
+# What Flux applies from a directory without a kustomization.yaml: its YAML files, and
+# below it every directory with a kustomization.yaml or, failing that, its YAML files.
+function generated_resources() {
+	if [ -e "$1/kustomization.yaml" ]; then
+		echo "$1"
+		return
+	fi
+	find "$1" -maxdepth 1 -type f -name '*.yaml'
+	for d in $(find "$1" -mindepth 1 -maxdepth 1 -type d | sort); do
+		generated_resources "$d"
+	done
+}
+
+##
+# Build `path` of the Kustomization `name`; print what's wrong and fail if it doesn't build.
+function check() {
+	local name="$1" file="$2" path="${3#./}"
+	path="${path:-.}"
+	local dir="${tmp_dir}/build"
+
+	if [ ! -d "${path}" ]; then
+		echo "Kustomization ${name} in ${file}: spec.path '${path}' doesn't exist. Restore the directory," \
+			"or delete the Kustomization: remove ${file} and its entry in the kustomization.yaml that lists it."
+		return 1
+	fi
+
+	if [ -e "${path}/kustomization.yaml" ]; then
+		dir="${path}"
+	else
+		local resources=($(generated_resources "${path}"))
+		if [ ${#resources[@]} -eq 0 ]; then
+			echo "Kustomization ${name} in ${file}: spec.path '${path}' is empty. Delete the Kustomization:" \
+				"remove ${file} and its entry in the kustomization.yaml that lists it."
+			return 1
+		fi
+		rm -rf "${dir}"
+		mkdir -p "${dir}"
+		{
+			echo "apiVersion: kustomize.config.k8s.io/v1beta1"
+			echo "kind: Kustomization"
+			echo "resources:"
+			for r in "${resources[@]}"; do
+				echo "  - $(realpath --relative-to="${dir}" "${r}")"
+			done
+		} >"${dir}/kustomization.yaml"
+	fi
+
+	local output
+	if ! output=$("${kustomize[@]}" "${dir}" 2>&1 >/dev/null); then
+		echo "Kustomization ${name} in ${file}: spec.path '${path}' doesn't build. A kustomization.yaml" \
+			"lists something that's gone: remove its entry, or restore it. kustomize says:"
+		echo "${output}" | sed 's/^/  /'
+		return 1
+	fi
+}
+
+failed=0
+for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec grep -l '^apiVersion: kustomize.toolkit.fluxcd.io/' {} + | sort); do
+	for k in $(yq --no-doc 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/v1" and .kind == "Kustomization") |
+		[.metadata.namespace + "/" + .metadata.name, .spec.path] | join(",")' "$f"); do
+		check "${k%%,*}" "${f#./}" "${k#*,}" || failed=1
+	done
+done
+exit ${failed}

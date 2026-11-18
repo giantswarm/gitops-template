@@ -22,6 +22,7 @@ from prune_objects import (
     deleted_problems,
     kept_problems,
 )
+from prune_patches import delete_patches
 from prune_source import remove_from_source, restore_source
 
 
@@ -59,7 +60,7 @@ def check_removed_files(
 ) -> None:
     """P1: removing an app's files removes the app. P2: removing the organization's file leaves
     the organization."""
-    remove_from_source(api, PRUNE_IGNORE)
+    remove_from_source(api, PRUNE_IGNORE, delete_patches(PRUNED_OBJECTS))
     wait_until(
         lambda: app_problems(api, workload_cluster),
         PRUNE_TIMEOUT_SEC,
