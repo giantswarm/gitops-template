@@ -183,6 +183,8 @@ en- and decrypt real user-related data.
     cat <<EOF > secrets/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
     resources:
     - ${MC_NAME}.gpgkey.enc.yaml
     EOF

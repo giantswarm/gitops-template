@@ -44,6 +44,9 @@ Some objects delete a whole cluster when they go, so Flux doesn't delete them. T
   then deletes the cluster and its cloud infrastructure.
 - The `Organization`, such as `organizations/demoorg/demoorg.yaml`. Deleting it deletes the `org-demoorg` namespace,
   with every cluster in it.
+- The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`. Flux decrypts with them, so deleting one stops
+  GitOps for every cluster that uses it. The keys are encrypted, so `secrets/kustomization.yaml` adds the annotation
+  with `commonAnnotations` instead: changing an encrypted file by hand breaks its SOPS checksum.
 
 When you delete their files, they stay on the management cluster and the cluster keeps running, but Flux no longer
 manages them. A cluster `HelmRelease` that stays without its `OCIRepository` and ConfigMaps can't reconcile, and

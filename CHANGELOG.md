@@ -94,7 +94,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     Delete it once it holds nothing you need.
 - Every Flux `Kustomization` has `prune: true`, so deleting a file from Git deletes what it created, such as an app.
   The objects whose deletion would delete a cluster, the cluster `HelmRelease` in
-  `bases/clusters/capa/template` and the `Organization`, have the
+  `bases/clusters/capa/template` and the `Organization`, and the SOPS key `Secret`s Flux decrypts with, have the
   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so Flux keeps them and they have to be deleted by hand.
   `docs/how-it-works.md` explains what is deleted and what is kept, and the guides use `prune: true`, add the
   annotation where `kubectl gs` doesn't yet, and delete a cluster by deleting its `HelmRelease` by hand. The kind

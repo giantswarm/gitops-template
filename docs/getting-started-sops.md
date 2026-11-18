@@ -181,6 +181,8 @@ repository, and a `Kustomization` that tells it which directory to apply.
     cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
     resources:
     - ${MC_NAME}.gpgkey.enc.yaml
     EOF
