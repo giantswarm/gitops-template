@@ -85,12 +85,10 @@ entry for every management cluster, organization, workload cluster, app and base
 apiVersion: gitops.giantswarm.io/v1alpha1
 kind: RepositoryMetadata
 structureVersion: 3
-generatedWith: kubectl-gs/6.0.0
 layers:
   - kind: management-cluster
     path: management-clusters/MC_NAME
     structureVersion: 3
-    generatedWith: kubectl-gs/6.0.0
 ```
 
 The file sits outside of what Flux applies, so it never reaches a cluster. Don't edit it by hand.
