@@ -305,8 +305,11 @@ management cluster, copy it into each `org-*` namespace. The example in
   `rbac.kyverno.io/aggregate-to-background-controller: "true"` label adds the role to the controller's permissions.
 
 `MC_NAME.yaml` applies the directory with everything else in `MC_NAME/`. To share a Secret instead, such as a
-registry pull secret, change `kind: ConfigMap` in the policy to `kind: Secret`, add `secrets` to the ClusterRole's
-resources, and encrypt the source with SOPS, in a file that a `path_regex` of your `.sops.yaml` covers.
+registry pull secret, change `kind: ConfigMap` in the policy to `kind: Secret` and encrypt the source with SOPS, in a
+file that a `path_regex` of your `.sops.yaml` covers. Grant the background controller `secrets` as well, in a second
+rule with the verbs `get`, `list` and `watch` besides the four above: Kyverno checks that the controller can read the
+source and the copies, and its chart only lets it read ConfigMaps, so it would reject the policy and the management
+cluster's `Kustomization` would fail.
 
 ## Recommended next steps
 

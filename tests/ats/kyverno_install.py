@@ -2,47 +2,64 @@
 
 The shared-objects example is a Kyverno ClusterPolicy, so Kyverno has to run before Flux applies
 the repository: test_flux_objects.py requests the `kyverno` fixture before any other.
+
+The charts are the ones Giant Swarm ships, from team Shield's kyverno-app and kyverno-crds, at
+the versions on the management clusters. kyverno-app leaves the CRDs to kyverno-crds, so that
+chart goes first.
 """
+
+from pathlib import Path
 
 import pytest
 from conftest import HELM_URL, run_tool
 
-KYVERNO_CHART_REPO = "https://kyverno.github.io/kyverno/"
-# The chart kyverno-app 0.26.1 ships to the management clusters: Kyverno v1.19.2.
-# renovate: datasource=helm depName=kyverno registryUrl=https://kyverno.github.io/kyverno/
-KYVERNO_CHART_VERSION = "3.9.2"
+CHARTS = "oci://gsoci.azurecr.io/charts/giantswarm"
+# renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno-crds
+KYVERNO_CRDS_CHART_VERSION = "1.19.2"
+# renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno
+KYVERNO_CHART_VERSION = "0.26.1"
 KYVERNO_NAMESPACE = "kyverno"
 KYVERNO_READY_TIMEOUT_SEC = 300
+# turns off what needs CRDs the kind cluster doesn't have; the file says which
+KYVERNO_VALUES_FILE = (
+    Path(__file__).resolve().parent / "fixtures" / "kyverno-values.yaml"
+)
 
 
-@pytest.fixture(scope="module")
-def kyverno(kube_config: str) -> None:
-    """Install Kyverno's admission and background controllers, which generate rules need.
-
-    It isn't uninstalled: the test cluster goes away with it.
-    """
+def install_chart(kube_config: str, name: str, version: str, *args: str) -> None:
+    """Install Giant Swarm's chart `name` at `version` as the release `name`, and wait for it."""
     run_tool(
         "helm",
         HELM_URL,
         "upgrade",
         "--install",
-        "kyverno",
-        "kyverno",
-        "--repo",
-        KYVERNO_CHART_REPO,
+        name,
+        f"{CHARTS}/{name}",
         "--version",
-        KYVERNO_CHART_VERSION,
+        version,
         "--namespace",
         KYVERNO_NAMESPACE,
         "--create-namespace",
-        # the example needs neither
-        "--set",
-        "cleanupController.enabled=false",
-        "--set",
-        "reportsController.enabled=false",
         "--wait",
         "--timeout",
         f"{KYVERNO_READY_TIMEOUT_SEC}s",
         "--kubeconfig",
         kube_config,
+        *args,
+    )
+
+
+@pytest.fixture(scope="module")
+def kyverno(kube_config: str) -> None:
+    """Install the Kyverno CRDs, then Kyverno.
+
+    It isn't uninstalled: the test cluster goes away with it.
+    """
+    install_chart(kube_config, "kyverno-crds", KYVERNO_CRDS_CHART_VERSION)
+    install_chart(
+        kube_config,
+        "kyverno",
+        KYVERNO_CHART_VERSION,
+        "--values",
+        str(KYVERNO_VALUES_FILE),
     )

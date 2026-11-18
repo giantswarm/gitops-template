@@ -2,7 +2,9 @@
 # it needs those permissions on the copied kind, or Kyverno rejects the policy.
 # The Kyverno chart grants them for ConfigMaps but not for Secrets; this role
 # keeps the example from depending on the chart's defaults. To copy a Secret,
-# such as a registry pull secret, add `secrets` to its resources. The label
+# such as a registry pull secret, grant `secrets` with these verbs and `get`,
+# `list` and `watch` too: Kyverno checks that the controller can read the
+# source and the copies, and the chart only lets it read ConfigMaps. The label
 # aggregates the role into the background controller's ClusterRole.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
