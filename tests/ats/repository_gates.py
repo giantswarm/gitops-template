@@ -1,0 +1,51 @@
+"""The clusters whose apps wait for them, as the repository's Kustomizations say, so that
+test_cluster_gate can compare them with cluster_gates.GATES without a cluster."""
+
+from pathlib import Path
+
+import yaml
+
+WORKLOAD_CLUSTERS_DIR = (
+    Path(__file__).resolve().parent
+    / "../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters"
+)
+# for each `Cluster`: the Kustomization that health-checks it, then the ones that depend on
+#  that one, as `(name, path)`
+Gates = dict[str, list[tuple[str, str]]]
+
+
+def gates_of(kustomizations: list[dict]) -> tuple[Gates, list[str]]:
+    """The gates of `kustomizations`, and the Kustomizations that depend on one without a
+    `Cluster` health check."""
+    clusters = {
+        k["metadata"]["name"]: check["name"]
+        for k in kustomizations
+        for check in k["spec"].get("healthChecks") or []
+        if check["kind"] == "Cluster"
+    }
+    gates: Gates = {name: [] for name in clusters.values()}
+    problems = []
+    for k in kustomizations:
+        name = k["metadata"]["name"]
+        if name in clusters:
+            gates[clusters[name]].insert(0, (name, k["spec"]["path"]))
+        for dependency in k["spec"].get("dependsOn") or []:
+            if dependency["name"] not in clusters:
+                problems.append(
+                    f"Kustomization '{name}' depends on '{dependency['name']}', which doesn't "
+                    "health-check a Cluster: give it the cluster's health check, and add the "
+                    "cluster to GATES in cluster_gates.py"
+                )
+                continue
+            gates[clusters[dependency["name"]]].append((name, k["spec"]["path"]))
+    return gates, problems
+
+
+def gates_in_repository() -> tuple[Gates, list[str]]:
+    """The gates of the workload cluster Kustomizations in the repository."""
+    kustomizations = []
+    for file in sorted(WORKLOAD_CLUSTERS_DIR.glob("*.yaml")):
+        if file.name != "kustomization.yaml":
+            with file.open() as f:
+                kustomizations.append(yaml.safe_load(f))
+    return gates_of(kustomizations)
