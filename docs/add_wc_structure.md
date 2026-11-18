@@ -257,7 +257,11 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create Kustomization CR for it. Use one of the templates:
+1. Go back to the `workload-clusters` directory and create Kustomization CR for it. With `prune: true`, Flux deletes
+   what you delete from the cluster's files, but not the cluster, if its `HelmRelease` has the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
+   cluster bases of this repository. See
+   [How it works](./how-it-works.md). Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
@@ -277,7 +281,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           substitute:
             cluster_name: "${WC_NAME}"
             organization: "${ORG_NAME}"
-        prune: false
+        prune: true
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
@@ -308,7 +312,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           substitute:
             cluster_name: "${WC_NAME}"
             organization: "${ORG_NAME}"
-        prune: false
+        prune: true
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
@@ -335,7 +339,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
          # key: kubeConfig
          name: ${WC_NAME}-kubeconfig
      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
-     prune: false
+     prune: true
      sourceRef:
        kind: GitRepository
        name: ${GIT_REPOSITORY_NAME}

@@ -15,6 +15,7 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
+from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 
 
@@ -110,3 +111,13 @@ def test_node_pools(
         kube_cluster.kube_client, gitops_test_config.ignored_objects
     )
     assert not problems, "\n".join(problems)
+
+
+# must stay last: it deletes what the tests above check
+def test_prune(
+    request: pytest.FixtureRequest,
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    check_prune(request, kube_cluster.kube_client, workload_cluster)

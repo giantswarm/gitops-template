@@ -26,6 +26,10 @@ The workflow offers the following jobs:
   there to verify if they are deployed fine. It checks if all the `Kustomizations` are reconciled as expected
   and additionally if all the statements present in `tests/ats/assertions` are also available in objects in the
   cluster.
+  Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster: it leaves an app set and the
+  organization out of the `GitRepository` with `spec.ignore`, then deletes the cluster's `Kustomization`. The app
+  and everything the `Kustomization` applied have to go, and the `Organization` and the cluster's `HelmRelease` have
+  to stay. It deletes what the other tests check, so it runs last and fails if they didn't run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 

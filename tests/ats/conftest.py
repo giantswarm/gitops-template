@@ -21,6 +21,7 @@ from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, Confi
 from pytest_helm_charts.utils import wait_for_objects_condition
 
 from ci_context import master_gpg_key
+from flux_teardown import delete_without_prune
 
 # Its hooks skip the tests that need the cluster on a pull request from a fork.
 pytest_plugins = ["ci_context"]
@@ -707,6 +708,4 @@ def gitops_deployment(
     yield None
 
     for manifest_path in applied_manifests:
-        kube_cluster.kubectl(
-            f"delete -f {manifest_path} --wait=true", output_format="text"
-        )
+        delete_without_prune(kube_cluster, manifest_path)

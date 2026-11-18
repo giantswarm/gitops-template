@@ -38,7 +38,8 @@ export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
 
 **Note**, `kubectl gs gitops add management-cluster --gen-master-key` can generate the master key pair together with
 the directory tree, see `kubectl gs gitops add management-cluster --help`. It needs kubectl-gs 6.0.0 or newer, see
-[kubectl-gs version](./appendices.md#kubectl-gs-version). The steps below do it by hand.
+[kubectl-gs version](./appendices.md#kubectl-gs-version). The steps below do it by hand. The `Kustomization` it writes
+has `prune: false`, so set `prune: true`, as below.
 
 A master GPG keypair is used for en- and decryption of other GPG keys kept in this repository, that are in turn used to
 en- and decrypt real user-related data.
@@ -182,6 +183,11 @@ en- and decrypt real user-related data.
     cat <<EOF > secrets/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
+    labels:
+    - pairs:
+        giantswarm.io/prevent-deletion: "true"
     resources:
     - ${MC_NAME}.gpgkey.enc.yaml
     EOF
@@ -202,7 +208,7 @@ en- and decrypt real user-related data.
         secretRef:
           name: sops-gpg-master
       serviceAccountName: automation
-      prune: false
+      prune: true
       interval: 1m
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
