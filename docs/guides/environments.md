@@ -253,6 +253,8 @@ configMapGenerator:
     namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
 resources:
   - ../../../../cluster_templates/hello_app_cluster
@@ -347,6 +349,8 @@ configMapGenerator:
     namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 patches:
   - patch: |-
       - op: add
@@ -388,6 +392,8 @@ configMapGenerator:
     namespace: org-\${organization}
 generatorOptions:
   disableNameSuffixHash: true
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 patches:
   - patch: |-
       - op: add

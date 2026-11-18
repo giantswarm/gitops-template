@@ -18,5 +18,7 @@ data:
       source_name: my-repository
 kind: ConfigMap
 metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
   name: ${cluster_name}-flux-app-user-values
   namespace: org-${organization}

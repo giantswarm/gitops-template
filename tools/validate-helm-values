@@ -21,7 +21,11 @@
 #     are the first values file, so values from the repository take precedence. They don't
 #     set the region, so that a cluster without one fails.
 #
-# SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
+# Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the
+# label `reconcile.fluxcd.io/watch: Enabled`, so that helm-controller applies a change to it
+# straight away instead of at the HelmRelease's next interval.
+#
+# The values of SOPS-encrypted Secrets are left out, since CI has no key to decrypt them.
 #
 # HelmReleases listed in validate-helm-values.ignore are rendered, but their errors don't
 # fail the check.
@@ -157,6 +161,11 @@ while IFS=/ read -r ns name; do
 				failed=1
 			fi
 			continue
+		fi
+
+		if [ "$(yq '.metadata.labels["reconcile.fluxcd.io/watch"] // ""' <<<"${obj}")" != "Enabled" ]; then
+			echo "${id}: ${kind} ${ns}/${ref_name} from valuesFrom has no label reconcile.fluxcd.io/watch: Enabled"
+			failed=1
 		fi
 
 		if [ "${kind}" == "Secret" ] && [ "$(yq '.sops // "" | length' <<<"${obj}")" != "0" ]; then

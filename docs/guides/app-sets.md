@@ -196,6 +196,8 @@ their names, so Flux updates them in place instead of reinstalling the app.
         name: ${cluster_name}-hello-world-user-values
     generatorOptions:
       disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
     kind: Kustomization
     namespace: org-${organization}
     patches:

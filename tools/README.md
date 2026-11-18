@@ -62,6 +62,10 @@ the same way Flux does: maps are merged, and lists and scalars are replaced. The
 the `HelmRelease` references, or from a `HelmRepository`, and is cached under `${TMPDIR:-/tmp}/gitops-template-charts`.
 A semver range is resolved to the newest matching version, as Flux would resolve it.
 
+Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
+`reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
+as soon as it's made, not at the `HelmRelease`'s next `interval`.
+
 Some values don't exist until the cluster runs. They are replaced by stubs in [values-stubs](values-stubs/):
 
 - `cluster-values.yaml` replaces the `<cluster>-cluster-values` ConfigMap, which cluster-apps-operator creates for

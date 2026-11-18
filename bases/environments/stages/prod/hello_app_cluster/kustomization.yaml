@@ -8,6 +8,9 @@ configMapGenerator:
     namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
 # (optional) pin the hello-world version and the Giant Swarm release that prod
 # runs; the hello-world patch overrides the app set's. Renovate updates these

@@ -12,6 +12,9 @@ configMapGenerator:
     namespace: org-${organization}
 generatorOptions:
   disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
 patches:
   - patch: |-
       - op: add

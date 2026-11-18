@@ -104,6 +104,8 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     $(cat ${USERCONFIG_VALUES} | sed 's/^/    /')
     kind: ConfigMap
     metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
       name: \${cluster_name}-cluster-userconfig
       namespace: org-\${organization}
     EOF

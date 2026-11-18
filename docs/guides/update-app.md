@@ -33,6 +33,10 @@ export APP_NAME=APP_NAME
 - plain text configuration lives in the `-user-values` ConfigMap, generated from the `override_config.yaml` file,
 - encrypted configuration lives in the `-user-secrets` Secret, in the `secret.enc.yaml` file.
 
+  Both carry the `reconcile.fluxcd.io/watch: Enabled` label, so Flux applies a change to them as soon as it's merged,
+  not at the `HelmRelease`'s next `interval`. Keep the label on every ConfigMap and Secret a `HelmRelease` lists in
+  `valuesFrom`: CI fails without it.
+
   For an App created from an [App Template](./app-templates.md), the `oci-repository.yaml` and `helm-release.yaml`
   files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change
   them for a single cluster, add a patch to the App's `kustomization.yaml`, see
