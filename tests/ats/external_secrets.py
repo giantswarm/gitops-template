@@ -17,9 +17,10 @@ from pytest_helm_charts.clusters import Cluster
 
 ESO_RELEASE_NAME = "external-secrets"
 ESO_NAMESPACE = "external-secrets"
-ESO_CHART_REPO = "https://charts.external-secrets.io"
-# renovate: datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
-ESO_CHART_VERSION = "2.15.0"
+# the External Secrets Operator Giant Swarm ships, from giantswarm/external-secrets
+ESO_CHART = "oci://gsoci.azurecr.io/charts/giantswarm/external-secrets"
+# renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/external-secrets
+ESO_CHART_VERSION = "2.14.0"
 ESO_READY_TIMEOUT_SEC = 300
 # the webhook that validates the store can refuse it for a moment after the install, until
 #  ESO's cert controller has given it its certificate
@@ -92,9 +93,7 @@ def external_secrets(kube_cluster: Cluster, kube_config: str) -> Iterator[None]:
         "upgrade",
         "--install",
         ESO_RELEASE_NAME,
-        "external-secrets",
-        "--repo",
-        ESO_CHART_REPO,
+        ESO_CHART,
         "--version",
         ESO_CHART_VERSION,
         "--namespace",
