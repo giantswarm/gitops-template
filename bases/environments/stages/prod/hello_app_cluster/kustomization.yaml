@@ -14,11 +14,9 @@ generatorOptions:
 kind: Kustomization
 # (optional) pin the hello-world version and the Giant Swarm release that prod
 # runs; the hello-world patch overrides the app set's. Renovate updates these
-# pins in a pull request of their own, on a `renovate/prod-*` branch. The other
-# pull request for the same update changes what the out-of-band clusters render
-# for hello-world (dev and staging follow a semver range instead), and what the
-# WC_NAME* clusters, dev and staging render for the release. Prod renders the
-# new version once this one is merged: merge it after staging has run it.
+# pins in a pull request of their own, on a `renovate/prod-*` branch, that
+# isn't automerged. Prod renders the new version once this one is merged:
+# merge it after staging has run it.
 patches:
   - patch: |-
       - op: replace
@@ -33,7 +31,7 @@ patches:
       - op: replace
         path: /spec/ref/tag
         # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
-        value: "36.2.0"
+        value: "36.1.0"
     target:
       kind: OCIRepository
       name: \${cluster_name}

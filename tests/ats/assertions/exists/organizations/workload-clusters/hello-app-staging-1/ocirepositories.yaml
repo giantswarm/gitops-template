@@ -61,7 +61,7 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    semver: '>=3.0.0 <4.0.0'
+    tag: 3.2.4
   url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -78,6 +78,6 @@ spec:
   interval: 10m0s
   provider: generic
   ref:
-    tag: "36.2.0"
+    tag: "36.1.1"
   timeout: 1m0s
   url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

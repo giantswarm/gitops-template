@@ -6,6 +6,7 @@
     - [The development cluster](#the-development-cluster)
     - [The staging cluster](#the-staging-cluster)
     - [The production cluster](#the-production-cluster)
+    - [Promote a change from dev to prod](#promote-a-change-from-dev-to-prod)
 - [Add Workload Clusters based on the environment cluster templates](#add-workload-clusters-based-on-the-environment-cluster-templates)
 - [Tips for developing environments](#tips-for-developing-environments)
 
@@ -115,8 +116,10 @@ export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the CAPA cluster base, whose
 `release-aws` chart has the release as its version, so a patch sets the release as the tag of the cluster's
 `OCIRepository`.
-Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. In this example all stages run the same release.
-A stage that should run a newer one sets another version.
+Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. Each stage pins its own release, so a new release
+reaches dev first and staging and prod only when you promote it, see
+[Promote a change from dev to prod](#promote-a-change-from-dev-to-prod). In this example dev runs `36.2.0`, staging
+`36.1.1` and prod `36.1.0`.
 
 ```sh
 export RELEASE_VERSION=36.2.0
@@ -168,6 +171,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
         value: "${RELEASE_VERSION}"
     target:
       kind: OCIRepository
@@ -176,6 +180,8 @@ resources:
   - ../../../../cluster_templates/hello_app_cluster
 EOF
 ```
+
+The `# renovate:` comment lets Renovate find the release, which it can't see in a kustomize patch otherwise.
 
 And pretty much that is it for the development cluster. Let's look at the staging cluster next to the minor differences.
 
@@ -189,15 +195,9 @@ cd ../../staging/hello_app_cluster
 
 We will use the same environment variables for this cluster template as we did for the development cluster.
 
-It is similar to the development cluster in the following manners:
-
-- it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
-- it has automatic updates set up
-
-We want the versions automatically rolled out here to be more stable, so we tell Flux to automatically install all
-stable versions that are at least version `3.0.0`, but we do not want to automatically introduce possibly breaking
-changes in a major version bump, so let's stay below `4.0.0`. A range without a pre-release comparator never matches a
-pre-release tag, so no filter is needed. The release is set the same way as for the development cluster.
+It is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base, like the development
+cluster. Unlike it, staging doesn't follow a range: it pins the exact `hello-world` version and the release, so it only
+runs a version once you have promoted it from dev. The hello-world patch overrides the version the app set pins.
 
 ```sh
 cat <<EOF > kustomization.yaml
@@ -207,16 +207,17 @@ kind: Kustomization
 patches:
   - patch: |-
       - op: replace
-        path: /spec/ref
-        value:
-          semver: '>=3.0.0 <4.0.0'
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
+        value: "3.2.4"
     target:
       kind: OCIRepository
       name: \\\${cluster_name}-hello-world
   - patch: |-
       - op: replace
         path: /spec/ref/tag
-        value: "${RELEASE_VERSION}"
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
+        value: "36.1.1"
     target:
       kind: OCIRepository
       name: \\\${cluster_name}
@@ -264,6 +265,7 @@ EOF
 It is similar to the staging cluster in the following manners:
 
 - it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
+- it pins the exact versions it runs instead of following a range
 
 Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-cluster-userconfig` `ConfigMap` of the
 cluster template with extra settings for the production cluster: bigger nodes, and more of them.
@@ -279,9 +281,7 @@ global:
 EOF
 ```
 
-Notice however that we decided not to set up `Automatic Updates` for this cluster.
-
-Instead, we use the `Kustomization` in the cluster's [kustomization.yaml](
+Like staging, we use the `Kustomization` in the cluster's [kustomization.yaml](
 /bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
 in our `OCIRepository` resources, next to the release of the cluster.
 
@@ -291,6 +291,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
         value: "3.2.2"
     target:
       kind: OCIRepository
@@ -298,17 +299,45 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
-        value: "${RELEASE_VERSION}"
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
+        value: "36.1.0"
     target:
       kind: OCIRepository
       name: \\\${cluster_name}
 EOF
 ```
 
-We tell Flux to use version `3.2.2` of the `hello-world` app.
+We tell Flux to use version `3.2.2` of the `hello-world` app and release `36.1.0`, one step behind staging.
 
-In this example when we sufficiently validated our released changes in the staging environment we update the versions
-in the `Kustomization`, merge the change and let Flux do the work.
+#### Promote a change from dev to prod
+
+Every stage runs its own version, and a version moves from one stage to the next in a pull request:
+
+| Stage | hello-world | Release |
+| --- | --- | --- |
+| dev | the newest dev build, from a `semver` range | `36.2.0` |
+| staging | `3.2.4` | `36.1.1` |
+| prod | `3.2.2` | `36.1.0` |
+
+[Renovate](/renovate.json5) finds the pins by their `# renovate:` comments, and opens a pull request per stage for each
+new version of hello-world and of the release:
+
+- **dev**: hello-world follows its range, so Flux deploys a new dev build without a pull request. A new release comes
+  in the pull request without a stage prefix, which also updates the bases and the `WC_NAME*` example clusters.
+- **staging**: a pull request on a `renovate/staging-*` branch changes the staging stage and the kind test's
+  assertions for the staging clusters.
+- **prod**: a pull request on a `renovate/prod-*` branch does the same for the prod stage.
+
+The staging and prod pull requests, and every pull request that changes a release, are never automerged: a release
+update rolls the cluster's nodes. Merging them in order is the promotion:
+
+1. dev gets the change first. Flux deploys each dev build of hello-world as it is published; for a release, merge the
+   dev pull request.
+1. Once the change works in dev, and for hello-world is published as a stable version, merge the staging pull request.
+1. Once it works in staging, merge the prod pull request.
+
+Without Renovate, promote the same way: change the version in the next stage's `kustomization.yaml` and merge it. To
+promote a version other than the newest, change the version in Renovate's pull request before you merge it.
 
 #### Regions
 
