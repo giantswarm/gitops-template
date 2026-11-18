@@ -241,6 +241,15 @@ cost a pod each rather than another kind cluster on the runner. In a [comparison
 with a second kind cluster, the vCluster took 29 seconds to set up against 17 (medians of 6 and 15 runs), and the whole
 kind job 254 seconds against 237, less than the spread of about 60 seconds between runs of the same setup.
 
+### Kyverno
+
+The [shared-objects example](../add_mc.md#share-an-object-with-every-organization) is a Kyverno `ClusterPolicy`, so
+the test installs Kyverno's admission and background controllers before Flux applies the repository. The `kyverno`
+chart is pinned in `tests/ats/kyverno_install.py` (`KYVERNO_CHART_VERSION`, 3.9.2), the chart `kyverno-app` 0.26.1
+runs on the management clusters. `test_shared_object_copied` creates a new `org-*` namespace and waits for the
+`shared-ca-bundle` ConfigMap to be copied into it. It then changes the source, with the management cluster's
+`Kustomization` suspended, waits for the copy to follow, and puts the source back.
+
 ## Superseded runs
 
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to

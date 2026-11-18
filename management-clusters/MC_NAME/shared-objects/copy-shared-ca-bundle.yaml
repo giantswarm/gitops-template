@@ -1,0 +1,28 @@
+# Copies the shared-ca-bundle ConfigMap into every `org-*` namespace, the new
+# ones and, with `generateExisting`, the ones that exist already. With
+# `synchronize`, Kyverno keeps the copies in sync with the source: a change to
+# the source in Git reaches every organization.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: copy-shared-ca-bundle
+spec:
+  rules:
+    - name: copy-shared-ca-bundle
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              names:
+                - org-*
+      generate:
+        generateExisting: true
+        synchronize: true
+        apiVersion: v1
+        kind: ConfigMap
+        name: shared-ca-bundle
+        namespace: "{{request.object.metadata.name}}"
+        clone:
+          namespace: default
+          name: shared-ca-bundle

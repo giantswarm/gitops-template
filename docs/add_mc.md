@@ -288,6 +288,26 @@ Bear in mind `Flux` needs credentials to read the repository when it is private.
 After completing these steps, you are no longer required to interact with `Flux` directly. Further configuration,
 e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely provided through the repository.
 
+## Share an object with every organization
+
+Every organization may need the same object, such as a registry pull secret or a CA bundle. Rather than a copy in
+Git for each organization, keep one in the management cluster's directory and let Kyverno, which runs on every Giant Swarm
+management cluster, copy it into each `org-*` namespace. The example in
+[management-clusters/MC_NAME/shared-objects](/management-clusters/MC_NAME/shared-objects/) has three files:
+
+- `shared-ca-bundle.yaml`: the `shared-ca-bundle` ConfigMap in the `default` namespace, the source of the copies.
+- `copy-shared-ca-bundle.yaml`: a Kyverno `ClusterPolicy` with a `generate` rule that clones the ConfigMap into
+  every `org-*` namespace when it's created. `generateExisting: true` copies it into the existing organizations, too,
+  and `synchronize: true` keeps the copies in sync: a change to the source in Git reaches every organization.
+- `kyverno-generate-configmaps.yaml`: a ClusterRole that lets Kyverno's background controller create, update and
+  delete ConfigMaps, which it does for the copies. Kyverno rejects a `generate` rule for a kind its background
+  controller can't manage. The Kyverno chart grants this for ConfigMaps, but not for Secrets; the
+  `rbac.kyverno.io/aggregate-to-background-controller: "true"` label adds the role to the controller's permissions.
+
+`MC_NAME.yaml` applies the directory with everything else in `MC_NAME/`. To share a Secret instead, such as a
+registry pull secret, change `kind: ConfigMap` in the policy to `kind: Secret`, add `secrets` to the ClusterRole's
+resources, and encrypt the source with SOPS, in a file that a `path_regex` of your `.sops.yaml` covers.
+
 ## Recommended next steps
 
 - [Add a new Organization](./add_org.md)

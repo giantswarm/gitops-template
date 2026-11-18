@@ -1,0 +1,22 @@
+# Kyverno's background controller creates, updates and deletes the copies, so
+# it needs those permissions on the copied kind, or Kyverno rejects the policy.
+# The Kyverno chart grants them for ConfigMaps but not for Secrets; this role
+# keeps the example from depending on the chart's defaults. To copy a Secret,
+# such as a registry pull secret, add `secrets` to its resources. The label
+# aggregates the role into the background controller's ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:generate-configmaps
+  labels:
+    rbac.kyverno.io/aggregate-to-background-controller: "true"
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+      - update
+      - patch
+      - delete

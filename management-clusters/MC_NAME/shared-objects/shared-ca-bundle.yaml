@@ -1,0 +1,13 @@
+# The shared object: the policy in copy-shared-ca-bundle.yaml copies it into
+# every `org-*` namespace and keeps the copies in sync with it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared-ca-bundle
+  namespace: default
+data:
+  # TODO: replace with the PEM certificates of the CAs your clusters trust
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    REPLACE_WITH_YOUR_CA_CERTIFICATE
+    -----END CERTIFICATE-----
