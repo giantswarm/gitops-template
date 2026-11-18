@@ -155,6 +155,7 @@ metadata:
   labels:
     giantswarm.io/cluster: out-of-band-no-flux
     giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux
     kustomize.toolkit.fluxcd.io/namespace: default
   name: out-of-band-no-flux

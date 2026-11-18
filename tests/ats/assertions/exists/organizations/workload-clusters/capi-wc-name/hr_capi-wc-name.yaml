@@ -6,6 +6,7 @@ metadata:
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
   name: capi-wc-name
