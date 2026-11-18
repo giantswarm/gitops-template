@@ -9,6 +9,7 @@ chart goes first. kyverno-app puts its PolicyExceptions in the `giantswarm` name
 every management cluster has, so the fixture creates it first.
 """
 
+import logging
 from pathlib import Path
 
 import pykube
@@ -29,6 +30,25 @@ KYVERNO_READY_TIMEOUT_SEC = 300
 KYVERNO_VALUES_FILE = (
     Path(__file__).resolve().parent / "fixtures" / "kyverno-values.yaml"
 )
+
+logger = logging.getLogger(__name__)
+
+
+def log_namespace_state(api: pykube.HTTPClient) -> None:
+    """Log why Kyverno's pods aren't ready: their phases and waiting reasons, and the events."""
+    for pod in pykube.Pod.objects(api, namespace=KYVERNO_NAMESPACE):
+        status = pod.obj.get("status", {})
+        waiting = [
+            c["state"]["waiting"].get("reason", "")
+            for c in status.get("containerStatuses", [])
+            if "waiting" in c.get("state", {})
+        ]
+        logger.error(f"pod {pod.name}: {status.get('phase')} {waiting}")
+    for event in pykube.Event.objects(api, namespace=KYVERNO_NAMESPACE):
+        obj = event.obj
+        logger.error(
+            f"event {obj['involvedObject']['name']}: {obj.get('reason')} {obj.get('message')}"
+        )
 
 
 def install_chart(kube_config: str, name: str, version: str, *args: str) -> None:
@@ -70,11 +90,15 @@ def kyverno(kube_cluster: Cluster, kube_config: str) -> None:
             },
         )
     )
-    install_chart(kube_config, "kyverno-crds", KYVERNO_CRDS_CHART_VERSION)
-    install_chart(
-        kube_config,
-        "kyverno",
-        KYVERNO_CHART_VERSION,
-        "--values",
-        str(KYVERNO_VALUES_FILE),
-    )
+    try:
+        install_chart(kube_config, "kyverno-crds", KYVERNO_CRDS_CHART_VERSION)
+        install_chart(
+            kube_config,
+            "kyverno",
+            KYVERNO_CHART_VERSION,
+            "--values",
+            str(KYVERNO_VALUES_FILE),
+        )
+    except Exception:
+        log_namespace_state(kube_cluster.kube_client)
+        raise

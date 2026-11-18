@@ -1,7 +1,9 @@
 # Values of Giant Swarm's kyverno chart in the kind test. They only turn off the
 # objects whose CRDs a management cluster has and the kind cluster doesn't:
 # Cilium's CiliumNetworkPolicy, Grafana's PodLogs, the VerticalPodAutoscaler and
-# Prometheus' ServiceMonitor. Everything else is the chart's default.
+# Prometheus' ServiceMonitor. The admission controller runs one replica, without the
+# autoscaler that keeps three: the kind cluster has a single node and no metrics server.
+# Everything else is the chart's default.
 ciliumNetworkPolicy:
   enabled: false
 monitoring:
@@ -24,6 +26,9 @@ verticalPodAutoscaler:
     enabled: false
 kyverno:
   admissionController:
+    autoscaling:
+      enabled: false
+    replicas: 1
     serviceMonitor:
       enabled: false
   backgroundController:
