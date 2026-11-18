@@ -715,7 +715,8 @@ annotation, so Flux keeps it. You delete it by hand at the end. See [How it work
    uninstalled them from the workload cluster, and it needs the cluster to do that, so wait for them:
 
     ```sh
-    until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} -l giantswarm.io/cluster=${WC_NAME} \
+    until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
+        -l kustomize.toolkit.fluxcd.io/name=${MC_NAME}-clusters-${WC_NAME},kustomize.toolkit.fluxcd.io/namespace=default \
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
