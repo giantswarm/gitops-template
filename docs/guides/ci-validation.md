@@ -250,10 +250,11 @@ ships to the management clusters, from `oci://gsoci.azurecr.io/charts/giantswarm
 `giantswarm-critical` PriorityClass and its `PolicyException`s go in the `giantswarm` namespace, which every management
 cluster has, so the test first installs Giant Swarm's `priority-classes` 0.3.1 chart and creates the namespace. The
 charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
-turns off only the objects whose CRDs the kind cluster doesn't have: the `CiliumNetworkPolicy`s, `PodLogs`,
+turns off the objects whose CRDs the kind cluster doesn't have: the `CiliumNetworkPolicy`s, `PodLogs`,
 `VerticalPodAutoscaler`s and `ServiceMonitor`s. It also lowers the background and reports controllers' requests from
-the chart's 500m CPU and 1Gi, sized for a management cluster, so that Flux still fits on the single kind node. `test_shared_object_copied` creates a new `org-*` namespace and waits
-for the `shared-ca-bundle` ConfigMap to be copied into it. It then changes the source, with the management cluster's
+the chart's 500m CPU and 1Gi, sized for a management cluster, so that Flux still fits on the single kind node.
+`test_shared_object_copied` creates a new `org-*` namespace and waits for the `shared-ca-bundle` ConfigMap to be
+copied into it. It then changes the source, with the management cluster's
 `Kustomization` suspended, waits for the copy to follow, and puts the source back.
 
 ## Superseded runs
