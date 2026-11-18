@@ -70,6 +70,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
     kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central

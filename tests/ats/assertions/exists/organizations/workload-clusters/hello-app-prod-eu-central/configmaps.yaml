@@ -7,6 +7,7 @@ data:
         description: description
         name: hello-app-prod-eu-central
         organization: org-name
+        preventDeletion: true
 kind: ConfigMap
 metadata:
   name: hello-app-prod-eu-central-config

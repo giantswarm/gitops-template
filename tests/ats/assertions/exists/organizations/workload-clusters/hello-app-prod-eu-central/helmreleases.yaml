@@ -200,6 +200,7 @@ metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-eu-central
     giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
     kustomize.toolkit.fluxcd.io/name: hello-app-prod-eu-central
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-eu-central
@@ -212,7 +213,6 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m
   releaseName: hello-app-prod-eu-central
   serviceAccountName: automation
