@@ -87,6 +87,13 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `sops-age-wc-name` Secret, encrypted with the master key. `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with it,
   and `WC_NAME-apps.yaml` decrypts the cert-manager values Secret. The kind test checks the decrypted Secret. GPG
   keys and the `kubectl gs` commands are unchanged. ([#257](https://github.com/giantswarm/gitops-template/issues/257))
+- An External Secrets Operator example: hello-world in the example cluster `WC_NAME_OUT_OF_BAND_NO_FLUX_APP` gets
+  its secret values from an `ExternalSecret`, which writes the `*-user-secrets` Secret its `HelmRelease` reads. The
+  cluster's SOPS-encrypted Secret stays, so the example shows both side by side. The kind test installs External
+  Secrets Operator and the fake store of [secret store for testing](docs/appendices.md#secret-store-for-testing),
+  and checks the Secret and the value in the workload cluster. `test-all-ff validate` checks the `ExternalSecret`
+  against its schema from [datreeio/CRDs-catalog](https://github.com/datreeio/CRDs-catalog).
+  ([#241](https://github.com/giantswarm/gitops-template/issues/241))
 
 ### Changed
 

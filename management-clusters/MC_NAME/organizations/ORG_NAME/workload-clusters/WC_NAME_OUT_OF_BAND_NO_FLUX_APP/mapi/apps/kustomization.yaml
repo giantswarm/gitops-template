@@ -6,6 +6,7 @@ labels:
       giantswarm.io/cluster: ${cluster_name}
       giantswarm.io/managed-by: flux
 resources:
+  - hello-world/externalsecret.yaml
   - hello-world/helm-release.yaml
   - hello-world/oci-repository.yaml
   - hello-world-automatic-updates/helm-release.yaml

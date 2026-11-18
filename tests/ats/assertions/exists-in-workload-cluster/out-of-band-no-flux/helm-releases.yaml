@@ -14,6 +14,13 @@ metadata:
   annotations:
     meta.helm.sh/release-name: hello-world-standalone
     meta.helm.sh/release-namespace: hello-world
+# from the out-of-band-no-flux-hello-world-standalone-user-secrets Secret, which External
+# Secrets Operator writes
+spec:
+  template:
+    metadata:
+      annotations:
+        example.com/source: secret-manager
 ---
 helmRelease: org-org-name/out-of-band-no-flux-hello-world-app-auto
 apiVersion: apps/v1
