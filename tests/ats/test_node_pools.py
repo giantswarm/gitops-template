@@ -3,7 +3,6 @@ no cluster."""
 
 import node_pools as node_pools_module
 import pytest
-from helm_values import ValuesSourceError
 from node_pools import (
     EXPECTED_NODE_POOLS,
     node_pool_problems,
@@ -11,6 +10,7 @@ from node_pools import (
     node_pools,
     workload_cluster_node_pools,
 )
+from values_sources import ValuesSourceError
 
 
 def test_node_pool_problems() -> None:
