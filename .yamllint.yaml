@@ -1,8 +1,14 @@
 ---
 extends: default
+ignore: |
+  *.enc.yaml
+  .github/workflows/zz_generated.*
+  tests/ats/fixtures/crds/
 rules:
   comments:
     min-spaces-from-content: 1
   document-start: disable
   line-length:
     max: 200
+  truthy:
+    check-keys: false

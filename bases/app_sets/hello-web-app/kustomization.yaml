@@ -7,7 +7,7 @@ labels:
 configMapGenerator:
   - behavior: replace
     files:
-    - values=default_config_hello_world.yaml
+      - values=default_config_hello_world.yaml
     name: ${cluster_name}-hello-world-values # has to be in sync with the name used by included app
 # block end
 kind: Kustomization

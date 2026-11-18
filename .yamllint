@@ -1,8 +1,0 @@
----
-ignore: |
-  *.enc.yaml
-  .github/**
-  .pre-commit-config.yaml
-rules: {}
-yaml-files:
-  - "*.yaml"

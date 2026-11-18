@@ -107,7 +107,7 @@ function test() {
 			echo "OK"
 
 			echo -n "yamllint: "
-			if ! (yamllint "$tmp_file"); then
+			if ! yamllint "$tmp_file"; then
 				has_validation_errors=1
 			else
 				echo "OK"

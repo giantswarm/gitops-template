@@ -24,7 +24,7 @@ repos:
       rev: '1.9.4'
       hooks:
           - id: bandit
-            args: [ "-c", ".bandit" ]
+            args: ["-c", ".bandit"]
 
     # static type checking with mypy
     - repo: https://github.com/pre-commit/mirrors-mypy
@@ -42,7 +42,7 @@ repos:
       rev: v1.0.6
       hooks:
           - id: shell-lint
-            args: [ --format=json ]
+            args: [--format=json]
 
     - repo: https://github.com/igorshubovych/markdownlint-cli
       rev: v0.50.0
@@ -73,4 +73,4 @@ repos:
           - id: shellcheck
           - id: shfmt
             args:
-              - "-w"
+                - "-w"
