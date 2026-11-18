@@ -207,6 +207,11 @@ function _find_kustomization() {
 
 ##
 # Build the given kustomization and applies any optional filtering
+# Drop the empty documents a build can end in, which yq would print as blank lines.
+function drop_empty_documents() {
+	yq 'select(. != null)'
+}
+
 function build() {
 	local kustomization=""
 	local use_kustomize=false
@@ -241,7 +246,7 @@ function build() {
 	fi
 
 	if ! $use_kustomize; then
-		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | yq $yqflags "${*:-.} | select(. != null)"
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | drop_empty_documents | yq $yqflags "$*"
 		return $?
 	fi
 
@@ -265,7 +270,7 @@ function build() {
 	for v in $toexport; do
 		export "${v?}"
 	done
-	kustomize build --load-restrictor=LoadRestrictionsNone $path | envsubst | yq $yqflags "$*"
+	kustomize build --load-restrictor=LoadRestrictionsNone $path | envsubst | drop_empty_documents | yq $yqflags "$*"
 }
 
 function=$1
