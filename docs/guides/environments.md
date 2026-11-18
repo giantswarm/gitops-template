@@ -484,8 +484,9 @@ yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"
 > With `prune: true`, Flux deletes what you delete from the cluster's files, and
 > everything the `Kustomization` applied when the `Kustomization` itself goes. It
 > doesn't delete the cluster: the cluster's `HelmRelease`, from the CAPA cluster
-> base, has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. To
-> delete the cluster, delete its `HelmRelease` by hand, see
+> base, has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and
+> the `giantswarm.io/prevent-deletion` label. To delete the cluster, remove the
+> label and delete its `HelmRelease` by hand, see
 > [How it works](../how-it-works.md).
 
 In our example we create one instance from each cluster environment base:

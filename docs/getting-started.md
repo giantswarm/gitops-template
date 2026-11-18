@@ -241,6 +241,8 @@ kind: Organization
 metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/prevent-deletion: "true"
   name: ${ORG_NAME}
 spec: {}
 EOF
@@ -367,7 +369,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 
 1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files.
    It never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
-   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation:
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
@@ -680,11 +682,12 @@ example, `semver: 3.2.x` installs every new patch version.
 
 Skip this step to keep the cluster. When you delete the cluster's files, Flux deletes its `Kustomization`, its apps and
 its configuration, but not the cluster: its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled`
-annotation, so Flux keeps it. You delete it by hand at the end. See [How it works](./how-it-works.md).
+annotation, so Flux keeps it, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label
+is removed. You remove the label and delete it by hand at the end. See [How it works](./how-it-works.md).
 
-> **Warning:** `kubectl gs` doesn't write the annotation yet. The `Organization` that `kubectl gs gitops add
-> organization` writes doesn't have it, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add base`
-> writes. Add it by hand before you rely on Flux to keep them when their files are deleted.
+> **Warning:** `kubectl gs` doesn't write the annotation or the label yet. The `Organization` that `kubectl gs gitops
+> add organization` writes doesn't have them, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add
+> base` writes. Add them by hand before you rely on them to keep those objects when their files are deleted.
 
 1. Remove the cluster from the organization's list:
 
@@ -720,9 +723,10 @@ annotation, so Flux keeps it. You delete it by hand at the end. See [How it work
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
-1. Finally, delete the cluster's `HelmRelease`. This deletes the cluster:
+1. Finally, remove the label from the cluster's `HelmRelease` and delete it. This deletes the cluster:
 
     ```sh
+    kubectl label helmrelease ${WC_NAME} -n org-${ORG_NAME} giantswarm.io/prevent-deletion-
     kubectl delete helmrelease ${WC_NAME} -n org-${ORG_NAME}
     ```
 

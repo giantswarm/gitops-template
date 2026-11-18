@@ -54,7 +54,8 @@ export ORG_NAME=ORGANIZATION
 
 1. Create the Organization CR. Deleting it deletes the organization's namespace, with every cluster in it, so the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation keeps Flux from deleting it when its file is deleted,
-   see [How it works](./how-it-works.md). Create it directly:
+   and the `giantswarm.io/prevent-deletion` label stops anyone deleting it until the label is removed, see
+   [How it works](./how-it-works.md). Create it directly:
 
     ```sh
     cat <<EOF > ${ORG_NAME}.yaml
@@ -63,6 +64,8 @@ export ORG_NAME=ORGANIZATION
     metadata:
       annotations:
         kustomize.toolkit.fluxcd.io/prune: disabled
+      labels:
+        giantswarm.io/prevent-deletion: "true"
       name: ${ORG_NAME}
     spec: {}
     status: {}
@@ -75,10 +78,11 @@ export ORG_NAME=ORGANIZATION
     kubectl gs template organization --name ${ORG_NAME} > ${ORG_NAME}.yaml
     ```
 
-    `kubectl gs` doesn't write the annotation yet. Add it:
+    `kubectl gs` doesn't write the annotation or the label yet. Add them:
 
     ```sh
-    yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${ORG_NAME}.yaml
+    yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
+      .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' ${ORG_NAME}.yaml
     ```
 
 After completing all the steps, you can open a pull request with the changes. Once it is merged, `Flux` should automatically

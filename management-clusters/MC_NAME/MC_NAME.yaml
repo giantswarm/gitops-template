@@ -11,9 +11,10 @@ spec:
   interval: 1m0s
   path: ./management-clusters/MC_NAME
   # Flux deletes what you delete from Git. The objects whose deletion would
-  # delete a cluster, the Organizations and the cluster HelmReleases, have the
-  # `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so Flux leaves
-  # them. See docs/how-it-works.md.
+  # delete a cluster, the Organizations, the cluster HelmReleases and the SOPS
+  # keys, have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so
+  # Flux leaves them, and the `giantswarm.io/prevent-deletion` label, so nobody
+  # can delete them until it's removed. See docs/how-it-works.md.
   prune: true
   serviceAccountName: automation
   sourceRef:

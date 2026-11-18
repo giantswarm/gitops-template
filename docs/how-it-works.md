@@ -37,8 +37,14 @@ Flux deletes its `HelmRelease`, which uninstalls the app from the workload clust
 ConfigMaps. When you take a cluster's `Kustomization` out of `workload-clusters/kustomization.yaml`, Flux deletes it
 together with everything it applied, except the objects below.
 
-Some objects delete a whole cluster when they go, so Flux doesn't delete them. They have the
-`kustomize.toolkit.fluxcd.io/prune: disabled` annotation:
+Some objects delete a whole cluster when they go, so they carry two markers:
+
+- The `kustomize.toolkit.fluxcd.io/prune: disabled` annotation: Flux doesn't delete them, even when their files
+  disappear from what it renders, for example because a mistake in a template drops them.
+- The `giantswarm.io/prevent-deletion: "true"` label: the `kyverno-policies-ux` policies on a Giant Swarm management
+  cluster refuse to delete them, whoever asks, `kubectl` and Flux included, until the label is removed.
+
+The protected objects are:
 
 - The cluster's `HelmRelease`, in `bases/clusters/capa/template`. Deleting it uninstalls the chart, and Cluster API
   then deletes the cluster and its cloud infrastructure.
@@ -46,19 +52,20 @@ Some objects delete a whole cluster when they go, so Flux doesn't delete them. T
   with every cluster in it.
 - The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`. Flux decrypts with them, so deleting one stops
   GitOps for every cluster that uses it. The keys are encrypted, so `secrets/kustomization.yaml` adds the annotation
-  with `commonAnnotations` instead: changing an encrypted file by hand breaks its SOPS checksum.
+  and the label instead: changing an encrypted file by hand breaks its SOPS checksum.
 
 When you delete their files, they stay on the management cluster and the cluster keeps running, but Flux no longer
 manages them. A cluster `HelmRelease` that stays without its `OCIRepository` and ConfigMaps can't reconcile, and
-reports it as not ready. To delete the cluster, delete its `HelmRelease` by hand too:
+reports it as not ready. To delete the cluster, remove the label from its `HelmRelease` and delete it by hand:
 
 ```sh
+kubectl label helmrelease demowc -n org-demoorg giantswarm.io/prevent-deletion-
 kubectl delete helmrelease demowc -n org-demoorg
 ```
 
 The rest of the cluster's objects, such as its `OCIRepository`, its values ConfigMaps and its apps, don't delete the
-cluster, so Flux deletes them. Add the annotation to anything else that must outlive its file, such as the
-`HelmRelease` of a cluster base you write yourself. `kubectl gs` doesn't add it yet: add it by hand to the
+cluster, so Flux deletes them. Add the annotation and the label to anything else that must outlive its file, such as
+the `HelmRelease` of a cluster base you write yourself. `kubectl gs` doesn't add them yet: add them by hand to the
 `Organization` that `kubectl gs gitops add organization` writes, and to the cluster `HelmRelease` of a base that
 `kubectl gs gitops add base` writes.
 

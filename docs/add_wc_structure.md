@@ -259,7 +259,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
 1. Go back to the `workload-clusters` directory and create Kustomization CR for it. With `prune: true`, Flux deletes
    what you delete from the cluster's files, but not the cluster, if its `HelmRelease` has the
-   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, as in the cluster bases of this repository. See
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
+   cluster bases of this repository. See
    [How it works](./how-it-works.md). Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):

@@ -34,6 +34,8 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: ${cluster_name}
+    # nobody can delete it, Flux included, until this label is removed
+    giantswarm.io/prevent-deletion: "true"
   name: ${cluster_name}
   namespace: org-${organization}
 spec:

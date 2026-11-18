@@ -126,8 +126,8 @@ both apply the same resources until you delete it.
 
 > **Warning:** check that the old workload cluster `Kustomization` has `prune: false` before you go on. Deleting a
 > `Kustomization` with `prune: true` deletes what it applied, such as the cluster's apps, before the new one takes it
-> over. The cluster's `HelmRelease` stays only if it has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation,
-> see [How it works](../how-it-works.md).
+> over. The cluster's `HelmRelease` stays only if it has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation
+> or the `giantswarm.io/prevent-deletion` label, see [How it works](../how-it-works.md).
 
 1. Check the `prune` setting of the old `Kustomization`:
 

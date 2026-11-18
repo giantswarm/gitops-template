@@ -185,6 +185,9 @@ en- and decrypt real user-related data.
     kind: Kustomization
     commonAnnotations:
       kustomize.toolkit.fluxcd.io/prune: disabled
+    labels:
+    - pairs:
+        giantswarm.io/prevent-deletion: "true"
     resources:
     - ${MC_NAME}.gpgkey.enc.yaml
     EOF
