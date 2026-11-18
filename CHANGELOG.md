@@ -437,7 +437,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   this. `tools/fake-flux build` no longer writes empty documents, so `tools/test-all-ff validate` lints the build output
   as it is. ([#217](https://github.com/giantswarm/gitops-template/issues/217))
 - Pull requests from forks, which GitHub gives no secrets and a read-only token, get working CI. `validate.yaml` and
-  `yaml-diff.yaml` skip their comments there, which they can't post, and leave a notice saying why. `tests/ats`
+  `yaml-diff.yaml` skip their comments there, which they can't post, leave a notice saying why, and put the diff and
+  the validation log in the job summary. `tests/ats`
   skips the tests that need the kind cluster with a warning when `GITOPS_MASTER_GPG_KEY` is empty on such a pull
   request, instead of failing with "master gpg key missing"; anywhere else, also in a fork's own runs, a missing key
   still fails it. CI calls `giantswarm/github-workflows` at `0175154`, where the secret is optional and the shared

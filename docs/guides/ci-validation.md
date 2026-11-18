@@ -67,9 +67,9 @@ checks `main` as it is after a merge, which no pull request run has tested when 
 other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
 `on.push.branches`.
 
-A pull request from a fork gets a read-only token and none of the repository's secrets. `yaml-diff.yaml` skips its
-diff comment there, which it can't post, and leaves a notice on the run saying why. `validate.yaml` does the same
-with its validation comment, and the validation log is in the job summary. The kind test skips the tests that need
+A pull request from a fork gets a read-only token and none of the repository's secrets. `yaml-diff.yaml` and
+`validate.yaml` skip their comments there, which they can't post, leave a notice on the run saying why, and put the
+diff and the validation log in the job summary. The kind test skips the tests that need
 the cluster there; see [`GITOPS_MASTER_GPG_KEY`](#configuration).
 
 ## `test-on-kind` validation step - additional information
