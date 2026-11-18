@@ -246,8 +246,10 @@ kind job 254 seconds against 237, less than the spread of about 60 seconds betwe
 The [shared-objects example](../add_mc.md#share-an-object-with-every-organization) is a Kyverno `ClusterPolicy`, so
 the test installs Kyverno before Flux applies the repository. It installs Giant Swarm's charts, the ones team Shield
 ships to the management clusters, from `oci://gsoci.azurecr.io/charts/giantswarm`: `kyverno-crds` 1.19.2, as the
-`kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.1, the chart of `kyverno-app`. Both are pinned in
-`tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
+`kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.1, the chart of `kyverno-app`. Kyverno's pods use the
+`giantswarm-critical` PriorityClass and its `PolicyException`s go in the `giantswarm` namespace, which every management
+cluster has, so the test first installs Giant Swarm's `priority-classes` 0.3.1 chart and creates the namespace. The
+charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
 turns off only the objects whose CRDs the kind cluster doesn't have: the `CiliumNetworkPolicy`s, `PodLogs`,
 `VerticalPodAutoscaler`s and `ServiceMonitor`s. `test_shared_object_copied` creates a new `org-*` namespace and waits
 for the `shared-ca-bundle` ConfigMap to be copied into it. It then changes the source, with the management cluster's

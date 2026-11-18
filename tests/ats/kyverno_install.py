@@ -5,8 +5,9 @@ the repository: test_flux_objects.py requests the `kyverno` fixture before any o
 
 The charts are the ones Giant Swarm ships, from team Shield's kyverno-app and kyverno-crds, at
 the versions on the management clusters. kyverno-app leaves the CRDs to kyverno-crds, so that
-chart goes first. kyverno-app puts its PolicyExceptions in the `giantswarm` namespace, which
-every management cluster has, so the fixture creates it first.
+chart goes first. kyverno-app's pods use the `giantswarm-critical` PriorityClass and its
+PolicyExceptions go in the `giantswarm` namespace, both of which every management cluster has:
+the fixture installs Giant Swarm's priority-classes chart and creates the namespace first.
 """
 
 import logging
@@ -18,6 +19,8 @@ from conftest import HELM_URL, apply, run_tool
 from pytest_helm_charts.clusters import Cluster
 
 CHARTS = "oci://gsoci.azurecr.io/charts/giantswarm"
+# renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/priority-classes
+PRIORITY_CLASSES_CHART_VERSION = "0.3.1"
 # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno-crds
 KYVERNO_CRDS_CHART_VERSION = "1.19.2"
 # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno
@@ -91,6 +94,7 @@ def kyverno(kube_cluster: Cluster, kube_config: str) -> None:
         )
     )
     try:
+        install_chart(kube_config, "priority-classes", PRIORITY_CLASSES_CHART_VERSION)
         install_chart(kube_config, "kyverno-crds", KYVERNO_CRDS_CHART_VERSION)
         install_chart(
             kube_config,

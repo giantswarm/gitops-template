@@ -76,8 +76,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the `copy-shared-ca-bundle` `ClusterPolicy` has a `generate` rule with `synchronize: true` that copies the
   `shared-ca-bundle` ConfigMap from the `default` namespace into every `org-*` namespace and keeps the copies in sync.
   A ClusterRole lets Kyverno's background controller manage the copies. `tools/test-all-ff` validates the
-  `ClusterPolicy` against a schema from the CRDs catalog. The kind test installs Giant Swarm's `kyverno-crds`
-  1.19.2 and `kyverno` 0.26.1 charts, pinned in `tests/ats/kyverno_install.py`, and checks that a new organization
+  `ClusterPolicy` against a schema from the CRDs catalog. The kind test installs Giant Swarm's `priority-classes`
+  0.3.1, `kyverno-crds` 1.19.2 and `kyverno` 0.26.1 charts, pinned in `tests/ats/kyverno_install.py`, and checks that a new organization
   namespace gets the copy and that a change to the source reaches it. See [Share an object with every organization](docs/add_mc.md#share-an-object-with-every-organization).
   ([#242](https://github.com/giantswarm/gitops-template/issues/242))
 
