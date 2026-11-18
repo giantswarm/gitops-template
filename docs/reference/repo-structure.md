@@ -46,6 +46,8 @@ management-clusters
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
+                ├── [WC_NAME_APPS.yaml]
+                ├── [WC_NAME_APP_SETS.yaml]
                 ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
@@ -64,8 +66,8 @@ How to read it:
 - Names in capital letters are placeholders. Replace them with your own names, following the [naming](#naming) rules.
 - Names with an extension, like `MC_NAME.yaml`, are files. The rest are directories.
 - Names in square brackets are optional. See [optional components](#optional-components).
-- The horizontal line splits the work between the two [Flux Kustomizations](#flux-kustomizations). `MC_NAME.yaml`
-  applies everything above it, and `WC_NAME.yaml` applies the `mapi` directory below it.
+- The horizontal line splits the work between the two kinds of [Flux Kustomizations](#flux-kustomizations).
+  `MC_NAME.yaml` applies everything above it, and the cluster's Kustomizations apply the `mapi` directory below it.
 - `.sops.yaml`, `.sops.keys` and the `*.gpgkey.enc.yaml` files are only needed when you encrypt secrets with SOPS.
   See [SOPS keys](./sops-keys.md).
 
@@ -148,6 +150,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | --- | --- |
 | Management cluster Flux `Kustomization` | `MC_NAME-gitops`, in `MC_NAME.yaml` |
 | Workload cluster Flux `Kustomization` | `MC_NAME-clusters-WC_NAME`, in `WC_NAME.yaml` |
+| Flux `Kustomization`s of a workload cluster's apps and app sets | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME_APPS.yaml`, and `MC_NAME-clusters-WC_NAME-app-sets`, in `WC_NAME_APP_SETS.yaml`. `kubectl gs gitops` doesn't generate them, see [Flux Kustomizations](#flux-kustomizations) |
 | Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `mapi/apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `mapi/cluster` |
@@ -247,9 +250,12 @@ management-clusters
         └── ORG_NAME
             └── workload-clusters
                 ├── kustomization.yaml
-                ├── WC_NAME.yaml            # applies WC_NAME/mapi/
+                ├── WC_NAME.yaml            # applies WC_NAME/mapi/cluster/
+                ├── WC_NAME_APPS.yaml       # applies WC_NAME/mapi/apps/, once the cluster is ready
+                ├── WC_NAME_APP_SETS.yaml   # applies WC_NAME/mapi/app_sets/, once the cluster is ready
                 └── WC_NAME
                     └── mapi
+                        ├── app_sets
                         ├── apps
                         └── cluster
 ```
@@ -260,10 +266,28 @@ management-clusters
 ```yaml
 resources:
   - WC_NAME.yaml
+  - WC_NAME_APPS.yaml
 ```
 
-`WC_NAME.yaml` then applies its `WC_NAME/mapi` directory. It also sets the variables, like `${cluster_name}`, that the
-bases use. See [How it works](../how-it-works.md) for why there are two.
+Each of them applies one directory of `WC_NAME/mapi` and sets the variables, like `${cluster_name}`, that the bases
+use. See [How it works](../how-it-works.md) for why the management cluster's and the clusters' Kustomizations are
+separate.
+
+A cluster's apps install into the cluster, so they wait for it:
+
+1. `WC_NAME.yaml` applies `mapi/cluster`, the cluster's `HelmRelease`. Its `healthChecks` name the Cluster API
+   `Cluster` it creates, and its `healthCheckExprs` count the `Cluster` as ready once its `Available` condition is
+   `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster coming up.
+1. `WC_NAME_APPS.yaml` applies `mapi/apps`, and `WC_NAME_APP_SETS.yaml` applies `mapi/app_sets`. Both have the
+   cluster's Kustomization in `dependsOn`, so Flux applies nothing of them until it's `Ready`. Until then, they report
+   `DependencyNotReady`.
+
+Name the cluster in `healthChecks` with its name and namespace written out, such as `capi-wc-name` and
+`org-org-name`: Flux doesn't substitute variables in a Kustomization's own spec. A cluster without apps, such as the
+`HELLO_APP_*` examples, has only `WC_NAME.yaml`, which applies all of `mapi`, and needs no health check.
+
+`kubectl gs gitops add workload-cluster` still writes a single `WC_NAME.yaml` that applies all of `mapi`, so its apps
+don't wait for the cluster; split it as above to make them wait.
 
 ## Objects the management cluster provides
 

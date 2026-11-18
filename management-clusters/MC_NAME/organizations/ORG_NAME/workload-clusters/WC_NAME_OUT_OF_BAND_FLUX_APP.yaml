@@ -8,8 +8,20 @@ spec:
     provider: sops
     secretRef:
       name: sops-gpg-wc-name
+  # Ready once Cluster API reports the cluster Available. The _APPS and
+  # _APP_SETS Kustomizations depend on this one, so the apps install once the
+  # cluster is up.
+  healthCheckExprs:
+    - apiVersion: cluster.x-k8s.io/v1beta2
+      kind: Cluster
+      current: status.conditions.filter(c, c.type == 'Available').all(c, c.status == 'True')
+  healthChecks:
+    - apiVersion: cluster.x-k8s.io/v1beta2
+      kind: Cluster
+      name: out-of-band-flux-app  # TODO: change to your cluster name, the `cluster_name` below
+      namespace: org-org-name  # TODO: change 'org-name' to your organization name, the `organization` below
   interval: 1m
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi"
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/cluster"
   postBuild:
     substitute:
       cluster_description: "description"
@@ -22,4 +34,5 @@ spec:
   sourceRef:
     kind: GitRepository
     name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
-  timeout: 2m
+  # long enough for a new cluster to come up
+  timeout: 30m

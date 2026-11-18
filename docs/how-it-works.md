@@ -18,15 +18,18 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
    `management-clusters/demomc`: the organizations, and the Flux `Kustomization` of each workload cluster listed in
    `workload-clusters/kustomization.yaml`, such as `demowc.yaml`. A cluster file that isn't in that list does
    nothing. It stops there and doesn't apply what's inside the `demowc` directory.
-1. The `demowc.yaml` Kustomization applies the `demowc/mapi` directory. While it does, it fills in variables such as
-   `${cluster_name}`, `${organization}` and `${release}` from its own settings.
+1. The `demowc.yaml` Kustomization applies the `demowc/mapi/cluster` directory. While it does, it fills in variables
+   such as `${cluster_name}`, `${organization}` and `${release}` from its own settings.
 1. `mapi/cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
    `HelmRelease` that installs it on the management cluster. The chart creates the cluster with Cluster API. When the
    cluster is up, the management cluster also creates the `demowc-kubeconfig` Secret, with access to the new cluster,
    and the `demowc-cluster-values` ConfigMap, with values apps can use, such as the cluster's base domain.
 1. `mapi/apps` holds the apps. Each app is a Flux `OCIRepository`, which points at a chart in an OCI registry, and a
    Flux `HelmRelease`, which installs it. Both stay on the management cluster, in the `org-demoorg` namespace. The
-   `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster.
+   `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster. The apps need the
+   cluster, so a second Kustomization, `demowc_APPS.yaml`, applies `mapi/apps` and waits until `demowc.yaml` is
+   `Ready`, which is when Cluster API reports the cluster `Available`. See
+   [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
 
 Flux keeps doing this. When a file changes in Git, it applies the change. When someone changes a field that Git sets,
 Flux sets it back at its next run. Fields added by hand stay.
@@ -69,8 +72,8 @@ the `HelmRelease` of a cluster base you write yourself. `kubectl gs` doesn't add
 `Organization` that `kubectl gs gitops add organization` writes, and to the cluster `HelmRelease` of a base that
 `kubectl gs gitops add base` writes.
 
-The split between the two Kustomizations matters. The management cluster's Kustomization creates the cluster's
-Kustomization, and the cluster's Kustomization applies the cluster's `mapi` directory. Each cluster gets its own
+The split between the two kinds of Kustomization matters. The management cluster's Kustomization creates the
+cluster's Kustomizations, and they apply the cluster's `mapi` directory. Each cluster gets its own
 variables, and a mistake in one cluster's directory doesn't stop the others.
 
 `mapi` stands for Management API. Everything in it is a resource on the management cluster that configures the

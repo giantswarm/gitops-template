@@ -157,7 +157,9 @@ Using an App Set Template is once again very similar to using a single
 **Note**, an App Set and a standalone App created from the same App Template produce objects with the same names, for
 example `${cluster_name}-hello-world`. A cluster can only have one of them. To move an app that is installed
 standalone into a set, remove it from the `mapi/apps` directory in the same commit that adds the set: the objects keep
-their names, so Flux updates them in place instead of reinstalling the app.
+their names, so Flux updates them in place instead of reinstalling the app. That holds when one Kustomization applies
+both directories. When the cluster's apps and app sets have Kustomizations of their own, as in the examples, the apps
+Kustomization can delete the app before the app sets Kustomization takes it over, and the app is reinstalled.
 
 1. Export the names of the Management Cluster, Organization and Workload Cluster:
 
@@ -219,8 +221,12 @@ their names, so Flux updates them in place instead of reinstalling the app.
     [envoy-gateway](/bases/apps/envoy-gateway/) App Template in the same cluster; leave it out if the cluster doesn't
     have it. See [App Templates](./app-templates.md) for why the App Template doesn't set it itself.
 
-    There is no list to update: the `mapi` directory has no `kustomization.yaml`, so Flux picks up every directory
-    with a `kustomization.yaml` below it, including the new one.
+    There is no list to update: the `mapi/app_sets` directory has no `kustomization.yaml`, so Flux picks up every
+    directory with a `kustomization.yaml` below it, including the new one. In the examples, the cluster's app sets
+    Kustomization, `WC_NAME_APP_SETS.yaml`, applies `mapi/app_sets` once the cluster is ready, like the apps, see
+    [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). Without a `kustomization.yaml`, Git
+    doesn't keep an empty `mapi/app_sets`: when you remove a cluster's last App Set, remove its app sets Kustomization
+    in the same commit, and Flux deletes what it applied.
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set
 Template. The `${cluster_name}-hello-world-user-values` ConfigMap is the optional user layer the app's `HelmRelease`

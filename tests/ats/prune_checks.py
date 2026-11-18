@@ -10,7 +10,7 @@ import pykube
 import pytest
 from checks.waits import fail_on_problems
 from flux_reconcile import wait_until
-from prune_cluster import delete_cluster_kustomization, workload_problems
+from prune_cluster import delete_cluster_kustomizations, workload_problems
 from prune_objects import (
     PROTECTED_CLUSTER,
     PROTECTED_OBJECTS,
@@ -73,11 +73,11 @@ def check_removed_files(
 def check_removed_cluster(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
-    """P3: deleting a cluster's Kustomization deletes what it applied, except the cluster's
-    HelmRelease."""
-    applied = delete_cluster_kustomization(api)
+    """P3: deleting a cluster's Kustomizations deletes what they applied, except the
+    cluster's HelmRelease."""
+    applied = delete_cluster_kustomizations(api)
     if PROTECTED_CLUSTER not in applied:
-        pytest.fail(f"The cluster's Kustomization didn't apply {PROTECTED_CLUSTER}.")
+        pytest.fail(f"The cluster's Kustomizations didn't apply {PROTECTED_CLUSTER}.")
     deleted = sorted(applied - {PROTECTED_CLUSTER})
     wait_until(
         lambda: deleted_problems(api, deleted) + workload_problems(workload_cluster),

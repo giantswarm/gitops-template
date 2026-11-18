@@ -75,6 +75,19 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- A cluster's apps install once the cluster is ready. The `WC_NAME` and out-of-band example clusters each have a
+  cluster `Kustomization` that applies only `mapi/cluster`, with a health check that waits until Cluster API reports
+  the `Cluster` `Available` and a `timeout` of 30 minutes, and new `Kustomization`s for `mapi/apps`
+  (`WC_NAME_APPS.yaml`, `*_OUT_OF_BAND_*_APPS.yaml`) and `mapi/app_sets` (`*_APP_SETS.yaml`) that depend on it. The
+  `HELLO_APP_*` clusters have no apps and keep a single `Kustomization`. The kind test creates stand-in `Cluster`s
+  and checks that the apps wait for them, and `test_prune` deletes all of the cluster's `Kustomization`s.
+  `kubectl gs gitops add workload-cluster` still writes a single `Kustomization`.
+  ([#210](https://github.com/giantswarm/gitops-template/issues/210))
+  To split a running cluster's `Kustomization`, do it in two commits:
+  1. Add the apps and app sets `Kustomization`s, and list them in `workload-clusters/kustomization.yaml`.
+  1. Then narrow the cluster `Kustomization`'s `path` to `mapi/cluster` and add the health check. Done the other way
+     round, the cluster `Kustomization`, which prunes, deletes the apps when its `path` narrows, and they're
+     uninstalled until the new `Kustomization`s apply them again.
 - The `hello-world` base in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
   install into their own namespace in the workload cluster, `hello-world` and `cert-manager`, with Helm storage in
   the same namespace. They used `org-${organization}`, which created an organisation namespace in the workload

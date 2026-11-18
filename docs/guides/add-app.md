@@ -19,6 +19,11 @@ points at the chart. Its values come in layers, listed in the `HelmRelease`'s `s
 the App Template defaults (only for apps created from a template), and two optional per-cluster overrides, the
 `-user-values` ConfigMap and the `-user-secrets` Secret.
 
+The apps go into the cluster's `mapi/apps` directory. In the examples, the cluster's apps Kustomization,
+`WC_NAME_APPS.yaml`, applies it once the cluster is ready, because its `dependsOn` waits for the cluster's
+Kustomization, `WC_NAME.yaml`. See [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) to split a
+cluster that has a single Kustomization for all of `mapi`.
+
 ## Examples
 
 Examples of creating apps are available in following locations:

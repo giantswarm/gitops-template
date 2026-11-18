@@ -27,9 +27,10 @@ The workflow offers the following jobs:
   and additionally if all the statements present in `tests/ats/assertions` are also available in objects in the
   cluster.
   Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster: it leaves an app set and the
-  organization out of the `GitRepository` with `spec.ignore`, then deletes the cluster's `Kustomization`. The app
-  and everything the `Kustomization` applied have to go, and the `Organization` and the cluster's `HelmRelease` have
-  to stay. It deletes what the other tests check, so it runs last and fails if they didn't run before it.
+  organization out of the `GitRepository` with `spec.ignore`, then deletes the cluster's `Kustomization`s, the
+  cluster's and the ones of its apps and app sets. The app and everything the `Kustomization`s applied have to go,
+  and the `Organization` and the cluster's `HelmRelease` have to stay. It deletes what the other tests check, so it
+  runs last and fails if they didn't run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 
@@ -139,6 +140,14 @@ Cluster API controllers and no infrastructure providers such as CAPA or CAPZ, so
 A test can create one, for example a stand-in `Cluster`, and set its status itself. Use `v1beta2`, the version the
 objects are stored in: the CRDs are installed without their conversion webhook, so other versions are served without
 conversion.
+
+The test does that for every cluster whose apps wait for it, as listed in `GATED_KUSTOMIZATIONS` in
+[cluster_gate.py](../../tests/ats/cluster_gate.py). It creates a paused stand-in `Cluster` with `Available` `False`,
+and the apps and app sets `Kustomization`s have to report `DependencyNotReady` without applying anything. Then it
+sets `Available` to `True`, and they have to get `Ready`. `test_apps_wait_for_cluster` reports the result. The other
+checks run after it, as the cluster `Kustomization`s only get `Ready` once their `Cluster` is `Available`. When you
+add a cluster with apps, add it to `GATED_KUSTOMIZATIONS`: a test without the cluster compares the list with the
+`Kustomization`s in the repository.
 
 The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 

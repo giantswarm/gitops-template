@@ -27,8 +27,18 @@ PRUNE_IGNORE = "\n".join(
 )
 # the Kustomization of the management cluster, which applies the organization
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
-# the Kustomization of the out-of-band-no-flux cluster, which applies the app set
-CLUSTER_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux")
+# the Kustomization of the out-of-band-no-flux cluster's app sets, which applies the app set
+APP_SETS_KUSTOMIZATION = (
+    FLUX_OBJECTS_NAMESPACE,
+    "mc-name-clusters-out-of-band-no-flux-app-sets",
+)
+# the Kustomizations of the out-of-band-no-flux cluster: the cluster's, which applies the
+#  cluster's HelmRelease, and the ones of its apps and app sets
+CLUSTER_KUSTOMIZATIONS = [
+    (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
+    (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux-apps"),
+    APP_SETS_KUSTOMIZATION,
+]
 # (kind, namespace, name) of the objects in the removed files that Flux deletes: the app
 PRUNED_OBJECTS = [
     ("HelmRelease", "org-org-name", "out-of-band-no-flux-hello-world"),

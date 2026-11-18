@@ -1,6 +1,8 @@
 """The kind test: what Flux applies from the repository has to get ready and match the
 assertions. The checks are in `checks`."""
 
+from collections.abc import Iterator
+
 import pykube
 import pytest
 from checks.assertion_files import (
@@ -13,6 +15,7 @@ from checks.assertions import check_assertions
 from checks.flux_readiness import check_kustomizations, check_sources
 from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
+from cluster_gate import check_cluster_gate, stand_in_clusters
 from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
 from prune_checks import check_prune
@@ -21,8 +24,20 @@ from values_watch import check_values_change_applied
 
 
 @pytest.fixture(scope="module")
-def check_kustomizations_successful(
+def cluster_gate_problems(
     kube_cluster: Cluster, gitops_deployment: None
+) -> Iterator[list[str]]:
+    # The cluster Kustomizations get ready only once their stand-in Cluster is Available, so
+    #  this runs before the Kustomizations are checked; test_apps_wait_for_cluster reports it.
+    clusters = stand_in_clusters(kube_cluster.kube_client)
+    yield check_cluster_gate(clusters)
+    for cluster in clusters:
+        cluster.delete()
+
+
+@pytest.fixture(scope="module")
+def check_kustomizations_successful(
+    kube_cluster: Cluster, gitops_deployment: None, cluster_gate_problems: list[str]
 ) -> None:
     check_kustomizations(kube_cluster.kube_client)
 
@@ -119,6 +134,11 @@ def test_values_change_applied_at_once(
     check_helm_release_successful: dict[str, dict],
 ) -> None:
     check_values_change_applied(kube_cluster.kube_client)
+
+
+def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
+    # G1: a cluster's apps Kustomizations apply nothing until the cluster is Available
+    assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
 
 
 # must stay last: it deletes what the tests above check

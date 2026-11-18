@@ -10,7 +10,7 @@ from conftest import FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE
 from flux_inventory import inventory_keys
 from flux_reconcile import repo_problems, request_reconcile, wait_until
 from prune_objects import (
-    CLUSTER_KUSTOMIZATION,
+    APP_SETS_KUSTOMIZATION,
     PROTECTED_OBJECTS,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
@@ -64,7 +64,7 @@ def remove_from_source(api: pykube.HTTPClient, ignore: str) -> None:
     #  kustomize-controller only reacts to a new revision by itself. Without the request, the
     #  Kustomizations would apply it at their next interval.
     kustomizations = [
-        kustomization(api, k) for k in (ROOT_KUSTOMIZATION, CLUSTER_KUSTOMIZATION)
+        kustomization(api, k) for k in (ROOT_KUSTOMIZATION, APP_SETS_KUSTOMIZATION)
     ]
     for k in kustomizations:
         request_reconcile(k)
@@ -77,7 +77,7 @@ def remove_from_source(api: pykube.HTTPClient, ignore: str) -> None:
 
 def restore_source(api: pykube.HTTPClient) -> None:
     """Put the files remove_from_source left out back into the artifact. It doesn't bring back
-    the cluster Kustomization check_removed_cluster deletes, which is why test_prune runs last.
+    the cluster Kustomizations check_removed_cluster deletes, which is why test_prune runs last.
     """
     repo = git_repository(api)
     repo.patch({"spec": {"ignore": None}})

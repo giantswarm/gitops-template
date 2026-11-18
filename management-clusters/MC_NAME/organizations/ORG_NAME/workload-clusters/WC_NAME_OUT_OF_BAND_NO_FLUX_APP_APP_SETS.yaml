@@ -1,0 +1,28 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mc-name-clusters-out-of-band-no-flux-app-sets  # TODO: change 'mc-name' to your Management Cluster name and 'out-of-band-no-flux' to your cluster name; must be a correct k8s resource name (DNS-like)
+  namespace: default
+spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-gpg-from-template-wc-name
+  # the app sets install once the cluster is up, see WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
+  dependsOn:
+    - name: mc-name-clusters-out-of-band-no-flux  # TODO: the name of WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml's Kustomization
+  interval: 1m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/mapi/app_sets"
+  postBuild:
+    substitute:
+      cluster_description: "description"
+      cluster_name: "out-of-band-no-flux"
+      organization: "org-name"  # TODO: change 'org-name' to your organization name
+      # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
+      release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
+  prune: true
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+  timeout: 2m
