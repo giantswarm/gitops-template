@@ -54,9 +54,7 @@ export ORG_NAME=ORGANIZATION
 
 1. Create the Organization CR. Deleting it deletes the organization's namespace, with every cluster in it, so the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation keeps Flux from deleting it when its file is deleted,
-   see [How it works](./how-it-works.md). Create it
-
-    directly:
+   see [How it works](./how-it-works.md). Create it directly:
 
     ```sh
     cat <<EOF > ${ORG_NAME}.yaml

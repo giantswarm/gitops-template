@@ -76,7 +76,9 @@ def remove_from_source(api: pykube.HTTPClient, ignore: str) -> None:
 
 
 def restore_source(api: pykube.HTTPClient) -> None:
-    """Put the files remove_from_source left out back into the artifact."""
+    """Put the files remove_from_source left out back into the artifact. It doesn't bring back
+    the cluster Kustomization check_removed_cluster deletes, which is why test_prune runs last.
+    """
     repo = git_repository(api)
     repo.patch({"spec": {"ignore": None}})
     request_reconcile(repo)

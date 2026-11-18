@@ -40,7 +40,7 @@ PRUNED_OBJECTS = [
 #  protects: deleting the organization deletes its clusters
 PROTECTED_OBJECTS = [("Organization", "", "org-name")]
 # the app's workload in the workload cluster, which goes when its HelmRelease is deleted
-PRUNED_WORKLOAD = ("org-org-name", "hello-world")
+PRUNED_WORKLOAD = ("hello-world", "hello-world")
 # the cluster's HelmRelease, which deleting the cluster's Kustomization leaves
 PROTECTED_CLUSTER = ("HelmRelease", "org-org-name", "out-of-band-no-flux")
 PRUNE_KINDS: dict[str, type[APIObject]] = {

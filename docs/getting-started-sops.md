@@ -706,6 +706,14 @@ annotation, so Flux keeps it. You delete it by hand at the end. See [How it work
     kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME} -n default --timeout=10m
     ```
 
+1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
+   uninstalled them from the workload cluster, and it needs the cluster to do that, so wait for them:
+
+    ```sh
+    until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} -l giantswarm.io/cluster=${WC_NAME} \
+        --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
+    ```
+
 1. Finally, delete the cluster's `HelmRelease`. This deletes the cluster:
 
     ```sh

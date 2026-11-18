@@ -30,10 +30,12 @@ def tests_not_run_before(request: pytest.FixtureRequest) -> list[str]:
     for example because of `-k`, `--lf`, `--ff` or `--sw`."""
     items = request.session.items
     before = {
-        i.name for i in items[: items.index(request.node)] if i.module is request.module
+        i.originalname
+        for i in items[: items.index(request.node)]
+        if i.module is request.module
     }
     module_tests = {n for n in dir(request.module) if n.startswith("test_")}
-    return sorted(module_tests - before - {request.node.name})
+    return sorted(module_tests - before - {request.node.originalname})
 
 
 def app_problems(

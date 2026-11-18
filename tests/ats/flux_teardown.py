@@ -1,6 +1,7 @@
 """Deleting what the kind test applied without Flux deleting what the Kustomizations applied."""
 
 import pykube
+from pykube.exceptions import HTTPError
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 
@@ -16,5 +17,10 @@ def delete_without_prune(kube_cluster: Cluster, manifest_path: str) -> None:
     for k in KustomizationCR.objects(kube_cluster.kube_client).filter(
         namespace=pykube.all
     ):
-        k.patch({"spec": {"suspend": True, "prune": False}})
+        try:
+            k.patch({"spec": {"suspend": True, "prune": False}})
+        except HTTPError as e:
+            # deleted since it was listed, such as the cluster Kustomization test_prune deletes
+            if e.code != 404:
+                raise
     kube_cluster.kubectl(f"delete -f {manifest_path} --wait=true", output_format="text")
