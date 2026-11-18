@@ -392,6 +392,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- yamllint checks YAML with the rules in `.yamllint.yaml`. An empty `.yamllint` with no rules took precedence, so only
+  the syntax was checked. The repository's own YAML is fixed, and `.yamllint.yaml` ignores what can't be edited here:
+  SOPS-encrypted `*.enc.yaml` files, devctl's `zz_generated` workflows and the CRD fixtures copied from upstream. GitHub
+  Actions' `on:` key passes `truthy`. If your fork relied on the empty `.yamllint`, expect findings when you merge
+  this. `tools/fake-flux build` no longer writes empty documents, so `tools/test-all-ff validate` lints the build output
+  as it is. ([#217](https://github.com/giantswarm/gitops-template/issues/217))
 - Pull requests from forks, which GitHub gives no secrets and a read-only token, get part of the way to working CI.
   `yaml-diff.yaml` skips its diff comment there, which it can't post, and leaves a notice saying why. `tests/ats`
   skips the tests that need the kind cluster with a warning when `GITOPS_MASTER_GPG_KEY` is empty on such a pull

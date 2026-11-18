@@ -241,7 +241,7 @@ function build() {
 	fi
 
 	if ! $use_kustomize; then
-		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | yq $yqflags "$*"
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | yq $yqflags "${*:-.} | select(. != null)"
 		return $?
 	fi
 
