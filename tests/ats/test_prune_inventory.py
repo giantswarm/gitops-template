@@ -32,6 +32,25 @@ def test_inventory_keys() -> None:
     }
 
 
+def test_inventory_keys_of_a_name_with_a_colon() -> None:
+    # Flux writes a colon in a name, as RBAC objects often have, as `__`
+    kustomization = {
+        "status": {
+            "inventory": {
+                "entries": [
+                    {
+                        "id": "_kyverno__generate-configmaps_rbac.authorization.k8s.io_ClusterRole",
+                        "v": "v1",
+                    },
+                ]
+            }
+        }
+    }
+    assert inventory_keys(kustomization) == {
+        ("ClusterRole", "", "kyverno:generate-configmaps"),
+    }
+
+
 def test_inventory_keys_of_a_kustomization_without_inventory() -> None:
     assert inventory_keys({"status": {}}) == set()
 
