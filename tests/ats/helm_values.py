@@ -7,13 +7,10 @@ was there. An optional entry whose object or key is missing is skipped.
 """
 
 import base64
-from collections.abc import Callable
 from typing import Any
 
 import yaml
-
-# (kind, namespace, name) -> the object, or None if it doesn't exist
-Lookup = Callable[[str, str, str], dict | None]
+from checks.helm_release_sources import Lookup
 
 VALUES_KINDS = ("ConfigMap", "Secret")
 DEFAULT_VALUES_KEY = "values.yaml"

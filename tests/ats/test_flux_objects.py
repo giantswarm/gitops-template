@@ -14,6 +14,7 @@ from checks.flux_readiness import check_kustomizations, check_sources
 from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from conftest import GitOpsTestConfig
+from node_pools import node_pool_problems_in_cluster
 from pytest_helm_charts.clusters import Cluster
 
 
@@ -98,3 +99,10 @@ def test_workload_cluster_assertions(
     assert (
         not unavailable
     ), f"Deployments in the workload cluster aren't available: {unavailable}"
+
+
+def test_node_pools(
+    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+) -> None:
+    problems = node_pool_problems_in_cluster(kube_cluster.kube_client)
+    assert not problems, "\n".join(problems)

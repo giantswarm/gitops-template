@@ -3,7 +3,8 @@
 import base64
 
 import pytest
-from helm_values import Lookup, ValuesSourceError, merge_maps, merged_values
+from checks.helm_release_sources import Lookup
+from helm_values import ValuesSourceError, merge_maps, merged_values
 from node_pools import node_pools
 
 NAMESPACE = "org-org-name"
