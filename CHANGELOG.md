@@ -213,6 +213,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- CI: pin `clusterctl` to 1.10.10, the CAPI version `tests/ats` installs. The shared `gitops-validate` workflow
+  now defaults to 1.14.4, which refuses to clean up a v1beta1 management cluster and fails `test_on_kind` in
+  teardown.
+
 - `tests/ats`: pin every CAPI provider to an explicit release URL, via a
   generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
   on every run since 2026-08-19.

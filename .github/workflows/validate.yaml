@@ -16,5 +16,10 @@ jobs:
       # Matches [requires] python_version in tests/ats/Pipfile. The shared
       # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
       python_version: "3.12"
+      # Matches CLUSTER_CTL_CORE_VERSION in tests/ats/conftest.py. clusterctl 1.11
+      # and later only work with v1beta2 management clusters, and the shared
+      # workflow defaults to 1.14.4, so `clusterctl delete` fails in teardown.
+      # Drop this once the tests install v1beta2 providers.
+      clusterctl_ver: "1.10.10"
     secrets:
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
