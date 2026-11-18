@@ -99,12 +99,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
      those directories first.
   1. Add the apps `Kustomization`, with the cluster's in `dependsOn`, and list it in
      `workload-clusters/kustomization.yaml`.
-  1. Add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation to every object that changes owner in the next
-     step, so neither `Kustomization` deletes it while the other takes it over: the apps in `mapi/apps` and
+  1. In Git, add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation to every object that changes owner in the
+     next step, so neither `Kustomization` deletes it while the other takes it over: the apps in `mapi/apps` and
      `mapi/app_sets`, and the cluster's `OCIRepository`, values and region ConfigMaps and base-app `HelmRelease`s.
   1. Then, in one commit, narrow the cluster `Kustomization`'s `path` to `mapi/cluster`, add its health check and
      `timeout`, and remove `cluster/` from `mapi/kustomization.yaml`.
-  1. Remove the annotation from each of those objects again once it's in the inventory of its new `Kustomization`
+  1. Remove the annotation in Git from each of those objects again once it's in the inventory of its new `Kustomization`
      (`kubectl get kustomization NAME -n default -o yaml`, `status.inventory`). Keep it on the objects that carry it
      anyway, such as the cluster's `HelmRelease`.
 - The `hello-world` base in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
