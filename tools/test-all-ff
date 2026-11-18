@@ -107,7 +107,9 @@ function test() {
 			echo "OK"
 
 			echo -n "yamllint: "
-			if ! (yamllint "$tmp_file"); then
+			# flux build writes an empty document between some objects, a blank line that the
+			# empty-lines rule rejects. Lint the build without blank lines.
+			if ! (sed '/^$/d' "$tmp_file" | yamllint -); then
 				has_validation_errors=1
 			else
 				echo "OK"
