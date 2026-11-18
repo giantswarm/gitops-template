@@ -67,12 +67,10 @@ checks `main` as it is after a merge, which no pull request run has tested when 
 other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
 `on.push.branches`.
 
-A pull request from a fork gets a read-only token and none of the repository's secrets. `yaml-diff.yaml` skips its
-diff comment there, which it can't post, and leaves a notice on the run saying why. `validate.yaml` fails on such a
-pull request before any of its jobs starts, with "Secret GITOPS_MASTER_GPG_KEY is required, but not provided while
-calling": the shared workflow requires the secret, and GitHub treats the empty value as not provided. Until the shared
-workflow makes the secret optional and skips its comments on such pull requests, a pull request from a fork gets no
-validation from `validate.yaml`; run those checks in a branch of the repository itself.
+A pull request from a fork gets a read-only token and none of the repository's secrets. `yaml-diff.yaml` and
+`validate.yaml` skip their comments there, which they can't post, leave a notice on the run saying why, and put the
+diff and the validation log in the job summary. The kind test skips the tests that need
+the cluster there; see [`GITOPS_MASTER_GPG_KEY`](#configuration).
 
 ## `test-on-kind` validation step - additional information
 
@@ -197,8 +195,7 @@ This build step requires additional configuration using the following environmen
   to set it as a repository secret on github (tho job is configured to pick up this secret by default).
   An empty key fails the test, also in a fork's own runs, with one exception: on a pull request from a fork, which
   GitHub gives no secrets, the test skips every test that needs the cluster and says so in a warning on the run; the
-  checks that need no cluster still run. That takes effect once the shared workflow makes the secret optional; until
-  then such a pull request fails before the test starts (see [When the workflow runs](#when-the-workflow-runs)).
+  checks that need no cluster still run.
 
 ### The workload cluster of the `out-of-band-no-flux` example
 
