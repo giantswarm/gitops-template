@@ -225,11 +225,15 @@ their names, so Flux updates them in place instead of reinstalling the app.
     cd .. && yq -i '.resources += ["hello-web-app-1/"]' kustomization.yaml
     ```
 
-    For the cluster's first App Set, create that list with `kind: Kustomization` and an empty `resources:` first, and
-    add `app_sets/` to the `resources:` of `mapi/kustomization.yaml`. In the examples, the cluster's apps
-    Kustomization, `WC_NAME_APPS.yaml`, applies `mapi` without `mapi/cluster`, so the App Sets install once the
-    cluster is ready, like the secondary apps. See
-    [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+    For the cluster's first App Set, create that list with `kind: Kustomization` and an empty `resources:` first. If
+    the cluster is split into a cluster and an apps Kustomization, as in the examples, also add `app_sets/` to the
+    `resources:` of its `mapi/kustomization.yaml`. The apps Kustomization, `WC_NAME_APPS.yaml`, applies `mapi`
+    without `mapi/cluster`, so the App Sets install once the cluster is ready, like the secondary apps. See
+    [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). A cluster with a single
+    Kustomization for all of `mapi`, such as one `kubectl gs gitops add workload-cluster` writes, has no
+    `mapi/kustomization.yaml` and needs nothing more: Flux picks up `app_sets` by itself. Don't create a
+    `mapi/kustomization.yaml` there, as Flux would then stop applying, and delete, everything in `mapi` it doesn't
+    list.
 
 Over here, we are overriding the configuration of the `hello-world` app, which was already defined in the App Set
 Template. The `${cluster_name}-hello-world-user-values` ConfigMap is the optional user layer the app's `HelmRelease`
@@ -240,7 +244,7 @@ installed into on the workload cluster is its `spec.targetNamespace`. If you wan
 overrides work, please consult our [docs about creating apps](./add-app.md), as in general App Set is just a bundle of them.
 
 To remove an App Set, delete its directory and its entry in `mapi/app_sets/kustomization.yaml`, and Flux deletes what
-it applied. When you remove the cluster's last App Set, delete `mapi/app_sets` and its entry in
+it applied. When you remove the cluster's last App Set, delete `mapi/app_sets` and, in a split cluster, its entry in
 `mapi/kustomization.yaml` too: a list that names a directory that's gone doesn't build, and Flux stops applying the
 cluster's apps until it does. The `check-kustomization-paths` pre-commit hook catches that before you push, see
 [CI validation](./ci-validation.md#check-kustomization-paths).

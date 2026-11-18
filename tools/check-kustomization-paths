@@ -1,17 +1,22 @@
 #!/bin/bash
-# shellcheck disable=SC2207
+# shellcheck disable=SC2207,SC2016
 set -euo pipefail
 
 function help() {
 	echo -e "
-Check that the spec.path of every Flux Kustomization exists and builds. Must be run from
-the repository root, or from the directory given as the only argument.
+Check that the spec.path of every Flux Kustomization that applies this repository exists and
+builds. Must be run from the repository root, or from the directory given as the only argument.
 
 Usage: $0 [dir]
 
-A path with a kustomization.yaml is built with kustomize. A path without one is built the
-way Flux builds it, from the YAML files and the directories with a kustomization.yaml below
-it, and must not be empty. The Kustomizations in tools/testdata are left out.
+This repository's GitRepository is the sourceRef of the management cluster's own
+Kustomization, the one whose spec.path is the directory its file is in, such as
+management-clusters/MC_NAME/MC_NAME.yaml. Kustomizations with another source are left out,
+and so are the ones in tools/testdata.
+
+A path with a kustomization file is built with kustomize. A path without one is built the
+way Flux builds it, from the YAML files and the directories with a kustomization file below
+it, and must not be empty.
 "
 	exit 1
 }
@@ -30,14 +35,20 @@ tmp_dir=$(mktemp -d)
 trap 'rm -rf "${tmp_dir}"' EXIT
 
 ##
-# What Flux applies from a directory without a kustomization.yaml: its YAML files, and
-# below it every directory with a kustomization.yaml or, failing that, its YAML files.
+# Whether directory $1 has a file kustomize builds it from.
+function has_kustomization() {
+	[ -e "$1/kustomization.yaml" ] || [ -e "$1/kustomization.yml" ] || [ -e "$1/Kustomization" ]
+}
+
+##
+# What Flux applies from a directory without a kustomization file: its YAML files, and
+# below it every directory with a kustomization file or, failing that, its YAML files.
 function generated_resources() {
-	if [ -e "$1/kustomization.yaml" ]; then
+	if has_kustomization "$1"; then
 		echo "$1"
 		return
 	fi
-	find "$1" -maxdepth 1 -type f -name '*.yaml'
+	find "$1" -maxdepth 1 -type f \( -name '*.yaml' -o -name '*.yml' \)
 	for d in $(find "$1" -mindepth 1 -maxdepth 1 -type d | sort); do
 		generated_resources "$d"
 	done
@@ -56,7 +67,7 @@ function check() {
 		return 1
 	fi
 
-	if [ -e "${path}/kustomization.yaml" ]; then
+	if has_kustomization "${path}"; then
 		dir="${path}"
 	else
 		local resources=($(generated_resources "${path}"))
@@ -86,11 +97,45 @@ function check() {
 	fi
 }
 
+# Every Flux Kustomization, one per line: file,namespace/name,path,source. v1beta2 is the API
+#  version Flux 2.0 replaced with v1; Flux still reads Kustomizations written with it.
+files=($(find . \( -name '*.yaml' -o -name '*.yml' \) -not -path './tools/testdata/*' -not -path './.git/*' \
+	-exec grep -l '^apiVersion: kustomize.toolkit.fluxcd.io/' {} + | sort || true))
+if [ ${#files[@]} -eq 0 ]; then
+	echo "No Flux Kustomization found below $(pwd): nothing to check."
+	exit 1
+fi
+if ! kustomizations=$(yq --no-doc '
+	select((.apiVersion == "kustomize.toolkit.fluxcd.io/v1" or .apiVersion == "kustomize.toolkit.fluxcd.io/v1beta2")
+		and .kind == "Kustomization") |
+	(.metadata.namespace // "") as $ns |
+	[filename, $ns + "/" + .metadata.name, .spec.path // "",
+		.spec.sourceRef.kind + "/" + (.spec.sourceRef.namespace // $ns) + "/" + .spec.sourceRef.name] |
+	join(",")' "${files[@]}"); then
+	echo "yq couldn't read the Flux Kustomizations: nothing was checked."
+	exit 1
+fi
+
+# this repository's GitRepository: the source of the Kustomizations that apply their own directory
+sources=()
+for k in ${kustomizations}; do
+	IFS=, read -r file name path source <<<"${k}"
+	path="${path#./}"
+	if [ "$(dirname "${file#./}")" == "${path%/}" ] && [[ "${source}" == GitRepository/* ]]; then
+		sources+=("${source}")
+	fi
+done
+if [ ${#sources[@]} -eq 0 ]; then
+	echo "No Flux Kustomization applies the directory its file is in, as management-clusters/MC_NAME/MC_NAME.yaml" \
+		"does: can't tell which GitRepository is this repository's, so nothing was checked."
+	exit 1
+fi
+
 failed=0
-for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec grep -l '^apiVersion: kustomize.toolkit.fluxcd.io/' {} + | sort); do
-	for k in $(yq --no-doc 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/v1" and .kind == "Kustomization") |
-		[.metadata.namespace + "/" + .metadata.name, .spec.path] | join(",")' "$f"); do
-		check "${k%%,*}" "${f#./}" "${k#*,}" || failed=1
-	done
+for k in ${kustomizations}; do
+	IFS=, read -r file name path source <<<"${k}"
+	if [[ " ${sources[*]} " == *" ${source} "* ]]; then
+		check "${name}" "${file#./}" "${path}" || failed=1
+	fi
 done
 exit ${failed}

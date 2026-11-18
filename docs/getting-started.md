@@ -785,8 +785,8 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
-        -l kustomize.toolkit.fluxcd.io/name=${MC_NAME}-clusters-${WC_NAME}-apps,kustomize.toolkit.fluxcd.io/namespace=default \
-        -o name)" ]; do sleep 10; done
+        -l 'kustomize.toolkit.fluxcd.io/name in ('"${MC_NAME}-clusters-${WC_NAME},${MC_NAME}-clusters-${WC_NAME}-apps"'),kustomize.toolkit.fluxcd.io/namespace=default' \
+        --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
 1. Finally, remove the label from the cluster's `HelmRelease` and delete it. This deletes the cluster:

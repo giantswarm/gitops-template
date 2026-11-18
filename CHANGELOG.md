@@ -78,7 +78,10 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A cluster's secondary apps install once the cluster is ready. The `WC_NAME` and out-of-band example clusters each
   have two `Kustomization`s. The cluster's, in the existing file, applies `mapi/cluster`: the cluster and its base
   apps, which now live in `mapi/cluster/apps`, such as the Gateway API stack of the out-of-band clusters. Its health
-  check waits until Cluster API reports the `Cluster` `Available`, with a `timeout` of 30 minutes. The new apps
+  check waits until Cluster API reports the `Cluster` `Available`, with a `timeout` of 30 minutes. While the cluster
+  isn't `Available`, each reconciliation of that `Kustomization` waits for up to those 30 minutes, so a fix pushed to
+  the cluster's files is only applied once the wait runs out, and the apps `Kustomization` reports
+  `DependencyNotReady` all the while. The new apps
   `Kustomization`, `WC_NAME_APPS.yaml` and `*_OUT_OF_BAND_*_APPS.yaml`, applies the rest of `mapi`, the secondary apps
   and App Sets that the new `mapi/kustomization.yaml` lists, and depends on the cluster's. `mapi/app_sets` has a
   `kustomization.yaml` that lists the cluster's App Sets. The `HELLO_APP_*` clusters have no apps and keep a single
@@ -88,8 +91,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `kubectl gs gitops add workload-cluster` still writes a single `Kustomization`.
   ([#210](https://github.com/giantswarm/gitops-template/issues/210))
   To split a running cluster's `Kustomization`:
-  1. Move the base apps into `mapi/cluster/apps` and list them in `mapi/cluster/kustomization.yaml`. Add
-     `mapi/kustomization.yaml`, listing `cluster/`, `apps/` and, if the cluster has App Sets, `app_sets/` for now.
+  1. Move the base apps into `mapi/cluster/apps` and list them in `mapi/cluster/kustomization.yaml`. If the cluster
+     has App Sets, add `mapi/app_sets/kustomization.yaml` listing each App Set's directory: Flux generated that list
+     until now, and without it `mapi/app_sets` doesn't build. Add `mapi/kustomization.yaml`, listing `cluster/`,
+     `apps/` and, if the cluster has App Sets, `app_sets/` for now. Anything else under `mapi/` that
+     `mapi/kustomization.yaml` doesn't list stops being applied, and Flux deletes it: list it, or move it into one of
+     those directories first.
   1. Add the apps `Kustomization`, with the cluster's in `dependsOn`, and list it in
      `workload-clusters/kustomization.yaml`.
   1. Then, in one commit, narrow the cluster `Kustomization`'s `path` to `mapi/cluster`, add its health check and

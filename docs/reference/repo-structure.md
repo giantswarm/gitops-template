@@ -282,6 +282,9 @@ A cluster with apps has two Kustomizations:
    their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name the
    Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available` condition
    is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster coming up.
+   While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you push to
+   the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
+   Kustomization reports `DependencyNotReady` all the while.
 1. `WC_NAME_APPS.yaml` applies the rest of `mapi`: the secondary apps in `mapi/apps` and the App Sets in
    `mapi/app_sets`, which `mapi/kustomization.yaml` lists. It has the cluster's Kustomization in `dependsOn`, so Flux
    applies none of them until the cluster is `Available`. Until then, it reports `DependencyNotReady`.

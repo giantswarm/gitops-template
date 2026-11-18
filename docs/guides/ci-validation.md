@@ -39,11 +39,15 @@ You can check a demo PR where this is used in [PR 44](https://github.com/giantsw
 ## check-kustomization-paths
 
 [tools/check-kustomization-paths](../../tools/check-kustomization-paths) runs as a `pre-commit` hook. For every Flux
-`Kustomization` in the repository, outside of `tools/testdata`, it checks that `spec.path` exists and builds. It builds
-a path that has a `kustomization.yaml` with `kustomize build`, or with `kubectl kustomize` if `kustomize` isn't
-installed. A path without one it builds the way Flux does, from the YAML files and the directories with a
-`kustomization.yaml` below it, and such a path must not be empty. It fails, naming the `Kustomization`, its file and its
-path, when:
+`Kustomization` (`kustomize.toolkit.fluxcd.io/v1`, or the older `v1beta2`) that applies this repository, outside of
+`tools/testdata`, it checks that `spec.path` exists and builds. This repository's `GitRepository` is the `sourceRef` of
+the management cluster's own `Kustomization`, the one whose path is the directory of its file, such as
+`MC_NAME.yaml`. A `Kustomization` with another source reads another repository, so it's left out. The hook builds a
+path that has a `kustomization.yaml`, `kustomization.yml` or `Kustomization` with `kustomize build`, or with
+`kubectl kustomize` if `kustomize` isn't installed. A path without one it builds the way Flux does, from the YAML files
+and the directories with a kustomization file below it, and such a path must not be empty. It fails when it finds no
+`Kustomization`, no management cluster `Kustomization` or when `yq` can't read them, rather than pass without
+checking anything. Otherwise it fails, naming the `Kustomization`, its file and its path, when:
 
 - the path doesn't exist: restore the directory, or delete the `Kustomization`, its file and its entry in the
   `kustomization.yaml` that lists it;
@@ -53,7 +57,8 @@ path, when:
 
 On a cluster, each of these stops Flux applying the `Kustomization` until it's fixed, and it doesn't delete what the
 `Kustomization` applied before. `tools/test-all-ff validate` checks that the hook fails on the fixture in
-`tools/testdata/gone-path`.
+`tools/testdata/gone-path`, leaving out its `Kustomization` with another source, and on a directory without any
+`Kustomization`.
 
 ## When the workflow runs
 
@@ -163,7 +168,7 @@ objects are stored in: the CRDs are installed without their conversion webhook, 
 conversion.
 
 The test does that for every cluster whose apps wait for it, as listed in `GATES` in
-[cluster_gate.py](../../tests/ats/cluster_gate.py). It creates a paused stand-in `Cluster` with `Available` `False`.
+[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with `Available` `False`.
 The cluster's `Kustomization` still has to apply the base apps, while the apps `Kustomization` has to report
 `DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization` has to
 get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
