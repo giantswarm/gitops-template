@@ -225,7 +225,9 @@ their names, so Flux updates them in place instead of reinstalling the app.
     cd .. && yq -i '.resources += ["hello-web-app-1/"]' kustomization.yaml
     ```
 
-    For the cluster's first App Set, create that list with `kind: Kustomization` and an empty `resources:` first. If
+    If the cluster doesn't have that file yet, create it first, with `kind: Kustomization` and a `resources:` listing
+    every App Set directory already in `mapi/app_sets`. Flux found them by itself until now: an App Set the list leaves
+    out stops being applied, and Flux deletes it and its apps. If
     the cluster is split into a cluster and an apps Kustomization, as in the examples, also add `app_sets/` to the
     `resources:` of its `mapi/kustomization.yaml`. The apps Kustomization, `WC_NAME-apps.yaml`, applies `mapi`
     without `mapi/cluster`, so the App Sets install once the cluster is ready, like the secondary apps. See

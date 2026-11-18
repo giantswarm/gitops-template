@@ -197,7 +197,9 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     ```
 
     Base apps, which install with the cluster, go into `mapi/cluster/apps`, listed in `mapi/cluster/kustomization.yaml`.
-    Then add `mapi/kustomization.yaml`, listing `apps/` and, if the cluster has App Sets, `app_sets/`, and add
+    If the cluster has App Sets, add `mapi/app_sets/kustomization.yaml`, listing each App Set's directory: without it,
+    `mapi/app_sets` doesn't build. Then add `mapi/kustomization.yaml`, listing `apps/` and, if the cluster has App Sets,
+    `app_sets/`, and add
     `${WC_NAME}-apps.yaml` for `mapi`, with the same `postBuild` and the cluster's Kustomization in `dependsOn`, as in
     [WC_NAME-apps.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME-apps.yaml). List
     it in `kustomization.yaml`. See [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations) for the
