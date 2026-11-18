@@ -102,7 +102,11 @@ def test_workload_cluster_assertions(
 
 
 def test_node_pools(
-    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+    kube_cluster: Cluster,
+    check_helm_release_successful: dict[str, dict],
+    gitops_test_config: GitOpsTestConfig,
 ) -> None:
-    problems = node_pool_problems_in_cluster(kube_cluster.kube_client)
+    problems = node_pool_problems_in_cluster(
+        kube_cluster.kube_client, gitops_test_config.ignored_objects
+    )
     assert not problems, "\n".join(problems)
