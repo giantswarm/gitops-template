@@ -82,7 +82,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   isn't `Available`, each reconciliation of that `Kustomization` waits for up to those 30 minutes, so a fix pushed to
   the cluster's files is only applied once the wait runs out, and the apps `Kustomization` reports
   `DependencyNotReady` all the while. The new apps
-  `Kustomization`, `WC_NAME_APPS.yaml` and `*_OUT_OF_BAND_*_APPS.yaml`, applies the rest of `mapi`, the secondary apps
+  `Kustomization`, `WC_NAME-apps.yaml` and `*_OUT_OF_BAND_*-apps.yaml`, applies the rest of `mapi`, the secondary apps
   and App Sets that the new `mapi/kustomization.yaml` lists, and depends on the cluster's. `mapi/app_sets` has a
   `kustomization.yaml` that lists the cluster's App Sets. The `HELLO_APP_*` clusters have no apps and keep a single
   `Kustomization`. The kind test creates stand-in `Cluster`s and checks that the base apps don't wait for them and
@@ -99,8 +99,14 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
      those directories first.
   1. Add the apps `Kustomization`, with the cluster's in `dependsOn`, and list it in
      `workload-clusters/kustomization.yaml`.
+  1. Add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation to every object that changes owner in the next
+     step, so neither `Kustomization` deletes it while the other takes it over: the apps in `mapi/apps` and
+     `mapi/app_sets`, and the cluster's `OCIRepository`, values and region ConfigMaps and base-app `HelmRelease`s.
   1. Then, in one commit, narrow the cluster `Kustomization`'s `path` to `mapi/cluster`, add its health check and
      `timeout`, and remove `cluster/` from `mapi/kustomization.yaml`.
+  1. Remove the annotation from each of those objects again once it's in the inventory of its new `Kustomization`
+     (`kubectl get kustomization NAME -n default -o yaml`, `status.inventory`). Keep it on the objects that carry it
+     anyway, such as the cluster's `HelmRelease`.
 - The `hello-world` base in `bases/apps/hello-world` and the `cert-manager` app of the `WC_NAME` example
   install into their own namespace in the workload cluster, `hello-world` and `cert-manager`, with Helm storage in
   the same namespace. They used `org-${organization}`, which created an organisation namespace in the workload

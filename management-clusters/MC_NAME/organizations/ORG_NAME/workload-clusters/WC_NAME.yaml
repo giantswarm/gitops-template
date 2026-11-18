@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   # Applies the cluster and its base apps, in mapi/cluster. Ready once Cluster
-  # API reports the cluster Available. The Kustomization in WC_NAME_APPS.yaml
+  # API reports the cluster Available. The Kustomization in WC_NAME-apps.yaml
   # depends on this one, so the secondary apps install once the cluster is up.
   healthCheckExprs:
     - apiVersion: cluster.x-k8s.io/v1beta2

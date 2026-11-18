@@ -227,7 +227,7 @@ their names, so Flux updates them in place instead of reinstalling the app.
 
     For the cluster's first App Set, create that list with `kind: Kustomization` and an empty `resources:` first. If
     the cluster is split into a cluster and an apps Kustomization, as in the examples, also add `app_sets/` to the
-    `resources:` of its `mapi/kustomization.yaml`. The apps Kustomization, `WC_NAME_APPS.yaml`, applies `mapi`
+    `resources:` of its `mapi/kustomization.yaml`. The apps Kustomization, `WC_NAME-apps.yaml`, applies `mapi`
     without `mapi/cluster`, so the App Sets install once the cluster is ready, like the secondary apps. See
     [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). A cluster with a single
     Kustomization for all of `mapi`, such as one `kubectl gs gitops add workload-cluster` writes, has no

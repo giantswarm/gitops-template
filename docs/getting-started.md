@@ -428,7 +428,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
    it until the cluster's is `Ready`:
 
     ```sh
-    cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}_APPS.yaml
+    cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
@@ -457,7 +457,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     Add both to the organization's list of clusters:
 
     ```sh
-    yq -i '.resources += ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'_APPS.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
+    yq -i '.resources += ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'-apps.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
     Finally, commit and push:
@@ -756,14 +756,14 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
 1. Remove the cluster from the organization's list:
 
     ```sh
-    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml" or . == "'"${WC_NAME}"'_APPS.yaml"))' \
+    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml" or . == "'"${WC_NAME}"'-apps.yaml"))' \
       ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
     Remove its files, then commit and push:
 
     ```sh
-    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml ${ORG_DIR}/workload-clusters/${WC_NAME}_APPS.yaml && git commit -am "Delete workload cluster ${WC_NAME}" && git push
+    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml && git commit -am "Delete workload cluster ${WC_NAME}" && git push
     ```
 
 1. Make Flux read the change right away:

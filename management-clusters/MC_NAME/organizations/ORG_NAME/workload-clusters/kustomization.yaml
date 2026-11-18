@@ -6,13 +6,13 @@ labels:
       giantswarm.io/managed-by: flux
 resources:
   - WC_NAME.yaml
-  - WC_NAME_APPS.yaml
+  - WC_NAME-apps.yaml
   - HELLO_APP_DEV_CLUSTER_1.yaml
   - HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
   - HELLO_APP_PROD_CLUSTER_US_WEST.yaml
   - HELLO_APP_STAGING_CLUSTER_1.yaml
   - WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
-  - WC_NAME_OUT_OF_BAND_FLUX_APP_APPS.yaml
+  - WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
   - WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
-  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP_APPS.yaml
+  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
   - WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml

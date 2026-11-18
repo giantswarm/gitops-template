@@ -28,7 +28,7 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
 1. `mapi/apps` holds the other apps. Each app is a Flux `OCIRepository`, which points at a chart in an OCI registry,
    and a Flux `HelmRelease`, which installs it. Both stay on the management cluster, in the `org-demoorg` namespace.
    The `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster. These apps
-   wait for the cluster: a second Kustomization, `demowc_APPS.yaml`, applies the rest of `mapi` once `demowc.yaml` is
+   wait for the cluster: a second Kustomization, `demowc-apps.yaml`, applies the rest of `mapi` once `demowc.yaml` is
    `Ready`, which is when Cluster API reports the cluster `Available`. See
    [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
 

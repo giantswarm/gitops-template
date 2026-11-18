@@ -21,7 +21,7 @@ the App Template defaults (only for apps created from a template), and two optio
 
 An app goes into one of two directories of the cluster. A base app, one the cluster needs from the start, goes into
 `mapi/cluster/apps` and installs with the cluster: the cluster's Kustomization, `WC_NAME.yaml`, applies it. A
-secondary app goes into `mapi/apps`, which the cluster's apps Kustomization, `WC_NAME_APPS.yaml`, applies once the
+secondary app goes into `mapi/apps`, which the cluster's apps Kustomization, `WC_NAME-apps.yaml`, applies once the
 cluster is ready, because its `dependsOn` waits for the cluster's Kustomization. The steps below add a secondary app;
 for a base app, use `mapi/cluster/apps` and list it in its `kustomization.yaml`. See
 [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) to split a cluster that has a single

@@ -46,7 +46,7 @@ management-clusters
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
-                ├── [WC_NAME_APPS.yaml]
+                ├── [WC_NAME-apps.yaml]
                 ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
@@ -63,6 +63,7 @@ management-clusters
 How to read it:
 
 - Names in capital letters are placeholders. Replace them with your own names, following the [naming](#naming) rules.
+  Lowercase parts stay as they are: `WC_NAME-apps.yaml` for a cluster `demo0` is `demo0-apps.yaml`.
 - Names with an extension, like `MC_NAME.yaml`, are files. The rest are directories.
 - Names in square brackets are optional. See [optional components](#optional-components).
 - The horizontal line splits the work between the two kinds of [Flux Kustomizations](#flux-kustomizations).
@@ -149,7 +150,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | --- | --- |
 | Management cluster Flux `Kustomization` | `MC_NAME-gitops`, in `MC_NAME.yaml` |
 | Workload cluster Flux `Kustomization` | `MC_NAME-clusters-WC_NAME`, in `WC_NAME.yaml` |
-| Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME_APPS.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux Kustomizations](#flux-kustomizations) |
+| Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME-apps.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux Kustomizations](#flux-kustomizations) |
 | An app's `HelmRelease` and `OCIRepository` when it's a base app, installed with the cluster | the same files, in `mapi/cluster/apps/APP_NAME` |
 | Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `mapi/apps/APP_NAME` |
@@ -251,7 +252,7 @@ management-clusters
             └── workload-clusters
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml            # applies WC_NAME/mapi/cluster/
-                ├── WC_NAME_APPS.yaml       # applies WC_NAME/mapi/, once the cluster is ready
+                ├── WC_NAME-apps.yaml       # applies WC_NAME/mapi/, once the cluster is ready
                 └── WC_NAME
                     └── mapi
                         ├── kustomization.yaml   # lists apps and app_sets, not cluster
@@ -268,7 +269,7 @@ management-clusters
 ```yaml
 resources:
   - WC_NAME.yaml
-  - WC_NAME_APPS.yaml
+  - WC_NAME-apps.yaml
 ```
 
 Both set the variables, like `${cluster_name}`, that the bases use. See [How it works](../how-it-works.md) for why the
@@ -285,7 +286,7 @@ A cluster with apps has two Kustomizations:
    While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you push to
    the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
    Kustomization reports `DependencyNotReady` all the while.
-1. `WC_NAME_APPS.yaml` applies the rest of `mapi`: the secondary apps in `mapi/apps` and the App Sets in
+1. `WC_NAME-apps.yaml` applies the rest of `mapi`: the secondary apps in `mapi/apps` and the App Sets in
    `mapi/app_sets`, which `mapi/kustomization.yaml` lists. It has the cluster's Kustomization in `dependsOn`, so Flux
    applies none of them until the cluster is `Available`. Until then, it reports `DependencyNotReady`.
 
