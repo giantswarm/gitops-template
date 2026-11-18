@@ -23,7 +23,8 @@ To encrypt files of a workload cluster, add a key pair for it:
   encrypted with the master key.
 
 The cluster's two Kustomizations reference that Secret in `spec.decryption` and use it to decrypt what they apply:
-`WC_NAME.yaml` the `WC_NAME/mapi/cluster` directory, and `WC_NAME-apps.yaml` the rest of `WC_NAME/mapi`.
+`WC_NAME.yaml` the `WC_NAME/cluster` directory, and `WC_NAME-apps.yaml` the `WC_NAME/apps` and `WC_NAME/app_sets`
+directories.
 
 ```text
                 MC_NAME.yaml
@@ -50,7 +51,7 @@ A workload cluster key can be an age key instead of a GPG key; age keys are simp
 
 The cluster's Kustomizations name that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
 uses an age key: `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with the `sops-age-wc-name` Secret, and
-`WC_NAME-apps.yaml` decrypts `mapi/apps/cert-manager/secret.enc.yaml` with it. For the steps, see
+`WC_NAME-apps.yaml` decrypts `apps/cert-manager/secret.enc.yaml` with it. For the steps, see
 [Create an age key pair](../add_wc_structure.md#create-an-age-key-pair-optional-step).
 
 A Kustomization reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.
@@ -104,10 +105,10 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/mapi/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/(cluster|apps|app_sets)/.*\.enc\.yaml
     age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 ```
 
@@ -125,7 +126,7 @@ creation_rules:
     path_regex: management-clusters/demomc/organizations/demo-gitops/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002 # organization key
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/apps/app1/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/apps/app1/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000003 # app1 key
 ```
 

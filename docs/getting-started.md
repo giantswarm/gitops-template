@@ -274,8 +274,8 @@ kubectl get namespace org-${ORG_NAME}
 ## 3. Create a workload cluster
 
 A cluster gets two `Kustomization`s, which fill in variables such as `${cluster_name}` in the files below. The
-cluster's `Kustomization` applies the `${WC_DIR}/mapi/cluster` directory and gets `Ready` once the cluster is up. The
-apps' `Kustomization` applies the rest of `${WC_DIR}/mapi` only after that, so the apps install into a cluster that
+cluster's `Kustomization` applies the `${WC_DIR}/cluster` directory and gets `Ready` once the cluster is up. The
+apps' `Kustomization` applies the rest of `${WC_DIR}` only after that, so the apps install into a cluster that
 exists.
 The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart, built from the
 [CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
@@ -292,12 +292,20 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 >   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
 > ```
 >
+> The CLI still generates a `mapi` directory. Move what's in it up into `${WC_DIR}`, and take one `../` off the path
+> to the base in the cluster's `kustomization.yaml`, which the CLI writes for `mapi/cluster`:
+>
+> ```sh
+> mv ${WC_DIR}/mapi/apps ${WC_DIR}/mapi/cluster ${WC_DIR}/ && rmdir ${WC_DIR}/mapi
+> yq -i '.resources |= map(sub("^\.\./"; ""))' ${WC_DIR}/cluster/kustomization.yaml
+> ```
+>
 > The CLI doesn't add a region, so add it to the cluster's `kustomization.yaml`, with the `REGION` from the second step
 > below:
 >
 > ```sh
-> yq -i '.components = ["../../../../../../../../bases/environments/regions/" + strenv(REGION)]' \
->   ${WC_DIR}/mapi/cluster/kustomization.yaml
+> yq -i '.components = ["../../../../../../../bases/environments/regions/" + strenv(REGION)]' \
+>   ${WC_DIR}/cluster/kustomization.yaml
 > ```
 >
 > The cluster's `Kustomization` it writes has `prune: false`. Set `prune: true`, as below:
@@ -307,7 +315,8 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 > ```
 >
 > The CLI still writes a single `Kustomization` that applies all of `${WC_DIR}/mapi`, so the apps don't wait for the
-> cluster. To make them wait, replace it with the two `Kustomization`s of the last step below.
+> cluster. Replace it with the two `Kustomization`s of the last step below, and add `${WC_DIR}/kustomization.yaml`
+> as in the step before it.
 >
 > Then commit and push, as in the last step below.
 
@@ -335,19 +344,19 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
    its directory:
 
     ```sh
-    mkdir -p ${WC_DIR}/mapi/cluster
+    mkdir -p ${WC_DIR}/cluster
     ```
 
     Then create its `kustomization.yaml`:
 
     ```sh
-    cat <<EOF > ${WC_DIR}/mapi/cluster/kustomization.yaml
+    cat <<EOF > ${WC_DIR}/cluster/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     components:
-      - ../../../../../../../../bases/environments/regions/${REGION}
+      - ../../../../../../../bases/environments/regions/${REGION}
     resources:
-      - ../../../../../../../../bases/clusters/capa/template
+      - ../../../../../../../bases/clusters/capa/template
     EOF
     ```
 
@@ -359,13 +368,13 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
    create its directory:
 
     ```sh
-    mkdir -p ${WC_DIR}/mapi/apps
+    mkdir -p ${WC_DIR}/apps
     ```
 
     Then create the list:
 
     ```sh
-    cat <<'EOF' > ${WC_DIR}/mapi/apps/kustomization.yaml
+    cat <<'EOF' > ${WC_DIR}/apps/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     buildMetadata: [originAnnotations]
@@ -374,11 +383,11 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     EOF
     ```
 
-    Then list it in `${WC_DIR}/mapi/kustomization.yaml`, which leaves out `cluster`, as the cluster has a
+    Then list it in `${WC_DIR}/kustomization.yaml`, which leaves out `cluster`, as the cluster has a
     `Kustomization` of its own:
 
     ```sh
-    cat <<'EOF' > ${WC_DIR}/mapi/kustomization.yaml
+    cat <<'EOF' > ${WC_DIR}/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
@@ -409,7 +418,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
           name: ${WC_NAME}
           namespace: org-${ORG_NAME}
       interval: 10m
-      path: ./${WC_DIR}/mapi/cluster
+      path: ./${WC_DIR}/cluster
       postBuild:
         substitute:
           cluster_description: "${WC_NAME} managed by GitOps"
@@ -440,7 +449,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
       dependsOn:
         - name: ${MC_NAME}-clusters-${WC_NAME}
       interval: 10m
-      path: ./${WC_DIR}/mapi
+      path: ./${WC_DIR}
       postBuild:
         substitute:
           cluster_description: "${WC_NAME} managed by GitOps"
@@ -529,7 +538,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 1. Save the app's directory for the next commands:
 
     ```sh
-    export APP_DIR=${WC_DIR}/mapi/apps/hello-world
+    export APP_DIR=${WC_DIR}/apps/hello-world
     ```
 
     Then create it:
@@ -675,7 +684,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     ```
 
     For a complete example, see the
-    [`ExternalSecret` of hello-world](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/mapi/apps/hello-world/externalsecret.yaml)
+    [`ExternalSecret` of hello-world](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world/externalsecret.yaml)
     in the example cluster `WC_NAME_OUT_OF_BAND_NO_FLUX_APP`. It reads the store from
     [secret store for testing](./appendices.md#secret-store-for-testing). The same cluster keeps the secret values of
     envoy-gateway in a SOPS-encrypted Secret, so it shows both ways side by side.
@@ -683,13 +692,13 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
 1. Add the app to the cluster's list of apps:
 
     ```sh
-    yq -i '.resources += ["hello-world"]' ${WC_DIR}/mapi/apps/kustomization.yaml
+    yq -i '.resources += ["hello-world"]' ${WC_DIR}/apps/kustomization.yaml
     ```
 
 1. Commit and push:
 
     ```sh
-    git add ${WC_DIR}/mapi/apps && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
+    git add ${WC_DIR}/apps && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
     ```
 
 **Check:** the release is `Ready` on the management cluster:

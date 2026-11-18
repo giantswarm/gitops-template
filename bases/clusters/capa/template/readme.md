@@ -19,7 +19,7 @@ The cluster appends the rest in its own kustomization:
 1. Optionally more components, such as a region's extra node pool.
 1. Your own values, last. Add a ConfigMap with a `values` key next to the base, and a patch that appends it to the
    `HelmRelease`'s `valuesFrom`. See the [WC_NAME](
-   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/cluster/) example.
+   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/cluster/) example.
 
 List the components under `components:` in the kustomization that has the patch with your own values. kustomize applies
 a kustomization's components before its own patches, so the region comes before your values, and the components come in

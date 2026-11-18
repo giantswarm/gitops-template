@@ -18,17 +18,17 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
    `management-clusters/demomc`: the organizations, and the Flux `Kustomization` of each workload cluster listed in
    `workload-clusters/kustomization.yaml`, such as `demowc.yaml`. A cluster file that isn't in that list does
    nothing. It stops there and doesn't apply what's inside the `demowc` directory.
-1. The `demowc.yaml` Kustomization applies the `demowc/mapi/cluster` directory. While it does, it fills in variables
+1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory. While it does, it fills in variables
    such as `${cluster_name}`, `${organization}` and `${release}` from its own settings.
-1. `mapi/cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
+1. `cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
    `HelmRelease` that installs it on the management cluster. The chart creates the cluster with Cluster API. When the
    cluster is up, the management cluster also creates the `demowc-kubeconfig` Secret, with access to the new cluster,
    and the `demowc-cluster-values` ConfigMap, with values apps can use, such as the cluster's base domain. Base apps,
-   the ones the cluster needs from the start, sit next to it in `mapi/cluster/apps` and install with it.
-1. `mapi/apps` holds the other apps. Each app is a Flux `OCIRepository`, which points at a chart in an OCI registry,
+   the ones the cluster needs from the start, sit next to it in `cluster/apps` and install with it.
+1. `apps` holds the other apps. Each app is a Flux `OCIRepository`, which points at a chart in an OCI registry,
    and a Flux `HelmRelease`, which installs it. Both stay on the management cluster, in the `org-demoorg` namespace.
    The `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster. These apps
-   wait for the cluster: a second Kustomization, `demowc-apps.yaml`, applies the rest of `mapi` once `demowc.yaml` is
+   wait for the cluster: a second Kustomization, `demowc-apps.yaml`, applies `apps` and `app_sets` once `demowc.yaml` is
    `Ready`, which is when Cluster API reports the cluster `Available`. See
    [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
 
@@ -74,13 +74,14 @@ the `HelmRelease` of a cluster base you write yourself. `kubectl gs` doesn't add
 `kubectl gs gitops add base` writes.
 
 The split between the two kinds of Kustomization matters. The management cluster's Kustomization creates the
-cluster's Kustomizations, and they apply the cluster's `mapi` directory. Each cluster gets its own
+cluster's Kustomizations, and they apply the cluster's directory. Each cluster gets its own
 variables, and a mistake in one cluster's directory doesn't stop the others.
 
-`mapi` stands for Management API. Everything in it is a resource on the management cluster that configures the
+Everything in `cluster`, `apps` and `app_sets` is a resource on the management cluster that configures the
 workload cluster. Resources that must be applied inside the workload cluster directly go into an optional
-`out-of-band` directory next to it. A third Kustomization, such as `demowc-direct.yaml`, applies it with the
-`demowc-kubeconfig` Secret. You can also run Flux in the workload cluster and point it at that directory.
+`out-of-band` directory next to them, which the cluster's `kustomization.yaml` leaves out. A third Kustomization,
+such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. You can also run Flux in the workload
+cluster and point it at that directory.
 
 ## Bases and variables
 
@@ -110,7 +111,7 @@ it instead, see [CI validation](./guides/ci-validation.md). CI reads only `spec.
 `spec.postBuild.substituteFrom`, so a variable set only in `substituteFrom` fails CI, although Flux sets it on the
 cluster.
 
-For example, a cluster made from the CAPA cluster base needs only this `kustomization.yaml` in `mapi/cluster`, plus the
+For example, a cluster made from the CAPA cluster base needs only this `kustomization.yaml` in `cluster`, plus the
 `cluster_description`, `cluster_name`, `organization` and `release` variables in its Flux `Kustomization`. The
 component sets the cluster's region, which every cluster needs, see [Regions](./guides/environments.md#regions):
 
@@ -118,9 +119,9 @@ component sets the cluster's region, which every cluster needs, see [Regions](./
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 components:
-  - ../../../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../bases/environments/regions/eu_central
 resources:
-  - ../../../../../../../../bases/clusters/capa/template
+  - ../../../../../../../bases/clusters/capa/template
 ```
 
 To upgrade the cluster, you change `release` and push.

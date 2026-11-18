@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# What the cluster's Kustomization applies: the cluster, in cluster/. Anything else
+# in this directory, such as out-of-band/, is never applied to the management cluster.
+resources:
+  - cluster/

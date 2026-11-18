@@ -143,7 +143,7 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     touch .sops.yaml
     yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
-      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/mapi/.*\\.enc\\.yaml",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/.*\\.enc\\.yaml",
       "pgp": "'"${KEY_FP}"'"
     }]' .sops.yaml
     ```
@@ -206,7 +206,7 @@ the GPG keys of other clusters. The example `WC_NAME` cluster uses one; see [SOP
     touch .sops.yaml
     yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
-      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/mapi/.*\\.enc\\.yaml",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/(cluster|apps|app_sets)/.*\\.enc\\.yaml",
       "age": "'"${AGE_PUBLIC_KEY}"'"
     }]' .sops.yaml
     ```
@@ -237,14 +237,11 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
     mkdir ${WC_NAME}
     ```
 
-1. Go to the newly created directory and create `mapi` directory. If you need out-of-band
-   delivery method create also `out-of-band` directory. Next go to the `mapi` directory:
+1. Go to the newly created directory. If you need out-of-band delivery method create also `out-of-band` directory:
 
     ```sh
     cd ${WC_NAME}
-    mkdir mapi                # resources managed with Management API
     # mkdir out-of-band       # resources managed outside Management API, created directly in WC
-    cd mapi
     ```
 
 1. Create 2 sub-directories:
@@ -254,6 +251,19 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
 
     ```sh
     mkdir apps cluster
+    ```
+
+1. Create the `kustomization.yaml` file that lists them. It leaves out `out-of-band`, which must never be applied to
+   the Management Cluster:
+
+    ```sh
+    cat <<EOF > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - apps/
+      - cluster/
+    EOF
     ```
 
 1. Go to the `apps` directory:
@@ -332,7 +342,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-      cd ../../../
+      cd ../../
       cat <<EOF > ${WC_NAME}.yaml
       apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
@@ -341,7 +351,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
         namespace: default
       spec:
         interval: 10m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
@@ -361,7 +371,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
-      cd ../../../
+      cd ../../
       cat <<EOF > ${WC_NAME}.yaml
       apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
@@ -374,7 +384,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
           secretRef:
             name: sops-gpg-${WC_NAME}
         interval: 10m
-        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
+        path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"

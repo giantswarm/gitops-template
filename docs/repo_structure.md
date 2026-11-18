@@ -22,9 +22,9 @@ See [Naming](./reference/repo-structure.md#naming).
 
 See [Optional components](./reference/repo-structure.md#optional-components).
 
-## `[mapi] and [out-of-band]`
+## `cluster`, `apps` and `[out-of-band]`
 
-See [`mapi` and `[out-of-band]`](./reference/repo-structure.md#mapi-and-out-of-band).
+See [`cluster`, `apps` and `[out-of-band]`](./reference/repo-structure.md#cluster-apps-and-out-of-band).
 
 ## Flux Kustomization CRs Involved
 
