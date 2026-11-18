@@ -35,7 +35,9 @@ export APP_NAME=APP_NAME
 
   Both carry the `reconcile.fluxcd.io/watch: Enabled` label, so Flux applies a change to them as soon as it's merged,
   not at the `HelmRelease`'s next `interval`. Keep the label on every ConfigMap and Secret a `HelmRelease` lists in
-  `valuesFrom`: CI fails without it.
+  `valuesFrom`: CI fails without it. To label a Secret that's already encrypted, don't edit the file: add a patch
+  to the App's `kustomization.yaml`, as the `envoy-gateway-from-template` example of the
+  `WC_NAME_OUT_OF_BAND_FLUX_APP` cluster does, or edit it with `sops edit`.
 
   For an App created from an [App Template](./app-templates.md), the `oci-repository.yaml` and `helm-release.yaml`
   files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change

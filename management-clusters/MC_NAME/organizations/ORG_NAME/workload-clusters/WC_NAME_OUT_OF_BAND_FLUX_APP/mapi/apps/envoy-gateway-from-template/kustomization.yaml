@@ -23,6 +23,7 @@ patches:
           reconcile.fluxcd.io/watch: Enabled
     target:
       kind: Secret
+      name: .*-user-secrets
 resources:
   # config you'd rather not keep in plain text goes into a SOPS-encrypted Secret,
   # see docs/guides/add-app.md
