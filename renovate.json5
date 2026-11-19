@@ -27,10 +27,11 @@
   // without `oci://` as the dependency, but by default only in
   // `gotk-components.yaml`. The test assertions are included on purpose: they
   // repeat the tags, and Renovate puts the pins of one dependency in one PR
-  // (one for prod, see `packageRules`). The manager doesn't see a tag set by a
-  // kustomize patch, or one that is a postBuild variable such as
-  // `${release}`; those pins need a `# renovate:` comment for the regex
-  // manager below, with the same `depName`, or the PR leaves them behind.
+  // (one each for staging and prod, see `packageRules`). The manager doesn't
+  // see a tag set by a kustomize patch, or one that is a postBuild variable
+  // such as `${release}`; those pins need a `# renovate:` comment for the
+  // regex manager below, with the same `depName`, or the PR leaves them
+  // behind.
   "flux": {
     "managerFilePatterns": ["/\\.ya?ml$/"],
   },
@@ -38,8 +39,8 @@
   // in the hand-authored workflows, the constants in `tools/test-all-ff` and
   // `tests/ats/conftest.py`, the Giant Swarm release where the `release`
   // variable is set, and the chart tags kustomize patches set (the release in
-  // each stage, hello-world in the app set and in prod). The release is the
-  // tag of the `release-aws` chart. The manifests only ever set it through
+  // each stage, hello-world in the app set, staging and prod). The release is
+  // the tag of the `release-aws` chart. The manifests only ever set it through
   // these comments; the flux manager finds `release-aws` only in the test
   // assertions and `tools/testdata`, which name the same dependency so that
   // they move in the same PR. Each one has a comment on the line before it:
@@ -64,17 +65,34 @@
   ],
   "packageRules": [
     {
-      // Prod gets its own PR for each version its stage pins (hello-world and
-      // the release), on a `renovate/prod-*` branch. The other PR moves the
-      // bases, the app set, dev, staging and the out-of-band examples; prod's
-      // stage patches keep the old version until this one is merged, after
-      // staging has run the new one. The files are prod's stage and the kind
-      // test's assertions for every `hello-app-prod-*` cluster. Charts prod
-      // takes from the bases unpatched, such as envoy-gateway, are not prod
-      // pins: their prod assertions stay in the other PR, which changes what
-      // prod renders. A new prod patch needs its dependency added to
-      // `matchDepNames`, and a prod cluster or prod pin in another path needs
-      // that path added to `matchFileNames`.
+      // Staging and prod each get their own PR for each version their stage
+      // pins (hello-world and the release), on a `renovate/staging-*` and a
+      // `renovate/prod-*` branch. Dev follows a semver range for hello-world,
+      // so the other PR moves the bases, the app set, the out-of-band examples
+      // and dev's release; staging's and prod's stage patches keep the old
+      // version until their own PR is merged. Merging them in turn promotes a
+      // version from dev to staging to prod. The files are the stage and the
+      // kind test's assertions for every cluster of that stage. Charts the
+      // stages take from the bases unpatched, such as envoy-gateway, are not
+      // stage pins: their assertions stay in the other PR, which changes what
+      // every stage renders. A new stage patch needs its dependency added to
+      // `matchDepNames`, and a cluster or pin in another path needs that path
+      // added to `matchFileNames`.
+      "description": "Update staging's own pins in a separate PR, merged by hand after dev",
+      "matchDepNames": [
+        "gsoci.azurecr.io/charts/giantswarm/hello-world",
+        "gsoci.azurecr.io/charts/giantswarm/release-aws",
+      ],
+      "matchFileNames": [
+        "bases/environments/stages/staging/**",
+        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-staging-*/**",
+      ],
+      "additionalBranchPrefix": "staging-",
+      "commitMessageSuffix": "in staging",
+      // The preset automerges patch updates; staging waits for dev.
+      "automerge": false,
+    },
+    {
       "description": "Update prod's own pins in a separate PR, merged by hand after staging",
       "matchDepNames": [
         "gsoci.azurecr.io/charts/giantswarm/hello-world",
@@ -91,9 +109,9 @@
     },
     {
       // A Giant Swarm release update rolls the cluster's nodes, which must
-      // not happen unattended. Its PRs, prod's and the others, are never
-      // automerged, whatever the update type. Chart updates keep the preset's
-      // behaviour: patch updates automerge.
+      // not happen unattended. Its PRs, staging's, prod's and the others, are
+      // never automerged, whatever the update type. Chart updates keep the
+      // preset's behaviour: patch updates automerge.
       "description": "Never automerge a Giant Swarm release update: it rolls nodes",
       "matchDepNames": ["gsoci.azurecr.io/charts/giantswarm/release-aws"],
       "automerge": false,

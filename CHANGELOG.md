@@ -401,6 +401,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   as the `GitRepository` fetches it, so the interval only sets how often Flux undoes drift. The guides' examples
   match. [Reconcile intervals](docs/reference/repo-structure.md#reconcile-intervals) gives the interval of each kind
   of Flux object and why. ([#214](https://github.com/giantswarm/gitops-template/issues/214))
+- The environment stages show a version promoted from dev to prod. Dev follows a semver range for hello-world, and
+  staging and prod pin it. Each stage pins its own Giant Swarm release: dev `36.2.0`, staging `36.1.1` and prod
+  `36.1.0`. Staging's pins, like prod's, get their own Renovate PR on a `renovate/staging-*` branch that isn't
+  automerged, so a new version reaches staging and prod only when its PR is merged. The
+  [environments guide](docs/guides/environments.md#promote-a-change-from-dev-to-prod) describes the promotion.
+  ([#255](https://github.com/giantswarm/gitops-template/issues/255))
 
 ### Removed
 

@@ -17,7 +17,9 @@ patches:
     target:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
-  # the Giant Swarm release the clusters of this stage run
+  # the Giant Swarm release the clusters of this stage run. Renovate updates it
+  # in the same pull request as the bases and the WC_NAME* clusters; staging
+  # and prod get theirs in pull requests of their own.
   - patch: |-
       - op: replace
         path: /spec/ref/tag
