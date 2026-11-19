@@ -152,7 +152,13 @@ function test() {
 		# The secret stores in bases/secret_stores read cloud secret managers, which CI can't
 		# reach, so no cluster of the repository uses them and no Kustomization above builds
 		# them. Each base is built here and its manifests checked.
-		for base in $(find bases/secret_stores -name kustomization.yaml -printf '%h\n' | sort); do
+		local secret_store_bases
+		secret_store_bases=$(find bases/secret_stores -name kustomization.yaml -printf '%h\n' | sort)
+		if [ -z "${secret_store_bases}" ]; then
+			echo "No secret store bases found in bases/secret_stores."
+			has_validation_errors=1
+		fi
+		for base in ${secret_store_bases}; do
 			echo -n "build ${base}: "
 			tmp_file="${tmp_dir}/base.yaml"
 			if ! build_errors=$(kubectl kustomize "${base}" 2>&1 >"${tmp_file}"); then

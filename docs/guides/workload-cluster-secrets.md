@@ -63,7 +63,7 @@ issues for a ServiceAccount, so no cloud credential is stored in the cluster or 
 
 Ask Giant Swarm support for your management cluster's service account issuer URL.
 
-The bases have no namespace. Use one in your organization's directory, so the store is in the organization's
+The bases have no namespace. Use one in your organisation's directory, so the store is in the organisation's
 namespace next to the clusters' `ExternalSecret`s, for example in
 `management-clusters/MC_NAME/organizations/ORG_NAME/secret-stores/kustomization.yaml`:
 
@@ -75,7 +75,7 @@ resources:
   - ../../../../../bases/secret_stores/azure-key-vault
 ```
 
-`MC_NAME.yaml` applies it with the rest of the organization. Then point the `ExternalSecret` at the store:
+`MC_NAME.yaml` applies it with the rest of the organisation. Then point the `ExternalSecret` at the store:
 
 ```yaml
 spec:

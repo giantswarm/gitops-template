@@ -87,7 +87,7 @@ def pushed_problems(pushed: PushedSecret, secret: dict | None) -> list[str]:
     encoded = (secret.get("data") or {}).get(pushed.key)
     if not encoded:
         return [f"Secret '{name}' has no '{pushed.key}'"]
-    if pushed.value and base64.b64decode(encoded).decode() != pushed.value:
+    if pushed.value and base64.b64decode(encoded) != pushed.value.encode():
         return [f"Secret '{name}' has another '{pushed.key}' than the store's"]
     return []
 

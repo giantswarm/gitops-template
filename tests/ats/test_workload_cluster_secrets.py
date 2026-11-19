@@ -40,3 +40,10 @@ def test_pushed_problems_other_value() -> None:
     assert pushed_problems(COMMON, {"data": {COMMON.key: ENCODED_X}}) == [
         f"Secret 'default/{COMMON.name}' has another '{COMMON.key}' than the store's"
     ]
+
+
+def test_pushed_problems_value_not_utf8() -> None:
+    not_utf8 = base64.b64encode(b"\xff").decode()
+    assert pushed_problems(COMMON, {"data": {COMMON.key: not_utf8}}) == [
+        f"Secret 'default/{COMMON.name}' has another '{COMMON.key}' than the store's"
+    ]
