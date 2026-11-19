@@ -5,10 +5,25 @@ usually want to deliver their own workloads from their own repository, without a
 repository for every change, and without being able to touch anything but their own workloads. This guide sets that
 up for one team on one workload cluster.
 
-## How it works
+## Two modes
 
 The team gets a namespace in the workload cluster, and Flux applies the team's repository into that namespace, and
-nowhere else:
+nowhere else. Which Flux does it depends on where Flux runs:
+
+1. **Flux on the management cluster.** The team's `GitRepository` and `Kustomization` live on the management cluster,
+   in the organization namespace, and the `Kustomization` reaches the workload cluster through its kubeconfig. The
+   workload cluster runs no Flux.
+1. **Flux in the workload cluster.** The workload cluster runs Flux, for example flux-app as in the
+   `out-of-band-flux-app` example. Flux on the management cluster delivers the team's `GitRepository` and
+   `Kustomization`, and any Secret they need, into the workload cluster, where its own Flux reconciles them.
+
+Pick Flux on the management cluster when the workload cluster doesn't run Flux: there is nothing to install or upgrade
+in it, and the platform team sees every team's `Kustomization` on the management cluster. Pick Flux in the workload
+cluster when it runs Flux anyway, when the team should see its `Kustomization` and its errors in the cluster it
+deploys to, or when delivery should go on while the management cluster is unavailable. The work of reconciling then
+happens in the workload cluster, not on the management cluster.
+
+## Flux on the management cluster
 
 1. The platform team creates a ServiceAccount named after the team in the organization namespace on the management
    cluster. It has no rights there. In the workload cluster, the platform team creates the team's namespace, and a
@@ -25,12 +40,32 @@ The cluster's apps `Kustomization` applies the team's `GitRepository` and `Kusto
 `automation` ServiceAccount, so they can only live in the organization's namespace, see
 [Tenancy](../how-it-works.md#tenancy).
 
+## Flux in the workload cluster
+
+1. In the workload cluster, the platform team creates the team's namespace, a ServiceAccount named after the team in
+   that namespace, and a `RoleBinding` that gives the ServiceAccount the `admin` role there.
+1. Also in the team's namespace in the workload cluster, the platform team adds a `GitRepository` for the team's
+   repository and a Flux `Kustomization` that applies it, with `serviceAccountName` set to the team's ServiceAccount
+   and `targetNamespace` set to the team's namespace. Flux in the workload cluster impersonates the ServiceAccount,
+   which can write the team's namespace only.
+1. The team pushes to its repository, and Flux in the workload cluster applies it, as in the first mode.
+
+All of these are files in the cluster's `out-of-band` directory, which the cluster's `-direct` `Kustomization` on the
+management cluster applies to the workload cluster through its kubeconfig. That's how they get there: the management
+cluster's Flux delivers them, the workload cluster's Flux reconciles them. The workload cluster needs Flux's CRDs
+before the `-direct` `Kustomization` can apply them, which Flux installs with itself.
+
+A private repository needs a Secret with read access to it in the team's namespace, named in the `GitRepository`'s
+`spec.secretRef`. Deliver it the same way, encrypted with SOPS as in
+[Getting started with SOPS](../getting-started-sops.md), and give the `-direct` `Kustomization` the `decryption` the
+cluster's other `Kustomization`s have.
+
 | The platform team owns, in this repository | The application team owns, in its repository |
 | --- | --- |
 | The workload cluster and its apps | Its workloads: `Deployment`s, `Service`s, `ConfigMap`s and the like |
 | The team's ServiceAccount on the management cluster, in the organization's `teams` directory | |
 | The team's namespace and `RoleBinding` in the workload cluster, in the cluster's `out-of-band` directory | The directory Flux applies, and its `kustomization.yaml` if it has one |
-| The team's `GitRepository` and `Kustomization` on the management cluster, in the cluster's `teams` directory: which repository, which branch or tag, which directory | What goes into that directory, on that branch or tag |
+| The team's `GitRepository` and `Kustomization`: on the management cluster, in the cluster's `teams` directory, or in the workload cluster, in the cluster's `out-of-band` directory. Which repository, which branch or tag, which directory | What goes into that directory, on that branch or tag |
 
 What the team can't do: create objects outside its namespace, or cluster-wide objects such as a
 `CustomResourceDefinition`, a `ClusterRole` or another `Namespace`. Kubernetes refuses them, and the team's
@@ -38,8 +73,8 @@ What the team can't do: create objects outside its namespace, or cluster-wide ob
 
 ## Example
 
-The `out-of-band-no-flux` example cluster has the team `hello-team`, and the kind test in
-[CI validation](./ci-validation.md) reconciles it into the test's workload cluster:
+The `out-of-band-no-flux` example cluster has a team for each mode. `hello-team` uses Flux on the management
+cluster, and the kind test in [CI validation](./ci-validation.md) reconciles it into the test's workload cluster:
 
 - [organizations/ORG_NAME/teams/hello-team.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/teams/hello-team.yaml):
   the team's ServiceAccount, which the management cluster's Kustomization applies.
@@ -49,11 +84,19 @@ The `out-of-band-no-flux` example cluster has the team `hello-team`, and the kin
 - [teams/hello-team](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams/hello-team/):
   the team's `GitRepository` and `Kustomization`.
 
-The team's repository in the example is [podinfo](https://github.com/stefanprodan/podinfo), Flux's demo app, whose
+`hello-team-wc` uses Flux in the workload cluster:
+[out-of-band/teams/hello-team-wc.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams/hello-team-wc.yaml)
+holds its namespace, ServiceAccount, `RoleBinding`, `GitRepository` and `Kustomization`, which the cluster's `-direct`
+Kustomization delivers to the workload cluster. This mode needs Flux in the workload cluster: on a cluster without
+it, the `-direct` Kustomization fails, as the cluster doesn't serve the `GitRepository` and `Kustomization` kinds. The
+test's workload cluster runs no Flux, only has its CRDs, so the kind test checks that the objects get there, not that
+they reconcile.
+
+The team's repository in both is [podinfo](https://github.com/stefanprodan/podinfo), Flux's demo app, whose
 `kustomize` directory holds a `Deployment`, a `Service` and a `HorizontalPodAutoscaler`. It stands in for a
 repository your team owns.
 
-## Add a team
+## Add a team with Flux on the management cluster
 
 The cluster needs a `-direct` Kustomization, which applies its `out-of-band` directory to the workload cluster, see
 [Add a new Workload Cluster repository structure](../add_wc_structure.md#directory-tree).
@@ -197,3 +240,83 @@ To remove the team from the cluster, delete its directory in the cluster's `team
 `teams/kustomization.yaml` and its file in `out-of-band/teams`, and push. Flux deletes the team's `Kustomization`,
 which deletes the team's workloads from the workload cluster, then the namespace. Delete the team's ServiceAccount
 only once no cluster of the organization has the team any more.
+
+## Add a team with Flux in the workload cluster
+
+The cluster needs Flux, and a `-direct` Kustomization, which applies its `out-of-band` directory to the workload
+cluster, see [Add a new Workload Cluster repository structure](../add_wc_structure.md#directory-tree).
+
+1. Export the names as in the first mode.
+
+1. Create the team's namespace, ServiceAccount, `RoleBinding`, `GitRepository` and `Kustomization`. Set `ref` to the
+   branch or tag the team delivers from, and `path` to the directory in its repository:
+
+    ```sh
+    mkdir -p ${WC_DIR}/out-of-band/teams
+    cat <<EOF > ${WC_DIR}/out-of-band/teams/${TEAM_NAME}.yaml
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: ${TEAM_NAME}
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: ${TEAM_NAME}
+      namespace: ${TEAM_NAME}
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: ${TEAM_NAME}
+      namespace: ${TEAM_NAME}
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: admin
+    subjects:
+      - kind: ServiceAccount
+        name: ${TEAM_NAME}
+        namespace: ${TEAM_NAME}
+    ---
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    metadata:
+      name: ${TEAM_NAME}
+      namespace: ${TEAM_NAME}
+    spec:
+      interval: 10m
+      ref:
+        branch: main
+      url: ${TEAM_REPOSITORY}
+    ---
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: ${TEAM_NAME}
+      namespace: ${TEAM_NAME}
+    spec:
+      interval: 10m
+      path: ./deploy
+      prune: true
+      retryInterval: 1m
+      serviceAccountName: ${TEAM_NAME}
+      sourceRef:
+        kind: GitRepository
+        name: ${TEAM_NAME}
+      targetNamespace: ${TEAM_NAME}
+      timeout: 2m
+    EOF
+    ```
+
+1. Commit and push.
+
+**Check:** in the workload cluster, the team's `Kustomization` is `Ready` and its workloads run in its namespace:
+
+```sh
+flux get kustomizations -n ${TEAM_NAME} ${TEAM_NAME}
+kubectl get all -n ${TEAM_NAME}
+```
+
+To remove the team from the cluster, delete its file in `out-of-band/teams` and push. The `-direct` Kustomization
+deletes the team's objects from the workload cluster, and the team's workloads go with its namespace.
