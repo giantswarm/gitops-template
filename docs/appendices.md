@@ -101,6 +101,10 @@ spec:
 EOF
 ```
 
+To try [Report reconcile status on GitHub commits](./guides/commit-statuses.md) too, add its two values to the list
+under `data`: `gitops/github-commit-status-token`, a GitHub token that can write commit statuses, and
+`gitops/github-webhook-token`, the secret of the optional webhook.
+
 Check that the store is `Ready`:
 
 ```sh

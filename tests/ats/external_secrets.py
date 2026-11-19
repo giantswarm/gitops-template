@@ -13,6 +13,7 @@ import pykube
 import pytest
 from conftest import HELM_URL, apply, run_tool
 from eso_kinds import ClusterSecretStoreCR
+from fake_store import FAKE_STORE_DATA
 from pytest_helm_charts.clusters import Cluster
 from workload_cluster_secrets import COMMON, controller_egress
 
@@ -35,10 +36,7 @@ SECRET_STORE = {
         "provider": {
             "fake": {
                 "data": [
-                    {
-                        "key": "gitops/hello-world-values",
-                        "value": "podAnnotations:\n  example.com/source: secret-manager\n",
-                    },
+                    *FAKE_STORE_DATA,
                     {"key": "workload-clusters-common-token", "value": COMMON.value},
                 ]
             }

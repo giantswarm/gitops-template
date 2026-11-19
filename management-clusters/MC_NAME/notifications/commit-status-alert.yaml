@@ -1,0 +1,16 @@
+# Forwards the events of every Kustomization in `default` to the Provider: the management
+# cluster's, in MC_NAME.yaml, and the workload clusters', in the workload-clusters directories.
+# `info` forwards successes as well as failures, so a commit shows when Flux applied it. If
+# Kustomizations of another repository live in `default`, list this repository's by name.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-commit-status
+  namespace: default
+spec:
+  providerRef:
+    name: github-commit-status
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: "*"

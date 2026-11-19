@@ -7,6 +7,7 @@ import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
 import time
 import urllib.request
+from pathlib import Path
 from typing import Iterable, Any
 
 import pykube
@@ -20,6 +21,7 @@ from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.utils import wait_for_objects_condition
 
 from ci_context import master_gpg_key
+from commit_status import with_alerts_suspended
 from flux_teardown import delete_without_prune
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
@@ -683,7 +685,13 @@ def gitops_deployment(
             manifest_path = os.path.join(
                 GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml"
             )
-            kube_cluster.kubectl(f"apply -f {manifest_path} --wait=true")
+            # the kind test mustn't post commit statuses to GitHub, see commit_status.py
+            manifest = with_alerts_suspended(
+                yaml.safe_load(Path(manifest_path).read_text())
+            )
+            kube_cluster.kubectl(
+                "apply --wait=true", std_input=yaml.safe_dump(manifest)
+            )
             applied_manifests.append(manifest_path)
 
     yield None

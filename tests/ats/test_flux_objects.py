@@ -18,6 +18,7 @@ from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate
 from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
+from notification_objects import check_notifications
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from shared_objects import check_shared_object_copied
@@ -155,6 +156,14 @@ def test_shared_object_copied(
     check_kustomizations_successful: None,
 ) -> None:
     check_shared_object_copied(kube_cluster.kube_client)
+
+
+def test_commit_status_notifications(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    # N1: the GitHub Provider has its token from ESO, the Alert names it, the Receiver is Ready
+    check_notifications(kube_cluster.kube_client)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
