@@ -117,5 +117,20 @@
       "matchDepNames": ["gsoci.azurecr.io/charts/giantswarm/release-aws"],
       "automerge": false,
     },
+    {
+      // The Kyverno CLI in `validate.yaml` checks the policies the kind test
+      // and the management clusters run with Giant Swarm's kyverno and
+      // kyverno-crds charts, so it has to be the Kyverno those charts ship.
+      // Their updates come in one PR, never automerged: take a CLI version
+      // only together with the chart that ships it.
+      "description": "Update the Kyverno CLI and Giant Swarm's Kyverno charts together, by hand",
+      "matchDepNames": [
+        "kyverno/kyverno",
+        "gsoci.azurecr.io/charts/giantswarm/kyverno",
+        "gsoci.azurecr.io/charts/giantswarm/kyverno-crds",
+      ],
+      "groupName": "Kyverno",
+      "automerge": false,
+    },
   ],
 }

@@ -7,7 +7,11 @@
 # - the Organizations;
 # - the cluster HelmReleases: the HelmReleases in an `org-*` namespace that
 #   install into the management cluster, without a kubeconfig;
-# - the SOPS key Secrets, `sops-gpg-*` and `sops-age-*`.
+# - the SOPS key Secrets, `sops-gpg-*` and `sops-age-*`;
+# - the cluster OCIRepositories, which carry only the label: the
+#   OCIRepositories in an `org-*` namespace named after the cluster in their
+#   `giantswarm.io/cluster` label, as in bases/clusters/capa/template. Flux
+#   deletes one when its file goes, once the label is removed.
 #
 # It checks only what the repository's Flux Kustomizations, which are in the
 # `default` namespace, apply: Giant Swarm's own objects are left alone.
@@ -37,6 +41,10 @@ spec:
         apiVersions: [v1]
         operations: [CREATE, UPDATE]
         resources: [secrets]
+      - apiGroups: [source.toolkit.fluxcd.io]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [ocirepositories]
   matchConditions:
     - name: deleting-it-deletes-a-cluster
       expression: |-
@@ -44,15 +52,21 @@ spec:
         (object.kind == 'HelmRelease' && object.metadata.namespace.startsWith('org-') &&
           !has(object.spec.kubeConfig)) ||
         (object.kind == 'Secret' &&
-          (object.metadata.name.startsWith('sops-gpg-') || object.metadata.name.startsWith('sops-age-')))
+          (object.metadata.name.startsWith('sops-gpg-') || object.metadata.name.startsWith('sops-age-'))) ||
+        (object.kind == 'OCIRepository' && object.metadata.namespace.startsWith('org-') &&
+          has(object.metadata.labels) && 'giantswarm.io/cluster' in object.metadata.labels &&
+          object.metadata.labels['giantswarm.io/cluster'] == object.metadata.name)
   validations:
     - expression: |-
-        has(object.metadata.annotations) &&
-        'kustomize.toolkit.fluxcd.io/prune' in object.metadata.annotations &&
-        object.metadata.annotations['kustomize.toolkit.fluxcd.io/prune'] == 'disabled' &&
         has(object.metadata.labels) &&
         'giantswarm.io/prevent-deletion' in object.metadata.labels &&
         object.metadata.labels['giantswarm.io/prevent-deletion'] == 'true'
       message: >-
-        Protect it with the annotation kustomize.toolkit.fluxcd.io/prune: disabled
-        and the label giantswarm.io/prevent-deletion: "true".
+        Protect it with the label giantswarm.io/prevent-deletion: "true".
+    - expression: |-
+        object.kind == 'OCIRepository' ||
+        (has(object.metadata.annotations) &&
+          'kustomize.toolkit.fluxcd.io/prune' in object.metadata.annotations &&
+          object.metadata.annotations['kustomize.toolkit.fluxcd.io/prune'] == 'disabled')
+      message: >-
+        Protect it with the annotation kustomize.toolkit.fluxcd.io/prune: disabled.

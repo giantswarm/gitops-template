@@ -6,6 +6,7 @@
 - [Optional components](#optional-components)
   - [`[OTHER_RESOURCES]`](#other_resources)
   - [`[kustomization.yaml]`](#kustomizationyaml)
+  - [`[policies]`](#policies)
   - [`[organizations]` and `[workload-clusters]`](#organizations-and-workload-clusters)
   - [`cluster`, `apps` and `[out-of-band]`](#cluster-apps-and-out-of-band)
 - [Flux Kustomizations](#flux-kustomizations)
@@ -33,6 +34,8 @@ management-clusters
     ├── .sops.keys
     ├── [kustomization.yaml]
     ├── [OTHER_RESOURCES]
+    ├── [policies]
+    |   └── kustomization.yaml
     ├── secrets
     |   ├── MC_NAME.gpgkey.enc.yaml
     |   ├── [WC_NAME.gpgkey.enc.yaml]
@@ -197,6 +200,16 @@ easier:
 ```yaml
 buildMetadata: [originAnnotations]
 ```
+
+If you add one to `MC_NAME`, list `policies` in it with the rest, or the management cluster doesn't enforce the
+[convention policies](../guides/ci-validation.md#convention-policies), and `tools/check-policies` fails with
+"No Kyverno ValidatingPolicy found" when no management cluster applies them.
+
+### `[policies]`
+
+The [convention policies](../guides/ci-validation.md#convention-policies) for the management cluster. Its
+`kustomization.yaml` lists `bases/policies/conventions`. Without it, CI still checks the management cluster's objects
+against the policies, but the management cluster doesn't enforce them.
 
 ### `[organizations]` and `[workload-clusters]`
 

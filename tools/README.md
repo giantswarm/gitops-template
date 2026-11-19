@@ -269,9 +269,14 @@ sops:
 `check-policies` checks the repository against the Kyverno policies that encode its conventions, see
 [Convention policies](/docs/guides/ci-validation.md#convention-policies). Run it from the root of the repository. It:
 
+1. checks that [testdata/policies](testdata/policies/kyverno-test.yaml) tests every policy that
+   [bases/policies/conventions/kustomization.yaml](/bases/policies/conventions/kustomization.yaml) lists, with an
+   object it has to refuse and one it has to accept;
 1. runs `kyverno test` on [testdata/policies](testdata/policies/kyverno-test.yaml), which lists the objects the policies
-   in [bases/policies/conventions](/bases/policies/conventions/) have to refuse and accept;
+   have to refuse and accept;
 1. checks that `kyverno apply` fails on the objects that break them, as the last step relies on it;
+1. checks that `kyverno apply` accepts [the objects outside their scope](testdata/policies/out-of-scope.yaml), such as
+   Giant Swarm's own Flux objects and an app's `HelmRelease`;
 1. renders every Flux `Kustomization` with `test-all-ff template`, takes the Kyverno `ValidatingPolicy`s from what
    they apply and checks everything they apply against them with `kyverno apply`. It fails when they apply none.
 

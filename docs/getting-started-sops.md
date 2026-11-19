@@ -758,7 +758,8 @@ the `HelmRelease` by hand at the end. See [How it works](./how-it-works.md).
 
 > **Warning:** `kubectl gs` doesn't write the annotation or the label yet. The `Organization` that `kubectl gs gitops
 > add organization` writes doesn't have them, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add
-> base` writes. Add them by hand before you rely on them to keep those objects when their files are deleted.
+> base` writes. Add them by hand, with the label on the base's `OCIRepository`: the management cluster's
+> [convention policies](./guides/ci-validation.md#convention-policies) refuse those objects without them.
 
 1. Remove the label from the cluster's `OCIRepository` and `HelmRelease`, and set
    `global.metadata.preventDeletion` to `false`, so that the chart removes it from the cluster's `Cluster` too:

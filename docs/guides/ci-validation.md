@@ -73,24 +73,39 @@ repository's conventions:
   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion: "true"` label, see
   [How it works](../how-it-works.md). They are the `Organization`s, the cluster `HelmRelease`s, which are the
   `HelmRelease`s in an `org-*` namespace without a `spec.kubeConfig`, and the SOPS key `Secret`s, `sops-gpg-*` and
-  `sops-age-*`.
+  `sops-age-*`. The cluster `OCIRepository`s, the `OCIRepository`s in an `org-*` namespace named after the cluster in
+  their `giantswarm.io/cluster` label, carry the label only.
 
 They check only the objects that a Flux `Kustomization` in the `default` namespace applies, by the
 `kustomize.toolkit.fluxcd.io/namespace: default` label Flux puts on them, so Giant Swarm's own objects are left alone.
 
-The management cluster runs them: `MC_NAME.yaml` applies them from
-[management-clusters/MC_NAME/policies](../../management-clusters/MC_NAME/policies/kustomization.yaml), and Kyverno then
-refuses an object that breaks them. The kind test applies them the same way, so every `Kustomization` getting `Ready`
-shows that they refuse neither the examples nor the components the test installs. `test_conventions_enforced` checks
-that the test cluster refuses a dry run of a `Kustomization` without the service account and of a cluster `HelmRelease`
-without the protection, and accepts both once they're fixed.
+A management cluster runs them once its directory applies them: `MC_NAME.yaml` applies them from
+[management-clusters/MC_NAME/policies](../../management-clusters/MC_NAME/policies/kustomization.yaml), and
+[Add a new Management Cluster](../add_mc.md#directory-tree) adds the same directory for a new one. Kyverno then
+refuses an object that breaks them, and Flux reports the whole apply of the `Kustomization` that holds it as failed,
+so nothing else in that apply changes until it's fixed. The kind test applies them the same way, so every
+`Kustomization` getting `Ready` shows that they refuse neither the examples nor the components the test installs.
+`test_conventions_enforced` checks that the test cluster refuses a dry run of a `Kustomization` without the service
+account, of a cluster `HelmRelease` without the protection and of a cluster `OCIRepository` without the label, and
+accepts each once it's fixed.
+
+Before an existing repository applies the policies, give its older objects what the policies require. `kubectl gs`
+doesn't write the annotation or the label, so an `Organization` that `kubectl gs gitops add organization` wrote, or the
+cluster `HelmRelease` and `OCIRepository` of a base that `kubectl gs gitops add base` wrote, need them added by hand.
+Otherwise Kyverno refuses them, and with them the whole apply of `MC_NAME-gitops` or the cluster's `Kustomization`.
+
+Kyverno has to run for Flux to apply what the policies check. Its webhook refuses a request it can't answer, so while
+Kyverno is down, Flux can't create or change the `Kustomization`s, `HelmRelease`s, `Organization`s, `Secret`s and
+`OCIRepository`s that a `Kustomization` in the `default` namespace applies. It applies them again once Kyverno is
+back. Giant Swarm runs Kyverno on every management cluster.
 
 The `policies` job of `validate.yaml` runs [tools/check-policies](../../tools/README.md#check-policies) with the Kyverno
 CLI 1.19.2, the Kyverno of Giant Swarm's `kyverno` chart 0.26.1, which the kind test installs. It renders every Flux
-`Kustomization`, takes the `ValidatingPolicy`s from what they apply and checks everything they apply against them, so
-CI checks what the management cluster enforces. Before that, it runs `kyverno test` on
+`Kustomization`, takes the `ValidatingPolicy`s from what they apply and checks everything they apply, for every
+management cluster in the repository, against them. A management cluster enforces them only once its directory applies
+them, as above. Before that, it runs `kyverno test` on
 [tools/testdata/policies](../../tools/testdata/policies/kyverno-test.yaml), which lists the objects each policy has to
-refuse and accept.
+refuse and accept, and checks that the policies leave alone the objects outside their scope.
 
 ## When the workflow runs
 

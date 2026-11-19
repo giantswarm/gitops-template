@@ -1,0 +1,96 @@
+# Objects the convention policies must leave alone. Each would break a policy if it were in
+# its scope, so tools/check-policies requires `kyverno apply` to accept all of them: a policy
+# that loses its objectSelector or one of its matchConditions fails the check.
+#
+# Giant Swarm's own Flux objects: not applied by a Flux Kustomization in the `default`
+# namespace, so neither the service account nor the protection is checked.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: flux
+    kustomize.toolkit.fluxcd.io/namespace: flux-giantswarm
+  name: not-applied-by-repository
+  namespace: flux-giantswarm
+spec:
+  interval: 10m
+  path: ./
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: giantswarm
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: flux
+    kustomize.toolkit.fluxcd.io/namespace: flux-giantswarm
+  name: not-applied-by-repository
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: not-applied-by-repository
+  interval: 5m
+---
+# A HelmRelease outside the `org-*` namespaces isn't a cluster's, so it isn't protected.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: outside-org-namespace
+  namespace: default
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: outside-org-namespace
+  interval: 5m
+  serviceAccountName: automation
+---
+# An app's HelmRelease in an `org-*` namespace installs into the workload cluster through its
+# kubeconfig: it is neither a cluster's nor bound to the `automation` service account.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo-apps
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: app-in-org-namespace
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-in-org-namespace
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: demo-kubeconfig
+---
+# A Secret that isn't a SOPS key isn't protected.
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: not-a-sops-key
+  namespace: default
+type: Opaque
+---
+# An app's OCIRepository isn't named after its cluster, so it isn't protected.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: demo
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo-apps
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: demo-hello-world
+  namespace: org-demo
+spec:
+  ref:
+    tag: 3.2.2
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

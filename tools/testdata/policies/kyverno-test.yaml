@@ -74,3 +74,15 @@ results:
     resources:
       - sops-age-unprotected
     result: fail
+  - isValidatingPolicy: true
+    kind: OCIRepository
+    policy: gitops-protected-objects
+    resources:
+      - protected-repository
+    result: pass
+  - isValidatingPolicy: true
+    kind: OCIRepository
+    policy: gitops-protected-objects
+    resources:
+      - repository-without-label
+    result: fail

@@ -1,20 +1,44 @@
 #!/bin/bash
 # Check the repository against the Kyverno policies that encode its conventions.
 #
-# The policies are kept in bases/policies/conventions. The check uses the ValidatingPolicies the
-# management clusters' Kustomizations apply, such as management-clusters/MC_NAME/policies, so CI
-# checks what the clusters enforce. The script renders every Flux Kustomization with
-# test-all-ff, takes the policies from the output, and applies them to it with the Kyverno CLI.
-# Run it from the root of the repository.
+# The policies are kept in bases/policies/conventions, and its kustomization.yaml is the one list
+# of them: the script tests the policies it lists, and fails when testdata/policies/kyverno-test.yaml
+# doesn't test each of them. The check uses the ValidatingPolicies the management clusters'
+# Kustomizations apply, such as management-clusters/MC_NAME/policies, so CI checks what the clusters
+# enforce. The script renders every Flux Kustomization with test-all-ff, takes the policies from
+# the output, and applies them to it with the Kyverno CLI. Run it from the root of the repository.
 set -euo pipefail
 
 tools_dir="$(dirname "$0")"
 testdata="${tools_dir}/testdata/policies"
-# where the policies are kept; kyverno-test.yaml names them too
 policies_dir="${tools_dir}/../bases/policies/conventions"
 
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "${tmp_dir}"' EXIT
+
+listed=$(yq '.resources[]' "${policies_dir}/kustomization.yaml" | sort)
+policies=()
+while IFS= read -r file; do
+	policies+=("${policies_dir}/${file}")
+done <<<"${listed}"
+
+# Every policy has to be tested, with objects it refuses and objects it accepts.
+echo "Checking that ${testdata}/kyverno-test.yaml tests every policy"
+tested=$(yq '.policies[] | split("/") | .[-1]' "${testdata}/kyverno-test.yaml" | sort)
+if [ "${listed}" != "${tested}" ]; then
+	echo "kyverno-test.yaml tests ${tested//$'\n'/, }, but bases/policies/conventions has ${listed//$'\n'/, }."
+	exit 1
+fi
+for policy in "${policies[@]}"; do
+	name=$(yq '.metadata.name' "${policy}")
+	for result in pass fail; do
+		if [ "$(yq "[.results[] | select(.policy == \"${name}\" and .result == \"${result}\")] | length" \
+			"${testdata}/kyverno-test.yaml")" -eq 0 ]; then
+			echo "kyverno-test.yaml has no object that ${name} has to ${result}."
+			exit 1
+		fi
+	done
+done
 
 # The policies must refuse what breaks the conventions, and allow what follows them.
 echo "Testing the policies against ${testdata}"
@@ -23,8 +47,7 @@ kyverno test "${testdata}" --remove-color
 # `kyverno apply` must fail when an object breaks a policy, or the check below proves nothing.
 echo -n "kyverno apply, objects that break the conventions: "
 status=0
-output=$(kyverno apply "${policies_dir}"/flux-service-account.yaml "${policies_dir}"/protected-objects.yaml \
-	--resource "${testdata}/resources.yaml" --remove-color 2>&1) || status=$?
+output=$(kyverno apply "${policies[@]}" --resource "${testdata}/resources.yaml" --remove-color 2>&1) || status=$?
 if [ "${status}" -ne 0 ] && grep -q "without-service-account" <<<"${output}"; then
 	echo "OK, reported"
 else
@@ -32,6 +55,10 @@ else
 	echo "${output}"
 	exit 1
 fi
+
+# The policies must leave alone what is outside their scope, such as Giant Swarm's own objects.
+echo "kyverno apply, objects outside the policies' scope:"
+kyverno apply "${policies[@]}" --resource "${testdata}/out-of-scope.yaml" --remove-color
 
 echo "Rendering the repository"
 "${tools_dir}/test-all-ff" template >"${tmp_dir}/rendered.yaml"

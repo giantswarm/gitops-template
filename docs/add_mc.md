@@ -138,10 +138,11 @@ en- and decrypt real user-related data.
     mkdir ${MC_NAME}
     ```
 
-1. Go to the newly created directory and create 3 sub-directories there:
+1. Go to the newly created directory and create 4 sub-directories there:
 
     - `.sops.keys` - storage for all GPG public keys,
     - `organizations` - storage for MC organizations,
+    - `policies` - the Kyverno policies that enforce the repository's conventions,
     - `secrets` - storage for encrypted secrets, including regular GPG private keys.
 
     ```sh
@@ -149,7 +150,21 @@ en- and decrypt real user-related data.
     mkdir \
     .sops.keys \
     organizations  \
+    policies \
     secrets
+    ```
+
+1. Apply the [convention policies](./guides/ci-validation.md#convention-policies) on the management cluster. Without
+   them, CI still checks the cluster's objects against them, but the cluster doesn't enforce them:
+
+    ```sh
+    cat <<EOF > policies/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    buildMetadata: [originAnnotations]
+    kind: Kustomization
+    resources:
+      - ../../../bases/policies/conventions
+    EOF
     ```
 
 1. Share the master GPG public key from the [previous section](#flux-gpg-master-key-pair):

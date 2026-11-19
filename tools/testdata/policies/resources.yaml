@@ -207,3 +207,36 @@ metadata:
   name: sops-age-unprotected
   namespace: default
 type: Opaque
+---
+# The cluster's OCIRepository, named after the cluster, carries the prevent-deletion label but
+# not the prune annotation: Flux deletes it when its file goes, once the label is removed.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: protected-repository
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: protected-repository
+  namespace: org-demo
+spec:
+  ref:
+    tag: 36.2.0
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: repository-without-label
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: repository-without-label
+  namespace: org-demo
+spec:
+  ref:
+    tag: 36.2.0
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

@@ -7,11 +7,11 @@ the conventions: the API server has to refuse a dry run of an object that breaks
 the same object once it's fixed. test_flux_objects.py runs it once the Kustomizations are ready.
 """
 
-import copy
 import json
 
 import pykube
 from flux_reconcile import wait_until
+from helm_values import merge_maps
 
 # what a Flux Kustomization in the `default` namespace labels the objects it applies with
 APPLIED_BY_REPOSITORY = {
@@ -50,6 +50,23 @@ CLUSTER_HELM_RELEASE: dict = {
         "serviceAccountName": "automation",
     },
 }
+CLUSTER_OCI_REPOSITORY: dict = {
+    "apiVersion": "source.toolkit.fluxcd.io/v1",
+    "kind": "OCIRepository",
+    "metadata": {
+        "labels": {
+            **APPLIED_BY_REPOSITORY,
+            "giantswarm.io/cluster": "conventions-test",
+        },
+        "name": "conventions-test",
+        "namespace": "org-org-name",
+    },
+    "spec": {
+        "interval": "10m",
+        "ref": {"tag": "1.0.0"},
+        "url": "oci://gsoci.azurecr.io/charts/giantswarm/release-aws",
+    },
+}
 # each object that breaks a convention, what fixes it, and a word the refusal has to name
 CASES: list[tuple[dict, dict, str]] = [
     (KUSTOMIZATION, {"spec": {"serviceAccountName": "automation"}}, "automation"),
@@ -63,18 +80,12 @@ CASES: list[tuple[dict, dict, str]] = [
         },
         "prevent-deletion",
     ),
+    (
+        CLUSTER_OCI_REPOSITORY,
+        {"metadata": {"labels": {"giantswarm.io/prevent-deletion": "true"}}},
+        "prevent-deletion",
+    ),
 ]
-
-
-def merged(obj: dict, fix: dict) -> dict:
-    """`obj` with the maps of `fix` merged into it."""
-    result = copy.deepcopy(obj)
-    for key, value in fix.items():
-        if isinstance(value, dict):
-            result[key] = merged(result.get(key, {}), value)
-        else:
-            result[key] = value
-    return result
 
 
 def dry_run_refusal(api: pykube.HTTPClient, obj: dict) -> str:
@@ -95,7 +106,7 @@ def case_problems(api: pykube.HTTPClient, obj: dict, fix: dict, word: str) -> li
     refusal = dry_run_refusal(api, obj)
     if word not in refusal:
         return [f"{name} wasn't refused for '{word}': '{refusal or 'accepted'}'"]
-    refusal = dry_run_refusal(api, merged(obj, fix))
+    refusal = dry_run_refusal(api, merge_maps(obj, fix))
     if refusal:
         return [f"{name} was refused once fixed: '{refusal}'"]
     return []

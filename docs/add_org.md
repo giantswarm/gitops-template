@@ -78,7 +78,9 @@ export ORG_NAME=ORGANIZATION
     kubectl gs template organization --name ${ORG_NAME} > ${ORG_NAME}.yaml
     ```
 
-    `kubectl gs` doesn't write the annotation or the label yet. Add them:
+    `kubectl gs` doesn't write the annotation or the label yet, and the
+    [convention policies](./guides/ci-validation.md#convention-policies) refuse an Organization without them. Add
+    them:
 
     ```sh
     yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |

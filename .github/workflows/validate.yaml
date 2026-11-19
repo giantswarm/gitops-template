@@ -107,7 +107,8 @@ jobs:
           tarball_binary_path: "${binary}"
           # The Kyverno of Giant Swarm's kyverno chart 0.26.1, which the
           # management clusters and the kind test run, see
-          # tests/ats/kyverno_install.py. Move both together.
+          # tests/ats/kyverno_install.py. Renovate updates them in one PR, see
+          # renovate.json5: move them together.
           # renovate: datasource=github-releases depName=kyverno/kyverno extractVersion=^v(?<version>.+)$
           version: "1.19.2"
       - name: check the policies
