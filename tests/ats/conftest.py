@@ -390,7 +390,9 @@ def run_tool(name: str, url: str, *args: str) -> str:
         [path, *args], capture_output=True, text=True
     )
     if run_res.returncode != 0:
-        logger.error(f"`{name} {' '.join(args)}` failed: '{run_res.stderr}'")
+        logger.error(
+            f"`{name} {' '.join(args)}` failed: '{run_res.stderr}', output: '{run_res.stdout}'"
+        )
         raise Exception(f"`{name} {args[0]}` failed")
     return run_res.stdout
 

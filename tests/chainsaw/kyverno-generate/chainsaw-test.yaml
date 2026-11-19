@@ -1,0 +1,56 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kyverno-generate
+spec:
+  description: >-
+    The Kyverno policy of the shared-objects example copies its ConfigMap into a new `org-*`
+    namespace, with the source's data, and leaves other namespaces alone. The test creates an
+    organization namespace and deletes it again, which deletes the copy.
+  timeouts:
+    assert: 2m
+    error: 30s
+  steps:
+    - name: the policy is ready
+      try:
+        - assert:
+            resource:
+              apiVersion: kyverno.io/v1
+              kind: ClusterPolicy
+              metadata:
+                name: ($values.sharedObject.policy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: a new organization gets a copy of the source
+      bindings:
+        - name: source
+          value: (x_k8s_get($client, 'v1', 'ConfigMap', $values.sharedObject.namespace, $values.sharedObject.configMap))
+      try:
+        - create:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: ($values.sharedObject.testNamespace)
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: ($values.sharedObject.configMap)
+                namespace: ($values.sharedObject.testNamespace)
+                labels:
+                  app.kubernetes.io/managed-by: kyverno
+                  generate.kyverno.io/policy-name: ($values.sharedObject.policy)
+              (data == $source.data): true
+    - name: a namespace outside the organizations gets no copy
+      try:
+        # the test's own namespace, `chainsaw-*`, which the policy doesn't match
+        - error:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: ($values.sharedObject.configMap)
+                namespace: ($namespace)

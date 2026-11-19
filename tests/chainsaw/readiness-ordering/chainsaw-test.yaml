@@ -1,0 +1,83 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: readiness-ordering
+spec:
+  description: >-
+    A workload cluster's objects get Ready in their order: the Cluster, the cluster's
+    Kustomization that waits for it, the apps Kustomization that depends on that one, and a
+    HelmRelease that depends on another. Each step checks the link to the one before it, so a
+    failure names the first object that isn't Ready.
+  timeouts:
+    assert: 2m
+  steps:
+    - name: the cluster is Available
+      try:
+        - assert:
+            resource:
+              apiVersion: cluster.x-k8s.io/v1beta2
+              kind: Cluster
+              metadata:
+                name: ($values.cluster)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Available']):
+                  - status: "True"
+    - name: the cluster's Kustomization waits for the cluster and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: kustomize.toolkit.fluxcd.io/v1
+              kind: Kustomization
+              metadata:
+                name: ($values.kustomizations.cluster)
+                namespace: ($values.kustomizations.namespace)
+              spec:
+                (healthChecks[?kind == 'Cluster']):
+                  - name: ($values.cluster)
+                    namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the apps Kustomization depends on the cluster's and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: kustomize.toolkit.fluxcd.io/v1
+              kind: Kustomization
+              metadata:
+                name: ($values.kustomizations.apps)
+                namespace: ($values.kustomizations.namespace)
+              spec:
+                dependsOn:
+                  - name: ($values.kustomizations.cluster)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the HelmRelease the other depends on is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: ($values.helmReleases.dependency)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the dependant HelmRelease depends on it and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: ($values.helmReleases.dependant)
+                namespace: ($values.organizationNamespace)
+              spec:
+                dependsOn:
+                  - name: ($values.helmReleases.dependency)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"

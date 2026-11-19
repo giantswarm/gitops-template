@@ -1,0 +1,29 @@
+# The objects the Chainsaw tests look at, named as the template's examples name them. The kind
+# test runs the tests with this file. To run them against your management cluster, copy it and
+# set the names of your own objects: see docs/guides/ci-validation.md, "Chainsaw tests".
+
+# readiness-ordering: a workload cluster, its two Kustomizations and two of its HelmReleases,
+# where `dependant` depends on `dependency`
+organizationNamespace: org-org-name
+cluster: out-of-band-no-flux
+kustomizations:
+  namespace: default
+  cluster: mc-name-clusters-out-of-band-no-flux
+  apps: mc-name-clusters-out-of-band-no-flux-apps
+helmReleases:
+  dependency: out-of-band-no-flux-gateway-api-crds
+  dependant: out-of-band-no-flux-hello-world-standalone
+
+# external-secrets: an ExternalSecret in the organization namespace, and the HelmRelease that
+# reads the Secret it writes
+externalSecret:
+  name: out-of-band-no-flux-hello-world-standalone-user-secrets
+  helmRelease: out-of-band-no-flux-hello-world-standalone
+
+# kyverno-generate: the policy that copies a ConfigMap into every `org-*` namespace, and the
+# source it copies. The test creates `testNamespace` and deletes it again.
+sharedObject:
+  policy: copy-shared-ca-bundle
+  configMap: shared-ca-bundle
+  namespace: default
+  testNamespace: org-chainsaw-shared-objects

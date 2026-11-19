@@ -1,0 +1,54 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: external-secrets
+spec:
+  description: >-
+    The External Secrets Operator example: the ExternalSecret reads the secret store and
+    writes the app's values into a Secret, with the label that makes Flux watch it, and the
+    HelmRelease that reads that Secret is Ready.
+  timeouts:
+    assert: 2m
+  steps:
+    - name: the ExternalSecret has synced
+      try:
+        - assert:
+            resource:
+              apiVersion: external-secrets.io/v1
+              kind: ExternalSecret
+              metadata:
+                name: ($values.externalSecret.name)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+                    reason: SecretSynced
+    - name: the Secret it writes is watched by Flux and has the values
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($values.externalSecret.name)
+                namespace: ($values.organizationNamespace)
+                labels:
+                  reconcile.fluxcd.io/watch: Enabled
+                (ownerReferences[?kind == 'ExternalSecret']):
+                  - name: ($values.externalSecret.name)
+              (data.values != null): true
+    - name: the HelmRelease reads the Secret and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: ($values.externalSecret.helmRelease)
+                namespace: ($values.organizationNamespace)
+              spec:
+                (valuesFrom[?kind == 'Secret']):
+                  - name: ($values.externalSecret.name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
