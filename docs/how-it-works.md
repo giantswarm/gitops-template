@@ -91,6 +91,9 @@ Most clusters and apps look alike. The `bases` directory holds what they share, 
 - `bases/app_sets` groups apps that you deploy together.
 - `bases/cluster_templates` and `bases/environments` combine these into clusters for stages like dev and production,
   or for regions.
+- `bases/policies` has Kyverno policies that refuse what breaks the repository's conventions, such as a cluster
+  `HelmRelease` without its protection. The management cluster and CI run them, see
+  [Convention policies](./guides/ci-validation.md#convention-policies).
 
 A cluster's directory points at bases in its `kustomization.yaml` and only adds what's different, such as its own
 values. The bases use variables like `${cluster_name}` where every cluster needs its own name. The cluster's Flux

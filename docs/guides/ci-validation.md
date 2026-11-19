@@ -33,6 +33,7 @@ The workflow offers the following jobs:
   can't change that list. Then it deletes the cluster's two `Kustomization`s. The App Set and everything the
   `Kustomization`s applied have to go, and the `Organization` and the cluster's `HelmRelease` have to stay. It deletes
   what the other tests check, so it runs last and fails if they didn't run before it.
+- `policies`: checks what Flux applies against the [convention policies](#convention-policies), with the Kyverno CLI.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 
@@ -59,6 +60,37 @@ On a cluster, each of these stops Flux applying the `Kustomization` until it's f
 `Kustomization` applied before. `tools/test-all-ff validate` checks that the hook fails on the fixture in
 `tools/testdata/gone-path`, leaving out its `Kustomization` with another source, and on a directory without any
 `Kustomization`.
+
+## Convention policies
+
+The Kyverno `ValidatingPolicy`s in [bases/policies/conventions](../../bases/policies/conventions/) encode the
+repository's conventions:
+
+- `gitops-flux-service-account`: every Flux `Kustomization` and `HelmRelease` runs as the `automation` service account,
+  unless it applies to a workload cluster through `spec.kubeConfig`, as an app's `HelmRelease` or `WC_NAME-direct.yaml`
+  does.
+- `gitops-protected-objects`: the objects whose deletion deletes a cluster or stops GitOps for it carry the
+  `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion: "true"` label, see
+  [How it works](../how-it-works.md). They are the `Organization`s, the cluster `HelmRelease`s, which are the
+  `HelmRelease`s in an `org-*` namespace without a `spec.kubeConfig`, and the SOPS key `Secret`s, `sops-gpg-*` and
+  `sops-age-*`.
+
+They check only the objects that a Flux `Kustomization` in the `default` namespace applies, by the
+`kustomize.toolkit.fluxcd.io/namespace: default` label Flux puts on them, so Giant Swarm's own objects are left alone.
+
+The management cluster runs them: `MC_NAME.yaml` applies them from
+[management-clusters/MC_NAME/policies](../../management-clusters/MC_NAME/policies/kustomization.yaml), and Kyverno then
+refuses an object that breaks them. The kind test applies them the same way, so every `Kustomization` getting `Ready`
+shows that they refuse neither the examples nor the components the test installs. `test_conventions_enforced` checks
+that the test cluster refuses a dry run of a `Kustomization` without the service account and of a cluster `HelmRelease`
+without the protection, and accepts both once they're fixed.
+
+The `policies` job of `validate.yaml` runs [tools/check-policies](../../tools/README.md#check-policies) with the Kyverno
+CLI 1.19.2, the Kyverno of Giant Swarm's `kyverno` chart 0.26.1, which the kind test installs. It renders every Flux
+`Kustomization`, takes the `ValidatingPolicy`s from what they apply and checks everything they apply against them, so
+CI checks what the management cluster enforces. Before that, it runs `kyverno test` on
+[tools/testdata/policies](../../tools/testdata/policies/kyverno-test.yaml), which lists the objects each policy has to
+refuse and accept.
 
 ## When the workflow runs
 

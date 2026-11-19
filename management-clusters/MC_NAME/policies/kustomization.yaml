@@ -1,0 +1,8 @@
+# Kyverno policies that refuse what breaks the repository's conventions, see
+# bases/policies/conventions. CI checks the repository against the same
+# policies, with tools/check-policies.
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+resources:
+  - ../../../bases/policies/conventions

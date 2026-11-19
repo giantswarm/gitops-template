@@ -1,0 +1,76 @@
+# What the convention policies must allow and refuse. tools/check-policies runs it with
+# `kyverno test`, before it checks the rendered repository against the same policies.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: conventions
+policies:
+  - ../../../bases/policies/conventions/flux-service-account.yaml
+  - ../../../bases/policies/conventions/protected-objects.yaml
+resources:
+  - resources.yaml
+results:
+  - isValidatingPolicy: true
+    kind: Kustomization
+    policy: gitops-flux-service-account
+    resources:
+      - with-automation
+      - with-kubeconfig
+    result: pass
+  - isValidatingPolicy: true
+    kind: Kustomization
+    policy: gitops-flux-service-account
+    resources:
+      - without-service-account
+      - other-service-account
+    result: fail
+  - isValidatingPolicy: true
+    kind: HelmRelease
+    policy: gitops-flux-service-account
+    resources:
+      - protected-cluster
+      - app-with-kubeconfig
+    result: pass
+  - isValidatingPolicy: true
+    kind: HelmRelease
+    policy: gitops-flux-service-account
+    resources:
+      - cluster-without-service-account
+    result: fail
+  - isValidatingPolicy: true
+    kind: HelmRelease
+    policy: gitops-protected-objects
+    resources:
+      - protected-cluster
+    result: pass
+  - isValidatingPolicy: true
+    kind: HelmRelease
+    policy: gitops-protected-objects
+    resources:
+      - cluster-without-protection
+      - cluster-without-label
+    result: fail
+  - isValidatingPolicy: true
+    kind: Organization
+    policy: gitops-protected-objects
+    resources:
+      - protected
+    result: pass
+  - isValidatingPolicy: true
+    kind: Organization
+    policy: gitops-protected-objects
+    resources:
+      - unprotected
+    result: fail
+  - isValidatingPolicy: true
+    kind: Secret
+    policy: gitops-protected-objects
+    resources:
+      - sops-gpg-protected
+    result: pass
+  - isValidatingPolicy: true
+    kind: Secret
+    policy: gitops-protected-objects
+    resources:
+      - sops-age-unprotected
+    result: fail

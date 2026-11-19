@@ -17,6 +17,7 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate
 from conftest import GitOpsTestConfig
+from conventions import check_conventions_enforced
 from node_pools import node_pool_problems_in_cluster
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
@@ -147,6 +148,13 @@ def test_shared_object_copied(
     check_kustomizations_successful: None,
 ) -> None:
     check_shared_object_copied(kube_cluster.kube_client)
+
+
+def test_conventions_enforced(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    check_conventions_enforced(kube_cluster.kube_client)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:

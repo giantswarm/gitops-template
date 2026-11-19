@@ -1,0 +1,46 @@
+#!/bin/bash
+# Check the repository against the Kyverno policies that encode its conventions.
+#
+# The policies are kept in bases/policies/conventions. The check uses the ValidatingPolicies the
+# management clusters' Kustomizations apply, such as management-clusters/MC_NAME/policies, so CI
+# checks what the clusters enforce. The script renders every Flux Kustomization with
+# test-all-ff, takes the policies from the output, and applies them to it with the Kyverno CLI.
+# Run it from the root of the repository.
+set -euo pipefail
+
+tools_dir="$(dirname "$0")"
+testdata="${tools_dir}/testdata/policies"
+# where the policies are kept; kyverno-test.yaml names them too
+policies_dir="${tools_dir}/../bases/policies/conventions"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "${tmp_dir}"' EXIT
+
+# The policies must refuse what breaks the conventions, and allow what follows them.
+echo "Testing the policies against ${testdata}"
+kyverno test "${testdata}" --remove-color
+
+# `kyverno apply` must fail when an object breaks a policy, or the check below proves nothing.
+echo -n "kyverno apply, objects that break the conventions: "
+status=0
+output=$(kyverno apply "${policies_dir}"/flux-service-account.yaml "${policies_dir}"/protected-objects.yaml \
+	--resource "${testdata}/resources.yaml" --remove-color 2>&1) || status=$?
+if [ "${status}" -ne 0 ] && grep -q "without-service-account" <<<"${output}"; then
+	echo "OK, reported"
+else
+	echo "not reported:"
+	echo "${output}"
+	exit 1
+fi
+
+echo "Rendering the repository"
+"${tools_dir}/test-all-ff" template >"${tmp_dir}/rendered.yaml"
+yq 'select(.apiVersion == "policies.kyverno.io/*" and .kind == "ValidatingPolicy")' \
+	"${tmp_dir}/rendered.yaml" >"${tmp_dir}/policies.yaml"
+if [ ! -s "${tmp_dir}/policies.yaml" ]; then
+	echo "No Kyverno ValidatingPolicy found in what the Flux Kustomizations apply."
+	exit 1
+fi
+
+echo "Checking the rendered repository against $(yq -N '.metadata.name' "${tmp_dir}/policies.yaml" | paste -sd, -)"
+kyverno apply "${tmp_dir}/policies.yaml" --resource "${tmp_dir}/rendered.yaml" --remove-color

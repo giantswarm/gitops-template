@@ -78,6 +78,41 @@ jobs:
       # that need the kind cluster.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
 
+  # The rendered repository against the Kyverno policies that encode its
+  # conventions, the ones the management cluster applies, see
+  # docs/guides/ci-validation.md. The shared workflow doesn't install the
+  # Kyverno CLI, so this job runs here.
+  policies:
+    needs: changes
+    if: needs.changes.outputs.markdown_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: install flux
+        uses: fluxcd/flux2/action@8454b02a32e48d775b9f563cb51fdcb1787b5b93 # v2.7.5
+        with:
+          # The Flux of flux-app 1.12.2 on the management clusters, as in tools/test-all-ff.
+          # renovate: datasource=github-releases depName=fluxcd/flux2 extractVersion=^v(?<version>.+)$
+          version: "2.7.5"
+      - name: install the Kyverno CLI
+        uses: giantswarm/install-binary-action@5bef88f65012037dd836117c8d344b21bb559854 # v4.1.0
+        with:
+          binary: kyverno
+          download_url: "https://github.com/kyverno/kyverno/releases/download/v${version}/kyverno-cli_v${version}_linux_x86_64.tar.gz"
+          smoke_test: "${binary} version"
+          tarball_binary_path: "${binary}"
+          # The Kyverno of Giant Swarm's kyverno chart 0.26.1, which the
+          # management clusters and the kind test run, see
+          # tests/ats/kyverno_install.py. Move both together.
+          # renovate: datasource=github-releases depName=kyverno/kyverno extractVersion=^v(?<version>.+)$
+          version: "1.19.2"
+      - name: check the policies
+        run: ./tools/check-policies
+
   # A pull request that changes only Markdown. A skipped caller job reports a
   # single check with its own name, not the checks of its jobs, so the
   # required checks would wait for a run that never comes. This caller has the

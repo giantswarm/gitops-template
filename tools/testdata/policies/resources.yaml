@@ -1,0 +1,209 @@
+# Objects as the repository's Flux Kustomizations, in the `default` namespace, apply them, with
+# the labels kustomize-controller sets. kyverno-test.yaml says which the policies must refuse.
+#
+# Flux Kustomizations and HelmReleases run as the `automation` service account, unless they
+# apply to a workload cluster through its kubeconfig.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: with-automation
+  namespace: default
+spec:
+  interval: 10m
+  path: ./management-clusters/MC_NAME
+  prune: true
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: with-kubeconfig
+  namespace: org-demo
+spec:
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: demo-kubeconfig
+  path: ./out-of-band
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+    namespace: default
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: without-service-account
+  namespace: default
+spec:
+  interval: 10m
+  path: ./management-clusters/MC_NAME
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: other-service-account
+  namespace: default
+spec:
+  interval: 10m
+  path: ./management-clusters/MC_NAME
+  prune: true
+  serviceAccountName: default
+  sourceRef:
+    kind: GitRepository
+    name: your-repo
+---
+# A cluster's HelmRelease installs the cluster chart into the management cluster, so it has no
+# kubeconfig. Deleting it deletes the cluster: it carries the prune annotation and the
+# prevent-deletion label.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: protected-cluster
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: protected-cluster
+  interval: 5m
+  serviceAccountName: automation
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: cluster-without-service-account
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: cluster-without-service-account
+  interval: 5m
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: cluster-without-protection
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: cluster-without-protection
+  interval: 5m
+  serviceAccountName: automation
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: cluster-without-label
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: cluster-without-label
+  interval: 5m
+  serviceAccountName: automation
+---
+# An app's HelmRelease installs into the workload cluster through its kubeconfig. Flux deletes it
+# with its files, so it isn't protected.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-demo-apps
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: app-with-kubeconfig
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-with-kubeconfig
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: demo-kubeconfig
+---
+# Deleting an Organization deletes its namespace, with every cluster in it.
+apiVersion: security.giantswarm.io/v1alpha1
+kind: Organization
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: protected
+spec: {}
+---
+apiVersion: security.giantswarm.io/v1alpha1
+kind: Organization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: unprotected
+spec: {}
+---
+# Flux decrypts with the SOPS keys: deleting one stops GitOps for its clusters.
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: sops-gpg-protected
+  namespace: default
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-gitops
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: sops-age-unprotected
+  namespace: default
+type: Opaque

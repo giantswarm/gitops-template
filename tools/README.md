@@ -12,6 +12,7 @@ The tools provided here may require the following external tools
 - [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli)
 - [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/)
 - [helm](https://helm.sh/docs/intro/install/), for `validate-helm-values`
+- [kyverno](https://kyverno.io/docs/kyverno-cli/install/), for `check-policies`; CI uses 1.19.2
 
 ## Provides
 
@@ -20,6 +21,7 @@ This directory provides the following tools
 - [test-all-ff](https://github.com/giantswarm/gitops-template/blob/main/tools/test-all-ff)
 - [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
 - [validate-helm-values](https://github.com/giantswarm/gitops-template/blob/main/tools/validate-helm-values)
+- [check-policies](https://github.com/giantswarm/gitops-template/blob/main/tools/check-policies)
 
 ## `test-all-ff`
 
@@ -261,3 +263,16 @@ sops:
       fp: <<<FINGERPRINT>>>
   version: 3.7.3
 ```
+
+## `check-policies`
+
+`check-policies` checks the repository against the Kyverno policies that encode its conventions, see
+[Convention policies](/docs/guides/ci-validation.md#convention-policies). Run it from the root of the repository. It:
+
+1. runs `kyverno test` on [testdata/policies](testdata/policies/kyverno-test.yaml), which lists the objects the policies
+   in [bases/policies/conventions](/bases/policies/conventions/) have to refuse and accept;
+1. checks that `kyverno apply` fails on the objects that break them, as the last step relies on it;
+1. renders every Flux `Kustomization` with `test-all-ff template`, takes the Kyverno `ValidatingPolicy`s from what
+   they apply and checks everything they apply against them with `kyverno apply`. It fails when they apply none.
+
+The `policies` job of [validate.yaml](/.github/workflows/validate.yaml) runs it.
