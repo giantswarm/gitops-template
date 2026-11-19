@@ -8,6 +8,7 @@ import pykube
 from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 
 from checks import waits
+from checks.debug_state import log_cluster_state
 from checks.helm_release_classes import classify, helm_releases_to_wait_for
 from checks.helm_release_references import reference_problems
 from checks.helm_release_sources import cluster_lookup
@@ -52,6 +53,8 @@ def check_helm_releases(
     not_ready = waits.wait_for_ready(
         api, HelmReleaseCR, to_wait, HELM_RELEASES_READY_TIMEOUT_SEC
     )
+    if not_ready:
+        log_cluster_state(api)
     waits.fail_on_problems(
         [f"HelmRelease '{k}' isn't ready: {r}" for k, r in not_ready.items()],
         "HelmReleases aren't ready",
