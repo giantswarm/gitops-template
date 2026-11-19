@@ -40,9 +40,9 @@ The cluster's two Kustomizations reference that Secret in `spec.decryption` and 
 
 ## age keys
 
-A workload cluster key can be an age key instead of a GPG key; age keys are simpler to create and handle. The
-master key stays a GPG key, because `kubectl gs gitops add management-cluster` creates one, and it encrypts the
-age key like the GPG keys:
+A workload cluster key can be an age key instead of a GPG key; age keys are simpler to create and handle. See
+[age or GPG](#age-or-gpg) for how they compare. The master key stays a GPG key, because
+`kubectl gs gitops add management-cluster` creates one, and it encrypts the age key like the GPG keys:
 
 - Its public key goes into `.sops.keys` as `.sops.WC_NAME.agekey.pub`, unencrypted.
 - Its private key goes into the `WC_NAME.agekey.enc.yaml` Secret in the management cluster's `secrets` directory,
@@ -54,6 +54,44 @@ uses an age key: `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with the `sops-a
 [Create an age key pair](../add_wc_structure.md#create-an-age-key-pair-optional-step).
 
 A Kustomization reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.
+
+## age or GPG
+
+### Security
+
+An age key isn't weaker than a GPG key. SOPS encrypts the values in a file with AES-256-GCM and a data key made for
+that file, whichever key you use. The age or GPG key only encrypts that data key:
+
+- An age key encrypts it with X25519 and ChaCha20-Poly1305.
+- A GPG key encrypts it with the key's own algorithm. The GPG keys in these docs use an ECDH subkey on `cv25519`;
+  Flux's SOPS guide creates an RSA-4096 key.
+
+With a strong GPG key, the algorithm is not where either falls short. GPG leaves the choice to you, and SOPS doesn't
+restrict it, so a weak key, such as a short RSA key, weakens every file encrypted for it. age has no options to get
+wrong. Keep in mind:
+
+- Neither the age keys nor the GPG keys in these docs are post-quantum.
+- An age key is a single key pair. It has no expiry date, no subkeys and no revocation certificate; you retire it by
+  removing it from `.sops.yaml` and the Secret.
+- The bigger risk is how you handle the key, not the algorithm: SOPS's threat model ranks a leaked key above a weak
+  one. Flux needs the private key without a passphrase, in a Secret on the management cluster, so anyone who can
+  read that Secret can decrypt the files. Limit who can read Secrets in its namespace with RBAC, keep the backup of
+  the private key encrypted and offline, and if a key leaks, remove it from `.sops.yaml`, then run
+  `sops updatekeys` and `sops rotate --in-place` on every file encrypted for it.
+
+### Which to pick
+
+Pick age if you have no reason to use GPG. Its keys are one line each, there is no keyring to import them into, and
+`age-keygen` creates one with a single command, so a key per cluster is easy to create and replace. The SOPS and Flux docs
+both recommend age over OpenPGP where you can use it.
+
+Pick GPG if your organisation already manages OpenPGP keys, if people keep their keys on smart cards, as SOPS's
+security notes advise for GPG keys, if you want keys that expire or have subkeys, or if a policy asks for OpenPGP or
+a specific set of algorithms.
+
+You don't have to choose once. A rule in `.sops.yaml` can list a `pgp` and an `age` key; SOPS encrypts the data key
+for each, and either can decrypt the file. To move from one to the other, add the new key to the rule and run
+`sops updatekeys` on each file, then remove the old key and run it again.
 
 ## Encryption rules
 
