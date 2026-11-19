@@ -43,6 +43,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The CAPA cluster base labels its `OCIRepository` and `HelmRelease` with `giantswarm.io/prevent-deletion`, and sets
+  `global.metadata.preventDeletion` so that the chart labels the `Cluster` too. The management cluster refuses to
+  delete them, as it did for the cluster App CR. Deleting the cluster in `docs/getting-started.md` now removes the
+  labels first.
+
 - The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
   repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
   is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported.
@@ -212,6 +217,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
 
 ### Fixed
+
+- The CAPA cluster base no longer retries a failed install. Flux uninstalls the release before each retry, which
+  deletes the cluster. This matches what `kubectl gs gitops add base` generates.
 
 - CI: pin `clusterctl` to 1.10.10, the CAPI version `tests/ats` installs. The shared `gitops-validate` workflow
   now defaults to 1.14.4, which refuses to clean up a v1beta1 management cluster and fails `test_on_kind` in

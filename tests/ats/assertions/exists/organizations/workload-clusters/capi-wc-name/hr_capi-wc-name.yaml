@@ -4,6 +4,7 @@ metadata:
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
     kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
     kustomize.toolkit.fluxcd.io/namespace: default
   name: capi-wc-name
@@ -16,7 +17,6 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m
   releaseName: capi-wc-name
   serviceAccountName: automation

@@ -6,6 +6,7 @@ data:
         description: description
         name: capi-wc-name
         organization: org-name
+        preventDeletion: true
 kind: ConfigMap
 metadata:
   name: capi-wc-name-config

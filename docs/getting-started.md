@@ -643,6 +643,17 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
     yq -i '.spec.prune = true' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
     ```
 
+    The management cluster refuses to delete a resource with the `giantswarm.io/prevent-deletion` label. Remove it
+    from the cluster's `OCIRepository` and `HelmRelease`, and set `global.metadata.preventDeletion` to `false`, so
+    that the chart removes it from the cluster's `Cluster` too:
+
+    ```sh
+    yq -i '.patches += [{"patch": "[{\"op\": \"remove\", \"path\": \"/metadata/labels/giantswarm.io~1prevent-deletion\"}]", "target": {"labelSelector": "giantswarm.io/prevent-deletion"}}, {"patch": "{\"apiVersion\": \"helm.toolkit.fluxcd.io/v2\", \"kind\": \"HelmRelease\", \"metadata\": {\"name\": \"cluster\"}, \"spec\": {\"values\": {\"global\": {\"metadata\": {\"preventDeletion\": false}}}}}", "target": {"kind": "HelmRelease"}}]' ${WC_DIR}/mapi/cluster/kustomization.yaml
+    ```
+
+    `spec.values` takes precedence over the ConfigMaps in `valuesFrom`, so this works whatever values the cluster
+    has.
+
     Commit and push:
 
     ```sh
@@ -653,6 +664,13 @@ Skip this step to keep the cluster. Deleting it takes two pushes, so that a mist
 
     ```sh
     flux get kustomizations ${MC_NAME}-clusters-${WC_NAME} -n default
+    ```
+
+    Then wait until the `Cluster` has lost the label, which takes an upgrade of the chart. The `PREVENT-DELETION`
+    column has to be empty:
+
+    ```sh
+    kubectl get clusters.cluster.x-k8s.io ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
     ```
 
 1. Remove the cluster from the organization's list:

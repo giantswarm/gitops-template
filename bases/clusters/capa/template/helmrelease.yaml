@@ -5,6 +5,9 @@ kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/cluster: ${cluster_name}
+    # kyverno-policies-ux refuses to delete a resource with this label.
+    # Deleting the HelmRelease uninstalls the chart, which deletes the cluster.
+    giantswarm.io/prevent-deletion: "true"
   name: ${cluster_name}
   namespace: org-${organization}
 spec:
@@ -13,9 +16,10 @@ spec:
     name: ${cluster_name}
     namespace: org-${organization}
   install:
+    # Flux remediates a failed install by uninstalling it, which deletes the
+    # cluster. Keep a failed install failed instead.
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m
   releaseName: ${cluster_name}
   serviceAccountName: automation

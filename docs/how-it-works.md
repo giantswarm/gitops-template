@@ -32,7 +32,9 @@ Flux keeps doing this. When a file changes in Git, it applies the change. When s
 Flux sets it back at its next run. Fields added by hand stay.
 
 Note that the Kustomizations in this repository have `prune: false`. Deleting a file in Git doesn't delete the
-resource from the cluster, so a mistake can't delete a cluster. To remove something, delete it by hand too.
+resource from the cluster, so a mistake can't delete a cluster. To remove something, delete it by hand too. On top
+of that, the cluster's `OCIRepository`, `HelmRelease` and `Cluster` carry the `giantswarm.io/prevent-deletion`
+label, which makes the management cluster refuse to delete them until the label is removed.
 
 The split between the two Kustomizations matters. The management cluster's Kustomization creates the cluster's
 Kustomization, and the cluster's Kustomization applies the cluster's `mapi` directory. Each cluster gets its own
