@@ -1,6 +1,10 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
+  annotations:
+    # Flux doesn't delete it when its file is deleted from Git, so the HelmRelease
+    # keeps its chart; delete it by hand after the HelmRelease.
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: ${cluster_name}
     # nobody can delete it, Flux included, until this label is removed

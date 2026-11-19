@@ -1,0 +1,28 @@
+# ResourceSets whose objects tools/validate-helm-values can't check: one renders them
+# with spec.resourcesTemplate, one has no namespace. tools/test-all-ff checks that
+# validate-helm-values reports both and fails, rather than passing without a check.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-template
+  namespace: org-demo
+spec:
+  inputs:
+    - name: demo
+  resourcesTemplate: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: << inputs.name >>
+      namespace: org-demo
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-no-namespace
+spec:
+  resources:
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: rset-no-namespace

@@ -522,7 +522,7 @@ yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"
 > doesn't delete the cluster: the cluster's `HelmRelease`, from the CAPA cluster
 > base, has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and
 > the `giantswarm.io/prevent-deletion` label. To delete the cluster, remove the
-> labels and delete its `HelmRelease` by hand, see
+> labels and delete its `HelmRelease` by hand, then its `OCIRepository`, see
 > [Delete the cluster](../getting-started.md#6-delete-the-cluster-optional).
 
 In our example we create one instance from each cluster environment base:

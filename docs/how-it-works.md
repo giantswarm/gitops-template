@@ -51,9 +51,9 @@ Some objects delete a whole cluster when they go, so they carry two markers:
 The protected objects are:
 
 - The cluster's `HelmRelease`, in `bases/clusters/capa/template`. Deleting it uninstalls the chart, and Cluster API
-  then deletes the cluster and its cloud infrastructure. The base also puts the label, but not the annotation, on the
-  cluster's `OCIRepository`, and sets `global.metadata.preventDeletion` so that the chart puts the label on the
-  `Cluster`.
+  then deletes the cluster and its cloud infrastructure. The base also puts the annotation and the label on the
+  cluster's `OCIRepository`, so that the `HelmRelease` keeps its chart, and sets `global.metadata.preventDeletion` so
+  that the chart puts the label on the `Cluster`.
 - The `Organization`, such as `organizations/demoorg/demoorg.yaml`. Deleting it deletes the `org-demoorg` namespace,
   with every cluster in it. Its file can't go on its own anyway: the organisation's `kustomization.yaml` takes the
   organisation's name from it, so without it the management cluster's Kustomization fails to build, and applies and
@@ -63,12 +63,12 @@ The protected objects are:
   and the label instead: changing an encrypted file by hand breaks its SOPS checksum.
 
 When you delete their files, they stay on the management cluster and the cluster keeps running, but Flux no longer
-manages them. A cluster `HelmRelease` that stays without its `OCIRepository` and ConfigMaps can't reconcile, and
-reports it as not ready. To delete the cluster, remove the labels with a push first, then delete its `HelmRelease` by
+manages them. A cluster `HelmRelease` that stays without its ConfigMaps can't reconcile, and reports it as not ready.
+To delete the cluster, remove the labels with a push first, then delete its `HelmRelease` and its `OCIRepository` by
 hand, see [Delete the cluster](./getting-started.md#6-delete-the-cluster-optional).
 
 The rest of the cluster's objects, such as its values ConfigMaps and its apps, don't delete the cluster, so Flux
-deletes them. So does its `OCIRepository`, once its label is gone. Add the annotation and the label to anything else
+deletes them. Add the annotation and the label to anything else
 that must outlive its file, such as the `HelmRelease` of a cluster base you write yourself. `kubectl gs` doesn't add
 them yet: add them by hand to the `Organization` that `kubectl gs gitops add organization` writes, and to the cluster
 `HelmRelease` of a base that `kubectl gs gitops add base` writes.

@@ -12,6 +12,7 @@
     - [When to use it](#when-to-use-it)
     - [How the examples work](#how-the-examples-work)
     - [Installing before the first window](#installing-before-the-first-window)
+    - [Moving an existing cluster](#moving-an-existing-cluster)
     - [Notes on the examples](#notes-on-the-examples)
     - [What the window does](#what-the-window-does)
     - [Losing the version](#losing-the-version)
@@ -211,7 +212,8 @@ out to several workload clusters from one list.
   the version its provider picks; a patch drops the base's two. The base and the region component still give the
   cluster its values, and the `HelmRelease` lists the region's values itself, as a component's patch doesn't reach into
   a `ResourceSet`. A new major release is a change to the range in Git, and an exact version in the range pins the
-  cluster to it.
+  cluster to it. Like a new release, a change to the range reaches the cluster at the next window, or at once when you
+  force the provider, see below.
 
 ### Installing before the first window
 
@@ -236,6 +238,21 @@ kubectl annotate resourcesetinputprovider ${CLUSTER_NAME}-release -n org-${ORG_N
 
 Later upgrades still wait for the window. The comments in both examples' providers and `ResourceSet`s give the same
 step, and the kind test does the same for both examples.
+
+### Moving an existing cluster
+
+A cluster that the cluster base creates can move to the layout of `WC_NAME_SCHEDULED_UPGRADES`. Its `OCIRepository` and
+`HelmRelease` leave its `Kustomization`, which doesn't delete them, as both have the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, and its `ResourceSet` takes them over once its provider has a
+version. Forcing the provider picks the highest release in the range at once, outside the window, so pin the range to
+the release the cluster runs first:
+
+1. Set the provider's `spec.filter.semver` to the cluster's current release, the `release` in its `Kustomization`, for
+   example `'36.2.0'`. Move the cluster's files to the example's layout, then commit and push.
+1. Once Flux has applied the provider, force it as above. The `ResourceSet` takes over the `OCIRepository` and the
+   `HelmRelease` at the release the cluster already runs, so the cluster doesn't change.
+1. Set the range back, for example to `'>=36.0.0 <37.0.0'`, then commit and push. The cluster moves to the highest
+   release in it at the next window.
 
 ### Notes on the examples
 

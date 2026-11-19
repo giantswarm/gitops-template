@@ -36,8 +36,8 @@ The workflow offers the following jobs:
   takes the organisation's name from the `Organization`, so without `ORG_NAME.yaml` the management cluster's
   `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its inventory keeps the
   `Organization` and the cluster's `Kustomization`s, and they stay. Then it deletes the cluster's two
-  `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` has to stay. It deletes what
-  the other tests check, so it runs last and fails if they didn't run before it.
+  `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and `OCIRepository` have to
+  stay. It deletes what the other tests check, so it runs last and fails if they didn't run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 

@@ -61,8 +61,11 @@ KEPT_BY_FAILED_BUILD = PROTECTED_OBJECTS + [
 ]
 # the app's workload in the workload cluster, which goes when its HelmRelease is deleted
 PRUNED_WORKLOAD = ("hello-world", "hello-world")
-# the cluster's HelmRelease, which deleting the cluster's Kustomization leaves
-PROTECTED_CLUSTER = ("HelmRelease", "org-org-name", "out-of-band-no-flux")
+# the cluster's HelmRelease and OCIRepository, which deleting the cluster's Kustomization leaves
+PROTECTED_CLUSTER = [
+    ("HelmRelease", "org-org-name", "out-of-band-no-flux"),
+    ("OCIRepository", "org-org-name", "out-of-band-no-flux"),
+]
 PRUNE_KINDS: dict[str, type[APIObject]] = {
     **REFERENCED_KINDS,
     "Organization": OrganizationCR,

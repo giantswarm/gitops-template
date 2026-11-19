@@ -3,7 +3,7 @@
 When a cluster's Kustomizations go, the cluster's and the one of its secondary apps, because
 their files are deleted from Git or by hand as the getting-started guides do, Flux deletes
 everything they applied, except what has `kustomize.toolkit.fluxcd.io/prune: disabled`: the
-cluster's HelmRelease stays.
+cluster's HelmRelease and OCIRepository stay.
 """
 
 import pykube
