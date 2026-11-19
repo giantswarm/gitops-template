@@ -453,6 +453,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   semantic diffs (ignoring key reordering), so the restriction is no longer
   needed. Closes
   [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
+- The kind test no longer installs the app platform: `apptestctl bootstrap`,
+  which installed app-operator, chart-operator and their CRDs, is gone, along
+  with the `apptestctl_ver` input in `.github/workflows/validate.yaml`. The
+  template uses no `App` CRs. The test installs flux-app with helm from
+  `oci://gsoci.azurecr.io/charts/giantswarm` instead, without the
+  `PodMonitor`s and kube-state-metrics, whose CRDs the kind cluster doesn't have.
 
 ### Fixed
 
