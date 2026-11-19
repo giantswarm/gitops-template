@@ -67,6 +67,14 @@ checks `main` as it is after a merge, which no pull request run has tested when 
 other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
 `on.push.branches`.
 
+A pull request that changes only Markdown files (`*.md`, anywhere in the repository, `CHANGELOG.md` included) skips
+`validate` and the kind test, as Markdown changes nothing they check. Its first job, `changes`, lists the files the
+pull request changes; a file renamed from or to another type counts as a change to that type too. Instead of the shared
+workflow, `validate.yaml` then calls [validate-markdown.yaml](../../.github/workflows/validate-markdown.yaml), which
+runs the same `pre-commit` hooks, so the Markdown is still linted, and reports `validate / validate` and
+`validate / test_on_kind` as skipped. GitHub counts a skipped check as passed, so a branch that requires these checks
+doesn't wait for them. Any other file in the pull request, and every push to `main`, runs everything.
+
 A pull request from a fork gets a read-only token and none of the repository's secrets. `yaml-diff.yaml` and
 `validate.yaml` skip their comments there, which they can't post, leave a notice on the run saying why, and put the
 diff and the validation log in the job summary. The kind test skips the tests that need

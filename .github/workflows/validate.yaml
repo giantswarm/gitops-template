@@ -21,7 +21,37 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Whether a pull request changes only Markdown files. A file renamed to or
+  # from another type counts as both. If GitHub lists fewer files than the pull
+  # request changes, the answer is no, so the full run happens.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      markdown_only: ${{ steps.files.outputs.markdown_only }}
+    steps:
+      - name: list the changed files
+        id: files
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+        run: |
+          markdown_only="$(gh api --paginate --slurp "repos/${REPO}/pulls/${PR_NUMBER}/files" |
+            jq --argjson changed "${CHANGED_FILES}" '
+              add // [] |
+              length > 0 and length == $changed and
+              all(.[]; (.filename | endswith(".md")) and ((.previous_filename // ".md") | endswith(".md")))')"
+          echo "markdown_only=${markdown_only}" >> "${GITHUB_OUTPUT}"
+
+  # Everything but a pull request that changes only Markdown.
   validate:
+    needs: changes
+    if: needs.changes.outputs.markdown_only != 'true'
     uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@01751540d4610548c37fe0b63aa719d68be3704f # main
     with:
       # Matches [requires] python_version in tests/ats/Pipfile.
@@ -47,3 +77,17 @@ jobs:
       # Empty on a pull request from a fork, where tests/ats skips the tests
       # that need the kind cluster.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
+
+  # A pull request that changes only Markdown. A skipped caller job reports a
+  # single check with its own name, not the checks of its jobs, so the
+  # required checks would wait for a run that never comes. This caller has the
+  # same name, and validate-markdown.yaml has jobs with the names of the
+  # shared workflow's, so the same checks report: check-pre-commit runs the
+  # pre-commit hooks, validate and test_on_kind are skipped, which passes.
+  validate-markdown:
+    name: validate
+    needs: changes
+    if: needs.changes.outputs.markdown_only == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/validate-markdown.yaml
