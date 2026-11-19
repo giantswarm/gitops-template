@@ -246,6 +246,21 @@ function test() {
 	fi
 
 	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must fail, not guess the newest chart, when it can't tell
+		# which provider gives a ResourceSet's OCIRepository its version.
+		echo -n "helm values, ResourceSet version not resolvable: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/resource-set-unresolved-version.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "ResourceSet org-demo/rset-selector: can't resolve the chart version" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
 		# validate-helm-values must fail for a valuesFrom ConfigMap without the watch label.
 		echo -n "helm values, ConfigMap without the watch label: "
 		status=0

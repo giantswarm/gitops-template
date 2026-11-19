@@ -26,8 +26,9 @@
 # The OCIRepositories and HelmReleases that a Flux Operator ResourceSet renders are checked
 # too. Their tag comes from the ResourceSetInputProvider the ResourceSet reads, and which tag
 # that picks is only known on the cluster, so an OCIRepository gets the provider's version
-# range instead. A rendered object that still has a `<< ... >>` template in it after that,
-# such as one named after an entry of `spec.inputs`, is left out.
+# range instead. The check fails when it can't tell which provider's range that is, rather
+# than guess. A rendered object that still has a `<< ... >>` template in it after that, such
+# as one named after an entry of `spec.inputs`, is left out.
 #
 # Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the
 # label `reconcile.fluxcd.io/watch: Enabled`, so that helm-controller applies a change to it
@@ -61,15 +62,28 @@ function object() {
 
 # Print the objects each Flux Operator ResourceSet in the manifest renders, with the version
 # range of its provider in place of an OCIRepository's tag. Objects with a template left in
-# them are left out.
+# them are left out. Fail when a ResourceSet renders an OCIRepository whose range can't be
+# found: its one `inputsFrom` entry has to name a provider in the manifest that has a
+# `spec.filter.semver`. A guess, such as the newest chart, would validate the wrong values.
 function resource_set_objects() {
-	local ns name rset range
+	local ns name rset provider range objects
 	while IFS=/ read -r ns name; do
 		[ -z "${name}" ] && continue
 		rset=$(object ResourceSet "${ns}" "${name}")
-		range=$(object ResourceSetInputProvider "${ns}" "$(yq '.spec.inputsFrom[0].name // ""' <<<"${rset}")" | yq '.spec.filter.semver // ""') || range=""
+		range=""
+		if [ "$(yq '.spec.inputsFrom // [] | length' <<<"${rset}")" == "1" ]; then
+			provider=$(yq '.spec.inputsFrom[0].name // ""' <<<"${rset}")
+			if [ -n "${provider}" ] && rsip=$(object ResourceSetInputProvider "${ns}" "${provider}"); then
+				range=$(yq '.spec.filter.semver // ""' <<<"${rsip}")
+			fi
+		fi
+		objects=$(NS="${ns}" RANGE="${range}" yq '(.spec.resources[] | select(.kind == "OCIRepository") | .spec.ref) = {"semver": strenv(RANGE)} | .spec.resources[] | select(to_yaml | test("<<") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc' <<<"${rset}")
+		if [ -z "${range}" ] && yq -e 'select(.kind == "OCIRepository")' <<<"${objects}" >/dev/null 2>&1; then
+			echo "ResourceSet ${ns}/${name}: can't resolve the chart version of its OCIRepository: it needs one inputsFrom entry that names a ResourceSetInputProvider in the same Kustomization, with a spec.filter.semver" >&2
+			return 1
+		fi
 		echo "---"
-		NS="${ns}" RANGE="${range}" yq '(.spec.resources[] | select(.kind == "OCIRepository") | .spec.ref) = {"semver": strenv(RANGE)} | .spec.resources[] | select(to_yaml | test("<<") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc' <<<"${rset}"
+		echo "${objects}"
 	done < <(yq -N 'select(.kind == "ResourceSet") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
 }
 
@@ -110,11 +124,11 @@ function pull_chart() {
 
 # Check what the ResourceSets render as if it were in the manifest itself.
 expanded="${work_dir}/manifest.yaml"
-{
-	cat "${manifest}"
-	echo
-	resource_set_objects
-} >"${expanded}"
+cat "${manifest}" >"${expanded}"
+echo >>"${expanded}"
+if ! resource_set_objects >>"${expanded}"; then
+	exit 1
+fi
 manifest="${expanded}"
 
 failed=0

@@ -71,8 +71,12 @@ A semver range is resolved to the newest matching version, as Flux would resolve
 
 The `OCIRepository`s and `HelmRelease`s that a Flux Operator `ResourceSet` in the manifest renders are checked too.
 Their tag is only known on the cluster, so the chart is the newest in the range of the `ResourceSetInputProvider` the
-`ResourceSet` reads. Rendered objects that still have a `<< ... >>` template in them, such as the ones named after an
-entry of the `ResourceSet`'s `spec.inputs`, are left out.
+`ResourceSet` reads. The script fails, rather than guess a version, when the `ResourceSet` doesn't have exactly one
+`inputsFrom` entry that names a provider in the same `Kustomization` with a `spec.filter.semver`, such as one that
+selects its providers by label. `test-all-ff validate` checks that with
+[testdata/resource-set-unresolved-version.yaml](testdata/resource-set-unresolved-version.yaml). Rendered objects that
+still have a `<< ... >>` template in them, such as the ones named after an entry of the `ResourceSet`'s `spec.inputs`,
+are left out.
 
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
