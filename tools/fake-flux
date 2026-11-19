@@ -20,7 +20,7 @@ KUSTOMIZATIONS=()
 function usage() {
 	if [ ${#KUSTOMIZATIONS[@]} -eq 0 ]; then
 		KUSTOMIZATIONS+=(
-			"./management-clusters/example/organizations/dev/workload-clusters/dev.yaml,dev,default,./management-clusters/example/organizations/dev/workload-clusters/dev/mapi"
+			"./management-clusters/example/organizations/dev/workload-clusters/dev.yaml,dev,default,./management-clusters/example/organizations/dev/workload-clusters/dev"
 		)
 	fi
 	cat <<EOF

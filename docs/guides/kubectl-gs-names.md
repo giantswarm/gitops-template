@@ -170,7 +170,7 @@ Once the files are renamed, `kubectl gs gitops` recognizes the apps.
     kubectl gs gitops check --adopt --dry-run
     ```
 
-    Every app directory under `mapi/apps` is listed as an `app` layer. If the output lists directories under
+    Every app directory under `apps` is listed as an `app` layer. If the output lists directories under
     `Skipped`, they still lack a `helm-release.yaml` or a `kustomization.yaml`.
 
 1. Record them in `.gitops-metadata.yaml`:

@@ -493,7 +493,7 @@ metadata:
   namespace: default
 spec:
   interval: 10m
-  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi"
+  path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1"
   postBuild:
     substitute:
       cluster_description: "description"
@@ -528,17 +528,17 @@ yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"
 In our example we create one instance from each cluster environment base:
 
 - for the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
-/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml)
+/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/cluster/kustomization.yaml)
 - for the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/mapi/cluster/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/cluster/kustomization.yaml)
 
 The dev and staging clusters run in `eu-central`. Production runs in two regions, and its clusters add their region's
 extra node pool:
 
 - for the production environment we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster/kustomization.yaml)
 - and another one in a different region with some different values for the cluster [HELLO_APP_PROD_CLUSTER_US_WEST](
-  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml)
+  /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/cluster/kustomization.yaml)
 
 Every cluster lists the components that append to its `HelmRelease` `valuesFrom`: its region, optionally the region's
 extra node pool, and last the cluster template's [userconfig](/bases/cluster_templates/hello_app_cluster/userconfig)
@@ -562,20 +562,29 @@ component would then land after the cluster's own values and override them.
 > created, but nothing reads it: the cluster silently loses its own values and those of its stage. CI doesn't catch
 > this.
 
-Let's take a look at the development environment instance. It runs in `eu-central`.
+Let's take a look at the development environment instance. It runs in `eu-central`. The cluster's directory lists
+`cluster/` in its own `kustomization.yaml`, so the cluster's `Kustomization` never applies an `out-of-band` directory
+next to it to the management cluster.
 
 ```sh
-mkdir -p HELLO_APP_DEV_CLUSTER_1/mapi/cluster
+mkdir -p HELLO_APP_DEV_CLUSTER_1/cluster
 
-cat <<EOF > HELLO_APP_DEV_CLUSTER_1/mapi/cluster/kustomization.yaml
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 components:
-  - ../../../../../../../../bases/environments/regions/eu_central
-  - ../../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
 resources:
-  - ../../../../../../../../bases/environments/stages/dev/hello_app_cluster
+  - ../../../../../../../bases/environments/stages/dev/hello_app_cluster
+EOF
+
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cluster/
 EOF
 ```
 
@@ -584,34 +593,48 @@ The staging cluster looks the same with the staging stage.
 The production clusters also add their region's extra node pool, between the region and the cluster's own values.
 
 ```bash
-mkdir -p HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster
-cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/mapi/cluster/kustomization.yaml
+mkdir -p HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster
+cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 components:
-  - ../../../../../../../../bases/environments/regions/eu_central
-  - ../../../../../../../../bases/environments/regions/eu_central/node_pool
-  - ../../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/environments/regions/eu_central
+  - ../../../../../../../bases/environments/regions/eu_central/node_pool
+  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
 resources:
-  - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
+EOF
+
+cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cluster/
 EOF
 ```
 
 The `us-west` version of the production cluster uses the other region.
 
 ```bash
-mkdir -p HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster
-cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/mapi/cluster/kustomization.yaml
+mkdir -p HELLO_APP_PROD_CLUSTER_US_WEST/cluster
+cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
 components:
-  - ../../../../../../../../bases/environments/regions/us_west
-  - ../../../../../../../../bases/environments/regions/us_west/node_pool
-  - ../../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/environments/regions/us_west
+  - ../../../../../../../bases/environments/regions/us_west/node_pool
+  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
 resources:
-  - ../../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
+EOF
+
+cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - cluster/
 EOF
 ```
 

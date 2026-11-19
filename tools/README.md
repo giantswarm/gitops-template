@@ -127,7 +127,7 @@ examples.
 #### Optional Arguments
 
 - `path` The path element is a subpath matching below the path defined in the kustomization you are parsing.
-  For example, if the kustomization 'spec.path' is './management-clusters/example/organizations/dev/workload-clusters/dev/mapi'
+  For example, if the kustomization 'spec.path' is './management-clusters/example/organizations/dev/workload-clusters/dev'
   then 'path' must be a relative path below this, e.g. 'apps/athena'
 
 - `--use-kustomize` Use kustomize to build the kustomization and not 'flux build'

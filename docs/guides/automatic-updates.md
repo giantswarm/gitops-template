@@ -21,7 +21,7 @@ reports the version it installed.
 ## Example
 
 An example of an App with automated updates is available in
-[WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world-automatic-updates/oci-repository.yaml).
+[WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-automatic-updates](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-automatic-updates/oci-repository.yaml).
 
 ## Export environment variables
 
@@ -41,7 +41,7 @@ export APP_NAME=APP_NAME
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
 1. Replace the fixed version of the `OCIRepository` with a version range, for example every release from `3.0.0` on,
@@ -106,7 +106,7 @@ patches:
 ## Apps from an App Set
 
 For an App installed through an [App Set](./app-sets.md), add the same patch to the `kustomization.yaml` of the App Set
-instance, in the cluster's `mapi/app_sets/YOUR_APP_SET` directory. Kustomize applies the instance's patches after the
+instance, in the cluster's `app_sets/YOUR_APP_SET` directory. Kustomize applies the instance's patches after the
 App Set Template's, so the range replaces the version the App Set pins, for this cluster only. Bear in mind that an
 App Set usually pins its versions on purpose, because its apps are known to work well together at those versions.
 
@@ -133,7 +133,7 @@ credentials to read it.
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
 1. Create Kubernetes Secret with Docker Registry credentials in the organization namespace, where the `OCIRepository`

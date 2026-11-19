@@ -20,20 +20,20 @@ the App Template defaults (only for apps created from a template), and two optio
 `-user-values` ConfigMap and the `-user-secrets` Secret.
 
 An app goes into one of two directories of the cluster. A base app, one the cluster needs from the start, goes into
-`mapi/cluster/apps` and installs with the cluster: the cluster's Kustomization, `WC_NAME.yaml`, applies it. A
-secondary app goes into `mapi/apps`, which the cluster's apps Kustomization, `WC_NAME-apps.yaml`, applies once the
+`cluster/apps` and installs with the cluster: the cluster's Kustomization, `WC_NAME.yaml`, applies it. A
+secondary app goes into `apps`, which the cluster's apps Kustomization, `WC_NAME-apps.yaml`, applies once the
 cluster is ready, because its `dependsOn` waits for the cluster's Kustomization. The steps below add a secondary app;
-for a base app, use `mapi/cluster/apps` and list it in its `kustomization.yaml`. See
+for a base app, use `cluster/apps` and list it in its `kustomization.yaml`. See
 [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) to split a cluster that has a single
-Kustomization for all of `mapi`.
+Kustomization for all of its directory.
 
 ## Examples
 
 Examples of creating apps are available in following locations:
 
-- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/apps/hello-world/)
+- An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world/)
 - An example of an app created from an App Template, with plain and SOPS-encrypted (`secret.enc.yaml`) overrides, is
-  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi/cluster/apps/envoy-gateway-from-template/).
+  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
   It's a base app.
 
 ## Common steps
@@ -62,7 +62,7 @@ template uses, for example `hello-world` for [bases/apps/hello-world](/bases/app
 1. Go to the `apps` directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps
     ```
 
 1. Create new directory with a name corresponding to the App name, and enter it:
@@ -209,7 +209,7 @@ path to the directory in an env variable:
     ```
 
 1. In the current directory
-    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}`)
+    (`management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}`)
     create a new `kustomization.yaml` with the following content:
 
     ```sh
@@ -229,7 +229,7 @@ path to the directory in an env variable:
     kind: Kustomization
     namespace: org-\${organization}
     resources:
-      - ../../../../../../../../../${APP_TEMPLATE_DIR}
+      - ../../../../../../../../${APP_TEMPLATE_DIR}
       - secret.enc.yaml ## ONLY IF INCLUDING SECRET
     EOF
     ```
