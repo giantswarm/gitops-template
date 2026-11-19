@@ -1,0 +1,51 @@
+# Values of Giant Swarm's kyverno chart in the kind test. They only turn off the
+# objects whose CRDs a management cluster has and the kind cluster doesn't:
+# Cilium's CiliumNetworkPolicy, Grafana's PodLogs, the VerticalPodAutoscaler and
+# Prometheus' ServiceMonitor. The background and reports controllers request less CPU and
+# memory than the chart's 500m and 1Gi, which are sized for a management cluster: the kind
+# cluster is one node on a CI runner, and Flux has to fit next to them. Everything else is
+# the chart's default.
+ciliumNetworkPolicy:
+  enabled: false
+monitoring:
+  podLogs:
+    enabled: false
+verticalPodAutoscaler:
+  admissionController:
+    enabled: false
+  backgroundController:
+    enabled: false
+  cleanupController:
+    enabled: false
+  reportsController:
+    enabled: false
+  kyvernoPlugin:
+    enabled: false
+  policyReporter:
+    enabled: false
+  ui:
+    enabled: false
+kyverno:
+  admissionController:
+    serviceMonitor:
+      enabled: false
+  backgroundController:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    serviceMonitor:
+      enabled: false
+  cleanupController:
+    serviceMonitor:
+      enabled: false
+  reportsController:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    serviceMonitor:
+      enabled: false
+policy-reporter:
+  monitoring:
+    enabled: false

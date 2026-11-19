@@ -41,6 +41,10 @@ FLUX_CRD_SCHEMAS_URL="https://github.com/fluxcd/flux2/releases/download/v${FLUX_
 GS_SCHEMA_REF="108ad92b6114d12bb84d20a3e9740bea5b2afbf0"
 GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/${GS_SCHEMA_REF}/master"
 
+# Other CRDs, such as Kyverno's ClusterPolicy, from the CRDs catalog.
+CRDS_CATALOG_REF="784ec895547a36e548e6810b41f27baade3a0890"
+CRDS_CATALOG_REPOSITORY="https://raw.githubusercontent.com/datreeio/CRDs-catalog/${CRDS_CATALOG_REF}"
+
 SCHEMA_CACHE="${TMPDIR:-/tmp}/gitops-template-schemas"
 FLUX_SCHEMA_DIR="${SCHEMA_CACHE}/flux-v${FLUX_VERSION}"
 
@@ -120,6 +124,7 @@ function test() {
 					-schema-location "${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
 					-schema-location "${FLUX_SCHEMA_DIR}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
 					-schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+					-schema-location "${CRDS_CATALOG_REPOSITORY}/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json" \
 					-cache "${SCHEMA_CACHE}/http" \
 					"$tmp_file"
 			); then

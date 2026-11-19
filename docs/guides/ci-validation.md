@@ -241,6 +241,22 @@ cost a pod each rather than another kind cluster on the runner. In a [comparison
 with a second kind cluster, the vCluster took 29 seconds to set up against 17 (medians of 6 and 15 runs), and the whole
 kind job 254 seconds against 237, less than the spread of about 60 seconds between runs of the same setup.
 
+### Kyverno
+
+The [shared-objects example](../add_mc.md#share-an-object-with-every-organization) is a Kyverno `ClusterPolicy`, so
+the test installs Kyverno before Flux applies the repository. It installs Giant Swarm's charts, the ones team Shield
+ships to the management clusters, from `oci://gsoci.azurecr.io/charts/giantswarm`: `kyverno-crds` 1.19.2, as the
+`kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.1, the chart of `kyverno-app`. Kyverno's pods use the
+`giantswarm-critical` PriorityClass and its `PolicyException`s go in the `giantswarm` namespace, which every management
+cluster has, so the test first installs Giant Swarm's `priority-classes` 0.3.1 chart and creates the namespace. The
+charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
+turns off the objects whose CRDs the kind cluster doesn't have: the `CiliumNetworkPolicy`s, `PodLogs`,
+`VerticalPodAutoscaler`s and `ServiceMonitor`s. It also lowers the background and reports controllers' requests from
+the chart's 500m CPU and 1Gi, sized for a management cluster, so that Flux still fits on the single kind node.
+`test_shared_object_copied` creates a new `org-*` namespace and waits for the `shared-ca-bundle` ConfigMap to be
+copied into it. It then changes the source, with the management cluster's
+`Kustomization` suspended, waits for the copy to follow, and puts the source back.
+
 ## Superseded runs
 
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to

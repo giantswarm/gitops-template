@@ -23,8 +23,8 @@ from pytest_helm_charts.utils import wait_for_objects_condition
 from ci_context import master_gpg_key
 from flux_teardown import delete_without_prune
 
-# Its hooks skip the tests that need the cluster on a pull request from a fork.
-pytest_plugins = ["ci_context"]
+# ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install has a fixture.
+pytest_plugins = ["ci_context", "kyverno_install"]
 
 FLUX_GIT_REPO_NAME = "your-repo"
 

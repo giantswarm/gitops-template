@@ -20,8 +20,13 @@ from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
+from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
+
+# Kyverno has to run before gitops_deployment applies the repository: pytest sets up the
+#  fixtures of `usefixtures` before the ones a test requests.
+pytestmark = pytest.mark.usefixtures("kyverno")
 
 
 @pytest.fixture(scope="module")
@@ -135,6 +140,13 @@ def test_values_change_applied_at_once(
     check_helm_release_successful: dict[str, dict],
 ) -> None:
     check_values_change_applied(kube_cluster.kube_client)
+
+
+def test_shared_object_copied(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    check_shared_object_copied(kube_cluster.kube_client)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:

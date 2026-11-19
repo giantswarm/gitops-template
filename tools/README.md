@@ -41,6 +41,8 @@ kind has no schema fails instead of being skipped. The script looks up schemas i
    `${TMPDIR:-/tmp}/gitops-template-schemas`.
 3. Giant Swarm CRDs such as `Organization`, from [giantswarm/json-schema](https://github.com/giantswarm/json-schema)
    at a pinned commit.
+4. Other CRDs, such as Kyverno's `ClusterPolicy`, from [datreeio/CRDs-catalog](https://github.com/datreeio/CRDs-catalog)
+   at a pinned commit.
 
 The versions are variables at the top of `test-all-ff`. If you add a resource whose kind is in none of these sources,
 add a `-schema-location` for it to the script.
