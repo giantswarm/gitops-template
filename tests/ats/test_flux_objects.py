@@ -163,7 +163,7 @@ def test_commit_status_notifications(
     kube_cluster: Cluster,
     check_kustomizations_successful: None,
 ) -> None:
-    # N1: the GitHub Provider has its token from ESO, the Alert names it, the Receiver is Ready
+    # N1: the Receiver is Ready; assertions/exists/notifications checks the Provider and the Alert
     check_notifications(kube_cluster.kube_client)
 
 

@@ -9,10 +9,13 @@
 - [Fetch on push (optional)](#fetch-on-push-optional)
 
 Flux's notification-controller can tell you on GitHub whether Flux applied a commit. A `Provider` of type `github`
-posts a commit status to the repository, and an `Alert` decides which events it gets. With the `Alert` below, every
-Flux `Kustomization` in the `default` namespace reports on the commit it applied: the management cluster's, in
-`MC_NAME.yaml`, and the workload clusters', in the `workload-clusters` directories. Each `Kustomization` shows as its
-own check on the commit, green once it applied the commit and red when it failed.
+posts a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`,
+every Flux `Kustomization` in the `default` namespace and in the organization's namespace, `org-ORG_NAME`, reports on
+the commit it applied: the management cluster's, in `MC_NAME.yaml`, and the workload clusters', in the
+`workload-clusters` directories. Each `Kustomization` shows as its own check on the commit, green once it applied the
+commit and red when it failed. The `Alert` names both namespaces: an event source without a `namespace` matches only
+the `Alert`'s own. It never covers `flux-giantswarm`, where Giant Swarm's own `Kustomizations` live, so keep that
+namespace out of it.
 
 A `Receiver` does the opposite: GitHub calls it on a push, and Flux fetches the repository at once instead of
 waiting for the `GitRepository`'s interval. It's optional.
@@ -39,6 +42,7 @@ export MC_NAME=MC_CODENAME           # management cluster codename
 export GITOPS_REPO=REPO_NAME         # name of the Flux GitRepository, for example `gitops`
 export GITHUB_REPO=YOUR_ORG/YOUR_REPO
 export MC_DIR=management-clusters/${MC_NAME}
+export ORG_NAME=ORG_NAME             # organization whose clusters report, without the `org-` prefix
 ```
 
 ## Commit statuses
@@ -60,10 +64,12 @@ cp management-clusters/MC_NAME/notifications/commit-status-*.yaml ${MC_DIR}/noti
 ```
 
 In `commit-status-externalsecret.yaml`, set `secretStoreRef` to your store and `remoteRef.key` to the name of the
-token in your secret manager. In `commit-status-provider.yaml`, set the repository:
+token in your secret manager. In `commit-status-provider.yaml`, set the repository, and in `commit-status-alert.yaml`,
+the organization's namespace:
 
 ```sh
 yq -i '.spec.address = "https://github.com/'"${GITHUB_REPO}"'"' ${MC_DIR}/notifications/commit-status-provider.yaml
+yq -i '.spec.eventSources[1].namespace = "org-'"${ORG_NAME}"'"' ${MC_DIR}/notifications/commit-status-alert.yaml
 ```
 
 ### Token encrypted with SOPS
@@ -75,18 +81,29 @@ copy the `Provider` and the `Alert` only:
 mkdir -p ${MC_DIR}/notifications
 cp management-clusters/MC_NAME/notifications/commit-status-{provider,alert}.yaml ${MC_DIR}/notifications/
 yq -i '.spec.address = "https://github.com/'"${GITHUB_REPO}"'"' ${MC_DIR}/notifications/commit-status-provider.yaml
+yq -i '.spec.eventSources[1].namespace = "org-'"${ORG_NAME}"'"' ${MC_DIR}/notifications/commit-status-alert.yaml
 ```
 
-Then write the token into the Secret, and encrypt it with the management cluster's key, the one whose private key is
-in the `sops-gpg-master` Secret. `KEY_FP` is its fingerprint, as in the management cluster's rule in `.sops.yaml`:
+The Secret is encrypted with the management cluster's key, the one whose private key is in the `sops-gpg-master`
+Secret. Add a rule to `.sops.yaml`, so `sops` encrypts the files in the `notifications` directory with that key.
+`KEY_FP` is its fingerprint, as in the management cluster's rule for its `secrets` directory:
 
 ```sh
 export KEY_FP=MASTER_KEY_FINGERPRINT
+yq -i '.creation_rules += [{
+  "encrypted_regex": "^(data|stringData)$",
+  "path_regex": "management-clusters/'"${MC_NAME}"'/notifications/.*\\.enc\\.yaml",
+  "pgp": "'"${KEY_FP}"'"
+}]' .sops.yaml
+```
+
+Then write the token into the Secret, and encrypt it:
+
+```sh
 kubectl create secret generic github-commit-status-token --namespace=default \
   --from-literal=token=YOUR_GITHUB_TOKEN --dry-run=client -o yaml \
   > ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
-sops --encrypt --encrypted-regex '^(data|stringData)$' --pgp "${KEY_FP}" --in-place \
-  ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
+sops --encrypt --in-place ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
 ```
 
 ### Check the statuses
@@ -98,16 +115,16 @@ git add ${MC_DIR}/notifications && git commit -m "Report reconcile status on com
 ```
 
 The commit after this one shows a check for each `Kustomization` on GitHub, named `kustomization/NAME/...`. If none
-shows up, notification-controller logs why, for example a token without access. Find the namespace of the
-notification-controller that reads the `default` namespace, then read its log:
+shows up, notification-controller logs why, for example a token without access. On a Giant Swarm management cluster,
+your Flux runs in the `flux-system` namespace, apart from Giant Swarm's own in `flux-giantswarm`, so read the log of
+the notification-controller in `flux-system`:
 
 ```sh
-kubectl get deployments --all-namespaces -l app.kubernetes.io/component=notification-controller
-kubectl logs -n FLUX_NAMESPACE deployment/notification-controller | grep github-commit-status
+kubectl logs -n flux-system deployment/notification-controller | grep github-commit-status
 ```
 
-If Kustomizations that read another repository live in the `default` namespace too, list this repository's by name in
-the `Alert`'s `eventSources`, instead of `name: "*"`: GitHub refuses statuses for commits it doesn't know.
+If Kustomizations that read another repository live in the same namespaces, list this repository's by name in the
+`Alert`'s `eventSources`, instead of `name: "*"`: GitHub refuses statuses for commits it doesn't know.
 
 ## Fetch on push (optional)
 
@@ -116,7 +133,7 @@ The `Receiver` needs a secret that GitHub signs its webhook calls with, and GitH
 1. Create a random secret, for example with `openssl rand -hex 32`. Give it to Flux in the `token` key of the
    `github-webhook-token` Secret in the `default` namespace, the same way as the GitHub token above: copy
    `receiver-externalsecret.yaml` and store the secret in your secret manager, or create and encrypt the Secret with
-   SOPS.
+   SOPS in `${MC_DIR}/notifications/github-webhook-token.enc.yaml`.
 
 1. Copy the `Receiver`, and set the name of your `GitRepository`:
 

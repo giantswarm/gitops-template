@@ -26,6 +26,12 @@ class BucketCR(NamespacedFluxCR):
     kind = "Bucket"
 
 
+class ReceiverCR(NamespacedFluxCR):
+    version = "notification.toolkit.fluxcd.io/v1"
+    endpoint = "receivers"
+    kind = "Receiver"
+
+
 # The kinds a HelmRelease takes its chart from: `chartRef` names an OCIRepository or a
 #  HelmChart, `chart.spec.sourceRef` one of the others.
 CHART_SOURCE_KINDS: dict[str, type[APIObject]] = {

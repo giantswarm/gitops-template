@@ -11,3 +11,6 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/(cluster|apps|app_sets)/.*\.enc\.yaml
     age: age1caxqewcznafndw75462qmycsvlyc5djy58430dsfptg0uk927eesjt4smq
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/notifications/.*\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
