@@ -3,6 +3,7 @@
 - [Example](#example)
 - [Export environment variables](#export-environment-variables)
 - [Create Flux GPG regular key pair (optional step)](#create-flux-gpg-regular-key-pair-optional-step)
+- [Create an age key pair (optional step)](#create-an-age-key-pair-optional-step)
 - [Directory tree](#directory-tree)
 - [MC configuration](#mc-configuration)
 - [Recommended next steps](#recommended-next-steps)
@@ -158,6 +159,70 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
     ```
 
+## Create an age key pair (optional step)
+
+Instead of a GPG key, the cluster can have an [age](https://github.com/FiloSottile/age) key, which is simpler to
+create and handle. You need `age-keygen`. The master key stays a GPG key: it encrypts the age key like it encrypts
+the GPG keys of other clusters. The example `WC_NAME` cluster uses one; see [SOPS keys](./reference/sops-keys.md).
+
+1. Generate the key. The file holds the private key, so keep it out of the repository:
+
+    ```sh
+    age-keygen -o ${WC_NAME}.agekey
+    export AGE_PUBLIC_KEY=$(age-keygen -y ${WC_NAME}.agekey)
+    ```
+
+1. Save the private key as a Kubernetes Secret into the MC `secrets` directory. kustomize-controller reads age keys
+   from Secret keys that end in `.agekey`:
+
+    ```sh
+    kubectl create secret generic sops-age-${WC_NAME} \
+    --dry-run=client \
+    --namespace=default \
+    --from-file=${WC_NAME}.agekey=${WC_NAME}.agekey \
+    -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.agekey.enc.yaml
+    ```
+
+1. Add it to the resources of `management-clusters/${MC_NAME}/secrets/kustomization.yaml`, and encrypt it with the
+   master key:
+
+    ```sh
+    yq -i eval ".resources += \"${WC_NAME}.agekey.enc.yaml\" | .resources style=\"\"" \
+    management-clusters/${MC_NAME}/secrets/kustomization.yaml
+    gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
+    sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${WC_NAME}.agekey.enc.yaml
+    ```
+
+1. Save `${WC_NAME}.agekey` to an external encrypted storage, as for the GPG key above, then delete the file:
+
+    ```sh
+    rm ${WC_NAME}.agekey
+    ```
+
+1. Share the public key in this repository and add its rule to the [SOPS configuration file](/.sops.yaml):
+
+    ```sh
+    echo "${AGE_PUBLIC_KEY}" > management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.agekey.pub
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/mapi/.*\\.enc\\.yaml",
+      "age": "'"${AGE_PUBLIC_KEY}"'"
+    }]' .sops.yaml
+    ```
+
+1. Commit the encrypted Secret, `secrets/kustomization.yaml`, the public key and `.sops.yaml` together:
+
+    ```sh
+    git add management-clusters/${MC_NAME}/secrets \
+    management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.agekey.pub \
+    .sops.yaml
+    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
+    ```
+
+The cluster's `Kustomization`, below, names `sops-age-${WC_NAME}` in `decryption.secretRef`. A `Kustomization` reads
+one Secret: to use a GPG and an age key for the same cluster, put both private keys into that one Secret.
+
 ## Directory tree
 
 1. Go to the `workload-clusters` directory:
@@ -291,7 +356,8 @@ Kubernetes Secret, you MUST not create multiple Secrets.
       EOF
       ```
 
-    - if you have created a dedicated GPG key for the cluster (running with Secrets encryption):
+    - if you have created a dedicated GPG key for the cluster (running with Secrets encryption; for an age key,
+      name `sops-age-${WC_NAME}` instead):
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters

@@ -81,6 +81,12 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   that a new organization namespace gets the copy and that a change to the source reaches it. See
   [Share an object with every organization](docs/add_mc.md#share-an-object-with-every-organization).
   ([#242](https://github.com/giantswarm/gitops-template/issues/242))
+- SOPS age keys for workload clusters, next to GPG keys. `docs/add_wc_structure.md` shows how to create one and
+  `docs/reference/sops-keys.md` how it fits with the GPG keys, `.sops.yaml` example included. The example `WC_NAME`
+  cluster has a demo age key: its public key is in `.sops.keys/.sops.WC_NAME.agekey.pub`, its private key in the
+  `sops-age-wc-name` Secret, encrypted with the master key. `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with it,
+  and `WC_NAME-apps.yaml` decrypts the cert-manager values Secret. The kind test checks the decrypted Secret. GPG
+  keys and the `kubectl gs` commands are unchanged. ([#257](https://github.com/giantswarm/gitops-template/issues/257))
 
 ### Changed
 

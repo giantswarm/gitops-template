@@ -8,3 +8,6 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/mapi/.*\.enc\.yaml
     pgp: EA38 1E1C 6A90 C39B 8545  1385 9D02 FFD1 231A 8B4F
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/mapi/.*\.enc\.yaml
+    age: age1caxqewcznafndw75462qmycsvlyc5djy58430dsfptg0uk927eesjt4smq
