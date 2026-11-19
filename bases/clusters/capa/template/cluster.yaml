@@ -3,6 +3,8 @@ kind: OCIRepository
 metadata:
   labels:
     giantswarm.io/cluster: ${cluster_name}
+    # nobody can delete it, Flux included, until this label is removed
+    giantswarm.io/prevent-deletion: "true"
   name: ${cluster_name}
   namespace: org-${organization}
 spec:
@@ -44,9 +46,10 @@ spec:
     name: ${cluster_name}
     namespace: org-${organization}
   install:
+    # Flux remediates a failed install by uninstalling it, which deletes the
+    # cluster. Keep a failed install failed instead.
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m0s
   releaseName: ${cluster_name}
   serviceAccountName: automation

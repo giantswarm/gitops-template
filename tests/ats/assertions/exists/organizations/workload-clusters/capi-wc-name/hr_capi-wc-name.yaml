@@ -19,7 +19,6 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m0s
   releaseName: capi-wc-name
   serviceAccountName: automation

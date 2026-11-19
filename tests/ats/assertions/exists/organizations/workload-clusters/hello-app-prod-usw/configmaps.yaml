@@ -11,7 +11,7 @@ data:
         description: description
         name: hello-app-prod-usw
         organization: org-name
-        preventDeletion: false
+        preventDeletion: true
       providerSpecific: {}
 kind: ConfigMap
 metadata:

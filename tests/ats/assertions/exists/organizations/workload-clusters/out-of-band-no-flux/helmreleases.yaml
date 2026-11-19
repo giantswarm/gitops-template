@@ -168,7 +168,6 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m0s
   releaseName: out-of-band-no-flux
   serviceAccountName: automation
