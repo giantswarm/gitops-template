@@ -1,6 +1,6 @@
 # Forwards the events of the Kustomizations of this repository to the Provider: those in
 # `default`, the management cluster's in MC_NAME.yaml and the workload clusters', and those in
-# the organization's namespace. An event source without `namespace` matches only the Alert's
+# the organisation's namespace. An event source without `namespace` matches only the Alert's
 # own namespace, so the Alert never sees Giant Swarm's own Kustomizations in `flux-giantswarm`.
 # `info` forwards successes as well as failures, so a commit shows when Flux applied it. If
 # Kustomizations of another repository live in these namespaces, list this repository's by name.
@@ -18,4 +18,4 @@ spec:
       name: "*"
     - kind: Kustomization
       name: "*"
-      namespace: org-org-name  # TODO: change "org-name" to your organization's name
+      namespace: org-org-name  # TODO: change "org-name" to your organisation's name

@@ -10,7 +10,7 @@
 
 Flux's notification-controller can tell you on GitHub whether Flux applied a commit. A `Provider` of type `github`
 posts a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`,
-every Flux `Kustomization` in the `default` namespace and in the organization's namespace, `org-ORG_NAME`, reports on
+every Flux `Kustomization` in the `default` namespace and in the organisation's namespace, `org-ORG_NAME`, reports on
 the commit it applied: the management cluster's, in `MC_NAME.yaml`, and the workload clusters', in the
 `workload-clusters` directories. Each `Kustomization` shows as its own check on the commit, green once it applied the
 commit and red when it failed. The `Alert` names both namespaces: an event source without a `namespace` matches only
@@ -42,7 +42,7 @@ export MC_NAME=MC_CODENAME           # management cluster codename
 export GITOPS_REPO=REPO_NAME         # name of the Flux GitRepository, for example `gitops`
 export GITHUB_REPO=YOUR_ORG/YOUR_REPO
 export MC_DIR=management-clusters/${MC_NAME}
-export ORG_NAME=ORG_NAME             # organization whose clusters report, without the `org-` prefix
+export ORG_NAME=ORG_NAME             # organisation whose clusters report, without the `org-` prefix
 ```
 
 ## Commit statuses
@@ -65,7 +65,7 @@ cp management-clusters/MC_NAME/notifications/commit-status-*.yaml ${MC_DIR}/noti
 
 In `commit-status-externalsecret.yaml`, set `secretStoreRef` to your store and `remoteRef.key` to the name of the
 token in your secret manager. In `commit-status-provider.yaml`, set the repository, and in `commit-status-alert.yaml`,
-the organization's namespace:
+the organisation's namespace:
 
 ```sh
 yq -i '.spec.address = "https://github.com/'"${GITHUB_REPO}"'"' ${MC_DIR}/notifications/commit-status-provider.yaml

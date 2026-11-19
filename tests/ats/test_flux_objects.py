@@ -163,7 +163,8 @@ def test_commit_status_notifications(
     kube_cluster: Cluster,
     check_kustomizations_successful: None,
 ) -> None:
-    # N1: the Receiver is Ready; assertions/exists/notifications checks the Provider and the Alert
+    # N1: ESO wrote the tokens and the Receiver is Ready; assertions/exists/notifications checks
+    #  the Provider and the Alert
     check_notifications(kube_cluster.kube_client)
 
 
