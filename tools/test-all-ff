@@ -41,7 +41,7 @@ FLUX_CRD_SCHEMAS_URL="https://github.com/fluxcd/flux2/releases/download/v${FLUX_
 GS_SCHEMA_REF="108ad92b6114d12bb84d20a3e9740bea5b2afbf0"
 GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/${GS_SCHEMA_REF}/master"
 
-# Other CRDs, such as Kyverno's ClusterPolicy, from the CRDs catalog.
+# Other CRDs, such as Kyverno's ClusterPolicy and External Secrets Operator's ExternalSecret, from the CRDs catalog.
 CRDS_CATALOG_REF="784ec895547a36e548e6810b41f27baade3a0890"
 CRDS_CATALOG_REPOSITORY="https://raw.githubusercontent.com/datreeio/CRDs-catalog/${CRDS_CATALOG_REF}"
 

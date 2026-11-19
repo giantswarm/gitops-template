@@ -3,6 +3,7 @@
 import pykube
 from checks.kinds import REFERENCED_KINDS
 from conftest import FLUX_OBJECTS_NAMESPACE
+from external_secrets import ExternalSecretCR
 from pykube.objects import APIObject
 
 
@@ -57,6 +58,8 @@ PROTECTED_CLUSTER = ("HelmRelease", "org-org-name", "out-of-band-no-flux")
 PRUNE_KINDS: dict[str, type[APIObject]] = {
     **REFERENCED_KINDS,
     "Organization": OrganizationCR,
+    # the out-of-band-no-flux cluster's hello-world reads its secret values through one
+    "ExternalSecret": ExternalSecretCR,
 }
 # the GitRepository and the Kustomizations reconcile when asked
 PRUNE_TIMEOUT_SEC = 180

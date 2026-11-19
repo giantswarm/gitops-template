@@ -674,6 +674,12 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     yq -i '.resources += ["externalsecret.yaml"]' ${APP_DIR}/kustomization.yaml
     ```
 
+    For a complete example, see the
+    [`ExternalSecret` of hello-world](../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/mapi/apps/hello-world/externalsecret.yaml)
+    in the example cluster `WC_NAME_OUT_OF_BAND_NO_FLUX_APP`. It reads the store from
+    [secret store for testing](./appendices.md#secret-store-for-testing). The same cluster keeps the secret values of
+    envoy-gateway in a SOPS-encrypted Secret, so it shows both ways side by side.
+
 1. Add the app to the cluster's list of apps:
 
     ```sh
