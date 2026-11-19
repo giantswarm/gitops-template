@@ -23,7 +23,8 @@ spec:
   url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
   filter:
     # minor and patch releases of v36; a new major release is a change in Git.
-    # An exact version, such as '36.2.0', pins the cluster to it.
+    # An exact version, such as '36.2.0', pins the cluster to it. Like a new release,
+    # a change here reaches the cluster at the next window, or at once with --force.
     semver: '>=36.0.0 <37.0.0'
     # only the highest version
     limit: 1
