@@ -147,8 +147,14 @@ The test cluster runs the same versions as a Giant Swarm management cluster wher
 | --- | --- | --- |
 | Kubernetes | v1.36.1, the default node image of kind v0.32.0 | `kind_ver` in [validate.yaml](../../.github/workflows/validate.yaml) |
 | flux-app | 1.12.2 (Flux v2.7.5) | `gitops_flux_app_version` in validate.yaml |
-| app-operator and chart-operator | installed by apptestctl 0.27.0 | `apptestctl_ver` in validate.yaml |
 | Cluster API CRDs | v1.14.4 | `CAPI_VERSION` in [conftest.py](../../tests/ats/conftest.py) |
+
+The test installs Flux with helm, from Giant Swarm's `flux-app` chart in `oci://gsoci.azurecr.io/charts/giantswarm`.
+It doesn't install the app platform (app-operator and chart-operator), as the template uses no `App` CRs.
+[tests/ats/fixtures/flux-app-values.yaml](../../tests/ats/fixtures/flux-app-values.yaml) turns off the objects whose
+CRDs the kind cluster doesn't have: the `PodMonitor`s, and the chart's kube-state-metrics with its `ServiceMonitor`
+and `CiliumNetworkPolicy`. The shared workflow still installs `apptestctl`, at its own default version, but nothing
+uses it.
 
 The shared workflow doesn't take a node image, so the Kubernetes patch version is whatever the kind release defaults
 to. pytest prints the version it ran against at the top of its output, as `kubernetes server: v1.36.1 (linux/amd64)`.

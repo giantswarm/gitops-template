@@ -17,14 +17,14 @@ import yaml
 from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
-from pytest_helm_charts.giantswarm_app_platform.app import AppFactoryFunc, ConfiguredApp
 from pytest_helm_charts.utils import wait_for_objects_condition
 
 from ci_context import master_gpg_key
 from flux_teardown import delete_without_prune
 
-# ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install has a fixture.
-pytest_plugins = ["ci_context", "kyverno_install"]
+# ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
+# flux_install have fixtures.
+pytest_plugins = ["ci_context", "kyverno_install", "flux_install"]
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
@@ -48,7 +48,6 @@ CAPI_CORE_COMPONENTS_URL = (
 
 FLUX_NAMESPACE_NAME = "default"
 FLUX_DEPLOYMENTS_READY_TIMEOUT_SEC = 180
-APPTESTCTL_URL = "https://github.com/giantswarm/apptestctl/releases"
 GS_CRDS_URLS = [
     "https://raw.githubusercontent.com/giantswarm/apiextensions/master/helm/crds-common/templates/"
     + "security.giantswarm.io_organizations.yaml"
@@ -190,24 +189,6 @@ def gitops_test_config() -> GitOpsTestConfig:
 
 
 @pytest.fixture(scope="module")
-def flux_app_deployment(
-    kube_cluster: Cluster,
-    app_factory: AppFactoryFunc,
-    gitops_test_config: GitOpsTestConfig,
-) -> ConfiguredApp:
-    logger.debug(
-        f"Deploying 'flux-app' in version '{gitops_test_config.flux_app_version}'."
-    )
-    return app_factory(
-        "flux-app",
-        gitops_test_config.flux_app_version,
-        "giantswarm",
-        FLUX_OBJECTS_NAMESPACE,
-        "https://giantswarm.github.io/giantswarm-catalog/",
-    )
-
-
-@pytest.fixture(scope="module")
 def gs_crds(kube_cluster: Cluster) -> None:
     logger.debug("Deploying Giant Swarm CRDs to the test cluster")
     for crd in GS_CRDS_URLS:
@@ -249,14 +230,6 @@ def capi_crds(kube_cluster: Cluster) -> None:
         "wait --for=condition=Established --timeout=60s crd"
         " --selector=cluster.x-k8s.io/provider=cluster-api",
         output_format="name",
-    )
-
-
-@pytest.fixture(scope="module")
-def app_platform_controllers(kube_config: str) -> None:
-    logger.debug("Bootstrapping app platform controllers with `apptestctl`")
-    run_tool(
-        "apptestctl", APPTESTCTL_URL, "bootstrap", "--kubeconfig-path", kube_config
     )
 
 
@@ -671,21 +644,20 @@ def install_crds(api: pykube.HTTPClient, directory: str) -> None:
 def gitops_environment(
     gs_crds: None,
     capi_crds: None,
-    app_platform_controllers: None,
     init_namespaces: Any,
     installation_values: list[pykube.ConfigMap],
     gpg_master_key: Secret,
     workload_cluster: pykube.HTTPClient,
-    flux_app_deployment: ConfiguredApp,
+    flux_app_deployment: None,
     flux_deployments: list[pykube.Deployment],
-) -> ConfiguredApp:
-    return flux_app_deployment
+) -> None:
+    return None
 
 
 @pytest.fixture(scope="module")
 def gitops_deployment(
     kube_cluster: Cluster,
-    gitops_environment: ConfiguredApp,
+    gitops_environment: None,
     git_repository_factory: GitRepositoryFactoryFunc,
     gitops_test_config: GitOpsTestConfig,
 ) -> Iterable[Any]:
