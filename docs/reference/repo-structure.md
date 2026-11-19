@@ -44,6 +44,7 @@ management-clusters
             ├── [kustomization.yaml]                    (mandatory when there are no workload-clusters)
             ├── [OTHER_RESOURCES]
             ├── ORG_NAME.yaml
+            ├── [teams]                                 application teams' ServiceAccounts, see guides/app-teams.md
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
