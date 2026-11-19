@@ -753,11 +753,34 @@ example, `semver: 3.2.x` installs every new patch version.
 Skip this step to keep the cluster. When you delete the cluster's files, Flux deletes its `Kustomization`s, its apps
 and its configuration, but not the cluster: its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled`
 annotation, so Flux keeps it, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label
-is removed. You remove the label and delete it by hand at the end. See [How it works](./how-it-works.md).
+is removed. The cluster's `OCIRepository` and `Cluster` carry the label too. You remove the labels first, and delete
+the `HelmRelease` by hand at the end. See [How it works](./how-it-works.md).
 
 > **Warning:** `kubectl gs` doesn't write the annotation or the label yet. The `Organization` that `kubectl gs gitops
 > add organization` writes doesn't have them, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add
 > base` writes. Add them by hand before you rely on them to keep those objects when their files are deleted.
+
+1. Remove the label from the cluster's `OCIRepository` and `HelmRelease`, and set
+   `global.metadata.preventDeletion` to `false`, so that the chart removes it from the cluster's `Cluster` too:
+
+    ```sh
+    yq -i '.patches += [{"patch": "[{\"op\": \"remove\", \"path\": \"/metadata/labels/giantswarm.io~1prevent-deletion\"}]", "target": {"labelSelector": "giantswarm.io/prevent-deletion"}}, {"patch": "{\"apiVersion\": \"helm.toolkit.fluxcd.io/v2\", \"kind\": \"HelmRelease\", \"metadata\": {\"name\": \"cluster\"}, \"spec\": {\"values\": {\"global\": {\"metadata\": {\"preventDeletion\": false}}}}}", "target": {"kind": "HelmRelease"}}]' ${WC_DIR}/cluster/kustomization.yaml
+    ```
+
+    `spec.values` takes precedence over the ConfigMaps in `valuesFrom`, so this works whatever values the cluster has.
+    Commit and push, and make Flux read the change right away:
+
+    ```sh
+    git commit -am "Remove the deletion protection of workload cluster ${WC_NAME}" && git push
+    flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
+    ```
+
+    Then wait until the `Cluster` has lost the label, which takes an upgrade of the chart. The `PREVENT-DELETION`
+    column has to be empty:
+
+    ```sh
+    kubectl get clusters.cluster.x-k8s.io ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
+    ```
 
 1. Remove the cluster from the organization's list:
 
@@ -795,10 +818,9 @@ is removed. You remove the label and delete it by hand at the end. See [How it w
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
-1. Finally, remove the label from the cluster's `HelmRelease` and delete it. This deletes the cluster:
+1. Finally, delete the cluster's `HelmRelease`, which no longer has the label. This deletes the cluster:
 
     ```sh
-    kubectl label helmrelease ${WC_NAME} -n org-${ORG_NAME} giantswarm.io/prevent-deletion-
     kubectl delete helmrelease ${WC_NAME} -n org-${ORG_NAME}
     ```
 
