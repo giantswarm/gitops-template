@@ -446,11 +446,6 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
      there.
   1. Remove the annotation in Git again once the cluster's `Kustomization`s are `Ready` at that commit. Keep it on the
      objects that carry it anyway, such as the cluster's `HelmRelease`.
-- The CAPA cluster base matches what `kubectl gs gitops add base` writes: its `OCIRepository` has the
-  `giantswarm.io/prevent-deletion` label too, it sets `global.metadata.preventDeletion: true` so that the chart labels
-  the `Cluster`, and it no longer retries a failed install, because Flux uninstalls the release before each retry,
-  which deletes the cluster. Deleting the cluster in the getting started guides now removes the labels in a first push.
-  ([#323](https://github.com/giantswarm/gitops-template/pull/323))
 
 ### Removed
 
