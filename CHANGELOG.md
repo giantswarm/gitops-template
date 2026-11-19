@@ -585,6 +585,11 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Secret's base64 `values`) and every other change under the same top-level key, so a values regression passed. Only
   trailing whitespace on each line is ignored now, which is what the skip was for: `|` against `|-` in an assertion
   file. ([#222](https://github.com/giantswarm/gitops-template/issues/222))
+- Removing the envoy-gateway App Template could fail: helm-controller ignores `dependsOn` on delete, so the three
+  releases were uninstalled at once, and when Envoy Gateway went first the `giantswarm-default` `GatewayClass` kept
+  its finalizer and the `gateway-api-config` uninstall waited on it for its 10-minute `timeout`, then failed. That
+  release sets `spec.uninstall.disableWait` now. The App Templates guide shows how to clear the finalizer when the
+  `GatewayClass` stays behind in a cluster that stays up.
 
 ## [0.1.0] Initial release
 

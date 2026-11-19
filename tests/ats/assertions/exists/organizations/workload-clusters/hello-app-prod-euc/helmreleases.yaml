@@ -124,6 +124,8 @@ spec:
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
   timeout: 10m
+  uninstall:
+    disableWait: true
   upgrade:
     remediation:
       remediateLastFailure: true
