@@ -277,4 +277,4 @@ The kind test takes a while, so `validate.yaml` runs once per pull request at a 
 a pull request, the run for the previous commit is cancelled. Pushes to a branch, such as a merge to `main`, don't
 cancel the run in progress: it finishes, and GitHub keeps only the newest of the push runs waiting behind it.
 
-#Bad heading for a lint probe
+Probe line, fixed.
