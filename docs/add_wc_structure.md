@@ -89,13 +89,14 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
-1. Save the private key as a Kubernetes Secret into the MC `secrets` directory:
+1. Save the private key as a Kubernetes Secret into the MC `secrets` directory. It goes into the organization's
+   namespace, where the cluster's Kustomization reads it:
 
     ```sh
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-${WC_NAME} \
     --dry-run=client \
-    --namespace=default \
+    --namespace=org-${ORG_NAME} \
     --from-file=${WC_NAME}.main.asc=/dev/stdin \
     -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
     ```
@@ -172,13 +173,13 @@ the GPG keys of other clusters. The example `WC_NAME` cluster uses one; see [SOP
     export AGE_PUBLIC_KEY=$(age-keygen -y ${WC_NAME}.agekey)
     ```
 
-1. Save the private key as a Kubernetes Secret into the MC `secrets` directory. kustomize-controller reads age keys
-   from Secret keys that end in `.agekey`:
+1. Save the private key as a Kubernetes Secret into the MC `secrets` directory, in the organization's namespace.
+   kustomize-controller reads age keys from Secret keys that end in `.agekey`:
 
     ```sh
     kubectl create secret generic sops-age-${WC_NAME} \
     --dry-run=client \
-    --namespace=default \
+    --namespace=org-${ORG_NAME} \
     --from-file=${WC_NAME}.agekey=${WC_NAME}.agekey \
     -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.agekey.enc.yaml
     ```
@@ -336,7 +337,8 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    what you delete from the cluster's files, but not the cluster, if its `HelmRelease` has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
    cluster bases of this repository. See
-   [How it works](./how-it-works.md). Use one of the templates:
+   [How it works](./how-it-works.md). It lives in the organization's namespace and runs as its `automation`
+   ServiceAccount, see [Tenancy](./how-it-works.md#tenancy). Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
@@ -348,7 +350,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
-        namespace: default
+        namespace: org-${ORG_NAME}
       spec:
         interval: 10m
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
@@ -362,6 +364,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
         sourceRef:
           kind: GitRepository
           name: ${GIT_REPOSITORY_NAME}
+          namespace: default
         timeout: 2m
       EOF
       ```
@@ -377,7 +380,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
-        namespace: default
+        namespace: org-${ORG_NAME}
       spec:
         decryption:
           provider: sops
@@ -395,6 +398,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
         sourceRef:
           kind: GitRepository
           name: ${GIT_REPOSITORY_NAME}
+          namespace: default
         timeout: 2m
       EOF
       ```

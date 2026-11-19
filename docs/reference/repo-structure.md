@@ -281,6 +281,8 @@ resources:
 
 Both set the variables, like `${cluster_name}`, that the bases use. See [How it works](../how-it-works.md) for why the
 management cluster's and the clusters' Kustomizations are separate.
+The management cluster's Kustomization lives in `default`, and the clusters' Kustomizations in their organization's
+namespace, such as `org-org-name`, see [Tenancy](../how-it-works.md#tenancy).
 
 A cluster with apps has two Kustomizations:
 
@@ -305,7 +307,8 @@ lists `cluster`, and needs no health check.
 `kubectl gs gitops add workload-cluster` still generates a `mapi` directory, with `cluster` and `apps` in it, and a
 single `WC_NAME.yaml` that applies all of `mapi`, so its apps don't wait for the cluster. Move the contents of `mapi`
 up into the cluster's directory, take one `../` off the paths to the bases in `cluster/kustomization.yaml`, which it
-writes for `mapi/cluster`, add the cluster's `kustomization.yaml`, and split the Kustomization as above.
+writes for `mapi/cluster`, add the cluster's `kustomization.yaml`, and split the Kustomization as above. It also
+writes the Kustomization into `default`: put the two into the organization's namespace.
 
 ### Reconcile intervals
 

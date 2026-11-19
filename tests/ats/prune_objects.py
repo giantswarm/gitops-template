@@ -2,6 +2,7 @@
 
 import pykube
 from checks.kinds import REFERENCED_KINDS
+from cluster_gates import CLUSTERS_NAMESPACE
 from conftest import FLUX_OBJECTS_NAMESPACE
 from external_secrets import ExternalSecretCR
 from pykube.objects import APIObject
@@ -27,13 +28,13 @@ PRUNE_IGNORE = "\n".join(
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
 # the Kustomization of the out-of-band-no-flux cluster's secondary apps, which applies the app set
 APPS_KUSTOMIZATION = (
-    FLUX_OBJECTS_NAMESPACE,
+    CLUSTERS_NAMESPACE,
     "mc-name-clusters-out-of-band-no-flux-apps",
 )
 # the Kustomizations of the out-of-band-no-flux cluster: the cluster's, which applies the
 #  cluster's HelmRelease and its base apps, and the one of its secondary apps
 CLUSTER_KUSTOMIZATIONS = [
-    (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
+    (CLUSTERS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
     APPS_KUSTOMIZATION,
 ]
 # P1: an app, the hello-web-app-1 app set of the out-of-band-no-flux cluster. spec.ignore can't

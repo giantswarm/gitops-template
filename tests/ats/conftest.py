@@ -19,6 +19,7 @@ from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.utils import wait_for_objects_condition
 
+from automation_rbac import automation_binding
 from ci_context import master_gpg_key
 from flux_teardown import delete_without_prune
 
@@ -256,7 +257,7 @@ def init_namespaces(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Any]:
     created_namespaces: list[pykube.Namespace] = []
-    created_cluster_role_bindings: list[pykube.ClusterRoleBinding] = []
+    created_bindings: list[pykube.objects.APIObject] = []
     created_service_accounts: list[pykube.ServiceAccount] = []
 
     for ns in gitops_test_config.init_namespaces:
@@ -283,29 +284,11 @@ def init_namespaces(
             sa.create()
             created_service_accounts.append(sa)
 
-        crb_name = f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin-{ns}"
-        crb_on_cluster = pykube.ClusterRoleBinding.objects(
-            kube_cluster.kube_client
-        ).get_or_none(name=crb_name)
-        if not crb_on_cluster:
-            crb = pykube.ClusterRoleBinding(
-                kube_cluster.kube_client,
-                {
-                    "metadata": {
-                        "name": crb_name,
-                    },
-                    "roleRef": {"kind": "ClusterRole", "name": "cluster-admin"},
-                    "subjects": [
-                        {
-                            "kind": "ServiceAccount",
-                            "name": FLUX_IMPERSONATION_SA_NAME,
-                            "namespace": ns,
-                        }
-                    ],
-                },
-            )
-            crb.create()
-            created_cluster_role_bindings.append(crb)
+        # cluster-admin for default/automation, admin of its own namespace for an org's
+        binding = automation_binding(kube_cluster.kube_client, ns)
+        if not binding.exists():
+            binding.create()
+            created_bindings.append(binding)
 
     yield
 
@@ -313,8 +296,8 @@ def init_namespaces(
         sa.delete()
     for namespace in created_namespaces:
         namespace.delete()
-    for crb in created_cluster_role_bindings:
-        crb.delete()
+    for binding in created_bindings:
+        binding.delete()
 
 
 @pytest.fixture(scope="module")

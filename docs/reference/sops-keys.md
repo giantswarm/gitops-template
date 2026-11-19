@@ -24,7 +24,9 @@ To encrypt files of a workload cluster, add a key pair for it:
 
 The cluster's two Kustomizations reference that Secret in `spec.decryption` and use it to decrypt what they apply:
 `WC_NAME.yaml` the `WC_NAME/cluster` directory, and `WC_NAME-apps.yaml` the `WC_NAME/apps` and `WC_NAME/app_sets`
-directories.
+directories. A Kustomization reads that Secret from its own namespace, so the Secret goes into the namespace of the
+cluster's organization, where its Kustomizations live, see [Tenancy](../how-it-works.md#tenancy). The master key
+stays in `default`, with the management cluster's Kustomization.
 
 ```text
                 MC_NAME.yaml

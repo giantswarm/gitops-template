@@ -372,8 +372,10 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 > ```
 >
 > The CLI still writes a single `Kustomization` that applies all of `${WC_DIR}/mapi`, so the apps don't wait for the
-> cluster. Replace it with the two `Kustomization`s of the last step below, and add `${WC_DIR}/kustomization.yaml`
-> as in the step before it.
+> cluster. It also puts it into the `default` namespace, where it runs as `default/automation`, which can write every
+> organization's namespace. Replace it with the two `Kustomization`s of the last step below, which live in
+> `org-${ORG_NAME}`, see [Tenancy](./how-it-works.md#tenancy), and add `${WC_DIR}/kustomization.yaml` as in the step
+> before it.
 >
 > Then commit and push, as in the last step below.
 
@@ -463,7 +465,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     kind: Kustomization
     metadata:
       name: ${MC_NAME}-clusters-${WC_NAME}
-      namespace: default
+      namespace: org-${ORG_NAME}
     spec:
       healthCheckExprs:
         - apiVersion: cluster.x-k8s.io/v1beta2
@@ -488,6 +490,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
       sourceRef:
         kind: GitRepository
         name: ${GITOPS_REPO}
+        namespace: default
       timeout: 30m
     EOF
     ```
@@ -501,7 +504,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     kind: Kustomization
     metadata:
       name: ${MC_NAME}-clusters-${WC_NAME}-apps
-      namespace: default
+      namespace: org-${ORG_NAME}
     spec:
       dependsOn:
         - name: ${MC_NAME}-clusters-${WC_NAME}
@@ -519,6 +522,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
       sourceRef:
         kind: GitRepository
         name: ${GITOPS_REPO}
+        namespace: default
       timeout: 2m
     EOF
     ```
@@ -544,7 +548,7 @@ kubectl gs get clusters -n org-${ORG_NAME}
 Once it's up, the cluster's `Kustomization` is `Ready`, and the apps' `Kustomization` after it:
 
 ```sh
-flux get kustomizations -n default | grep ${MC_NAME}-clusters-${WC_NAME}
+flux get kustomizations -n org-${ORG_NAME} | grep ${MC_NAME}-clusters-${WC_NAME}
 ```
 
 Once the cluster is up, log in to it:
@@ -806,7 +810,7 @@ the `HelmRelease` by hand at the end. See [How it works](./how-it-works.md).
 
     ```sh
     kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME} \
-      kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n default --timeout=10m
+      kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n org-${ORG_NAME} --timeout=10m
     ```
 
 1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
@@ -814,7 +818,7 @@ the `HelmRelease` by hand at the end. See [How it works](./how-it-works.md).
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
-        -l 'kustomize.toolkit.fluxcd.io/name in ('"${MC_NAME}-clusters-${WC_NAME},${MC_NAME}-clusters-${WC_NAME}-apps"'),kustomize.toolkit.fluxcd.io/namespace=default' \
+        -l 'kustomize.toolkit.fluxcd.io/name in ('"${MC_NAME}-clusters-${WC_NAME},${MC_NAME}-clusters-${WC_NAME}-apps"'),kustomize.toolkit.fluxcd.io/namespace=org-'"${ORG_NAME}" \
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 

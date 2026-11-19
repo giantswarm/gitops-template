@@ -16,7 +16,8 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
 1. You push a commit. A Flux `GitRepository` on the management cluster fetches it.
 1. The management cluster's own Flux `Kustomization`, `demomc.yaml`, applies everything under
    `management-clusters/demomc`: the organizations, and the Flux `Kustomization` of each workload cluster listed in
-   `workload-clusters/kustomization.yaml`, such as `demowc.yaml`. A cluster file that isn't in that list does
+   `workload-clusters/kustomization.yaml`, such as `demowc.yaml`, in the `org-demoorg` namespace, see
+   [Tenancy](#tenancy). A cluster file that isn't in that list does
    nothing. It stops there and doesn't apply what's inside the `demowc` directory.
 1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory. While it does, it fills in variables
    such as `${cluster_name}`, `${organization}` and `${release}` from its own settings.
@@ -80,6 +81,68 @@ workload cluster. Resources that must be applied inside the workload cluster dir
 `out-of-band` directory next to them, which the cluster's `kustomization.yaml` leaves out. A third Kustomization,
 such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. You can also run Flux in the workload
 cluster and point it at that directory.
+
+## Tenancy
+
+A management cluster serves several organizations, and each organization has its own namespace, such as
+`org-demoorg`. Giant Swarm creates an `automation` ServiceAccount in `default` and in every organization namespace,
+and the Kustomizations run as one of them, through `serviceAccountName: automation` in their own namespace:
+
+- `default/automation` can write everywhere. Only the management cluster's Kustomization, `demomc.yaml`, lives in
+  `default` and runs as it. It applies the organizations, the SOPS key Secrets and the clusters' Kustomizations.
+- `org-demoorg/automation` can write the `org-demoorg` namespace, and no other organization's. The Kustomizations of
+  the organization's clusters, such as `demowc.yaml`, live in `org-demoorg` and run as it.
+
+So a cluster's files can only create and change objects in their own organization's namespace. If they name another
+organization's namespace, by mistake or on purpose, Kubernetes refuses the objects and the Kustomization reports the
+error. The kind test in [CI validation](./guides/ci-validation.md) checks this.
+
+What else lives where follows from it:
+
+- The `GitRepository` stays in `default`, so the clusters' Kustomizations name its namespace in `sourceRef`.
+- A Kustomization reads its decryption Secret from its own namespace, so a cluster's SOPS key Secret goes into the
+  organization namespace, see [SOPS keys](./reference/sops-keys.md). The management cluster's Kustomization applies
+  it from `secrets/`.
+- An entry in `dependsOn` without a namespace means the Kustomization's own namespace, so a cluster's Kustomizations
+  stay together.
+- A `-direct` Kustomization, which applies `out-of-band` with the cluster's kubeconfig, already lives in the
+  organization namespace, next to the `demowc-kubeconfig` Secret.
+
+`kubectl gs gitops add workload-cluster` still writes the cluster's Kustomization into `default`, where it runs as
+`default/automation`. Move it before you push, or move an existing one as below.
+
+### Move a cluster's Kustomizations into the organization namespace
+
+A Kustomization in a new namespace is a new object. When you change the namespace in Git, the management cluster's
+Kustomization creates the new one and deletes the old one. A Kustomization with `prune: true` deletes what it applied
+when it is deleted, such as the cluster's apps, so stop the old one from pruning first:
+
+1. Set `prune: false` in the cluster's Kustomization files, such as `demowc.yaml` and `demowc-apps.yaml`, and push.
+   Wait until Flux has applied it, until this prints `false` for each of them:
+
+    ```sh
+    kubectl get kustomization demomc-clusters-demowc -n default -o jsonpath='{.spec.prune}'
+    ```
+
+1. In each file, set `metadata.namespace` to `org-demoorg` and add `namespace: default` to `sourceRef`. If the
+   cluster has a SOPS key, move its Secret into `org-demoorg` too. Changing an encrypted file by hand breaks its SOPS
+   checksum, so set the namespace with a patch in `secrets/kustomization.yaml`, as the example there does. Push.
+   Flux creates the new Kustomizations, which take over the cluster's objects, and deletes the old ones, which leave
+   them.
+1. Check that the new Kustomizations are `Ready`:
+
+    ```sh
+    flux get kustomizations -n org-demoorg
+    ```
+
+1. Set `prune: true` again in the files, and push.
+1. The old key Secret stays in `default`, as it is protected like every key, see above. Delete it by hand once the
+   new Kustomizations are `Ready`:
+
+    ```sh
+    kubectl label secret sops-gpg-demowc -n default giantswarm.io/prevent-deletion-
+    kubectl delete secret sops-gpg-demowc -n default
+    ```
 
 ## Bases and variables
 

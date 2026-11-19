@@ -490,7 +490,7 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: ${MC_NAME}-clusters-hello-app-dev-1
-  namespace: default
+  namespace: org-${ORG_NAME}
 spec:
   interval: 10m
   path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1"
@@ -505,6 +505,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: ${GIT_REPOSITORY_NAME}
+    namespace: default
   timeout: 2m
 EOF
 ```

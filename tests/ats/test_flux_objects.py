@@ -22,6 +22,7 @@ from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
+from tenancy import check_other_organization_refused
 from values_watch import check_values_change_applied
 
 # Kyverno has to run before gitops_deployment applies the repository: pytest sets up the
@@ -152,6 +153,14 @@ def test_shared_object_copied(
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
     # G1: a cluster's apps Kustomizations apply nothing until the cluster is Available
     assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
+
+
+def test_organization_kept_out_of_other_organizations(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    # T2: an organization's Kustomization runs as its own automation ServiceAccount
+    check_other_organization_refused(kube_cluster.kube_client)
 
 
 # must stay last: it deletes what the tests above check

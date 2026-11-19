@@ -7,7 +7,7 @@ metadata:
     giantswarm.io/managed-by: flux
     gitops.giantswarm.io/appSet: hello-web-app
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: out-of-band-no-flux-hello-world
   namespace: org-org-name
 spec:
@@ -24,7 +24,7 @@ metadata:
     giantswarm.io/cluster: out-of-band-no-flux
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: out-of-band-no-flux-hello-world-standalone
   namespace: org-org-name
 spec:
@@ -41,7 +41,7 @@ metadata:
     giantswarm.io/cluster: out-of-band-no-flux
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: out-of-band-no-flux-hello-world-app-auto
   namespace: org-org-name
 spec:
