@@ -26,15 +26,18 @@ The example is in the out-of-band-no-flux cluster, in
   has a [`Password` generator](https://external-secrets.io/latest/api/generator/password/), an `ExternalSecret` that
   writes its password into `${cluster_name}-generated-password`, and a `PushSecret` that copies it into the workload
   cluster as `generated-password`. The `ExternalSecret` has `refreshPolicy: CreatedOnce`: without it, ESO makes a new
-  password at every refresh.
+  password at every refresh. The `PushSecret` has `updatePolicy: IfNotExists`, so it writes the password only into a
+  cluster that hasn't got one: if the Secret on the management cluster is ever made again, with a new password, the
+  workload cluster keeps the one it has.
 
-The cluster's apps Kustomization, `WC_NAME-apps.yaml`, applies the directory once the cluster is ready, so the
-secrets arrive as soon as the cluster can take them. The `PushSecret`s copy them again every `refreshInterval`, so a
-secret you change in your secret manager reaches the cluster within two hours, one refresh of each.
+The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies the directory once the cluster
+is ready, so the secrets arrive as soon as the cluster can take them. The `PushSecret`s copy them again every
+`refreshInterval`, so a secret you change in your secret manager reaches the cluster within two hours, one refresh of
+each.
 
-To push a secret into another cluster, copy the directory into that cluster's `apps` and add its files to the
-cluster's `kustomization.yaml`. For other secrets, add an `ExternalSecret` and a `PushSecret` the same way. ESO has
-other generators too, for example `ECRAuthorizationToken` and `ACRAccessToken` for short-lived registry tokens, see
+To push a secret into another cluster, copy the directory into that cluster's `apps` and add its files to
+`apps/kustomization.yaml`. For other secrets, add an `ExternalSecret` and a `PushSecret` the same way. ESO has other
+generators too, for example `ECRAuthorizationToken` and `ACRAccessToken` for short-lived registry tokens, see
 [Generators](https://external-secrets.io/latest/api/generator/).
 
 The `PushSecret`s keep the default `deletionPolicy: None`: deleting them leaves the Secrets in the workload cluster.
@@ -49,11 +52,13 @@ issues for a ServiceAccount, so no cloud credential is stored in the cluster or 
 - [azure-key-vault](/bases/secret_stores/azure-key-vault/) reads Azure Key Vault with Azure Workload Identity. In
   Azure, create a managed identity that can read the key vault's secrets, and give it a federated credential for the
   management cluster's service account issuer and the subject
-  `system:serviceaccount:org-ORG_NAME:external-secrets-azure-key-vault`. Set the key vault's URL in
-  `secret-store.yaml`, and the identity's client ID and your tenant ID in `service-account.yaml`.
+  `system:serviceaccount:org-ORG_NAME:external-secrets-azure-key-vault`, with the audience
+  `api://AzureADTokenExchange`, which ESO asks for. Set the key vault's URL in `secret-store.yaml`, and the identity's
+  client ID and your tenant ID in `service-account.yaml`.
 - [aws-secrets-manager](/bases/secret_stores/aws-secrets-manager/) reads AWS Secrets Manager with IAM roles for
   service accounts. In AWS, create an IAM role that can read your secrets and that trusts the management cluster's
-  service account issuer for the subject `system:serviceaccount:org-ORG_NAME:external-secrets-aws-secrets-manager`.
+  service account issuer for the subject `system:serviceaccount:org-ORG_NAME:external-secrets-aws-secrets-manager`
+  and the audience `sts.amazonaws.com`, which ESO asks for.
   Set the region in `secret-store.yaml` and the role's ARN in `service-account.yaml`.
 
 Ask Giant Swarm support for your management cluster's service account issuer URL.
@@ -86,5 +91,5 @@ Azure Key Vault allows only letters, digits and hyphens in names.
 
 The kind test runs the example for real: it creates the test store, and a vCluster stands in for the workload
 cluster. It checks that both Secrets are on the management cluster and in the workload cluster. CI can't reach a
-cloud secret manager, so the bases in `bases/secret_stores` are checked against the schemas of their kinds only, by
-`tools/test-all-ff validate`.
+cloud secret manager, so `tools/test-all-ff validate` only builds each base in `bases/secret_stores` and checks it
+against the schemas of its kinds.

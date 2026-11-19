@@ -151,15 +151,25 @@ function test() {
 	if [ "${mode}" == "validate" ]; then
 		# The secret stores in bases/secret_stores read cloud secret managers, which CI can't
 		# reach, so no cluster of the repository uses them and no Kustomization above builds
-		# them. Their manifests are checked as they are.
-		echo -n "kubeconform, bases/secret_stores: "
-		mapfile -t store_files < <(find bases/secret_stores -name '*.yaml' -not -name kustomization.yaml | sort)
-		if ! kubeconform_check "${store_files[@]}"; then
-			has_validation_errors=1
-		else
+		# them. Each base is built here and its manifests checked.
+		for base in $(find bases/secret_stores -name kustomization.yaml -printf '%h\n' | sort); do
+			echo -n "build ${base}: "
+			tmp_file="${tmp_dir}/base.yaml"
+			if ! build_errors=$(kubectl kustomize "${base}" 2>&1 >"${tmp_file}"); then
+				echo "${build_errors}"
+				echo ""
+				has_validation_errors=1
+				continue
+			fi
 			echo "OK"
-		fi
-		echo ""
+			echo -n "kubeconform: "
+			if ! kubeconform_check "${tmp_file}"; then
+				has_validation_errors=1
+			else
+				echo "OK"
+			fi
+			echo ""
+		done
 	fi
 
 	if [ "${mode}" == "validate" ]; then

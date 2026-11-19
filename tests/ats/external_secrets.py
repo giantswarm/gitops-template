@@ -12,9 +12,9 @@ from collections.abc import Iterator
 import pykube
 import pytest
 from conftest import HELM_URL, apply, run_tool
-from pykube.objects import APIObject, NamespacedAPIObject
+from eso_kinds import ClusterSecretStoreCR
 from pytest_helm_charts.clusters import Cluster
-from workload_cluster_secrets import controller_egress_policy
+from workload_cluster_secrets import COMMON, controller_egress
 
 ESO_RELEASE_NAME = "external-secrets"
 ESO_NAMESPACE = "external-secrets"
@@ -39,27 +39,12 @@ SECRET_STORE = {
                         "key": "gitops/hello-world-values",
                         "value": "podAnnotations:\n  example.com/source: secret-manager\n",
                     },
-                    {
-                        "key": "workload-clusters-common-token",
-                        "value": "common-token-from-secret-manager",
-                    },
+                    {"key": "workload-clusters-common-token", "value": COMMON.value},
                 ]
             }
         }
     },
 }
-
-
-class ExternalSecretCR(NamespacedAPIObject):
-    version = "external-secrets.io/v1"
-    endpoint = "externalsecrets"
-    kind = "ExternalSecret"
-
-
-class ClusterSecretStoreCR(APIObject):
-    version = "external-secrets.io/v1"
-    endpoint = "clustersecretstores"
-    kind = "ClusterSecretStore"
 
 
 class StoreTimeoutError(TimeoutError):
@@ -120,15 +105,12 @@ def external_secrets(kube_cluster: Cluster, kube_config: str) -> Iterator[None]:
         f"{ESO_READY_TIMEOUT_SEC}s",
     )
     try:
-        egress = apply(
-            controller_egress_policy(
-                kube_cluster.kube_client, ESO_NAMESPACE, ESO_RELEASE_NAME
-            )
-        )
-        store = create_store(kube_cluster.kube_client, STORE_CREATE_TIMEOUT_SEC)
-        yield
-        store.delete()
-        egress.delete()
+        with controller_egress(
+            kube_cluster.kube_client, ESO_NAMESPACE, ESO_RELEASE_NAME
+        ):
+            store = create_store(kube_cluster.kube_client, STORE_CREATE_TIMEOUT_SEC)
+            yield
+            store.delete()
     finally:
         helm(
             kube_config,
