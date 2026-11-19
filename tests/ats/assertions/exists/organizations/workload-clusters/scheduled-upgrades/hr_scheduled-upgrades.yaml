@@ -1,0 +1,44 @@
+# The scheduled-upgrades cluster's HelmRelease, which its ResourceSet renders, not its
+# Kustomization: neither deleting the ResourceSet nor removing it from Git deletes it.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  annotations:
+    fluxcd.controlplane.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: scheduled-upgrades
+    giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
+    resourceset.fluxcd.controlplane.io/name: scheduled-upgrades
+    resourceset.fluxcd.controlplane.io/namespace: org-org-name
+  name: scheduled-upgrades
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: scheduled-upgrades
+    namespace: org-org-name
+  install:
+    remediation:
+      remediateLastFailure: false
+  interval: 5m0s
+  releaseName: scheduled-upgrades
+  serviceAccountName: automation
+  storageNamespace: org-org-name
+  targetNamespace: org-org-name
+  timeout: 10m0s
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
+      name: scheduled-upgrades-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: scheduled-upgrades-region-config
+      valuesKey: values

@@ -45,10 +45,11 @@ APP_RELEASES = [
 ]
 # the workload of the release in the test's vCluster, (namespace, name)
 APP_WORKLOAD = ("hello-world-scheduled", "hello-world-scheduled")
-# the cluster example: the release of the scheduled-upgrades cluster
+# the cluster example: the scheduled-upgrades cluster, whose ResourceSet renders its
+#  OCIRepository and HelmRelease, both named after the cluster, at the release its provider picks
 CLUSTER_PROVIDER = "scheduled-upgrades-release"
-CLUSTER_RESOURCE_SET = "scheduled-upgrades-release"
-CLUSTER_SOURCE = "scheduled-upgrades"
+CLUSTER_RESOURCE_SET = "scheduled-upgrades"
+CLUSTER_NAME = "scheduled-upgrades"
 # the Kustomizations that apply them, (namespace, name)
 APP_KUSTOMIZATION = ("default", "mc-name-gitops")
 CLUSTER_KUSTOMIZATION = ("default", "mc-name-clusters-scheduled-upgrades")

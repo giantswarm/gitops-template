@@ -67,9 +67,12 @@ runs it for every Flux `Kustomization`.
 The values come from the `HelmRelease`'s `valuesFrom` entries, in order, followed by `spec.values`. Helm merges them
 the same way Flux does: maps are merged, and lists and scalars are replaced. The chart comes from the `OCIRepository`
 the `HelmRelease` references, or from a `HelmRepository`, and is cached under `${TMPDIR:-/tmp}/gitops-template-charts`.
-A semver range is resolved to the newest matching version, as Flux would resolve it. When a Flux Operator
-`ResourceSet` in the manifest renders the `OCIRepository`, its tag is only known on the cluster, so the chart is the
-newest in the range of the `ResourceSetInputProvider` the `ResourceSet` reads.
+A semver range is resolved to the newest matching version, as Flux would resolve it.
+
+The `OCIRepository`s and `HelmRelease`s that a Flux Operator `ResourceSet` in the manifest renders are checked too.
+Their tag is only known on the cluster, so the chart is the newest in the range of the `ResourceSetInputProvider` the
+`ResourceSet` reads. Rendered objects that still have a `<< ... >>` template in them, such as the ones named after an
+entry of the `ResourceSet`'s `spec.inputs`, are left out.
 
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
@@ -92,7 +95,9 @@ with the chart's own error, "Unable to default the region". On a management clus
 region of the management cluster's nodes instead, so the cluster would be created where nobody chose. A cluster sets
 its region with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
 `test-all-ff validate` checks that the script fails for
-[testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
+[testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml), and for
+[testdata/resource-set-cluster-without-region.yaml](testdata/resource-set-cluster-without-region.yaml), where a
+`ResourceSet` renders the cluster.
 
 The check leaves out:
 

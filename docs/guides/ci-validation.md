@@ -358,6 +358,12 @@ each example's provider once and waits for its `ResourceSet`, before it checks t
   the window closed, where the release has to stay, then opens the window, where it has to move.
 - `test_input_loss_keeps_the_app` takes the version of the hello-world example away, by an unreadable registry, a
   range no tag matches and a deleted provider, and checks that the `ResourceSet` waits and the App stays installed.
+- `test_input_loss_keeps_the_cluster` does the same to the `scheduled-upgrades` cluster, and then deletes its
+  `ResourceSet`. The cluster's `HelmRelease` and `OCIRepository` have to stay each time.
+
+The assertions in `tests/ats/assertions/exists/organizations/workload-clusters/scheduled-upgrades` check that the
+cluster's `ResourceSet`, not its `Kustomization`, renders the cluster's `OCIRepository` and `HelmRelease`, with the
+protection of the cluster base.
 
 They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
 hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in

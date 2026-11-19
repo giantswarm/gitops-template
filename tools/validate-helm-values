@@ -21,8 +21,13 @@
 #     are the first values file, so values from the repository take precedence. They don't
 #     set the region, so that a cluster without one fails.
 #
-# The chart comes from the OCIRepository or HelmRepository in the manifest. An OCIRepository
-# that a Flux Operator ResourceSet renders gets the version range of the provider it reads.
+# The chart comes from the OCIRepository or HelmRepository in the manifest.
+#
+# The OCIRepositories and HelmReleases that a Flux Operator ResourceSet renders are checked
+# too. Their tag comes from the ResourceSetInputProvider the ResourceSet reads, and which tag
+# that picks is only known on the cluster, so an OCIRepository gets the provider's version
+# range instead. A rendered object that still has a `<< ... >>` template in it after that,
+# such as one named after an entry of `spec.inputs`, is left out.
 #
 # Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the
 # label `reconcile.fluxcd.io/watch: Enabled`, so that helm-controller applies a change to it
@@ -54,15 +59,18 @@ function object() {
 	KIND="$1" NS="$2" NAME="$3" yq -e 'select(.kind == strenv(KIND) and .metadata.namespace == strenv(NS) and .metadata.name == strenv(NAME))' "${manifest}" 2>/dev/null
 }
 
-# Print the OCIRepository of the given namespace and name that a Flux Operator ResourceSet in
-# the manifest renders. Its tag comes from the ResourceSetInputProvider the ResourceSet reads,
-# and which tag that picks is only known on the cluster, so the OCIRepository gets the
-# provider's version range instead.
-function resource_set_oci_repository() {
-	local rset range
-	rset=$(NS="$1" NAME="$2" yq -e 'select(.kind == "ResourceSet" and .metadata.namespace == strenv(NS) and (.spec.resources | any_c(.kind == "OCIRepository" and .metadata.name == strenv(NAME))))' "${manifest}" 2>/dev/null) || return 1
-	range=$(object ResourceSetInputProvider "$1" "$(yq '.spec.inputsFrom[0].name' <<<"${rset}")" | yq '.spec.filter.semver // ""')
-	NAME="$2" RANGE="${range}" yq '.spec.resources[] | select(.kind == "OCIRepository" and .metadata.name == strenv(NAME)) | .spec.ref = {"semver": strenv(RANGE)}' <<<"${rset}"
+# Print the objects each Flux Operator ResourceSet in the manifest renders, with the version
+# range of its provider in place of an OCIRepository's tag. Objects with a template left in
+# them are left out.
+function resource_set_objects() {
+	local ns name rset range
+	while IFS=/ read -r ns name; do
+		[ -z "${name}" ] && continue
+		rset=$(object ResourceSet "${ns}" "${name}")
+		range=$(object ResourceSetInputProvider "${ns}" "$(yq '.spec.inputsFrom[0].name // ""' <<<"${rset}")" | yq '.spec.filter.semver // ""') || range=""
+		echo "---"
+		NS="${ns}" RANGE="${range}" yq '(.spec.resources[] | select(.kind == "OCIRepository") | .spec.ref) = {"semver": strenv(RANGE)} | .spec.resources[] | select(to_yaml | test("<<") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc' <<<"${rset}"
+	done < <(yq -N 'select(.kind == "ResourceSet") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
 }
 
 # Succeed if the HelmRelease (namespace/name) is listed in the ignore file.
@@ -100,6 +108,15 @@ function pull_chart() {
 	ls "${dir}"/*.tgz
 }
 
+# Check what the ResourceSets render as if it were in the manifest itself.
+expanded="${work_dir}/manifest.yaml"
+{
+	cat "${manifest}"
+	echo
+	resource_set_objects
+} >"${expanded}"
+manifest="${expanded}"
+
 failed=0
 count=0
 
@@ -115,8 +132,7 @@ while IFS=/ read -r ns name; do
 	if [ "$(yq '.spec.chartRef.kind // ""' "${hr}")" == "OCIRepository" ]; then
 		src_ns=$(yq ".spec.chartRef.namespace // \"${ns}\"" "${hr}")
 		src_name=$(yq '.spec.chartRef.name' "${hr}")
-		if ! src=$(object OCIRepository "${src_ns}" "${src_name}") &&
-			! src=$(resource_set_oci_repository "${src_ns}" "${src_name}"); then
+		if ! src=$(object OCIRepository "${src_ns}" "${src_name}"); then
 			echo "${id}: OCIRepository ${src_ns}/${src_name} is not in the same Kustomization"
 			failed=1
 			continue

@@ -27,6 +27,7 @@ from node_pools import node_pool_problems_in_cluster
 from notification_objects import check_notifications
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
+from resource_set_cluster_guard import check_cluster_input_loss
 from resource_set_guard import check_input_loss
 from resource_set_objects import EXAMPLES, install_now
 from resource_set_schedule import check_schedule_window
@@ -233,6 +234,12 @@ def test_input_loss_keeps_the_app(
     check_helm_release_successful: dict[str, dict],
 ) -> None:
     check_input_loss(kube_cluster.kube_client, workload_cluster)
+
+
+def test_input_loss_keeps_the_cluster(
+    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+) -> None:
+    check_cluster_input_loss(kube_cluster.kube_client)
 
 
 # must stay last: it deletes what the tests above check

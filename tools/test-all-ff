@@ -230,6 +230,22 @@ function test() {
 	fi
 
 	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must render a HelmRelease that a ResourceSet renders, and fail
+		# for one whose cluster has no region.
+		echo -n "helm values, ResourceSet cluster without a region: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/resource-set-cluster-without-region.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "HelmRelease org-demo/rset-no-region.*" <<<"${output}" &&
+			grep -q "Unable to default the region" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
 		# validate-helm-values must fail for a valuesFrom ConfigMap without the watch label.
 		echo -n "helm values, ConfigMap without the watch label: "
 		status=0

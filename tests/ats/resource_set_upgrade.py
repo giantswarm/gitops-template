@@ -16,8 +16,8 @@ from prune_source import kustomization
 from pykube.objects import APIObject
 from resource_set_objects import (
     CLUSTER_KUSTOMIZATION,
+    CLUSTER_NAME,
     CLUSTER_PROVIDER,
-    CLUSTER_SOURCE,
     READY_TIMEOUT_SEC,
     ResourceSetInputProviderCR,
     get,
@@ -32,7 +32,7 @@ OLDER_RELEASE = "36.1.1"
 
 
 def source_tag(api: pykube.HTTPClient) -> str:
-    return get(api, OCIRepositoryCR, CLUSTER_SOURCE).obj["spec"]["ref"]["tag"]
+    return get(api, OCIRepositoryCR, CLUSTER_NAME).obj["spec"]["ref"]["tag"]
 
 
 def move(api: pykube.HTTPClient, rsip: APIObject, spec: dict, tag: str) -> None:

@@ -1,8 +1,15 @@
 # The version of hello-world that the hello-world-scheduled ResourceSet installs:
 # the highest tag in the range, picked only inside the upgrade window. Outside it,
 # Flux Operator doesn't read the registry, so a new tag waits for the next window.
-# A new provider exports no version until its first window opens; to install at
-# once, force it, see docs/guides/automatic-updates.md.
+#
+# First install: a new provider exports no version until its first window opens,
+# so the app isn't installed until then. To install it at once, force the
+# provider once after Flux has applied it:
+#
+#   flux-operator reconcile inputprovider hello-world-scheduled-version -n org-<organization> --force
+#
+# The force reads the registry once, outside the window. Later upgrades still
+# wait for the window. See docs/guides/automatic-updates.md.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSetInputProvider
 metadata:

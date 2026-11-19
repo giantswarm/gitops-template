@@ -1,0 +1,20 @@
+# The scheduled-upgrades cluster's OCIRepository, which its ResourceSet renders at the release
+# its provider picks. The tag moves, so the assertion leaves it out.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  annotations:
+    fluxcd.controlplane.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: scheduled-upgrades
+    giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
+    resourceset.fluxcd.controlplane.io/name: scheduled-upgrades
+    resourceset.fluxcd.controlplane.io/namespace: org-org-name
+  name: scheduled-upgrades
+  namespace: org-org-name
+spec:
+  interval: 10m0s
+  provider: generic
+  timeout: 1m0s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

@@ -11,8 +11,9 @@
   - [Upgrade windows with Flux Operator](#upgrade-windows-with-flux-operator)
     - [When to use it](#when-to-use-it)
     - [How the examples work](#how-the-examples-work)
-    - [What the window does](#what-the-window-does)
     - [Installing before the first window](#installing-before-the-first-window)
+    - [Notes on the examples](#notes-on-the-examples)
+    - [What the window does](#what-the-window-does)
     - [Losing the version](#losing-the-version)
 
 Follow the below instructions to tell Flux to automatically update an existing App. Automatic update means
@@ -204,11 +205,39 @@ out to several workload clusters from one list.
   highest release below `4.0.0` from Monday to Thursday, 09:00 to 17:00 in Berlin. With `inputStrategy: Permute`, the
   `ResourceSet` renders an `OCIRepository` and a `HelmRelease` for every cluster at that version. Removing a cluster
   from `spec.inputs` uninstalls the App from that cluster.
-- [WC_NAME_SCHEDULED_UPGRADES](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES/cluster/kustomization.yaml)
-  is a cluster whose Giant Swarm release moves to the highest `v36` release only on Tuesdays, 02:00 to 05:00 UTC. A
-  patch drops the `OCIRepository` of the cluster base, and a `ResourceSet` renders it at the version its provider
-  picks. The cluster's `HelmRelease` stays as the base has it, and upgrades the cluster when the tag changes. A new
-  major release is a change to the range in Git.
+- [WC_NAME_SCHEDULED_UPGRADES](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES/cluster/cluster-resource-set.yaml)
+  is a cluster whose Giant Swarm release moves to the highest `v36` release only on Tuesdays, 02:00 to 05:00 UTC. Its
+  `ResourceSet` renders the whole cluster, the `OCIRepository` and the `HelmRelease` as the cluster base has them, at
+  the version its provider picks; a patch drops the base's two. The base and the region component still give the
+  cluster its values, and the `HelmRelease` lists the region's values itself, as a component's patch doesn't reach into
+  a `ResourceSet`. A new major release is a change to the range in Git, and an exact version in the range pins the
+  cluster to it.
+
+### Installing before the first window
+
+A new provider whose window is closed reports `Ready` but exports no version until the window opens. Until then its
+`ResourceSet` waits, so the App isn't installed and the cluster isn't created. To install at once, force the provider
+once, after Flux has applied it. It then reads the registry outside its schedule, this one time:
+
+```sh
+# the hello-world example
+flux-operator reconcile inputprovider hello-world-scheduled-version -n org-${ORG_NAME} --force
+# the WC_NAME_SCHEDULED_UPGRADES example: its provider is named after the cluster
+flux-operator reconcile inputprovider ${CLUSTER_NAME}-release -n org-${ORG_NAME} --force
+```
+
+Without the `flux-operator` CLI, set both annotations to the same new value:
+
+```sh
+now="$(date +%s)"
+kubectl annotate resourcesetinputprovider ${CLUSTER_NAME}-release -n org-${ORG_NAME} --overwrite \
+  reconcile.fluxcd.io/requestedAt="${now}" reconcile.fluxcd.io/forceAt="${now}"
+```
+
+Later upgrades still wait for the window. The comments in both examples' providers and `ResourceSet`s give the same
+step, and the kind test does the same for both examples.
+
+### Notes on the examples
 
 Keep one `ResourceSet` per App, as the example does: a `ResourceSet` deletes what it rendered for an input that has
 gone, so Apps that shared one would go together. Set `spec.filter.limit: 1`, or every exported tag becomes a release
@@ -237,30 +266,11 @@ schedule off, and it doesn't hold upgrades back either: the provider looks at th
 something asks it to, such as a change to its spec or a restart of Flux Operator. It only stops looking every 10
 minutes. Set a `window` to keep upgrades in the window.
 
-### Installing before the first window
-
-A new provider whose window is closed reports `Ready` but exports no version until the window opens, so the App, or
-the cluster, isn't installed until then. To install at once, ask the provider to look now, outside its schedule:
-
-```sh
-flux-operator reconcile inputprovider ${APP_NAME} -n org-${ORG_NAME} --force
-```
-
-Without the `flux-operator` CLI, set both annotations to the same new value:
-
-```sh
-now="$(date +%s)"
-kubectl annotate resourcesetinputprovider ${APP_NAME} -n org-${ORG_NAME} --overwrite \
-  reconcile.fluxcd.io/requestedAt="${now}" reconcile.fluxcd.io/forceAt="${now}"
-```
-
-The kind test does the same for both examples. Later upgrades still wait for the window.
-
 ### Losing the version
 
 Without a version, a `ResourceSet` renders nothing and deletes what it rendered before, which uninstalls the App or
-deletes the cluster's `OCIRepository`. The version goes when no tag matches the range, when the registry can't be read
-or when the provider is deleted. Both examples guard against it with a `dependsOn` on their provider:
+deletes the cluster. The version goes when no tag matches the range, when the registry can't be read or when the
+provider is deleted. Both examples guard against it with a `dependsOn` on their provider:
 
 ```yaml
 dependsOn:
@@ -275,7 +285,9 @@ dependsOn:
 ```
 
 Until the provider is `Ready` with a version, the `ResourceSet` reports `DependencyNotReady` and leaves what it
-rendered as it is. The cluster's `OCIRepository` also has the `fluxcd.controlplane.io/prune: disabled` annotation, so
-the `ResourceSet` never deletes it, not even when the `ResourceSet` itself is deleted, and the
-`giantswarm.io/prevent-deletion` label, like the rest of the cluster. The kind test takes the version away in each of
-the three ways and checks that the App stays installed, in `tests/ats/resource_set_guard.py`.
+rendered as it is. The cluster's `OCIRepository` and `HelmRelease` also have the `fluxcd.controlplane.io/prune:
+disabled` annotation, so the `ResourceSet` never deletes them, not even when the `ResourceSet` itself is deleted or its
+file is deleted from Git, and the `giantswarm.io/prevent-deletion` label, as in the cluster base. The kind test takes
+the version away in each of the three ways and checks that the App stays installed, in
+`tests/ats/resource_set_guard.py`, and that the cluster's `HelmRelease` and `OCIRepository` stay, also when the
+`ResourceSet` is deleted, in `tests/ats/resource_set_cluster_guard.py`.
