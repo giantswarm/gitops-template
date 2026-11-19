@@ -102,6 +102,14 @@ def external_secrets(kube_cluster: Cluster, kube_config: str) -> Iterator[None]:
         # As Giant Swarm's management-cluster-bases sets it, so Kyverno admits the PolicyException.
         "--set",
         "giantswarm.policyExceptionNamespace=giantswarm",
+        # The chart's 100m CPU per pod is sized for a management cluster; on the one kind node
+        # it leaves the workload cluster's pods Pending with "Insufficient cpu".
+        "--set",
+        "giantswarm.resources.externalSecrets.requests.cpu=10m",
+        "--set",
+        "giantswarm.resources.certController.requests.cpu=10m",
+        "--set",
+        "giantswarm.resources.webhook.requests.cpu=10m",
         "--wait",
         "--timeout",
         f"{ESO_READY_TIMEOUT_SEC}s",
