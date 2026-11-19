@@ -70,11 +70,11 @@ function fetch_flux_schemas() {
 }
 
 ##
-# Discover all fluxcd kustomizations and store filename, name, namespace, path, kind and source name for each found
+# Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
 ALL_KUSTOMIZATIONS=(
 	$(
 		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -not -path './tests/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
-			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind,.spec.sourceRef.name] | select(.[4] == "Kustomization") | join(",")' $f
+			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
 		done
 	)
 )
@@ -93,26 +93,22 @@ function kubeconform_check() {
 }
 
 ##
-# Keep the Kustomizations that apply this repository: the ones with the source of a Kustomization
-# that applies the directory its file is in, such as management-clusters/MC_NAME/MC_NAME.yaml.
-# Another source, such as an application team's own repository, has nothing to build here.
-REPOSITORY_SOURCES=" "
-for k in "${ALL_KUSTOMIZATIONS[@]}"; do
-	IFS=, read -r file _ _ path _ source <<<"${k}"
-	path="${path#./}"
-	path="${path%/}"
-	if [ "$(dirname "${file#./}")" == "${path:-.}" ]; then
-		REPOSITORY_SOURCES+="${source} "
-	fi
-done
+# Keep the Kustomizations that apply this repository: the ones whose path is a directory of it.
+# Another one, such as an application team's, applies a directory of another repository, which
+# has nothing to build here.
 KUSTOMIZATIONS=()
 for k in "${ALL_KUSTOMIZATIONS[@]}"; do
-	if [[ "${REPOSITORY_SOURCES}" == *" ${k##*,} "* ]]; then
-		KUSTOMIZATIONS+=("${k%,*}")
+	path="$(cut -d, -f4 <<<"${k}")"
+	if [ -d "${path:-.}" ]; then
+		KUSTOMIZATIONS+=("${k}")
 	else
-		echo "Skipping kustomization $(cut -d, -f2 <<<"${k}"): its source, ${k##*,}, is another repository" >&2
+		echo "Skipping kustomization $(cut -d, -f2 <<<"${k}"): its path, ${path}, isn't in this repository" >&2
 	fi
 done
+if [ "${#KUSTOMIZATIONS[@]}" -eq 0 ]; then
+	echo "No kustomization applies a directory of this repository" >&2
+	exit 1
+fi
 export KUSTOMIZATIONS
 
 function test() {
