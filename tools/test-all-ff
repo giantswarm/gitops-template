@@ -167,8 +167,11 @@ function test() {
 				echo "OK"
 			fi
 
+			# kubeconform checks the objects the ResourceSets render too: the ResourceSet's
+			# schema keeps whatever its spec.resources hold.
 			echo -n "kubeconform: "
-			if ! kubeconform_check "$tmp_file"; then
+			if ! "$(dirname $0)/validate-helm-values" --expand "$tmp_file" >"${tmp_dir}/expanded.yaml" ||
+				! kubeconform_check "${tmp_dir}/expanded.yaml"; then
 				has_validation_errors=1
 			else
 				echo "OK"
@@ -252,6 +255,52 @@ function test() {
 		status=0
 		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/resource-set-unresolved-version.yaml" 2>&1) || status=$?
 		if [ "${status}" -ne 0 ] && grep -q "ResourceSet org-demo/rset-selector: can't resolve the chart version" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must keep a fixed tag of a ResourceSet's OCIRepository; only a
+		# templated one gets the provider's range.
+		echo -n "helm values, ResourceSet OCIRepository with a fixed tag: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" --expand "$(dirname $0)/testdata/resource-set-fixed-tag.yaml" 2>&1) || status=$?
+		if [ "${status}" -eq 0 ] && [ "$(yq 'select(.kind == "OCIRepository" and .metadata.name == "rset-fixed-tag") | .spec.ref | to_json(0)' <<<"${output}")" == '{"tag":"2.0.0"}' ]; then
+			echo "OK, kept"
+		else
+			echo "not kept:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must fail, not pass unchecked, for a ResourceSet whose objects
+		# it can't render.
+		echo -n "helm values, ResourceSets it can't render: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/resource-set-unsupported.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "ResourceSet org-demo/rset-template: spec.resourcesTemplate" <<<"${output}" &&
+			grep -q "ResourceSet rset-no-namespace: no metadata.namespace" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
+		# kubeconform must see the objects a ResourceSet renders, and fail for a misspelled field.
+		echo -n "kubeconform, ResourceSet HelmRelease with an unknown field: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" --expand "$(dirname $0)/testdata/resource-set-unknown-field.yaml" >"${tmp_dir}/expanded.yaml" &&
+			kubeconform_check "${tmp_dir}/expanded.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "remediateLastFailur" <<<"${output}"; then
 			echo "OK, reported"
 		else
 			echo "not reported:"
