@@ -99,6 +99,9 @@ def external_secrets(kube_cluster: Cluster, kube_config: str) -> Iterator[None]:
         "--namespace",
         ESO_NAMESPACE,
         "--create-namespace",
+        # As Giant Swarm's management-cluster-bases sets it, so Kyverno admits the PolicyException.
+        "--set",
+        "giantswarm.policyExceptionNamespace=giantswarm",
         "--wait",
         "--timeout",
         f"{ESO_READY_TIMEOUT_SEC}s",
