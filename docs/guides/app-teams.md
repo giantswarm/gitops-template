@@ -236,10 +236,23 @@ In the workload cluster, the team's workloads run in its namespace:
 kubectl get all -n ${TEAM_NAME}
 ```
 
-To remove the team from the cluster, delete its directory in the cluster's `teams`, its entry in
-`teams/kustomization.yaml` and its file in `out-of-band/teams`, and push. Flux deletes the team's `Kustomization`,
-which deletes the team's workloads from the workload cluster, then the namespace. Delete the team's ServiceAccount
-only once no cluster of the organization has the team any more.
+To remove the team from the cluster, push twice, in this order:
+
+1. Delete the team's directory in the cluster's `teams` and its entry in `teams/kustomization.yaml`, and push. Flux
+   deletes the team's `Kustomization`, which deletes the team's workloads from the workload cluster. Wait until the
+   `Kustomization` is gone:
+
+    ```sh
+    kubectl wait --for=delete kustomization/${WC_NAME}-${TEAM_NAME} -n org-${ORG_NAME} --timeout=10m
+    ```
+
+1. Delete the team's file in `out-of-band/teams`, and push. The `-direct` Kustomization deletes the team's namespace
+   and `RoleBinding`.
+
+Don't do both in one push. To delete the team's workloads, Flux impersonates the team's ServiceAccount in the workload
+cluster. Without the `RoleBinding`, the workload cluster refuses it, and the team's `Kustomization` stays
+`Terminating` until the `RoleBinding` is back. Delete the team's ServiceAccount only once no cluster of the
+organization has the team any more, for the same reason.
 
 ## Add a team with Flux in the workload cluster
 
@@ -319,4 +332,7 @@ kubectl get all -n ${TEAM_NAME}
 ```
 
 To remove the team from the cluster, delete its file in `out-of-band/teams` and push. The `-direct` Kustomization
-deletes the team's objects from the workload cluster, and the team's workloads go with its namespace.
+deletes the team's objects from the workload cluster, and the team's workloads go with its namespace. One push is
+enough here: the team's ServiceAccount is in the workload cluster and goes in the same push, and once it's gone,
+Flux there lets the team's `Kustomization` go without deleting its workloads itself, which the namespace's deletion
+does.
