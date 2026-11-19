@@ -48,4 +48,3 @@ def test_a_failure_logs_the_report(
     with pytest.raises(Exception, match="failed"):
         chainsaw.run_chainsaw(tmp_path)
     assert "step 2 failed" in caplog.text
-
