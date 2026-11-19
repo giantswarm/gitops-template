@@ -50,6 +50,8 @@ add a `-schema-location` for it to the script.
 ### test-all-ff usage
 
 - `validate` Tests all found flux kustomizations with `yamllint`, `kubeconform` and `validate-helm-values`
+  - It also checks the manifests in `bases/secret_stores` with `kubeconform`. They read cloud secret managers, so no
+    cluster in the repository uses them and no Kustomization builds them.
 - `template` Prints the entire repo manifest
 
 ## `validate-helm-values`

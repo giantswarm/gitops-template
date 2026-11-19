@@ -79,6 +79,19 @@ export KUSTOMIZATIONS=(
 	)
 )
 
+##
+# Check the manifests in the given files against the schema sources above.
+function kubeconform_check() {
+	kubeconform -strict -summary -output text \
+		-kubernetes-version "${KUBERNETES_VERSION}" \
+		-schema-location "${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+		-schema-location "${FLUX_SCHEMA_DIR}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+		-schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
+		-schema-location "${CRDS_CATALOG_REPOSITORY}/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json" \
+		-cache "${SCHEMA_CACHE}/http" \
+		"$@"
+}
+
 function test() {
 	local mode="$1"
 	local has_validation_errors=0
@@ -118,16 +131,7 @@ function test() {
 			fi
 
 			echo -n "kubeconform: "
-			if ! (
-				kubeconform -strict -summary -output text \
-					-kubernetes-version "${KUBERNETES_VERSION}" \
-					-schema-location "${KUBERNETES_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
-					-schema-location "${FLUX_SCHEMA_DIR}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
-					-schema-location "${GS_SCHEMA_REPOSITORY}/{{ .ResourceKind }}{{ .KindSuffix }}.json" \
-					-schema-location "${CRDS_CATALOG_REPOSITORY}/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json" \
-					-cache "${SCHEMA_CACHE}/http" \
-					"$tmp_file"
-			); then
+			if ! kubeconform_check "$tmp_file"; then
 				has_validation_errors=1
 			else
 				echo "OK"
@@ -143,6 +147,20 @@ function test() {
 			${fakeflux} build ${name}:${namespace} -M
 		fi
 	done
+
+	if [ "${mode}" == "validate" ]; then
+		# The secret stores in bases/secret_stores read cloud secret managers, which CI can't
+		# reach, so no cluster of the repository uses them and no Kustomization above builds
+		# them. Their manifests are checked as they are.
+		echo -n "kubeconform, bases/secret_stores: "
+		mapfile -t store_files < <(find bases/secret_stores -name '*.yaml' -not -name kustomization.yaml | sort)
+		if ! kubeconform_check "${store_files[@]}"; then
+			has_validation_errors=1
+		else
+			echo "OK"
+		fi
+		echo ""
+	fi
 
 	if [ "${mode}" == "validate" ]; then
 		# validate-helm-values must fail for a release-aws cluster that has no region.

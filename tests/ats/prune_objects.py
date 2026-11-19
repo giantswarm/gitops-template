@@ -5,6 +5,7 @@ from checks.kinds import REFERENCED_KINDS
 from conftest import FLUX_OBJECTS_NAMESPACE
 from external_secrets import ExternalSecretCR
 from pykube.objects import APIObject
+from workload_cluster_secrets import WORKLOAD_CLUSTER_SECRETS_KINDS
 
 
 class OrganizationCR(APIObject):
@@ -60,6 +61,8 @@ PRUNE_KINDS: dict[str, type[APIObject]] = {
     "Organization": OrganizationCR,
     # the out-of-band-no-flux cluster's hello-world reads its secret values through one
     "ExternalSecret": ExternalSecretCR,
+    # the out-of-band-no-flux cluster's apps push Secrets into the workload cluster with these
+    **WORKLOAD_CLUSTER_SECRETS_KINDS,
 }
 # the GitRepository and the Kustomizations reconcile when asked
 PRUNE_TIMEOUT_SEC = 180

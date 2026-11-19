@@ -26,7 +26,8 @@ bases
 ├── apps
 ├── cluster_templates
 ├── clusters
-└── environments
+├── environments
+└── secret_stores
 management-clusters
 └── MC_NAME
     ├── .sops.keys
