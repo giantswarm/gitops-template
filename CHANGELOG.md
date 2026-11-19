@@ -420,6 +420,32 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   automerged, so a new version reaches staging and prod only when its PR is merged. The
   [environments guide](docs/guides/environments.md#promote-a-change-from-dev-to-prod) describes the promotion.
   ([#255](https://github.com/giantswarm/gitops-template/issues/255))
+- **Breaking:** the structure version goes from 2 to 3: workload clusters no longer have a `mapi` directory. What
+  was in it, `cluster`, `apps`, `app_sets` and `kustomization.yaml`, moves up into the cluster's directory, next to
+  `out-of-band`. The cluster's `Kustomization` applies `WC_NAME/cluster`, and the apps `Kustomization` applies
+  `WC_NAME` through `WC_NAME/kustomization.yaml`, which lists `apps/` and `app_sets/`, never `cluster/` or
+  `out-of-band/`. The `HELLO_APP_*` clusters keep a single `Kustomization`, which applies the cluster's directory
+  through a new `kustomization.yaml` that lists `cluster/`, so an `out-of-band` directory next to it is never applied
+  to the management cluster. The `.sops.yaml` rules of the out-of-band examples and of `WC_NAME` match the cluster's
+  `cluster`, `apps` and `app_sets` directories. A new test pins the `spec.path` of every example cluster `Kustomization`.
+  `kubectl gs gitops add workload-cluster` still generates `mapi`, and `kubectl gs gitops upgrade` has no migration to
+  structure version 3: see `docs/reference/repo-structure.md` for how to move what it writes.
+  ([#298](https://github.com/giantswarm/gitops-template/issues/298))
+  To move a running cluster:
+  1. In Git, add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation to every object under `mapi`, including
+     the `OCIRepository`s, ConfigMaps and Secrets, not only the `HelmRelease`s, so no `Kustomization` deletes one while
+     the paths change. Wait until Flux has applied it.
+  1. Then, in one commit, move what's in `mapi` up into the cluster's directory with `git mv`, take one `../` off each
+     path out of the cluster's directory in the moved files, such as the paths to `bases`, and drop `mapi/` from the
+     `spec.path` of the cluster's `Kustomization`s. In the cluster's `.sops.yaml` rule, replace `mapi/` with
+     `(cluster|apps|app_sets)/`, so the rule doesn't match `out-of-band`, where the cluster's key can't decrypt. A
+     cluster with a single `Kustomization` had no `mapi/kustomization.yaml`, so Flux applied every YAML file and
+     directory in `mapi`: it gets a `kustomization.yaml` in its directory that lists every one of them that exists,
+     such as `cluster/` and, if the cluster has them, `apps/` and `app_sets/`. Anything left out stops being applied
+     and, with the annotation, stays on the management cluster unmanaged. Neither kind of cluster lists `out-of-band/`
+     there.
+  1. Remove the annotation in Git again once the cluster's `Kustomization`s are `Ready` at that commit. Keep it on the
+     objects that carry it anyway, such as the cluster's `HelmRelease`.
 
 ### Removed
 

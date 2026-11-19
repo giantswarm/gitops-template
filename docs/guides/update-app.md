@@ -51,7 +51,7 @@ export APP_NAME=APP_NAME
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
 1. Set the new chart version in the `OCIRepository`:
@@ -68,7 +68,7 @@ export APP_NAME=APP_NAME
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
 1. Edit the `helm-release.yaml`. For all the supported fields reference
@@ -79,7 +79,7 @@ export APP_NAME=APP_NAME
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
 1. Edit the `override_config.yaml` if you want to update a non-secret user configuration
@@ -89,7 +89,7 @@ export APP_NAME=APP_NAME
 1. Go to the App directory:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi/apps/${APP_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
     ```
 
 1. Import the WC's regular GPG private key from your safe storage into your keychain. In our example, we're gonna
@@ -138,8 +138,8 @@ export APP_NAME=APP_NAME
 
 ## Apps from an App Set
 
-An App installed through an [App Set](./app-sets.md) has no `mapi/apps/${APP_NAME}` directory. Its files are in the
-directory of the App Set instance, `mapi/app_sets/YOUR_APP_SET`, next to the instance's `kustomization.yaml`:
+An App installed through an [App Set](./app-sets.md) has no `apps/${APP_NAME}` directory. Its files are in the
+directory of the App Set instance, `app_sets/YOUR_APP_SET`, next to the instance's `kustomization.yaml`:
 
 - plain text configuration is in the `override_config_<app>.yaml` file, for example `override_config_hello_world.yaml`,
   which the instance's `configMapGenerator` turns into the `${cluster_name}-${APP_NAME}-user-values` ConfigMap,
