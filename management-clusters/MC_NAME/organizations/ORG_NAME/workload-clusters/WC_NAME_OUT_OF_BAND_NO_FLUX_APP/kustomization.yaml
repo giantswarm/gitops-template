@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   - apps/
   - app_sets/
+  - teams/

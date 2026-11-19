@@ -28,7 +28,9 @@ You can use this bash tool under a repository based on this template to verify t
 This tool will run through `yamllint`, `kubeconform` and `validate-helm-values` to verify your manifests pass all
 checks and is likely to succeed in the cluster.
 
-It runs `fake-flux` under the hood for each kustomization it finds. `fake-flux` runs `flux build` with
+It runs `fake-flux` under the hood for each kustomization it finds that applies this repository: one whose source is
+the source of `MC_NAME.yaml`, the Kustomization that applies the directory its file is in. It skips the others, such as
+an application team's, whose path is in the team's repository, and says so. `fake-flux` runs `flux build` with
 `--strict-substitute`, so a variable that the manifests use but `spec.postBuild.substitute` doesn't set fails the build.
 
 `kubeconform` runs with `-strict`, so unknown fields fail, and without `-ignore-missing-schemas`, so an object whose

@@ -1,0 +1,28 @@
+# What the hello-team application team's Kustomization applies from the team's repository
+# into the team's namespace of the workload cluster, as the team's ServiceAccount.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: out-of-band-no-flux-hello-team
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: podinfo
+  namespace: hello-team
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-direct
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-team
+  namespace: hello-team
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+  - kind: ServiceAccount
+    name: hello-team
+    namespace: org-org-name

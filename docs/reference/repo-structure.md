@@ -55,9 +55,10 @@ management-clusters
                     ├── [app_sets]
                     ├── apps
                     ├── cluster
-                    └── [out-of-band]
-                        ├── [kustomization.yaml]
-                        └── [OTHER_RESOURCES]
+                    ├── [out-of-band]
+                    |   ├── [kustomization.yaml]
+                    |   └── [OTHER_RESOURCES]
+                    └── [teams]                           application teams' repositories, see guides/app-teams.md
 ```
 
 How to read it:
