@@ -301,7 +301,7 @@ The steps name no objects themselves: they read the names from
 [tests/chainsaw/values.yaml](../../tests/chainsaw/values.yaml), which names the template's examples. The shared
 workflow runs only pytest on the kind cluster, so `test_chainsaw` in
 [test_flux_objects.py](../../tests/ats/test_flux_objects.py) runs Chainsaw, once the stand-in clusters exist and the
-`HelmRelease`s are `Ready`. It logs Chainsaw's report, and fails when a Chainsaw test fails, naming the step that
+`HelmRelease`s are `Ready`. It prints Chainsaw's report, and fails when a Chainsaw test fails, naming the step that
 failed.
 It downloads the Chainsaw release that `CHAINSAW_VERSION` in [tests/ats/chainsaw.py](../../tests/ats/chainsaw.py) pins
 and checks it against `CHAINSAW_SHA256`. Renovate moves the version but not the checksum: set the checksum of the new

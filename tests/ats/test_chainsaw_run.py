@@ -1,6 +1,5 @@
-"""How the kind test runs Chainsaw, and that it logs Chainsaw's report."""
+"""How the kind test runs Chainsaw, and that it logs Chainsaw's report when a test fails."""
 
-import logging
 import subprocess  # nosec B404 - only the CompletedProcess of a stand-in run
 from pathlib import Path
 
@@ -50,13 +49,3 @@ def test_a_failure_logs_the_report(
         chainsaw.run_chainsaw(tmp_path)
     assert "step 2 failed" in caplog.text
 
-
-def test_a_pass_logs_the_report(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    stand_in_chainsaw(monkeypatch, 0, "3 tests passed")
-    caplog.set_level(logging.INFO)
-
-    chainsaw.run_chainsaw(tmp_path)
-
-    assert "3 tests passed" in caplog.text

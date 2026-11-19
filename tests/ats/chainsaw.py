@@ -8,7 +8,6 @@ test_flux_objects.py runs it once everything the tests look at is ready.
 
 import hashlib
 import io
-import logging
 import tarfile
 from pathlib import Path
 
@@ -26,8 +25,6 @@ CHAINSAW_URL = (
     f"{CHAINSAW_VERSION}/chainsaw_linux_amd64.tar.gz"
 )
 DOWNLOAD_TIMEOUT_SEC = 60
-
-logger = logging.getLogger(__name__)
 
 TESTS_DIR = Path(__file__).resolve().parent.parent / "chainsaw"
 VALUES_FILE = TESTS_DIR / "values.yaml"
@@ -63,10 +60,10 @@ def fetch(directory: Path) -> Path:
 
 def run_chainsaw(directory: Path) -> str:
     """Fetch Chainsaw into `directory` and run every test in TESTS_DIR with the kind test's
-    values, against the cluster of $KUBECONFIG. Log Chainsaw's report, with each test and step,
-    and return it.
+    values, against the cluster of $KUBECONFIG, and return Chainsaw's report, with each test and
+    step. When a test fails, it logs the report and fails.
     """
-    report = run_tool(
+    return run_tool(
         str(fetch(directory)),
         CHAINSAW_URL,
         "test",
@@ -76,5 +73,3 @@ def run_chainsaw(directory: Path) -> str:
         str(VALUES_FILE),
         "--no-color",
     )
-    logger.info(report)
-    return report

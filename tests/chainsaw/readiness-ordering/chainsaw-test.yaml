@@ -37,7 +37,7 @@ spec:
               spec:
                 # Flux checks this Cluster, and counts a Cluster as healthy once it's Available
                 (length(healthChecks[?kind == 'Cluster' && name == $values.cluster && namespace == $values.organizationNamespace]) > `0`): true
-                (length(healthCheckExprs[?kind == 'Cluster' && contains(current, 'Available')]) > `0`): true
+                (length(healthCheckExprs[?kind == 'Cluster' && current == `"status.conditions.exists(c, c.type == 'Available' && c.status == 'True')"`]) > `0`): true
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"

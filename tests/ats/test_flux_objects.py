@@ -177,6 +177,7 @@ def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
 
 def test_chainsaw(
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     kube_config: str,
     tmp_path: Path,
     workload_cluster: pykube.HTTPClient,
@@ -186,7 +187,10 @@ def test_chainsaw(
     # the YAML tests in tests/chainsaw, once the stand-in clusters and the releases are ready;
     #  Chainsaw reads the cluster from $KUBECONFIG
     monkeypatch.setenv("KUBECONFIG", kube_config)
-    run_chainsaw(tmp_path)
+    report = run_chainsaw(tmp_path)
+    # pytest shows captured output only for a failing test: print the report of a pass, too
+    with capsys.disabled():
+        print(report)
 
 
 # must stay last: it deletes what the tests above check
