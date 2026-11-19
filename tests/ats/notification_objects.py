@@ -58,7 +58,11 @@ def check_notifications(api: pykube.HTTPClient) -> None:
     from pytest_helm_charts.flux.kustomization import KustomizationCR
 
     log = logging.getLogger(__name__)
-    root = KustomizationCR.objects(api).filter(namespace=NAMESPACE).get(name="mc-name-gitops")
+    root = (
+        KustomizationCR.objects(api)
+        .filter(namespace=NAMESPACE)
+        .get(name="mc-name-gitops")
+    )
     log.error(f"DEBUG root spec: {root.obj['spec']}")
     log.error(f"DEBUG root status: {root.obj.get('status')}")
     alert = AlertCR.objects(api).filter(namespace=NAMESPACE).get(name=ALERT)
