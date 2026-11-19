@@ -8,6 +8,12 @@
   - [Apps from an App Set](#apps-from-an-app-set)
   - [Checking the installed version](#checking-the-installed-version)
   - [Credentials for private registries (optional)](#credentials-for-private-registries-optional)
+  - [Upgrade windows with Flux Operator](#upgrade-windows-with-flux-operator)
+    - [When to use it](#when-to-use-it)
+    - [How the examples work](#how-the-examples-work)
+    - [What the window does](#what-the-window-does)
+    - [Installing before the first window](#installing-before-the-first-window)
+    - [Losing the version](#losing-the-version)
 
 Follow the below instructions to tell Flux to automatically update an existing App. Automatic update means
 that Flux will check the chart registry for you and automatically install new chart versions as they are published.
@@ -168,3 +174,108 @@ credentials to read it.
     ```sh
     yq -i '.resources += ["pullsecret.enc.yaml"]' kustomization.yaml
     ```
+
+## Upgrade windows with Flux Operator
+
+A version range upgrades the App as soon as a new version is published, at any time of day. Flux Operator, which runs
+on every Giant Swarm management cluster, can hold upgrades back until an upgrade window instead. Its API,
+`fluxcd.controlplane.io/v1`, is used as it is:
+
+- a `ResourceSetInputProvider` of type `OCIArtifactTag` lists the tags of the chart, keeps the ones in its
+  `spec.filter.semver` range and exports the highest. Its `spec.schedule` decides when it looks.
+- a `ResourceSet` renders the App's `OCIRepository` and `HelmRelease` from that version, with
+  `<< inputs.tag >>` where the version goes.
+
+### When to use it
+
+A plain `HelmRelease` is enough when:
+
+- a pinned version is fine: every upgrade is a pull request, and it reaches the cluster when it's merged.
+- a range is fine: the App may upgrade whenever a new version is published.
+
+Use a `ResourceSetInputProvider` and a `ResourceSet` when upgrades have to wait for a window, for example the release
+of a production cluster, or an App that should only restart in working hours. A `ResourceSet` also rolls the same App
+out to several workload clusters from one list.
+
+### How the examples work
+
+- [resource-sets/hello-world-scheduled](/management-clusters/MC_NAME/organizations/ORG_NAME/resource-sets/hello-world-scheduled/resource-set.yaml)
+  installs hello-world on two workload clusters, which its `ResourceSet` lists in `spec.inputs`. Its provider picks the
+  highest release below `4.0.0` from Monday to Thursday, 09:00 to 17:00 in Berlin. With `inputStrategy: Permute`, the
+  `ResourceSet` renders an `OCIRepository` and a `HelmRelease` for every cluster at that version. Removing a cluster
+  from `spec.inputs` uninstalls the App from that cluster.
+- [WC_NAME_SCHEDULED_UPGRADES](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES/cluster/kustomization.yaml)
+  is a cluster whose Giant Swarm release moves to the highest `v36` release only on Tuesdays, 02:00 to 05:00 UTC. A
+  patch drops the `OCIRepository` of the cluster base, and a `ResourceSet` renders it at the version its provider
+  picks. The cluster's `HelmRelease` stays as the base has it, and upgrades the cluster when the tag changes. A new
+  major release is a change to the range in Git.
+
+Keep one `ResourceSet` per App, as the example does: a `ResourceSet` deletes what it rendered for an input that has
+gone, so Apps that shared one would go together. Set `spec.filter.limit: 1`, or every exported tag becomes a release
+of its own. The `ResourceSet`s run as the organization's `automation` service account, in `spec.serviceAccountName`:
+Flux Operator applies what they render with that account's permissions, and a Kyverno policy on the management
+clusters rejects a `ResourceSet` without one. The `ResourceSet` and its provider have to be in the same namespace.
+
+To see which version a provider picked, and when it looks next:
+
+```sh
+kubectl get resourcesetinputproviders -n org-${ORG_NAME} \
+  -o 'custom-columns=NAME:.metadata.name,VERSION:.status.exportedInputs[0].tag,NEXT:.status.nextSchedule.when'
+```
+
+### What the window does
+
+The kind test checks what follows, in `tests/ats/resource_set_schedule.py`.
+
+With a `window`, the provider looks at the registry only while the window is open: from the `cron` time, in its
+`timeZone`, for the length of the window, less the provider's timeout of two minutes. Inside the window it looks every
+10 minutes. Outside it, nothing moves the version: not a new release, and not a change to the range in Git either.
+Both wait for the next window. A window has to be at least twice the timeout, so at least `4m`.
+
+`window` defaults to `0s`, which Flux Operator's API documents as "no window is applied". That doesn't turn the
+schedule off, and it doesn't hold upgrades back either: the provider looks at the `cron` time, and also whenever
+something asks it to, such as a change to its spec or a restart of Flux Operator. It only stops looking every 10
+minutes. Set a `window` to keep upgrades in the window.
+
+### Installing before the first window
+
+A new provider whose window is closed reports `Ready` but exports no version until the window opens, so the App, or
+the cluster, isn't installed until then. To install at once, ask the provider to look now, outside its schedule:
+
+```sh
+flux-operator reconcile inputprovider ${APP_NAME} -n org-${ORG_NAME} --force
+```
+
+Without the `flux-operator` CLI, set both annotations to the same new value:
+
+```sh
+now="$(date +%s)"
+kubectl annotate resourcesetinputprovider ${APP_NAME} -n org-${ORG_NAME} --overwrite \
+  reconcile.fluxcd.io/requestedAt="${now}" reconcile.fluxcd.io/forceAt="${now}"
+```
+
+The kind test does the same for both examples. Later upgrades still wait for the window.
+
+### Losing the version
+
+Without a version, a `ResourceSet` renders nothing and deletes what it rendered before, which uninstalls the App or
+deletes the cluster's `OCIRepository`. The version goes when no tag matches the range, when the registry can't be read
+or when the provider is deleted. Both examples guard against it with a `dependsOn` on their provider:
+
+```yaml
+dependsOn:
+  - apiVersion: fluxcd.controlplane.io/v1
+    kind: ResourceSetInputProvider
+    name: hello-world-scheduled-version
+    namespace: org-org-name
+    ready: true
+    readyExpr: >-
+      status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
+      && has(status.exportedInputs)
+```
+
+Until the provider is `Ready` with a version, the `ResourceSet` reports `DependencyNotReady` and leaves what it
+rendered as it is. The cluster's `OCIRepository` also has the `fluxcd.controlplane.io/prune: disabled` annotation, so
+the `ResourceSet` never deletes it, not even when the `ResourceSet` itself is deleted, and the
+`giantswarm.io/prevent-deletion` label, like the rest of the cluster. The kind test takes the version away in each of
+the three ways and checks that the App stays installed, in `tests/ats/resource_set_guard.py`.

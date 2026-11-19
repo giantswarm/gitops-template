@@ -72,3 +72,14 @@ metadata:
   annotations:
     meta.helm.sh/release-name: gateway-api-config
     meta.helm.sh/release-namespace: envoy-gateway-system
+---
+# of the organization's hello-world-scheduled ResourceSet, not of the cluster's Kustomizations
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-scheduled
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-scheduled
+  namespace: hello-world-scheduled
+  annotations:
+    meta.helm.sh/release-name: hello-world-scheduled
+    meta.helm.sh/release-namespace: hello-world-scheduled

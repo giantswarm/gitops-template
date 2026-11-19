@@ -2,7 +2,7 @@
 builds; they need no cluster."""
 
 import yaml
-from flux_inventory import inventory_keys
+from flux_inventory import applied_deployments, inventory_keys
 from prune_patches import delete_patches
 
 
@@ -70,3 +70,24 @@ def test_delete_patches_name_the_objects_before_substitution() -> None:
             },
         }
     ]
+
+
+def test_applied_deployments_leaves_out_releases_other_kustomizations_applied() -> None:
+    # a ResourceSet of the organization installs an app into the cluster, too
+    ours = {
+        "helmRelease": "org-org-name/wc-app",
+        "kind": "Deployment",
+        "metadata": {"name": "app", "namespace": "app"},
+    }
+    theirs = {
+        "helmRelease": "org-org-name/wc-scheduled",
+        "kind": "Deployment",
+        "metadata": {"name": "scheduled", "namespace": "scheduled"},
+    }
+    crd = {
+        "helmRelease": "org-org-name/wc-app",
+        "kind": "CustomResourceDefinition",
+        "metadata": {"name": "gateways.gateway.networking.k8s.io"},
+    }
+    applied = {("HelmRelease", "org-org-name", "wc-app")}
+    assert applied_deployments([ours, theirs, crd], applied) == [ours]

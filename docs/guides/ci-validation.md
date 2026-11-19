@@ -340,6 +340,30 @@ namespace, with the data of the base in Git, so a change to the base reaches eve
 copy, asks Flux to reconcile the management cluster's `Kustomization`, and waits for Flux to put the copy back.
 `tests/ats/test_shared_objects.py` checks, without a cluster, that the example organisation lists the base.
 
+### Flux Operator
+
+The [upgrade window examples](./automatic-updates.md#upgrade-windows-with-flux-operator) are Flux Operator
+`ResourceSetInputProvider`s and `ResourceSet`s, so the test installs Flux Operator before Flux applies the repository.
+It installs Giant Swarm's `flux-operator` chart 0.9.0 (Flux Operator v0.62.1), the version management-cluster-bases
+deploys, from `oci://gsoci.azurecr.io/charts/giantswarm`, into `flux-giantswarm`. The chart is pinned in
+`tests/ats/flux_operator_install.py`. [tests/ats/fixtures/flux-operator-values.yaml](../../tests/ats/fixtures/flux-operator-values.yaml)
+has the chart install the CRDs, which a management cluster gets from management-cluster-bases, and turns off the
+`VerticalPodAutoscaler` and the `ServiceMonitor`.
+
+A new provider whose window is closed exports no version, so once the `Kustomization`s are `Ready`, the test forces
+each example's provider once and waits for its `ResourceSet`, before it checks the sources and `HelmRelease`s. Then:
+
+- `test_schedule_window` checks what `schedule.window` does, on providers of its own.
+- `test_scheduled_cluster_upgrade` moves the `scheduled-upgrades` cluster to an older release, then to its range with
+  the window closed, where the release has to stay, then opens the window, where it has to move.
+- `test_input_loss_keeps_the_app` takes the version of the hello-world example away, by an unreadable registry, a
+  range no tag matches and a deleted provider, and checks that the `ResourceSet` waits and the App stays installed.
+
+They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
+hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
+`tests/ats/assertions/exists-in-workload-cluster`; `test_prune` leaves it out of the apps it expects to go with the
+cluster's `Kustomization`s, as an organization `ResourceSet` installs it.
+
 ## Superseded runs
 
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to

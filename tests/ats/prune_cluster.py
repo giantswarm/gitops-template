@@ -9,7 +9,7 @@ cluster's HelmRelease stays.
 import pykube
 from checks.assertion_files import WORKLOAD_CLUSTER_ASSERTIONS_DIR, load_assertions
 from checks.conditions import obj_key
-from flux_inventory import inventory_keys
+from flux_inventory import applied_deployments, inventory_keys
 from flux_reconcile import suspend, wait_until
 from prune_objects import (
     CLUSTER_KUSTOMIZATIONS,
@@ -44,12 +44,13 @@ def delete_cluster_kustomizations(
     return applied
 
 
-def workload_problems(workload_cluster: pykube.HTTPClient) -> list[str]:
-    """The Deployments of the cluster's apps that are still in the workload cluster."""
+def workload_problems(
+    workload_cluster: pykube.HTTPClient, applied: set[tuple[str, str, str]]
+) -> list[str]:
+    """The Deployments of the apps the cluster's Kustomizations `applied` that are still in
+    the workload cluster."""
     assertions = load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR).values()
-    deployments = [
-        a for file in assertions for a in file if a.get("kind") == "Deployment"
-    ]
+    deployments = applied_deployments([a for file in assertions for a in file], applied)
     return [
         f"Deployment '{obj_key(d)}' wasn't deleted from the workload cluster"
         for d in deployments

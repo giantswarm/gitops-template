@@ -44,3 +44,17 @@ def build_failure_problems(
             f"Kustomization '{key}' no longer lists {missing} in its inventory"
         )
     return problems
+
+
+def applied_deployments(
+    assertions: list[dict], applied: set[tuple[str, str, str]]
+) -> list[dict]:
+    """The Deployments among the workload cluster's `assertions` whose `helmRelease` is one of
+    the `applied` objects, `(kind, namespace, name)`. Other HelmReleases, such as a
+    ResourceSet's, install into the same cluster but aren't the Kustomizations'."""
+    releases = {f"{ns}/{name}" for kind, ns, name in applied if kind == "HelmRelease"}
+    return [
+        a
+        for a in assertions
+        if a.get("kind") == "Deployment" and a.get("helmRelease") in releases
+    ]

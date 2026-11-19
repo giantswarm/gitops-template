@@ -21,7 +21,8 @@ from values_sources import ValuesSourceError
 
 # The node pools in the values of each workload cluster's HelmRelease, by `namespace/name`.
 #  Every cluster has to be listed. Production clusters get the stage's `nodepool0` and their
-#  region's extra pool. Dev and staging have no pools of their own and get the chart's defaults.
+#  region's extra pool. Dev and staging have no pools of their own and get the chart's defaults,
+#  as does scheduled-upgrades.
 EXPECTED_NODE_POOLS: dict[str, set[str]] = {
     "org-org-name/hello-app-prod-euc": {"nodepool0", "large"},
     "org-org-name/hello-app-prod-usw": {"nodepool0", "large"},
@@ -30,6 +31,7 @@ EXPECTED_NODE_POOLS: dict[str, set[str]] = {
     "org-org-name/capi-wc-name": {"workers"},
     "org-org-name/out-of-band-flux-app": {"workers"},
     "org-org-name/out-of-band-no-flux": {"workers"},
+    "org-org-name/scheduled-upgrades": set(),
 }
 
 

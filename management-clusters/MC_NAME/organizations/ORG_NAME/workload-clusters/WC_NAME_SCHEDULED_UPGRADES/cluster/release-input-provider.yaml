@@ -1,0 +1,26 @@
+# The Giant Swarm release of the cluster: the highest release-aws version in the
+# range, picked only inside the upgrade window. Outside it, Flux Operator doesn't
+# read the registry, so a new release waits for the next window.
+# A new provider exports no version until its first window opens, and the cluster
+# isn't created until then; to create it at once, force the provider, see
+# docs/guides/automatic-updates.md.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-release
+  namespace: org-${organization}
+spec:
+  type: OCIArtifactTag
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
+  filter:
+    # minor and patch releases of v36; a new major release is a change in Git
+    semver: '>=36.0.0 <37.0.0'
+    # only the highest version
+    limit: 1
+  schedule:
+    # Tuesdays, 02:00 to 05:00 UTC
+    - cron: "0 2 * * 2"
+      timeZone: UTC
+      window: 3h

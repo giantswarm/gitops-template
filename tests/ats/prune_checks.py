@@ -83,7 +83,8 @@ def check_removed_cluster(
         pytest.fail(f"The cluster's Kustomizations didn't apply {PROTECTED_CLUSTER}.")
     deleted = sorted(applied - {PROTECTED_CLUSTER})
     wait_until(
-        lambda: deleted_problems(api, deleted) + workload_problems(workload_cluster),
+        lambda: deleted_problems(api, deleted)
+        + workload_problems(workload_cluster, applied),
         UNINSTALL_TIMEOUT_SEC,
         "the cluster's objects weren't deleted",
     )

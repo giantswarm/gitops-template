@@ -57,6 +57,7 @@
         "/^tests/ats/conftest\\.py$/",
         "/^tests/ats/kyverno_install\\.py$/",
         "/^tests/ats/external_secrets\\.py$/",
+        "/^tests/ats/flux_operator_install\\.py$/",
       ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?(?: registryUrl=(?<registryUrl>\\S+))?(?: extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*[A-Za-z_][A-Za-z0-9_]*\\s*[:=]\\s*\"(?<currentValue>[^\"]+)\"",

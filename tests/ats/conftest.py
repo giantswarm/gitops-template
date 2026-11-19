@@ -26,7 +26,8 @@ from flux_teardown import delete_without_prune
 # flux_install have fixtures; external_secrets installs External Secrets Operator;
 # workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster;
 # notification_objects suspends the notification example's Alert; automation_rbac gives the
-# `automation` ServiceAccounts the rights they have on a management cluster.
+# `automation` ServiceAccounts the rights they have on a management cluster;
+# flux_operator_install installs Flux Operator.
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
@@ -35,6 +36,7 @@ pytest_plugins = [
     "workload_cluster_flux_crds",
     "notification_objects",
     "automation_rbac",
+    "flux_operator_install",
 ]
 
 FLUX_GIT_REPO_NAME = "your-repo"

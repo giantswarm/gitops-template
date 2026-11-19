@@ -67,7 +67,9 @@ runs it for every Flux `Kustomization`.
 The values come from the `HelmRelease`'s `valuesFrom` entries, in order, followed by `spec.values`. Helm merges them
 the same way Flux does: maps are merged, and lists and scalars are replaced. The chart comes from the `OCIRepository`
 the `HelmRelease` references, or from a `HelmRepository`, and is cached under `${TMPDIR:-/tmp}/gitops-template-charts`.
-A semver range is resolved to the newest matching version, as Flux would resolve it.
+A semver range is resolved to the newest matching version, as Flux would resolve it. When a Flux Operator
+`ResourceSet` in the manifest renders the `OCIRepository`, its tag is only known on the cluster, so the chart is the
+newest in the range of the `ResourceSetInputProvider` the `ResourceSet` reads.
 
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
