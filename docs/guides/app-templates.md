@@ -189,6 +189,16 @@ patches:
 
 The `$` of the target name is escaped, as `kustomize` reads the name as a regular expression.
 
+`dependsOn` doesn't order deletes: when a Kustomization prunes the `HelmRelease`s of an App Template, helm-controller
+uninstalls them all at once. In the envoy-gateway App Template, the `gateway-api-config` release therefore sets
+`spec.uninstall.disableWait`, so its uninstall doesn't wait for the `giantswarm-default` `GatewayClass` to go. If
+Envoy Gateway is removed before it has cleared the `GatewayClass`'s finalizer, the `GatewayClass` stays `Terminating`.
+That only matters when you remove the stack from a workload cluster that stays up. Clear the finalizer there with:
+
+```sh
+kubectl patch gatewayclass giantswarm-default --type=merge -p '{"metadata":{"finalizers":null}}'
+```
+
 ## Recommended next steps
 
 - [Add a new App to a Workload Cluster](./add-app.md)

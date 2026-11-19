@@ -27,6 +27,11 @@ spec:
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
   timeout: 10m
+  uninstall:
+    # helm-controller ignores dependsOn on delete, so a pruned stack's releases are
+    # uninstalled at once; if envoy-gateway goes first, the GatewayClass keeps its
+    # finalizer and a waiting uninstall would fail after the timeout
+    disableWait: true
   upgrade:
     remediation:
       remediateLastFailure: true
