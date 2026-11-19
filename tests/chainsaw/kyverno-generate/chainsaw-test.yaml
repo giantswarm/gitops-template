@@ -4,12 +4,11 @@ metadata:
   name: kyverno-generate
 spec:
   description: >-
-    The Kyverno policy of the shared-objects example copies its ConfigMap into a new `org-*`
-    namespace, with the source's data, and leaves other namespaces alone. The test creates an
-    organization namespace and deletes it again, which deletes the copy.
+    The Kyverno policy of the shared-objects example is Ready and has copied its ConfigMap, with
+    the source's data, into the organization namespace. The test only reads: the kind test's
+    check_shared_object_copied creates a new organization namespace and changes the source.
   timeouts:
     assert: 2m
-    error: 30s
   steps:
     - name: the policy is ready
       try:
@@ -22,35 +21,19 @@ spec:
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"
-    - name: a new organization gets a copy of the source
+    - name: the organization has a copy of the source
       bindings:
         - name: source
           value: (x_k8s_get($client, 'v1', 'ConfigMap', $values.sharedObject.namespace, $values.sharedObject.configMap))
       try:
-        - create:
-            resource:
-              apiVersion: v1
-              kind: Namespace
-              metadata:
-                name: ($values.sharedObject.testNamespace)
         - assert:
             resource:
               apiVersion: v1
               kind: ConfigMap
               metadata:
                 name: ($values.sharedObject.configMap)
-                namespace: ($values.sharedObject.testNamespace)
+                namespace: ($values.organizationNamespace)
                 labels:
                   app.kubernetes.io/managed-by: kyverno
                   generate.kyverno.io/policy-name: ($values.sharedObject.policy)
               (data == $source.data): true
-    - name: a namespace outside the organizations gets no copy
-      try:
-        # the test's own namespace, `chainsaw-*`, which the policy doesn't match
-        - error:
-            resource:
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: ($values.sharedObject.configMap)
-                namespace: ($namespace)

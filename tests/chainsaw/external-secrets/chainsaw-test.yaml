@@ -5,8 +5,8 @@ metadata:
 spec:
   description: >-
     The External Secrets Operator example: the ExternalSecret reads the secret store and
-    writes the app's values into a Secret, with the label that makes Flux watch it, and the
-    HelmRelease that reads that Secret is Ready.
+    writes the app's values into its target Secret, with the label that makes Flux watch it,
+    and the HelmRelease that reads that Secret is Ready.
   timeouts:
     assert: 2m
   steps:
@@ -24,20 +24,27 @@ spec:
                   - status: "True"
                     reason: SecretSynced
     - name: the Secret it writes is watched by Flux and has the values
+      bindings:
+        # the Secret the ExternalSecret writes: its target, which defaults to its own name
+        - name: secret
+          value: (x_k8s_get($client, 'external-secrets.io/v1', 'ExternalSecret', $values.organizationNamespace, $values.externalSecret.name).spec.target.name || $values.externalSecret.name)
       try:
         - assert:
             resource:
               apiVersion: v1
               kind: Secret
               metadata:
-                name: ($values.externalSecret.name)
+                name: ($secret)
                 namespace: ($values.organizationNamespace)
                 labels:
                   reconcile.fluxcd.io/watch: Enabled
-                (ownerReferences[?kind == 'ExternalSecret']):
-                  - name: ($values.externalSecret.name)
+                (contains(ownerReferences[?kind == 'ExternalSecret'].name, $values.externalSecret.name)): true
               (data.values != null): true
     - name: the HelmRelease reads the Secret and is Ready
+      bindings:
+        # the Secret the ExternalSecret writes: its target, which defaults to its own name
+        - name: secret
+          value: (x_k8s_get($client, 'external-secrets.io/v1', 'ExternalSecret', $values.organizationNamespace, $values.externalSecret.name).spec.target.name || $values.externalSecret.name)
       try:
         - assert:
             resource:
@@ -47,8 +54,7 @@ spec:
                 name: ($values.externalSecret.helmRelease)
                 namespace: ($values.organizationNamespace)
               spec:
-                (valuesFrom[?kind == 'Secret']):
-                  - name: ($values.externalSecret.name)
+                (contains(valuesFrom[?kind == 'Secret'].name, $secret)): true
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"

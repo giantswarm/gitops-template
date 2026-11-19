@@ -37,7 +37,8 @@
   },
   // Versions pinned in plain variables: the shared workflow's version inputs
   // in the hand-authored workflows, the constants in `tools/test-all-ff` and
-  // `tests/ats/conftest.py` and `tests/ats/external_secrets.py`, the Giant Swarm release where the `release`
+  // `tests/ats/conftest.py`, `kyverno_install.py`, `external_secrets.py` and
+  // `chainsaw.py`, the Giant Swarm release where the `release`
   // variable is set, and the chart tags kustomize patches set (the release in
   // each stage, hello-world in the app set, staging and prod). The release is
   // the tag of the `release-aws` chart. The manifests only ever set it through
@@ -47,6 +48,8 @@
   //   # renovate: datasource=<datasource> depName=<name> [versioning=<v>] [registryUrl=<url>] [extractVersion=<regex>]
   // with the optional fields in that order, followed by `NAME: "x"`,
   // `NAME="x"` or `NAME = "x"`.
+  // A checksum next to a version, such as `CHAINSAW_SHA256` in
+  // `tests/ats/chainsaw.py`, isn't updated: set it by hand in Renovate's PR.
   "customManagers": [
     {
       "customType": "regex",

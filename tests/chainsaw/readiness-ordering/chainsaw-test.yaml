@@ -4,10 +4,12 @@ metadata:
   name: readiness-ordering
 spec:
   description: >-
-    A workload cluster's objects get Ready in their order: the Cluster, the cluster's
-    Kustomization that waits for it, the apps Kustomization that depends on that one, and a
-    HelmRelease that depends on another. Each step checks the link to the one before it, so a
-    failure names the first object that isn't Ready.
+    Along a workload cluster's chain, each object is linked to the one before it and is Ready:
+    the Cluster, the cluster's Kustomization that waits for it to be Available, the apps
+    Kustomization that depends on that one, and a HelmRelease that depends on another. The
+    steps run in that order, so a failure names the first object of the chain that isn't Ready
+    or isn't linked. The checks look only for the links they need, so the objects can have
+    other health checks and dependencies, too.
   timeouts:
     assert: 2m
   steps:
@@ -33,9 +35,9 @@ spec:
                 name: ($values.kustomizations.cluster)
                 namespace: ($values.kustomizations.namespace)
               spec:
-                (healthChecks[?kind == 'Cluster']):
-                  - name: ($values.cluster)
-                    namespace: ($values.organizationNamespace)
+                # Flux checks this Cluster, and counts a Cluster as healthy once it's Available
+                (length(healthChecks[?kind == 'Cluster' && name == $values.cluster && namespace == $values.organizationNamespace]) > `0`): true
+                (length(healthCheckExprs[?kind == 'Cluster' && contains(current, 'Available')]) > `0`): true
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"
@@ -49,8 +51,7 @@ spec:
                 name: ($values.kustomizations.apps)
                 namespace: ($values.kustomizations.namespace)
               spec:
-                dependsOn:
-                  - name: ($values.kustomizations.cluster)
+                (contains(dependsOn[].name, $values.kustomizations.cluster)): true
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"
@@ -76,8 +77,7 @@ spec:
                 name: ($values.helmReleases.dependant)
                 namespace: ($values.organizationNamespace)
               spec:
-                dependsOn:
-                  - name: ($values.helmReleases.dependency)
+                (contains(dependsOn[].name, $values.helmReleases.dependency)): true
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"

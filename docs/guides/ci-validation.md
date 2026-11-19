@@ -293,15 +293,16 @@ to match what the step expects, such as its `Ready` condition:
 
 | Test | What it checks |
 | --- | --- |
-| `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is `Ready` and depends on the one before it: the `Cluster` is `Available`, the cluster's `Kustomization` health-checks it, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. A failure names the first object of the chain that isn't `Ready`. |
-| `kyverno-generate` | The [shared-objects](../add_mc.md#share-an-object-with-every-organization) policy is `Ready`, copies its ConfigMap, with the source's data and Kyverno's labels, into a new `org-*` namespace, and copies nothing into another namespace. |
+| `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster` is `Available`, the cluster's `Kustomization` health-checks it and waits for it to be `Available`, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
+| `kyverno-generate` | The [shared-objects](../add_mc.md#share-an-object-with-every-organization) policy is `Ready`, and the organization namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. That a new organization gets a copy, and that a change to the source reaches the copies, `test_shared_object_copied` checks in the kind test. |
 | `external-secrets` | The [External Secrets Operator example](../getting-started.md#4-deploy-an-app)'s `ExternalSecret` has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads it is `Ready`. |
 
 The steps name no objects themselves: they read the names from
 [tests/chainsaw/values.yaml](../../tests/chainsaw/values.yaml), which names the template's examples. The shared
 workflow runs only pytest on the kind cluster, so `test_chainsaw` in
 [test_flux_objects.py](../../tests/ats/test_flux_objects.py) runs Chainsaw, once the stand-in clusters exist and the
-`HelmRelease`s are `Ready`. It fails when a Chainsaw test fails, and logs Chainsaw's report with the step that failed.
+`HelmRelease`s are `Ready`. It logs Chainsaw's report, and fails when a Chainsaw test fails, naming the step that
+failed.
 It downloads the Chainsaw release that `CHAINSAW_VERSION` in [tests/ats/chainsaw.py](../../tests/ats/chainsaw.py) pins
 and checks it against `CHAINSAW_SHA256`. Renovate moves the version but not the checksum: set the checksum of the new
 release's `chainsaw_linux_amd64.tar.gz`, from its `checksums.txt`, in the same pull request.
@@ -311,10 +312,9 @@ To add a test, create a directory in `tests/chainsaw` with a `chainsaw-test.yaml
 
 #### Run them against a management cluster
 
-The tests only read objects, apart from `kyverno-generate`, which creates the `org-chainsaw-shared-objects` namespace
-and deletes it again, and Chainsaw's own `chainsaw-*` namespace for each test. So you can run them on demand against a
-management cluster that Flux reconciles from your repository, for example after a change, to check that it got
-`Ready` there:
+The tests only read objects. Chainsaw itself creates a `chainsaw-*` namespace for each test and deletes it again. So
+you can run them on demand against a management cluster that Flux reconciles from your repository, for example after
+a change, to check that it got `Ready` there:
 
 1. Install [Chainsaw](https://kyverno.github.io/chainsaw/latest/quick-start/install/), the version in
    `tests/ats/chainsaw.py`.
@@ -329,7 +329,7 @@ management cluster that Flux reconciles from your repository, for example after 
 
    Add `--include-test-regex 'readiness-ordering|external-secrets'` to run some of the tests only.
 
-Your user needs to read the objects the tests check, and for `kyverno-generate` to create and delete namespaces.
+Your user needs to read the objects the tests check, and to create and delete Chainsaw's namespaces.
 
 ## Superseded runs
 

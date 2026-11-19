@@ -21,9 +21,8 @@ externalSecret:
   helmRelease: out-of-band-no-flux-hello-world-standalone
 
 # kyverno-generate: the policy that copies a ConfigMap into every `org-*` namespace, and the
-# source it copies. The test creates `testNamespace` and deletes it again.
+# source it copies. The test looks for the copy in `organizationNamespace`.
 sharedObject:
   policy: copy-shared-ca-bundle
   configMap: shared-ca-bundle
   namespace: default
-  testNamespace: org-chainsaw-shared-objects
