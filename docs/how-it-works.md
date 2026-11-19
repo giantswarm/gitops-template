@@ -121,7 +121,8 @@ when it is deleted, such as the cluster's apps, so stop the old one from pruning
    Wait until Flux has applied it, until this prints `false` for each of them:
 
     ```sh
-    kubectl get kustomization demomc-clusters-demowc -n default -o jsonpath='{.spec.prune}'
+    kubectl get kustomization demomc-clusters-demowc demomc-clusters-demowc-apps -n default \
+      -o jsonpath='{range .items[*]}{.metadata.name}: {.spec.prune}{"\n"}{end}'
     ```
 
 1. In each file, set `metadata.namespace` to `org-demoorg` and add `namespace: default` to `sourceRef`. If the
@@ -140,8 +141,9 @@ when it is deleted, such as the cluster's apps, so stop the old one from pruning
    new Kustomizations are `Ready`:
 
     ```sh
-    kubectl label secret sops-gpg-demowc -n default giantswarm.io/prevent-deletion-
-    kubectl delete secret sops-gpg-demowc -n default
+    KEY_SECRET=sops-gpg-demowc  # sops-age-demowc for an age key
+    kubectl label secret "${KEY_SECRET}" -n default giantswarm.io/prevent-deletion-
+    kubectl delete secret "${KEY_SECRET}" -n default
     ```
 
 ## Bases and variables

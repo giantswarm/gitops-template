@@ -198,9 +198,9 @@ This build step requires additional configuration using the following environmen
 - `GITOPS_INIT_NAMESPACES`: namespaces used for testing need to be initialized (RBAC permissions) before
   they can be used; as such this variable needs to hold a comma separated list of namespaces, where you want
   to deploy `Kustomization` objects during the test (example: `default,org-org-name`). Each gets an `automation`
-  ServiceAccount with the rights Giant Swarm gives it: cluster-admin for `default/automation`, and admin of its own
-  namespace only for an `org-*` one. `test_organization_kept_out_of_other_organizations` checks that a
-  `Kustomization` in `org-org-name` can't create an object in another organization's namespace, see
+  ServiceAccount with the rights Giant Swarm gives it: admin of its own namespace only for an `org-*` one, and
+  cluster-admin for any other, as for `default/automation`. `test_organization_kept_out_of_other_organizations`
+  checks that a `Kustomization` in `org-org-name` can't create an object in another organization's namespace, see
   [Tenancy](../how-it-works.md#tenancy)
 - `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) `HelmRelease`s and sources that the test doesn't
   look at (example: "org-org-name/my-helmrelease"). It doesn't apply to `Kustomization`s, which all have to get

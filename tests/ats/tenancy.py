@@ -11,7 +11,7 @@ test_flux_objects.py runs it once the Kustomizations are ready.
 import pykube
 import pytest
 from checks.conditions import obj_key
-from cluster_gates import ready_condition
+from cluster_gates import CLUSTERS_NAMESPACE, ready_condition
 from conftest import (
     FLUX_GIT_REPO_NAME,
     FLUX_IMPERSONATION_SA_NAME,
@@ -20,7 +20,6 @@ from conftest import (
 from flux_reconcile import wait_until
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 
-ORGANIZATION_NAMESPACE = "org-org-name"
 # the other organization: the Kustomization tries to create its ConfigMap here
 OTHER_ORGANIZATION_NAMESPACE = "org-tenancy-test"
 KUSTOMIZATION_NAME = "tenancy-test"
@@ -32,7 +31,7 @@ PATH = (
 CONFIG_MAP = "secret-to-be-created-directly-in-wc"
 # who Kubernetes refuses: the organization's ServiceAccount
 REFUSED_USER = (
-    f"system:serviceaccount:{ORGANIZATION_NAMESPACE}:{FLUX_IMPERSONATION_SA_NAME}"
+    f"system:serviceaccount:{CLUSTERS_NAMESPACE}:{FLUX_IMPERSONATION_SA_NAME}"
 )
 REFUSAL_TIMEOUT_SEC = 120
 
@@ -46,7 +45,7 @@ def tenancy_kustomization(api: pykube.HTTPClient) -> KustomizationCR:
             "kind": "Kustomization",
             "metadata": {
                 "name": KUSTOMIZATION_NAME,
-                "namespace": ORGANIZATION_NAMESPACE,
+                "namespace": CLUSTERS_NAMESPACE,
             },
             "spec": {
                 "interval": "10m",
