@@ -219,7 +219,6 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-      retries: 10
   interval: 5m0s
   releaseName: hello-app-prod-euc
   serviceAccountName: automation

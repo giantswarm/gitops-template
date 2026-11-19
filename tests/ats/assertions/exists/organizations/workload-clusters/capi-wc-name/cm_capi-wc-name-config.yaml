@@ -10,7 +10,7 @@ data:
         description: description
         name: capi-wc-name
         organization: org-name
-        preventDeletion: false
+        preventDeletion: true
       providerSpecific: {}
 kind: ConfigMap
 metadata:
