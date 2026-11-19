@@ -463,7 +463,7 @@ metadata:
   name: ${MC_NAME}-clusters-hello-app-dev-1
   namespace: default
 spec:
-  interval: 1m
+  interval: 10m
   path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1/mapi"
   postBuild:
     substitute:
@@ -471,6 +471,7 @@ spec:
       cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
       organization: "${ORG_NAME}"
   prune: true
+  retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository

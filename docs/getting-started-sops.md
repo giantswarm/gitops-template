@@ -99,9 +99,10 @@ repository, and a `Kustomization` that tells it which directory to apply.
         provider: sops
         secretRef:
           name: sops-gpg-master
-      interval: 1m
+      interval: 10m
       path: ./management-clusters/${MC_NAME}
       prune: true
+      retryInterval: 1m
       serviceAccountName: automation
       sourceRef:
         kind: GitRepository
@@ -464,7 +465,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
           kind: Cluster
           name: ${WC_NAME}
           namespace: org-${ORG_NAME}
-      interval: 1m
+      interval: 10m
       path: ./${WC_DIR}/mapi/cluster
       postBuild:
         substitute:
@@ -473,6 +474,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
           organization: "${ORG_NAME}"
           release: "${RELEASE_VERSION}"
       prune: true
+      retryInterval: 1m
       serviceAccountName: automation
       sourceRef:
         kind: GitRepository
@@ -494,7 +496,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     spec:
       dependsOn:
         - name: ${MC_NAME}-clusters-${WC_NAME}
-      interval: 1m
+      interval: 10m
       path: ./${WC_DIR}/mapi
       postBuild:
         substitute:
@@ -503,6 +505,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
           organization: "${ORG_NAME}"
           release: "${RELEASE_VERSION}"
       prune: true
+      retryInterval: 1m
       serviceAccountName: automation
       sourceRef:
         kind: GitRepository

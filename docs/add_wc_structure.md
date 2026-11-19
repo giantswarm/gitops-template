@@ -275,13 +275,14 @@ Kubernetes Secret, you MUST not create multiple Secrets.
         name: ${MC_NAME}-clusters-${WC_NAME}
         namespace: default
       spec:
-        interval: 1m
+        interval: 10m
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
             organization: "${ORG_NAME}"
         prune: true
+        retryInterval: 1m
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
@@ -306,13 +307,14 @@ Kubernetes Secret, you MUST not create multiple Secrets.
           provider: sops
           secretRef:
             name: sops-gpg-${WC_NAME}
-        interval: 1m
+        interval: 10m
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/mapi"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
             organization: "${ORG_NAME}"
         prune: true
+        retryInterval: 1m
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
@@ -333,13 +335,14 @@ Kubernetes Secret, you MUST not create multiple Secrets.
      name: ${MC_NAME}-clusters-${WC_NAME}-direct
      namespace: org-${ORG_NAME}
    spec:
-     interval: 1m
+     interval: 10m
      kubeConfig:
        secretRef:
          # key: kubeConfig
          name: ${WC_NAME}-kubeconfig
      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
      prune: true
+     retryInterval: 1m
      sourceRef:
        kind: GitRepository
        name: ${GIT_REPOSITORY_NAME}

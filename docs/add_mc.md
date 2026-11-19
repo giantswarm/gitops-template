@@ -209,7 +209,8 @@ en- and decrypt real user-related data.
           name: sops-gpg-master
       serviceAccountName: automation
       prune: true
-      interval: 1m
+      interval: 10m
+      retryInterval: 1m
       path: "./management-clusters/${MC_NAME}"
       sourceRef:
         kind: GitRepository

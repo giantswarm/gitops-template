@@ -6,7 +6,7 @@ metadata:
   name: mc-name-clusters-out-of-band-no-flux-direct
   namespace: org-org-name # Change to the `WC_NAME` for the legacy clusters. The rule of thumb: follow the `kubeconfig` namespace.
 spec:
-  interval: 1m
+  interval: 10m
   kubeConfig:
     secretRef:
       name: out-of-band-no-flux-kubeconfig  # TODO: make sure to change it to a name of a secret with a kubeconfig to connect to the target cluster
@@ -17,6 +17,7 @@ spec:
       cluster_name: "out-of-band-no-flux"
       organization: "org-name"
   prune: true
+  retryInterval: 1m
   sourceRef:
     kind: GitRepository
     name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo for this cluster (might be the same or different than the one used for the MC)
