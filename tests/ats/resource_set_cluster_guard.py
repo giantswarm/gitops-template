@@ -29,6 +29,7 @@ from resource_set_objects import (
     install_now,
     resume,
 )
+from resource_set_status import not_kept
 
 CLUSTER_KINDS = {"HelmRelease": HelmReleaseCR, "OCIRepository": OCIRepositoryCR}
 
@@ -39,10 +40,9 @@ def cluster_problems(api: pykube.HTTPClient) -> list[str]:
     for kind, cls in CLUSTER_KINDS.items():
         query = cls.objects(api).filter(namespace=NAMESPACE)
         obj = query.get_or_none(name=CLUSTER_NAME)
-        if obj is None:
-            problems.append(f"{kind} '{NAMESPACE}/{CLUSTER_NAME}' was deleted")
-        elif obj.obj["metadata"].get("deletionTimestamp"):
-            problems.append(f"{kind} '{NAMESPACE}/{CLUSTER_NAME}' is being deleted")
+        problems += not_kept(
+            kind, f"{NAMESPACE}/{CLUSTER_NAME}", obj.obj if obj else None
+        )
     return problems
 
 

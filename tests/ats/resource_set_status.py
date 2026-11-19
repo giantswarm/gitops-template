@@ -45,3 +45,13 @@ def next_schedule(rsip: dict) -> datetime | None:
 def handled(obj: dict, token: str) -> bool:
     """Whether Flux Operator has handled the reconcile request `token`, whatever it did."""
     return (obj.get("status") or {}).get("lastHandledReconcileAt") == token
+
+
+def not_kept(kind: str, key: str, obj: dict | None) -> list[str]:
+    """How the `kind` object `key`, `namespace/name`, didn't stay: it's gone, `obj` is None,
+    or it's being deleted."""
+    if obj is None:
+        return [f"{kind} '{key}' was deleted"]
+    if obj["metadata"].get("deletionTimestamp"):
+        return [f"{kind} '{key}' is being deleted"]
+    return []

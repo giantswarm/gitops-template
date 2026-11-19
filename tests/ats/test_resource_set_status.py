@@ -8,6 +8,7 @@ from resource_set_status import (
     exported_tags,
     handled,
     next_schedule,
+    not_kept,
     ready_reason,
 )
 
@@ -72,3 +73,18 @@ def test_closed_window_converts_to_utc() -> None:
     # 09:05 in UTC+2 is 07:05 UTC, so the window starts at 19:05 UTC
     now = datetime.fromisoformat("2026-11-19T09:05:00+02:00")
     assert closed_window(now)["cron"] == "5 19 * * *"
+
+
+def test_kept_problems() -> None:
+    assert not_kept("HelmRelease", "ns/a", {"metadata": {"name": "a"}}) == []
+
+
+def test_kept_problems_of_a_deleted_object() -> None:
+    assert not_kept("HelmRelease", "ns/a", None) == ["HelmRelease 'ns/a' was deleted"]
+
+
+def test_kept_problems_of_an_object_being_deleted() -> None:
+    obj = {"metadata": {"name": "a", "deletionTimestamp": "2026-11-19T10:00:00Z"}}
+    assert not_kept("HelmRelease", "ns/a", obj) == [
+        "HelmRelease 'ns/a' is being deleted"
+    ]

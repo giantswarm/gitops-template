@@ -33,7 +33,7 @@ from resource_set_objects import (
     request,
     resume,
 )
-from resource_set_status import ready_reason
+from resource_set_status import not_kept, ready_reason
 
 UNREADABLE_URL = "oci://gsoci.azurecr.io/charts/giantswarm/no-such-chart"
 NO_MATCHING_RANGE = ">=1000.0.0"
@@ -46,13 +46,15 @@ Kept = Callable[[], list[str]]
 def app_problems(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> list[str]:
-    """The HelmReleases and the workload of the app that are gone."""
+    """The HelmReleases of the app that are deleted or being deleted, and its workload if it's
+    gone."""
     releases = HelmReleaseCR.objects(api).filter(namespace=NAMESPACE)
-    problems = [
-        f"HelmRelease '{NAMESPACE}/{name}' was deleted"
-        for name in APP_RELEASES
-        if releases.get_or_none(name=name) is None
-    ]
+    problems = []
+    for name in APP_RELEASES:
+        release = releases.get_or_none(name=name)
+        problems += not_kept(
+            "HelmRelease", f"{NAMESPACE}/{name}", release.obj if release else None
+        )
     namespace, name = APP_WORKLOAD
     deployments = pykube.Deployment.objects(workload_cluster).filter(
         namespace=namespace
