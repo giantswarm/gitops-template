@@ -82,8 +82,8 @@ wrong. Keep in mind:
 ### Which to pick
 
 Pick age if you have no reason to use GPG. Its keys are one line each, there is no keyring to import them into, and
-`age-keygen` creates one with a single command, so a key per cluster is easy to create and replace. The SOPS and Flux docs
-both recommend age over OpenPGP where you can use it.
+`age-keygen` creates one with a single command, so a key per cluster is easy to create and replace. The SOPS and
+Flux docs both recommend age over OpenPGP where you can use it.
 
 Pick GPG if your organisation already manages OpenPGP keys, if people keep their keys on smart cards, as SOPS's
 security notes advise for GPG keys, if you want keys that expire or have subkeys, or if a policy asks for OpenPGP or
