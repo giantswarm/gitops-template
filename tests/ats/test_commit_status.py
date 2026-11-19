@@ -7,7 +7,7 @@ from commit_status import (
     alert_problems,
     provider_problems,
     receiver_problems,
-    with_alerts_suspended,
+    suspended,
 )
 
 PROVIDER = {
@@ -23,24 +23,14 @@ ALERT = {
 READY = {"conditions": [{"type": "Ready", "status": "True"}]}
 
 
-def test_with_alerts_suspended_adds_patch() -> None:
-    root = {"kind": "Kustomization", "spec": {"path": "./x"}}
-    patched = with_alerts_suspended(root)
-    assert patched["spec"]["patches"] == [
-        {
-            "target": {"kind": "Alert"},
-            "patch": '[{"op": "add", "path": "/spec/suspend", "value": true}]',
-        }
-    ]
+def test_suspended_sets_suspend() -> None:
+    alert = {"metadata": {"name": "a"}, "spec": {"eventSeverity": "info"}}
+    assert suspended(alert) == {
+        "metadata": {"name": "a"},
+        "spec": {"eventSeverity": "info", "suspend": True},
+    }
     # the manifest read from the repository stays as it is
-    assert "patches" not in root["spec"]
-
-
-def test_with_alerts_suspended_keeps_patches() -> None:
-    root = {"spec": {"patches": [{"patch": "p"}]}}
-    patched = with_alerts_suspended(root)
-    assert patched["spec"]["patches"][0] == {"patch": "p"}
-    assert len(patched["spec"]["patches"]) == 2
+    assert "suspend" not in alert["spec"]
 
 
 def test_provider_problems_ready() -> None:

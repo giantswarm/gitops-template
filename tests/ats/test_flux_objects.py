@@ -28,7 +28,8 @@ from workload_cluster_secrets import check_secrets_pushed
 
 # Kyverno has to run before gitops_deployment applies the repository: pytest sets up the
 #  fixtures of `usefixtures` before the ones a test requests.
-pytestmark = pytest.mark.usefixtures("kyverno")
+#  The Alert of the notification example has to be suspended before then, too.
+pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert")
 
 
 @pytest.fixture(scope="module")

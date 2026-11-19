@@ -1,10 +1,26 @@
 """N1: reading the notification example from the cluster; commit_status.py judges it."""
 
+from pathlib import Path
+
 import pykube
-from commit_status import alert_problems, provider_problems, receiver_problems
+import pytest
+import yaml
+from commit_status import (
+    alert_problems,
+    provider_problems,
+    receiver_problems,
+    suspended,
+)
 from flux_reconcile import wait_until
 from pykube.objects import NamespacedAPIObject
+from pytest_helm_charts.clusters import Cluster
 
+ALERT_FILE = (
+    Path(__file__).resolve().parents[2]
+    / "management-clusters/MC_NAME/notifications/commit-status-alert.yaml"
+)
+# not starting with `kubectl`: Flux removes the fields of those managers when it applies
+FIELD_MANAGER = "gitops-template-test"
 NAMESPACE = "default"
 PROVIDER = "github-commit-status"
 ALERT = "github-commit-status"
@@ -50,23 +66,22 @@ def _problems(api: pykube.HTTPClient) -> list[str]:
     )
 
 
+@pytest.fixture(scope="module")
+def suspended_alert(kube_cluster: Cluster, flux_app_deployment: None) -> None:
+    """Create the example's Alert, suspended, before Flux applies the repository.
+
+    Server-side, under a field manager of its own: Flux takes over the fields of the manifest
+    and leaves `suspend`. It isn't deleted: the test cluster goes away with it.
+    """
+    alert = suspended(yaml.safe_load(ALERT_FILE.read_text()))
+    kube_cluster.kubectl(
+        f"apply --server-side --field-manager={FIELD_MANAGER}",
+        std_input=yaml.safe_dump(alert),
+    )
+
+
 def check_notifications(api: pykube.HTTPClient) -> None:
     """Wait until the Provider has its token, the Alert names it, and the Receiver is Ready."""
-    # TEMPORARY DEBUG
-    import logging
-
-    from pytest_helm_charts.flux.kustomization import KustomizationCR
-
-    log = logging.getLogger(__name__)
-    root = (
-        KustomizationCR.objects(api)
-        .filter(namespace=NAMESPACE)
-        .get(name="mc-name-gitops")
-    )
-    log.error(f"DEBUG root spec: {root.obj['spec']}")
-    log.error(f"DEBUG root status: {root.obj.get('status')}")
-    alert = AlertCR.objects(api).filter(namespace=NAMESPACE).get(name=ALERT)
-    log.error(f"DEBUG alert: {alert.obj}")
     wait_until(
         lambda: _problems(api),
         READY_TIMEOUT_SEC,

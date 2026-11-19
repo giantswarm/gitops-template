@@ -1,28 +1,23 @@
 """N1: the notification example, commit statuses on GitHub and a Receiver for push events.
 
 The example's Provider posts a commit status to GitHub for every event of the Kustomizations.
-The kind test must not call GitHub, so gitops_deployment applies the root Kustomization with a
-patch that suspends every Alert it applies: notification-controller then sends nothing. The
-check, in notification_objects.py, proves the rest: Flux applied the objects, External Secrets
-Operator wrote the tokens from the test's fake store, the Alert names the Provider, and the
-Receiver is Ready. This module judges what it reads.
+The kind test must not call GitHub, so it creates the Alert, suspended, before Flux applies the
+repository: notification-controller then sends nothing. Flux applies the Alert over it and
+leaves `suspend` alone, as the test's own field manager owns it. The check, in
+notification_objects.py, proves the rest: Flux applied the objects, External Secrets Operator
+wrote the tokens from the test's fake store, the Alert names the Provider, and the Receiver is
+Ready. This module judges what it reads.
 """
 
 import copy
-import json
 
 from checks.conditions import is_ready, not_ready_reason, obj_key
 
-SUSPEND_ALERTS_PATCH = {
-    "target": {"kind": "Alert"},
-    "patch": json.dumps([{"op": "add", "path": "/spec/suspend", "value": True}]),
-}
 
-
-def with_alerts_suspended(kustomization: dict) -> dict:
-    """A copy of the root Kustomization `kustomization` that suspends every Alert it applies."""
-    patched = copy.deepcopy(kustomization)
-    patched["spec"].setdefault("patches", []).append(SUSPEND_ALERTS_PATCH)
+def suspended(alert: dict) -> dict:
+    """A copy of the Alert manifest `alert` with `spec.suspend` set."""
+    patched = copy.deepcopy(alert)
+    patched["spec"]["suspend"] = True
     return patched
 
 
