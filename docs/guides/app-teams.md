@@ -71,6 +71,12 @@ What the team can't do: create objects outside its namespace, or cluster-wide ob
 `CustomResourceDefinition`, a `ClusterRole` or another `Namespace`. Kubernetes refuses them, and the team's
 `Kustomization` reports the error. If the team needs one, the platform team adds it to the cluster's files.
 
+Nor can it create Flux objects in a workload cluster that runs Giant Swarm's flux-app: its `flux-edit` role doesn't
+add Flux's kinds to the `admin` role. Upstream Flux's does, so in a workload cluster that runs upstream Flux the team
+could create a `Kustomization` of its own, which Flux runs as kustomize-controller, with the rights of a cluster
+admin. There, start kustomize-controller with `--default-service-account` and `--no-cross-namespace-refs`, see
+[Flux multi-tenancy lockdown](https://fluxcd.io/flux/installation/configuration/multitenancy/).
+
 ## Example
 
 The `out-of-band-no-flux` example cluster has a team for each mode. `hello-team` uses Flux on the management
@@ -156,7 +162,11 @@ The cluster needs a `-direct` Kustomization, which applies its `out-of-band` dir
     ```
 
     The ServiceAccount doesn't have to exist in the workload cluster: the `RoleBinding` names the user Flux
-    impersonates.
+    impersonates. If the cluster's `out-of-band` directory has a `kustomization.yaml`, list the file there:
+
+    ```sh
+    [ -f ${WC_DIR}/out-of-band/kustomization.yaml ] && yq -i '.resources += ["teams/'"${TEAM_NAME}"'.yaml"] | .resources |= unique' ${WC_DIR}/out-of-band/kustomization.yaml
+    ```
 
 1. Create the team's `GitRepository` and `Kustomization`. Set `ref` to the branch or tag the team delivers from, and
    `path` to the directory in its repository:
@@ -246,13 +256,18 @@ To remove the team from the cluster, push twice, in this order:
     kubectl wait --for=delete kustomization/${WC_NAME}-${TEAM_NAME} -n org-${ORG_NAME} --timeout=10m
     ```
 
-1. Delete the team's file in `out-of-band/teams`, and push. The `-direct` Kustomization deletes the team's namespace
-   and `RoleBinding`.
+1. Delete the team's file in `out-of-band/teams`, and its entry in `out-of-band/kustomization.yaml` if there is one,
+   and push. The `-direct` Kustomization deletes the team's namespace and `RoleBinding`.
 
 Don't do both in one push. To delete the team's workloads, Flux impersonates the team's ServiceAccount in the workload
 cluster. Without the `RoleBinding`, the workload cluster refuses it, and the team's `Kustomization` stays
 `Terminating` until the `RoleBinding` is back. Delete the team's ServiceAccount only once no cluster of the
 organization has the team any more, for the same reason.
+
+Remove the cluster's teams this way before you delete the cluster, as in
+[Getting started](../getting-started.md#6-delete-the-cluster-optional). Deleting the cluster's files deletes the
+team's `Kustomization` and `RoleBinding` in the same push. Once the cluster is gone, so is its kubeconfig Secret,
+Flux can't reach the cluster any more, and the team's `Kustomization` stays `Terminating` for good.
 
 ## Add a team with Flux in the workload cluster
 
@@ -322,6 +337,12 @@ cluster, see [Add a new Workload Cluster repository structure](../add_wc_structu
     EOF
     ```
 
+    If the cluster's `out-of-band` directory has a `kustomization.yaml`, list the file there:
+
+    ```sh
+    [ -f ${WC_DIR}/out-of-band/kustomization.yaml ] && yq -i '.resources += ["teams/'"${TEAM_NAME}"'.yaml"] | .resources |= unique' ${WC_DIR}/out-of-band/kustomization.yaml
+    ```
+
 1. Commit and push.
 
 **Check:** in the workload cluster, the team's `Kustomization` is `Ready` and its workloads run in its namespace:
@@ -331,7 +352,8 @@ flux get kustomizations -n ${TEAM_NAME} ${TEAM_NAME}
 kubectl get all -n ${TEAM_NAME}
 ```
 
-To remove the team from the cluster, delete its file in `out-of-band/teams` and push. The `-direct` Kustomization
+To remove the team from the cluster, delete its file in `out-of-band/teams`, and its entry in
+`out-of-band/kustomization.yaml` if there is one, and push. The `-direct` Kustomization
 deletes the team's objects from the workload cluster, and the team's workloads go with its namespace. One push is
 enough here: the team's ServiceAccount is in the workload cluster and goes in the same push, and once it's gone,
 Flux there lets the team's `Kustomization` go without deleting its workloads itself, which the namespace's deletion
