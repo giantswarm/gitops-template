@@ -10,7 +10,7 @@
 #   flux-operator reconcile inputprovider <cluster name>-release -n org-<organization> --force
 #
 # The force reads the registry once, outside the window. Later upgrades still
-# wait for the window. See docs/guides/automatic-updates.md.
+# wait for the window. See docs/guides/scheduled-updates.md.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSetInputProvider
 metadata:

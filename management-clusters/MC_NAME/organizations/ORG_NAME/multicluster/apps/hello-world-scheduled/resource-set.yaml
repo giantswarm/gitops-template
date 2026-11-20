@@ -10,7 +10,7 @@
 #
 #   flux-operator reconcile inputprovider hello-world-scheduled-version -n org-<organization> --force
 #
-# See docs/guides/automatic-updates.md.
+# See docs/guides/scheduled-updates.md.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:

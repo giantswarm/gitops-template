@@ -48,7 +48,7 @@ management-clusters
             ├── ORG_NAME.yaml
             ├── [notifications]                         the organisation's commit statuses
             ├── [shared-objects]                        objects every organisation shares, see add_mc.md
-            ├── [multicluster]                          apps on several clusters, see guides/automatic-updates.md
+            ├── [multicluster]                          apps on several clusters, see guides/scheduled-updates.md
             |   ├── kustomization.yaml
             |   ├── apps.yaml
             |   └── apps                                apps.yaml responsibility
@@ -342,7 +342,7 @@ Both set the variables, like `${cluster_name}`, that the bases use. The organisa
 
 In the same way, the `kustomization.yaml` in `multicluster` lists only `apps.yaml`, whose Kustomization applies the
 organisation's apps on several clusters in `multicluster/apps`, so the management cluster's Kustomization never applies
-their `ResourceSet`s itself. See [Apps on several clusters](../guides/automatic-updates.md#apps-on-several-clusters).
+their `ResourceSet`s itself. See [Apps on several clusters](../guides/scheduled-updates.md#apps-on-several-clusters).
 
 A cluster with apps has two Kustomizations:
 

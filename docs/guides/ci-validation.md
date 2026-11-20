@@ -342,7 +342,7 @@ copy, asks Flux to reconcile the management cluster's `Kustomization`, and waits
 
 ### Flux Operator
 
-The [upgrade window examples](./automatic-updates.md#upgrade-windows-with-flux-operator) are Flux Operator
+The [upgrade window examples](./scheduled-updates.md) are Flux Operator
 `ResourceSetInputProvider`s and `ResourceSet`s, so the test installs Flux Operator before Flux applies the repository.
 It installs Giant Swarm's `flux-operator` chart 0.9.0 (Flux Operator v0.62.1), the version management-cluster-bases
 deploys, from `oci://gsoci.azurecr.io/charts/giantswarm`, into `flux-giantswarm`. The chart is pinned in
