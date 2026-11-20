@@ -403,7 +403,8 @@ def workload_cluster(
                 "persistence": {"volumeClaim": {"enabled": False}},
             },
             # CoreDNS stays on, the chart's default: the H3a releases run pods in the vCluster.
-            #  Without it, gateway-api-crds and hello-world-from-template's hello-world didn't get Ready.
+            #  Without it, gateway-api-crds and the hello-world of hello-world-from-template
+            #  didn't get Ready.
             "proxy": {"extraSANs": [service_host, node_ip]},
             "service": {"spec": {"type": "NodePort"}},
         },
