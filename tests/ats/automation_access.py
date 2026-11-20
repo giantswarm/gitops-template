@@ -35,6 +35,8 @@ def expected_access(org: str) -> list[Access]:
     return [
         Access(default, "create", "", "namespaces", "", False),
         Access(default, "get", "", "secrets", "kube-system", False),
+        Access(default, "get", "", "configmaps", "kube-system", False),
+        Access(org, "list", "", "pods", default, False),
         Access(org, "create", "apps", "deployments", default, False),
         Access(default, "create", "apps", "deployments", PROTECTED_NAMESPACE, False),
         Access(org, "patch", "application.giantswarm.io", "charts", "giantswarm", True),

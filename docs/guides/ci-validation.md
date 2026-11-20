@@ -225,11 +225,13 @@ namespace, which [rbac-operator](https://github.com/giantswarm/rbac-operator) cr
 `org-*` namespace of a management cluster. The test gives these ServiceAccounts exactly the rights they have there, so
 an example that a management cluster would refuse with `Forbidden` fails the test too. The `automation_rbac` fixture
 in [tests/ats/automation_rbac.py](../../tests/ats/automation_rbac.py) creates them once every CRD of the test is
-installed, and replaces an existing one whose rules, subjects or role differ, as rbac-operator does.
-`test_automation_access` then asks the cluster with `SubjectAccessReview`s whether each ServiceAccount may and may not
-do a set of things, so it also fails when something else, such as an object left over from an earlier run, grants
-more. Everything else the test sets up, such as Flux, Kyverno, External Secrets Operator, the vCluster, the
-stand-in clusters and the fixtures, uses the test's admin client.
+installed. It replaces an existing one whose rules or subjects differ, as rbac-operator does, and deletes and creates
+again a binding whose role differs, which the API server doesn't let it change, as `kubectl auth reconcile` does.
+`test_automation_access` in [tests/ats/test_flux_objects.py](../../tests/ats/test_flux_objects.py) then asks the
+cluster with `SubjectAccessReview`s whether each ServiceAccount may and may not do the things that
+[tests/ats/automation_access.py](../../tests/ats/automation_access.py) lists, so it also fails when something else,
+such as an object left over from an earlier run, grants more. Everything else the test sets up, such as Flux,
+Kyverno, External Secrets Operator, the vCluster, the stand-in clusters and the fixtures, uses the test's admin client.
 
 `default/automation`:
 

@@ -1,5 +1,6 @@
 """The rules of the Roles and ClusterRoles the `automation` ServiceAccounts are bound to on a Giant
-Swarm management cluster, copied from their sources; automation_bindings binds them.
+Swarm management cluster, copied from their sources; automation_accounts and automation_bindings
+bind them.
 
 - giantswarm/rbac-operator at 4681152f3de2a062788baa7ecd44a2882acbce5d (RBAC_OPERATOR):
   service/controller/defaultnamespace/resource/clusterroles/create.go (the ClusterRoles) and
