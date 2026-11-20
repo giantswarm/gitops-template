@@ -5,6 +5,6 @@ kind: Kustomization
 # they are listed: the region, then the cluster's own values last.
 components:
   - ../../../../../../../bases/environments/regions/eu_central
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/clusters/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../bases/environments/stages/dev/hello_app_cluster

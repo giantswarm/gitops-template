@@ -113,8 +113,8 @@ If the apps are independent, don't make a stack: list each App Template in the c
 ## Using a stack in a cluster
 
 Use it as you use an [App Template](./add-app.md#adding-app-using-app-template): a directory in the cluster's `apps`,
-whose `kustomization.yaml` lists the stack under `resources:`. A cluster template lists it in its
-`apps/kustomization.yaml`, as [hello_app_cluster](/bases/cluster_templates/hello_app_cluster/apps/) does. There is no
+whose `kustomization.yaml` lists the stack under `resources:`. A cluster base lists it in its
+`apps/kustomization.yaml`, as [hello_app_cluster](/bases/clusters/hello_app_cluster/apps/) does. There is no
 `${cluster_name}-hello-web` `HelmRelease`: to change an app's values for one cluster, add a `configMapGenerator` entry
 named after that app, `${cluster_name}-<app>-user-values`, as
 [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template/)
@@ -153,4 +153,4 @@ of a Flux `Kustomization`, and a Component can't.
 ## Recommended next steps
 
 - [Add a new App Template to the repository](./app-templates.md)
-- [Add Workload Cluster environments](./environments.md), which install hello-web through a cluster template
+- [Add Workload Cluster environments](./environments.md), which install hello-web through a cluster base

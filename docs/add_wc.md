@@ -3,7 +3,7 @@
 Adding a new workload cluster requires a few major steps in the configuration process. You need to
 understand and follow all of them to produce a valid configuration. These steps are documented in following docs:
 
-1. [Preparing a cluster definition template](./guides/cluster-templates.md) you want to use for your cluster (if it
+1. [Preparing a cluster base](./guides/clusters.md) you want to use for your cluster (if it
    doesn't already exist).
 1. [Preparing multiple environments](./guides/environments.md)
 1. [Preparing GitOps repository structure, encryption secrets and dedicated `Flux` `Kustomization`](./add_wc_structure.md).
