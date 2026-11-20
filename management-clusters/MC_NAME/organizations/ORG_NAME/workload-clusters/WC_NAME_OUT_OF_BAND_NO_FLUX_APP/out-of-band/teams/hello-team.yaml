@@ -1,6 +1,7 @@
 # The scope of the hello-team application team in the workload cluster, which the platform team
-# owns: the team's namespace, and the rights of its ServiceAccount there. The team's Kustomization,
-# in teams/hello-team, runs as that ServiceAccount. See docs/guides/app-teams.md.
+# owns: the team's namespace, and the rights there of the organisation's automation
+# ServiceAccount, which the team's Kustomization, in teams/hello-team, runs as. See
+# docs/guides/app-teams.md.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -21,5 +22,5 @@ subjects:
   # Kustomization in the workload cluster. The Kustomization is on the management cluster, in
   # the organization namespace, so the ServiceAccount needn't exist in the workload cluster.
   - kind: ServiceAccount
-    name: hello-team
+    name: automation
     namespace: org-${organization}

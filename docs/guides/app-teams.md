@@ -20,25 +20,32 @@ nowhere else. Which Flux does it depends on where Flux runs:
 Pick Flux on the management cluster when the workload cluster doesn't run Flux: there is nothing to install or upgrade
 in it, and the platform team sees every team's `Kustomization` on the management cluster. Pick Flux in the workload
 cluster when it runs Flux anyway, when the team should see its `Kustomization` and its errors in the cluster it
-deploys to, or when delivery should go on while the management cluster is unavailable. The work of reconciling then
-happens in the workload cluster, not on the management cluster.
+deploys to, when delivery should go on while the management cluster is unavailable, or when the teams on the cluster
+must be kept apart from each other. The work of reconciling then happens in the workload cluster, not on the
+management cluster.
 
 ## Flux on the management cluster
 
-1. The platform team creates a ServiceAccount named after the team in the organization namespace on the management
-   cluster. It has no rights there. In the workload cluster, the platform team creates the team's namespace, and a
-   `RoleBinding` there that gives the ServiceAccount the `admin` role in that namespace.
+1. In the workload cluster, the platform team creates the team's namespace, and a `RoleBinding` there that gives the
+   organisation's `automation` ServiceAccount the `admin` role in that namespace. Giant Swarm provides `automation`
+   in the organization namespace on the management cluster, and the `Kustomization`s of this repository run as it.
 1. On the management cluster, in the organization namespace, the platform team adds a `GitRepository` for the
    team's repository and a Flux `Kustomization` that applies it. The `Kustomization` reaches the workload cluster
-   through its kubeconfig Secret, and has `serviceAccountName` set to the team's ServiceAccount. Flux then
-   impersonates `system:serviceaccount:org-<organization>:<team>` in the workload cluster, which can write the team's
-   namespace only. `targetNamespace` puts everything from the team's repository into that namespace.
+   through its kubeconfig Secret, and has `serviceAccountName` set to `automation`. Flux then impersonates
+   `system:serviceaccount:org-<organisation>:automation` in the workload cluster, which can write only the namespaces
+   that have such a `RoleBinding`. `targetNamespace` puts everything from the team's repository into the team's
+   namespace.
 1. The team pushes plain Kubernetes manifests, or a `kustomization.yaml`, to its repository. Flux applies them at
    the next `interval`, and deletes what the team deletes, as the `Kustomization` has `prune: true`.
 
 The cluster's apps `Kustomization` applies the team's `GitRepository` and `Kustomization` into the organization
 namespace. That's where the cluster's kubeconfig Secret is, and a `Kustomization` reads its kubeconfig Secret from its
 own namespace.
+
+Every team with Flux on the management cluster that delivers to the same workload cluster has the same identity
+there: the organisation's `automation` ServiceAccount. That identity is admin in every team's namespace, so a team's
+repository can write into another team's namespace. If isolation between teams matters, use Flux in the workload
+cluster, where each team has a ServiceAccount of its own.
 
 ## Flux in the workload cluster
 
@@ -63,7 +70,6 @@ cluster's other `Kustomization`s have.
 | The platform team owns, in this repository | The application team owns, in its repository |
 | --- | --- |
 | The workload cluster and its apps | Its workloads: `Deployment`s, `Service`s, `ConfigMap`s and the like |
-| The team's ServiceAccount on the management cluster, in the organization's `teams` directory | |
 | The team's namespace and `RoleBinding` in the workload cluster, in the cluster's `out-of-band` directory | The directory Flux applies, and its `kustomization.yaml` if it has one |
 | The team's `GitRepository` and `Kustomization`: on the management cluster, in the cluster's `teams` directory, or in the workload cluster, in the cluster's `out-of-band` directory. Which repository, which branch or tag, which directory | What goes into that directory, on that branch or tag |
 
@@ -83,13 +89,11 @@ the object's namespace instead.
 The `out-of-band-no-flux` example cluster has a team for each mode. `hello-team` uses Flux on the management
 cluster, and the kind test in [CI validation](./ci-validation.md) reconciles it into the test's workload cluster:
 
-- [organizations/ORG_NAME/teams/hello-team.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/teams/hello-team.yaml):
-  the team's ServiceAccount, which the management cluster's Kustomization applies.
 - [out-of-band/teams/hello-team.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams/hello-team.yaml):
-  the team's namespace and `RoleBinding`, which the cluster's `-direct` Kustomization applies to the workload
-  cluster.
+  the team's namespace and the `RoleBinding` of the organisation's `automation` ServiceAccount, which the cluster's
+  `-direct` Kustomization applies to the workload cluster.
 - [teams/hello-team](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams/hello-team/):
-  the team's `GitRepository` and `Kustomization`.
+  the team's `GitRepository`, and its `Kustomization`, which runs as `automation`.
 
 `hello-team-wc` uses Flux in the workload cluster:
 [out-of-band/teams/hello-team-wc.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams/hello-team-wc.yaml)
@@ -119,28 +123,6 @@ The cluster needs a `-direct` Kustomization, which applies its `out-of-band` dir
     export WC_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}
     ```
 
-1. Create the team's ServiceAccount in the organization namespace, once per organization, whichever clusters the
-   team delivers to. Flux checks that it exists before it deletes what the team's `Kustomization` applied, so it
-   belongs to the organization rather than to a cluster, and outlives the team's `Kustomization`s:
-
-    ```sh
-    mkdir -p management-clusters/${MC_NAME}/organizations/${ORG_NAME}/teams
-    cat <<EOF > management-clusters/${MC_NAME}/organizations/${ORG_NAME}/teams/${TEAM_NAME}.yaml
-    apiVersion: v1
-    kind: ServiceAccount
-    metadata:
-      name: ${TEAM_NAME}
-      namespace: org-${ORG_NAME}
-    EOF
-    ```
-
-    The management cluster's `Kustomization` applies it. If the organization directory has a `kustomization.yaml`,
-    list the file there, or Flux never applies it:
-
-    ```sh
-    [ -f management-clusters/${MC_NAME}/organizations/${ORG_NAME}/kustomization.yaml ] && yq -i '.resources += ["teams/'"${TEAM_NAME}"'.yaml"] | .resources |= unique' management-clusters/${MC_NAME}/organizations/${ORG_NAME}/kustomization.yaml
-    ```
-
 1. Create the team's namespace and `RoleBinding` in the workload cluster:
 
     ```sh
@@ -162,12 +144,12 @@ The cluster needs a `-direct` Kustomization, which applies its `out-of-band` dir
       name: admin
     subjects:
       - kind: ServiceAccount
-        name: ${TEAM_NAME}
+        name: automation
         namespace: org-${ORG_NAME}
     EOF
     ```
 
-    The ServiceAccount doesn't have to exist in the workload cluster: the `RoleBinding` names the user Flux
+    `automation` doesn't have to exist in the workload cluster: the `RoleBinding` names the user Flux
     impersonates. If the cluster's `out-of-band` directory has a `kustomization.yaml`, list the file there:
 
     ```sh
@@ -207,7 +189,7 @@ The cluster needs a `-direct` Kustomization, which applies its `out-of-band` dir
       path: ./deploy
       prune: true
       retryInterval: 1m
-      serviceAccountName: ${TEAM_NAME}
+      serviceAccountName: automation
       sourceRef:
         kind: GitRepository
         name: \${cluster_name}-${TEAM_NAME}
@@ -265,10 +247,9 @@ To remove the team from the cluster, push twice, in this order:
 1. Delete the team's file in `out-of-band/teams`, and its entry in `out-of-band/kustomization.yaml` if there is one,
    and push. The `-direct` Kustomization deletes the team's namespace and `RoleBinding`.
 
-Don't do both in one push. To delete the team's workloads, Flux impersonates the team's ServiceAccount in the workload
-cluster. Without the `RoleBinding`, the workload cluster refuses it, and the team's `Kustomization` stays
-`Terminating` until the `RoleBinding` is back. Delete the team's ServiceAccount only once no cluster of the
-organization has the team any more, for the same reason.
+Don't do both in one push. To delete the team's workloads, Flux impersonates the organisation's `automation`
+ServiceAccount in the workload cluster. Without the `RoleBinding` in the team's namespace, the workload cluster refuses
+it, and the team's `Kustomization` stays `Terminating` until the `RoleBinding` is back.
 
 Remove the cluster's teams this way before you delete the cluster, as in
 [Getting started](../getting-started.md#6-delete-the-cluster-optional). Deleting the cluster's files deletes the
