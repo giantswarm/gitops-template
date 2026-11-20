@@ -35,14 +35,18 @@ def describe(condition: dict) -> str:
     )
 
 
+def later_ready(conditions: list[dict]) -> list[dict]:
+    """The Ready conditions after the first condition."""
+    return [c for c in conditions[1:] if c.get("type") == "Ready"]
+
+
 def not_ready_reason(obj: dict) -> str:
     """Why `is_ready` says no: the first condition, which is the one it reads, and the Ready
     condition when that isn't the first, as it holds the error while Flux retries."""
     conditions = (obj.get("status") or {}).get("conditions") or []
     if not conditions:
         return "has no conditions"
-    later_ready = [c for c in conditions[1:] if c.get("type") == "Ready"]
-    return "; ".join(describe(c) for c in conditions[:1] + later_ready)
+    return "; ".join(describe(c) for c in conditions[:1] + later_ready(conditions))
 
 
 def ready(kind: str, obj: dict) -> bool:

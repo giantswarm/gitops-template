@@ -1,5 +1,5 @@
 """The rules of the Roles and ClusterRoles the `automation` ServiceAccounts are bound to on a Giant
-Swarm management cluster, copied from their sources; automation_rbac binds them.
+Swarm management cluster, copied from their sources; automation_bindings binds them.
 
 - giantswarm/rbac-operator at 4681152f3de2a062788baa7ecd44a2882acbce5d (RBAC_OPERATOR):
   service/controller/defaultnamespace/resource/clusterroles/create.go (the ClusterRoles) and
@@ -10,23 +10,27 @@ Swarm management cluster, copied from their sources; automation_rbac binds them.
   renames in bases/flux-app-v2/common/kustomization.yaml.
 """
 
+from rbac_manifests import cluster_role
+
 RBAC_OPERATOR = "giantswarm/rbac-operator@4681152f3de2a062788baa7ecd44a2882acbce5d"
 MC_BASES = (
     "giantswarm/management-cluster-bases@52aa8ee8a4ddb0c95e693bac67556150e33d956f"
 )
 FLUX_APP = "giantswarm/flux-app@02f4e84fa7a585de8e0deb95983ea47a4cbf828c"
 
-MANAGED_BY = {"giantswarm.io/managed-by": "rbac-operator"}
 READ = ["get", "list", "watch"]
-ALL_CONFIGMAP_VERBS = ["get", "list", "watch", "create", "update", "patch", "delete"]
+WRITE = ["get", "list", "watch", "create", "update", "patch", "delete"]
+ALL = ["*"]
 # clusterroles/create.go isRestrictedResource, lines 441-450
 RESTRICTED_RESOURCES = ("configmaps", "secrets")
+
+
+def rule(groups: list[str], resources: list[str], verbs: list[str]) -> dict:
+    return {"apiGroups": groups, "resources": resources, "verbs": verbs}
+
+
 # clusterroles/create.go lines 126-131
-POD_LOGS_RULE = {"apiGroups": [""], "resources": ["pods/log"], "verbs": ["get", "list"]}
-
-
-def all_verbs(group: str, resource: str) -> list[dict]:
-    return [{"apiGroups": [group], "resources": [resource], "verbs": ["*"]}]
+POD_LOGS_RULE = rule([""], ["pods/log"], ["get", "list"])
 
 
 def read_all_rules(discovery: list[dict]) -> list[dict]:
@@ -35,7 +39,8 @@ def read_all_rules(discovery: list[dict]) -> list[dict]:
 
     rbac-operator builds them from discovery (clusterroles/create.go createReadAllClusterRole,
     lines 88-148), with client-go's ServerPreferredResources: one rule per group and resource,
-    whatever the version, without subresources and resources without verbs. `discovery` holds
+    from its preferred version, without subresources. It then skips the resources without
+    verbs, so one the preferred version serves without verbs gets no rule. `discovery` holds
     the APIResourceLists, the preferred version of each group first.
     """
     rules = []
@@ -44,46 +49,32 @@ def read_all_rules(discovery: list[dict]) -> list[dict]:
         group = resource_list["groupVersion"].rpartition("/")[0]
         for resource in resource_list.get("resources") or []:
             name = resource["name"]
-            skip = "/" in name or not resource.get("verbs")
-            if skip or name in RESTRICTED_RESOURCES or (group, name) in seen:
+            if "/" in name or (group, name) in seen:
                 continue
             seen.add((group, name))
-            rules.append({"apiGroups": [group], "resources": [name], "verbs": READ})
+            if resource.get("verbs") and name not in RESTRICTED_RESOURCES:
+                rules.append(rule([group], [name], READ))
     rules.append(POD_LOGS_RULE)
     return rules
 
 
 # FLUX_APP clusterrole-crd-controller.yaml with podSecurityStandards enforced, so without the
 #  PodSecurityPolicy rule
-CRD_CONTROLLER_RULES = [
-    {"apiGroups": [group], "resources": ["*"], "verbs": ["*"]}
-    for group in [
-        "source.toolkit.fluxcd.io",
-        "kustomize.toolkit.fluxcd.io",
-        "helm.toolkit.fluxcd.io",
-        "notification.toolkit.fluxcd.io",
-        "image.toolkit.fluxcd.io",
-        "source.extensions.fluxcd.io",
-    ]
-] + [
-    {
-        "apiGroups": [""],
-        "resources": ["namespaces", "secrets", "configmaps", "serviceaccounts"],
-        "verbs": READ,
-    },
-    {"apiGroups": [""], "resources": ["events"], "verbs": ["create", "patch"]},
-    {"apiGroups": [""], "resources": ["configmaps"], "verbs": ALL_CONFIGMAP_VERBS},
-    {
-        "apiGroups": [""],
-        "resources": ["configmaps/status"],
-        "verbs": ["get", "update", "patch"],
-    },
-    {
-        "apiGroups": ["coordination.k8s.io"],
-        "resources": ["leases"],
-        "verbs": ALL_CONFIGMAP_VERBS,
-    },
-    {"apiGroups": [""], "resources": ["serviceaccounts/token"], "verbs": ["create"]},
+FLUX_GROUPS = [
+    "source.toolkit.fluxcd.io",
+    "kustomize.toolkit.fluxcd.io",
+    "helm.toolkit.fluxcd.io",
+    "notification.toolkit.fluxcd.io",
+    "image.toolkit.fluxcd.io",
+    "source.extensions.fluxcd.io",
+]
+CRD_CONTROLLER_RULES = [rule([group], ["*"], ALL) for group in FLUX_GROUPS] + [
+    rule([""], ["namespaces", "secrets", "configmaps", "serviceaccounts"], READ),
+    rule([""], ["events"], ["create", "patch"]),
+    rule([""], ["configmaps"], WRITE),
+    rule([""], ["configmaps/status"], ["get", "update", "patch"]),
+    rule(["coordination.k8s.io"], ["leases"], WRITE),
+    rule([""], ["serviceaccounts/token"], ["create"]),
     {"nonResourceURLs": ["/livez/ping"], "verbs": ["head"]},
 ]
 
@@ -93,30 +84,22 @@ CRD_CONTROLLER_RULES = [
 #  cluster without Kamaji.
 STATIC_CLUSTER_ROLES = {
     # lines 154-177
-    "write-organizations": all_verbs("security.giantswarm.io", "organizations"),
+    "write-organizations": [rule(["security.giantswarm.io"], ["organizations"], ALL)],
     # lines 233-259
-    "write-client-certificates": all_verbs("core.giantswarm.io", "certconfigs"),
+    "write-client-certificates": [rule(["core.giantswarm.io"], ["certconfigs"], ALL)],
     # lines 265-291
-    "write-silences": all_verbs("monitoring.giantswarm.io", "silences"),
+    "write-silences": [rule(["monitoring.giantswarm.io"], ["silences"], ALL)],
     # lines 297-323
-    "write-policy-exceptions": all_verbs("kyverno.io", "policyexceptions"),
+    "write-policy-exceptions": [rule(["kyverno.io"], ["policyexceptions"], ALL)],
     # lines 329-351: on CAPA management clusters, which the template's cluster examples are
-    "write-aws-cluster-role-identity": all_verbs(
-        "infrastructure.cluster.x-k8s.io", "awsclusterroleidentities"
-    ),
+    "write-aws-cluster-role-identity": [
+        rule(["infrastructure.cluster.x-k8s.io"], ["awsclusterroleidentities"], ALL)
+    ],
     # lines 357-392
     "cluster-app-chart-lookups": [
-        {
-            "apiGroups": ["release.giantswarm.io"],
-            "resources": ["releases"],
-            "verbs": READ,
-        },
-        {"apiGroups": [""], "resources": ["nodes"], "verbs": READ},
-        {
-            "apiGroups": ["infrastructure.cluster.x-k8s.io"],
-            "resources": ["awsclusterroleidentities"],
-            "verbs": READ,
-        },
+        rule(["release.giantswarm.io"], ["releases"], READ),
+        rule([""], ["nodes"], READ),
+        rule(["infrastructure.cluster.x-k8s.io"], ["awsclusterroleidentities"], READ),
     ],
     # FLUX_APP's `crd-controller`, under the name MC_BASES gives it
     "crd-controller-giantswarm": CRD_CONTROLLER_RULES,
@@ -124,35 +107,11 @@ STATIC_CLUSTER_ROLES = {
 
 # rbac/resource/automation/create.go lines 154-175
 PATCH_CHARTS_RULES = [
-    {
-        "apiGroups": ["application.giantswarm.io"],
-        "resources": ["charts"],
-        "verbs": ["list", "get", "patch"],
-    }
+    rule(["application.giantswarm.io"], ["charts"], ["list", "get", "patch"])
 ]
-WRITE_POLICY_EXCEPTIONS_RULES = all_verbs("kyverno.io", "policyexceptions")
+WRITE_POLICY_EXCEPTIONS_RULES = STATIC_CLUSTER_ROLES["write-policy-exceptions"]
 # MC_BASES bases/flux-app-v2/common/resource-rbac.yaml lines 34-46
-READ_PODS_AND_LOGS_RULES = [
-    {"apiGroups": [""], "resources": ["pods", "pods/log"], "verbs": ["get", "list"]}
-]
-
-
-def cluster_role(name: str, rules: list[dict]) -> dict:
-    return {
-        "apiVersion": "rbac.authorization.k8s.io/v1",
-        "kind": "ClusterRole",
-        "metadata": {"name": name, "labels": MANAGED_BY},
-        "rules": rules,
-    }
-
-
-def role(name: str, namespace: str, rules: list[dict]) -> dict:
-    return {
-        "apiVersion": "rbac.authorization.k8s.io/v1",
-        "kind": "Role",
-        "metadata": {"name": name, "namespace": namespace, "labels": MANAGED_BY},
-        "rules": rules,
-    }
+READ_PODS_AND_LOGS_RULES = [rule([""], ["pods", "pods/log"], ["get", "list"])]
 
 
 def cluster_roles(read_all: list[dict]) -> list[dict]:

@@ -225,7 +225,10 @@ namespace, which [rbac-operator](https://github.com/giantswarm/rbac-operator) cr
 `org-*` namespace of a management cluster. The test gives these ServiceAccounts exactly the rights they have there, so
 an example that a management cluster would refuse with `Forbidden` fails the test too. The `automation_rbac` fixture
 in [tests/ats/automation_rbac.py](../../tests/ats/automation_rbac.py) creates them once every CRD of the test is
-installed. Everything else the test sets up, such as Flux, Kyverno, External Secrets Operator, the vCluster, the
+installed, and replaces an existing one whose rules, subjects or role differ, as rbac-operator does.
+`test_automation_access` then asks the cluster with `SubjectAccessReview`s whether each ServiceAccount may and may not
+do a set of things, so it also fails when something else, such as an object left over from an earlier run, grants
+more. Everything else the test sets up, such as Flux, Kyverno, External Secrets Operator, the vCluster, the
 stand-in clusters and the fixtures, uses the test's admin client.
 
 `default/automation`:
@@ -233,29 +236,32 @@ stand-in clusters and the fixtures, uses the test's admin client.
 - `cluster-admin` in `default`, through a `RoleBinding`, and in every `org-*` namespace except `org-giantswarm`;
 - `read-all` in every namespace: `get`, `list` and `watch` on every resource the API server serves, except
   `ConfigMap`s and `Secret`s, and `get` and `list` on `pods/log`;
-- in every namespace: all verbs on `Organization`s, `CertConfig`s, `Silence`s, Kyverno `PolicyException`s and, on
-  CAPA management clusters, `AWSClusterRoleIdentity`s.
+- all verbs on `Organization`s and, on CAPA management clusters, `AWSClusterRoleIdentity`s, which are
+  cluster-scoped;
+- in every namespace: all verbs on `CertConfig`s, `Silence`s and Kyverno `PolicyException`s.
 
 `org-<organisation>/automation`:
 
 - `cluster-admin` in its own namespace only;
-- in every namespace: all verbs on `Silence`s, and `get`, `list` and `watch` on `Release`s, `Node`s and
-  `AWSClusterRoleIdentity`s, which the cluster charts look up;
+- in every namespace: all verbs on `Silence`s;
+- `get`, `list` and `watch` on the cluster-scoped `Release`s, `Node`s and `AWSClusterRoleIdentity`s, which the
+  cluster charts look up;
 - all verbs on `PolicyException`s in `kube-system`, `giantswarm` and `policy-exceptions`, and `get`, `list` and `patch`
   on `Chart`s in `giantswarm`;
 - the role of the Kamaji app, where it runs, which the kind cluster doesn't.
 
 Neither can create namespaces, cluster-scoped objects other than `Organization`s and `AWSClusterRoleIdentity`s, or
-RBAC outside the namespaces where it's `cluster-admin`. `org-<organisation>/automation` can't read other namespaces.
+RBAC outside the namespaces where it's `cluster-admin`. `org-<organisation>/automation` can't read other namespaces
+beyond those.
 
 The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, and the `RoleBinding`s
 of Giant Swarm's Flux from management-cluster-bases at `52aa8ee8a4ddb0c95e693bac67556150e33d956f` and flux-app at
 `02f4e84fa7a585de8e0deb95983ea47a4cbf828c`. [tests/ats/automation_roles.py](../../tests/ats/automation_roles.py) holds the
-rules, and both modules name the file and lines each object comes from. rbac-operator builds
-`read-all` from the API server's discovery, so the test does too: it covers the resources served when the fixture
-runs. The test leaves out the binding to Crossplane's `crossplane-edit`, which rbac-operator creates only where
-Crossplane runs, and Kyverno policies that limit Flux on a management cluster. When rbac-operator changes the rights,
-update the modules and the commits.
+rules and [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py) the bindings, and both name the
+file and lines each object comes from. rbac-operator builds `read-all` from the API server's discovery, so the test
+does too: it covers the resources served when the fixture runs. The test leaves out the binding to Crossplane's
+`crossplane-edit`, which rbac-operator creates only where Crossplane runs, and Kyverno policies that limit Flux on a
+management cluster. When rbac-operator changes the rights, update the modules and the commits.
 
 ### The workload cluster of the `out-of-band-no-flux` example
 

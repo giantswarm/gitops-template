@@ -5,6 +5,12 @@ from collections.abc import Iterator
 
 import pykube
 import pytest
+from automation_access import (
+    access_problems,
+    api_server_review,
+    expected_access,
+    org_namespace,
+)
 from checks.assertion_files import (
     EXISTS_ASSERTIONS_DIR,
     WORKLOAD_CLUSTER_ASSERTIONS_DIR,
@@ -55,6 +61,22 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
     # all the checks are done actually in the fixture, which was extracted to avoid
     #  duplication in other tests
     pass
+
+
+def test_automation_access(
+    kube_cluster: Cluster,
+    gitops_test_config: GitOpsTestConfig,
+    automation_rbac: None,
+    check_kustomizations_successful: None,
+) -> None:
+    # the `automation` ServiceAccounts have the rights of a management cluster, no more and no
+    #  less, once the repository is applied: SubjectAccessReviews also catch what other objects,
+    #  such as ones left over from an earlier run, grant them
+    org = org_namespace(gitops_test_config.init_namespaces)
+    assert org, "GITOPS_INIT_NAMESPACES has no `org-*` namespace"
+    review = api_server_review(kube_cluster.kube_client)
+    problems = access_problems(review, expected_access(org))
+    assert not problems, "\n".join(problems)
 
 
 @pytest.fixture(scope="module")
