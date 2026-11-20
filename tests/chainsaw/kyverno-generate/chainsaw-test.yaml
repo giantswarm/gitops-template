@@ -5,8 +5,8 @@ metadata:
 spec:
   description: >-
     The Kyverno policy of the shared-objects example is Ready and has copied its ConfigMap, with
-    the source's data, into the organization namespace. The test only reads: the kind test's
-    check_shared_object_copied creates a new organization namespace and changes the source.
+    the source's data, into the organisation's namespace. The test only reads: the kind test's
+    check_shared_object_copied creates a new organisation namespace and changes the source.
   timeouts:
     assert: 2m
   steps:
@@ -21,7 +21,7 @@ spec:
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"
-    - name: the organization has a copy of the source
+    - name: the organisation has a copy of the source
       bindings:
         - name: source
           value: (x_k8s_get($client, 'v1', 'ConfigMap', $values.sharedObject.namespace, $values.sharedObject.configMap))

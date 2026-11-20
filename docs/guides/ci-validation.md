@@ -307,7 +307,7 @@ uses the existing `default` namespace and neither creates nor deletes one.
 | Test | What it checks |
 | --- | --- |
 | `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster` is `Available`, the cluster's `Kustomization` health-checks it and waits for it to be `Available`, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
-| `kyverno-generate` | The [shared-objects](../add_mc.md#share-an-object-with-every-organization) policy is `Ready`, and the organization namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. |
+| `kyverno-generate` | The [shared-objects](../add_mc.md#share-an-object-with-every-organization) policy is `Ready`, and the organisation's namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. |
 | `external-secrets` | The [External Secrets Operator example](../getting-started.md#4-deploy-an-app)'s `ExternalSecret` has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads the values from that key is `Ready`. |
 
 To add a test, create a directory in `tests/chainsaw` with a `chainsaw-test.yaml`, and put the names it needs in the
@@ -316,7 +316,7 @@ values file.
 ### The values file
 
 The steps name no objects themselves: they read the names from a values file.
-[tests/chainsaw/values.yaml](../../tests/chainsaw/values.yaml) names the template's examples: the organization
+[tests/chainsaw/values.yaml](../../tests/chainsaw/values.yaml) names the template's examples: the organisation's
 namespace, the `out-of-band-no-flux` cluster with its `Kustomization`s and two of its `HelmRelease`s, the
 `ExternalSecret` with the key of the values in its Secret and the `HelmRelease` that reads that Secret, and the Kyverno
 policy with the ConfigMap it copies. Copy it and set the names of your own objects. Run only the tests whose examples
