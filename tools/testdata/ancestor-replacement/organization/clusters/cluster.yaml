@@ -1,0 +1,17 @@
+# Its postBuild.substitute doesn't set `organization`, which cluster/configmap.yaml uses:
+# ../kustomization.yaml sets it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ancestor-replacement
+  namespace: default
+spec:
+  interval: 1m
+  path: ./organization/clusters/cluster
+  postBuild:
+    substitute:
+      cluster_name: "ancestor-replacement"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: ancestor-replacement

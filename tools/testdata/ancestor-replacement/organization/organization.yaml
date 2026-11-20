@@ -1,0 +1,6 @@
+# the source of the replacement in kustomization.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: from-the-ancestor
+  namespace: default

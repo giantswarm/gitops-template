@@ -261,6 +261,23 @@ function test() {
 			echo "${output}"
 			has_validation_errors=1
 		fi
+
+		# fake-flux must build a Kustomization as Flux applies it: with the value a replacement
+		# in an ancestor directory's kustomization.yaml sets, as an organisation's sets
+		# `organization` in its workload clusters' Kustomizations.
+		echo -n "fake-flux, a variable an ancestor's replacement sets: "
+		fixture_dir="${tmp_dir}/ancestor-replacement"
+		mkdir -p "${fixture_dir}/.git"
+		cp -r "$(dirname $0)/testdata/ancestor-replacement/." "${fixture_dir}"
+		status=0
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build ancestor-replacement:default -M 2>&1) || status=$?
+		if [ "${status}" -eq 0 ] && grep -q "namespace: org-from-the-ancestor" <<<"${output}"; then
+			echo "OK, set"
+		else
+			echo "not set:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
 	fi
 
 	if [ "${mode}" == "validate" ]; then

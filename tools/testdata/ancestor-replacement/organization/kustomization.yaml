@@ -1,0 +1,22 @@
+# Fixture for tools/test-all-ff: a cluster's Flux Kustomization, in clusters/cluster.yaml, gets
+# `organization` from this directory's replacement, not from its own file, as a workload
+# cluster's does from its organisation's kustomization.yaml. tools/fake-flux has to build the
+# Kustomization as Flux applies it, from this directory, or `${organization}` stays unset.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - organization.yaml
+  - clusters
+replacements:
+  - source:
+      kind: ConfigMap
+      name: from-the-ancestor
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+        options:
+          create: true

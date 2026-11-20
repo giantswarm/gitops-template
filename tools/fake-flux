@@ -205,6 +205,36 @@ function _find_kustomization() {
 	esac
 }
 
+# kustomize if it's installed, otherwise the one built into kubectl
+if command -v kustomize >/dev/null; then
+	kustomize_build=(kustomize build --load-restrictor=LoadRestrictionsNone)
+else
+	kustomize_build=(kubectl kustomize --load-restrictor=LoadRestrictionsNone)
+fi
+
+##
+# Write the Flux Kustomization named $2, from file $1, to file $3 as Flux applies it. Flux's
+# generated build of a directory without a kustomization.yaml stops at a directory with one and
+# builds it whole, so the file's directory is built by kustomize if it has one, and its parent
+# too if that has one, and so on. A replacement in such an ancestor, such as the one in an
+# organisation's kustomization.yaml that sets `organization`, changes the Kustomization. The
+# highest of those directories whose build has the Kustomization wins; without one, the file is
+# used as it is.
+function _as_applied() {
+	local file="$1" out="$3" dir dirs=()
+	dir=$(dirname "${file}")
+	while [ "${dir}" != "." ] && [ -e "${dir}/kustomization.yaml" ]; do
+		dirs=("${dir}" "${dirs[@]}")
+		dir=$(dirname "${dir}")
+	done
+	for dir in "${dirs[@]}"; do
+		"${kustomize_build[@]}" "${dir}" | name="$2" yq 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/*" and
+			.kind == "Kustomization" and .metadata.name == strenv(name))' >"${out}"
+		[ -s "${out}" ] && return 0
+	done
+	cp "${file}" "${out}"
+}
+
 ##
 # Build the given kustomization and applies any optional filtering
 # Drop the empty documents a build can end in, which yq would print as blank lines.
@@ -224,9 +254,15 @@ function build() {
 	path="$(cut -d, -f4 <<<${kustomization})"
 	kustomization="$(cut -d, -f1 <<<${kustomization})"
 
+	# the Kustomization as Flux applies it, and the kustomization.yaml --use-kustomize writes
+	applied=$(mktemp)
+	generated=""
 	cleanup() {
-		rm "${path}"/kustomization.yaml
+		rm -f "${applied}" ${generated:+"${generated}"}
 	}
+	trap cleanup EXIT SIGINT
+	_as_applied "${kustomization}" "${name}" "${applied}"
+	namespace=$(yq '.metadata.namespace // "default"' "${applied}")
 
 	if [ -n "$2" ] && [ -e "$(realpath $path/$2)" ]; then
 		path="${path}/$2"
@@ -246,7 +282,7 @@ function build() {
 	fi
 
 	if ! $use_kustomize; then
-		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | drop_empty_documents | yq $yqflags "$*"
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${applied} --dry-run --strict-substitute | drop_empty_documents | yq $yqflags "$*"
 		return $?
 	fi
 
@@ -256,8 +292,8 @@ function build() {
 		declare -a resources=()
 		_find_resources "${path}" "${path}"
 
-		trap cleanup EXIT SIGINT
-		cat <<-EOF >"${path}/kustomization.yaml"
+		generated="${path}/kustomization.yaml"
+		cat <<-EOF >"${generated}"
 			apiVersion: kustomize.config.k8s.io/v1beta1
 			kind: Kustomization
 			buildMetadata: [originAnnotations]
@@ -266,7 +302,7 @@ function build() {
 		EOF
 	fi
 
-	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "$(cut -d, -f1 <<<$kustomization)")
+	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "${applied}")
 	for v in $toexport; do
 		export "${v?}"
 	done
