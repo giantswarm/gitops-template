@@ -8,5 +8,5 @@ labels:
 # region. The cluster appends them with the ../userconfig component, which it
 # lists after its region component.
 resources:
-  - ../../../clusters/capa/template
+  - ../../capa
   - cluster_userconfig.yaml

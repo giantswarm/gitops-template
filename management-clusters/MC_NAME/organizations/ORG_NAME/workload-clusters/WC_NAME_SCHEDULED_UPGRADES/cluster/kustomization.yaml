@@ -13,6 +13,6 @@ labels:
 patches:
   - path: patch_delete_base_cluster.yaml
 resources:
-  - ../../../../../../../bases/clusters/capa/template
+  - ../../../../../../../bases/clusters/capa
   - release-input-provider.yaml
   - cluster-resource-set.yaml

@@ -96,7 +96,7 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
   each workload cluster.
 - `cluster-app-installation-values.yaml` replaces the `cluster-app-installation-values` ConfigMap, which holds the
   management cluster's values, such as `global.managementCluster`. A Kyverno policy copies it into every `org-*`
-  namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/template/readme.md). The
+  namespace of a Giant Swarm management cluster; see the [cluster base](/bases/clusters/capa/readme.md). The
   kind test creates its stand-in from the same file.
 - `charts/<chart>.yaml` holds values a chart can't render without the management cluster, such as
   `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values

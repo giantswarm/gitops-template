@@ -37,4 +37,4 @@ patches:
       name: \${cluster_name}
 # block end
 resources:
-  - ../../../../cluster_templates/hello_app_cluster
+  - ../../../../clusters/hello_app_cluster

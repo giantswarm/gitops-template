@@ -6,6 +6,6 @@ kind: Kustomization
 components:
   - ../../../../../../../bases/environments/regions/us_west
   - ../../../../../../../bases/environments/regions/us_west/node_pool
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/clusters/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../bases/environments/stages/prod/hello_app_cluster

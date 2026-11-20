@@ -7,7 +7,7 @@
     - [The staging cluster](#the-staging-cluster)
     - [The production cluster](#the-production-cluster)
     - [Promote a change from dev to prod](#promote-a-change-from-dev-to-prod)
-- [Add Workload Clusters based on the environment cluster templates](#add-workload-clusters-based-on-the-environment-cluster-templates)
+- [Add Workload Clusters based on the environment cluster bases](#add-workload-clusters-based-on-the-environment-cluster-bases)
 - [Tips for developing environments](#tips-for-developing-environments)
 
 You might want to set up multiple, similar Workload Clusters that serve as for example development,
@@ -69,10 +69,10 @@ mkdir -p bases/environments/stages/prod
 ```
 
 Each of these contain a `hello_app_cluster` example, built from the
-[hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository. A
-cluster template bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa/template)
+[hello_app_cluster](/bases/clusters/hello_app_cluster) cluster base that ships with this repository. A
+cluster base like it bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa)
 and the [hello-web](/bases/stacks/hello-web) stack, which installs hello-world served through Envoy Gateway. None
-of the other docs create it, so if your repository doesn't have it, copy `bases/cluster_templates/hello_app_cluster`
+of the other docs create it, so if your repository doesn't have it, copy `bases/clusters/hello_app_cluster`
 together with the bases it references.
 
 The hello-web stack holds what ties its apps together: it orders hello-world after the Gateway API CRDs, sets the
@@ -87,7 +87,7 @@ mkdir -p bases/environments/stages/prod/hello_app_cluster
 
 By checking each `kustomization.yaml` files - the [dev](
 /bases/environments/stages/dev/hello_app_cluster/kustomization.yaml) one for example - you will notice that they
-all reference our [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base.
+all reference our [hello_app_cluster](/bases/clusters/hello_app_cluster) cluster base.
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -95,7 +95,7 @@ kind: Kustomization
 # ...
 resources:
   # ...
-  - ../../../../cluster_templates/hello_app_cluster
+  - ../../../../clusters/hello_app_cluster
 ```
 
 You can put additional configuration under these folders that should be same for each instances of these clusters.
@@ -112,8 +112,8 @@ export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
-Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the CAPA cluster base, whose
-`release-aws` chart has the release as its version, so a patch sets the release as the tag of the cluster's
+Each stage also pins the Giant Swarm release its clusters run. The hello_app_cluster base builds on the CAPA cluster
+base, whose `release-aws` chart has the release as its version, so a patch sets the release as the tag of the cluster's
 `OCIRepository`.
 Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. Each stage pins its own release, so a new release
 reaches dev first and staging and prod only when you promote it, see
@@ -130,7 +130,7 @@ Change our working directory to the `hello_app_cluster` development cluster envi
 cd bases/environments/stages/dev/hello_app_cluster
 ```
 
-The [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
+The [hello_app_cluster](/bases/clusters/hello_app_cluster) cluster base defines that the
 [hello-web](/bases/stacks/hello-web) stack should be installed in all of these clusters. Values for its apps come
 from the stack itself; what a stage adds on top is the chart version to run.
 
@@ -174,7 +174,7 @@ patches:
       kind: OCIRepository
       name: \\\${cluster_name}
 resources:
-  - ../../../../cluster_templates/hello_app_cluster
+  - ../../../../clusters/hello_app_cluster
 EOF
 ```
 
@@ -190,9 +190,9 @@ Let's change our working directory to the staging cluster.
 cd ../../staging/hello_app_cluster
 ```
 
-We will use the same environment variables for this cluster template as we did for the development cluster.
+We will use the same environment variables for this cluster as we did for the development cluster.
 
-It is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base, like the development
+It is based on the [hello_app_cluster](/bases/clusters/hello_app_cluster) cluster base, like the development
 cluster. Unlike it, staging doesn't follow a range: it pins the exact `hello-world` version and the release, so it only
 runs a version once you have promoted it from dev. The hello-world patch overrides the version the hello-web stack
 pins.
@@ -220,7 +220,7 @@ patches:
       kind: OCIRepository
       name: \\\${cluster_name}
 resources:
-  - ../../../../cluster_templates/hello_app_cluster
+  - ../../../../clusters/hello_app_cluster
 EOF
 ```
 
@@ -236,7 +236,7 @@ Let's change our working directory to the production cluster.
 cd ../../prod/hello_app_cluster
 ```
 
-We will use the same environment variables for this cluster template as we did for the development cluster.
+We will use the same environment variables for this cluster as we did for the development cluster.
 
 Let's create the `Kustomization` for the production cluster environment template.
 
@@ -256,17 +256,17 @@ generatorOptions:
     reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
 resources:
-  - ../../../../cluster_templates/hello_app_cluster
+  - ../../../../clusters/hello_app_cluster
 EOF
 ```
 
 It is similar to the staging cluster in the following manners:
 
-- it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
+- it is based on the [hello_app_cluster](/bases/clusters/hello_app_cluster) cluster base
 - it pins the exact versions it runs instead of following a range
 
 Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-cluster-userconfig` `ConfigMap` of the
-cluster template with extra settings for the production cluster: bigger nodes, and more of them.
+cluster base with extra settings for the production cluster: bigger nodes, and more of them.
 
 ```sh
 cat <<EOF > cluster_userconfig.yaml
@@ -468,7 +468,7 @@ The pool is called `large` and doesn't share a key with the stage's `nodepool0`,
 pools: the stage's and the region's. The dev and staging clusters don't add the node pool component, so they only get
 the chart's default node pools.
 
-## Add Workload Clusters based on the environment cluster templates
+## Add Workload Clusters based on the environment cluster bases
 
 Just as any other Workload Clusters we define them in
 [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
@@ -539,18 +539,18 @@ extra node pool:
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/cluster/kustomization.yaml)
 
 Every cluster lists the components that append to its `HelmRelease` `valuesFrom`: its region, optionally the region's
-extra node pool, and last the cluster template's [userconfig](/bases/cluster_templates/hello_app_cluster/userconfig)
+extra node pool, and last the cluster base's [userconfig](/bases/clusters/hello_app_cluster/userconfig)
 component, which appends the cluster's own `${cluster_name}-cluster-userconfig`. kustomize applies the components in
 the order they are listed, so Flux merges the entries in this order:
 
 1. `cluster-app-installation-values`, the management cluster's values (see the [cluster base](
-   /bases/clusters/capa/template/readme.md#values-from-the-management-cluster))
+   /bases/clusters/capa/readme.md#values-from-the-management-cluster))
 1. `${cluster_name}-config`, the base values
 1. `${cluster_name}-region-config`, the region
 1. `${cluster_name}-region-node-pool-config`, the region's extra node pool, for the clusters that add it
 1. `${cluster_name}-cluster-userconfig`, the cluster's own values
 
-The cluster template doesn't append the cluster's own values itself. It is a resource of the cluster's kustomization,
+The cluster base doesn't append the cluster's own values itself. It is a resource of the cluster's kustomization,
 and kustomize applies the patches of a resource before the components of the kustomization that uses it. A region
 component would then land after the cluster's own values and override them.
 
@@ -573,7 +573,7 @@ buildMetadata: [originAnnotations]
 kind: Kustomization
 components:
   - ../../../../../../../bases/environments/regions/eu_central
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/clusters/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../bases/environments/stages/dev/hello_app_cluster
 EOF
@@ -599,7 +599,7 @@ kind: Kustomization
 components:
   - ../../../../../../../bases/environments/regions/eu_central
   - ../../../../../../../bases/environments/regions/eu_central/node_pool
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/clusters/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
 EOF
@@ -623,7 +623,7 @@ kind: Kustomization
 components:
   - ../../../../../../../bases/environments/regions/us_west
   - ../../../../../../../bases/environments/regions/us_west/node_pool
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/clusters/hello_app_cluster/userconfig
 resources:
   - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
 EOF

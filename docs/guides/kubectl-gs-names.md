@@ -75,7 +75,7 @@ Nothing changes in the clusters: Flux applies the same resources from the new fi
 
 ## Rename the cluster user config
 
-1. Rename the files of every workload cluster, and of the cluster templates and environments that have them:
+1. Rename the files of every workload cluster, and of the cluster bases and environments that have them:
 
     ```sh
     for f in $(git ls-files '*cluster_user_config.yaml'); do
@@ -154,10 +154,10 @@ both apply the same resources until you delete it.
 
 ## Align the CAPA cluster base (optional)
 
-If your repository has its own copy of `bases/clusters/capa/template`, compare it with the
-[one in this template](/bases/clusters/capa/template). It now has one `cluster.yaml` with the `OCIRepository` and the
+If your repository has its own copy of the CAPA cluster base, compare it with the
+[one in this template](/bases/clusters/capa). It now has one `cluster.yaml` with the `OCIRepository` and the
 `HelmRelease`, as `kubectl gs gitops add base --provider capa` writes. Merge your two files into it and change
-`kustomization.yaml` to list `cluster.yaml`. The base's [readme](/bases/clusters/capa/template/readme.md) lists where
+`kustomization.yaml` to list `cluster.yaml`. The base's [readme](/bases/clusters/capa/readme.md) lists where
 it differs from the CLI's on purpose.
 
 ## Record the layers

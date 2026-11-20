@@ -390,9 +390,9 @@ cluster's `Kustomization` applies the `${WC_DIR}/cluster` directory and gets `Re
 apps' `Kustomization` applies the rest of `${WC_DIR}` only after that, so the apps install into a cluster that
 exists.
 The cluster itself is a Flux `HelmRelease` that installs the `release-aws` chart, built from the
-[CAPA cluster base](/bases/clusters/capa/template) that ships with this repository. The chart version is
+[CAPA cluster base](/bases/clusters/capa) that ships with this repository. The chart version is
 the Giant Swarm release, so the release the cluster runs is stored in Git. `release-aws` rejects a cluster name longer
-than 20 characters. For other providers, see [Add a CAPx Workload Cluster template](./guides/cluster-templates.md).
+than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](./guides/clusters.md).
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
 > creates the same cluster, with the same file and resource names. After you pick a release in the first step below,
@@ -401,7 +401,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
 > ```sh
 > kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NAME} \
 >   --management-cluster ${MC_NAME} --repository-name ${GITOPS_REPO} \
->   --base bases/clusters/capa/template --release ${RELEASE_VERSION}
+>   --base bases/clusters/capa --release ${RELEASE_VERSION}
 > ```
 >
 > The CLI still generates a `mapi` directory. Move what's in it up into `${WC_DIR}`, and take one `../` off the path
@@ -468,7 +468,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster templa
     components:
       - ../../../../../../../bases/environments/regions/${REGION}
     resources:
-      - ../../../../../../../bases/clusters/capa/template
+      - ../../../../../../../bases/clusters/capa
     EOF
     ```
 
