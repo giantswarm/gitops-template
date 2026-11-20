@@ -23,6 +23,7 @@ from pytest_helm_charts.clusters import Cluster
 from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
+from workload_cluster_secrets import check_secrets_pushed
 
 # Kyverno has to run before gitops_deployment applies the repository: pytest sets up the
 #  fixtures of `usefixtures` before the ones a test requests.
@@ -122,6 +123,13 @@ def test_workload_cluster_assertions(
     assert (
         not unavailable
     ), f"Deployments in the workload cluster aren't available: {unavailable}"
+
+
+def test_secrets_pushed(
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    check_secrets_pushed(workload_cluster)
 
 
 def test_node_pools(

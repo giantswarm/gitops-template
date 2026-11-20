@@ -130,7 +130,9 @@ Clusters and apps need secrets, such as an app's passwords. There are two ways t
 
 - Keep them in a secret manager. External Secrets Operator runs on every management cluster and copies them into
   Kubernetes Secrets. The repository only holds `ExternalSecret` resources that say which secret goes where.
-  [Getting started](./getting-started.md) uses this way.
+  [Getting started](./getting-started.md) uses this way. ESO can also make secrets, such as passwords, and push
+  secrets into a new workload cluster, see [Push secrets into a new Workload
+  Cluster](./guides/workload-cluster-secrets.md).
 - Keep them in the repository, encrypted with [SOPS](https://github.com/getsops/sops) and GPG keys. Flux decrypts
   them when it applies them. [Getting started with SOPS](./getting-started-sops.md) uses this way.
 

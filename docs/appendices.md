@@ -78,7 +78,7 @@ in the store object itself, so it needs no secret manager and no extra credentia
 Note that the token ends up in plain text in the cluster. Use this only for testing, and delete the store when you're
 done. Creating a `ClusterSecretStore` also needs permissions beyond the `default` and `org-*` namespaces.
 
-First, create the store with the two values the guide reads. Put your GitHub token in place of `YOUR_GITHUB_TOKEN`:
+First, create the store with the values the guides read. Put your GitHub token in place of `YOUR_GITHUB_TOKEN`:
 
 ```sh
 cat <<'EOF' | kubectl apply -f -
@@ -96,6 +96,8 @@ spec:
           value: |
             podAnnotations:
               example.com/source: secret-manager
+        - key: workload-clusters-common-token
+          value: common-token-from-secret-manager
 EOF
 ```
 

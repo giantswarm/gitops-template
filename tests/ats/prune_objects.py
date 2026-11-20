@@ -3,7 +3,7 @@
 import pykube
 from checks.kinds import REFERENCED_KINDS
 from conftest import FLUX_OBJECTS_NAMESPACE
-from external_secrets import ExternalSecretCR
+from eso_kinds import ExternalSecretCR, PasswordCR, PushSecretCR, SecretStoreCR
 from pykube.objects import APIObject
 
 
@@ -60,6 +60,10 @@ PRUNE_KINDS: dict[str, type[APIObject]] = {
     "Organization": OrganizationCR,
     # the out-of-band-no-flux cluster's hello-world reads its secret values through one
     "ExternalSecret": ExternalSecretCR,
+    # the out-of-band-no-flux cluster's apps push Secrets into the workload cluster with these
+    "SecretStore": SecretStoreCR,
+    "PushSecret": PushSecretCR,
+    "Password": PasswordCR,
 }
 # the GitRepository and the Kustomizations reconcile when asked
 PRUNE_TIMEOUT_SEC = 180
