@@ -1,5 +1,6 @@
 # What the hello-team application team's Kustomization applies from the team's repository
-# into the team's namespace of the workload cluster, as the team's ServiceAccount.
+# into the team's namespace of the workload cluster, as the organisation's automation
+# ServiceAccount.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -24,5 +25,5 @@ roleRef:
   name: admin
 subjects:
   - kind: ServiceAccount
-    name: hello-team
+    name: automation
     namespace: org-org-name

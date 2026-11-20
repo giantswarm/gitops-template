@@ -4,7 +4,7 @@ metadata:
   name: ${cluster_name}-hello-team
   namespace: org-${organization}
 spec:
-  # the team's namespace and the rights of its ServiceAccount, in out-of-band/teams
+  # the team's namespace and its RoleBinding, in out-of-band/teams
   dependsOn:
     - name: mc-name-clusters-out-of-band-no-flux-direct  # TODO: the name of the cluster's -direct Kustomization
   interval: 10m
@@ -16,8 +16,10 @@ spec:
   prune: true
   retryInterval: 1m
   # With kubeConfig, Flux impersonates this ServiceAccount of the Kustomization's namespace in
-  # the workload cluster. It can write the team's namespace only.
-  serviceAccountName: hello-team
+  # the workload cluster: the organisation's automation ServiceAccount, which Giant Swarm
+  # provides. Every team of the organisation on this cluster runs as it, and it is admin in
+  # each of their namespaces.
+  serviceAccountName: automation
   sourceRef:
     kind: GitRepository
     name: ${cluster_name}-hello-team
