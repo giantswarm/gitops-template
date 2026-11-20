@@ -173,10 +173,12 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
         substitute:
           cluster_description: "My GitOps Cluster"
           cluster_name: "demo0"
-          organization: "gitops-demo"
           release: "36.2.0"
       ...
     ```
+
+    Don't set `organization`: the organisation's `kustomization.yaml` sets it from the name of the `Organization`, see
+    [The organisation's name](./reference/repo-structure.md#the-organisations-name).
 
     Note that without `release`, the `OCIRepository` has no chart version to pull and the cluster doesn't install. To
     upgrade the cluster later, change `release` to a newer release.

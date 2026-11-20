@@ -20,7 +20,9 @@ class OrganizationCR(APIObject):
 #  matches a file under a Kustomization's path here.
 PRUNE_IGNORE = "\n".join(
     [
-        # P2: the organization
+        # P2: the organisation's Organization, alone. The replacements in the organisation's
+        #  kustomization.yaml take its name from it, so the organisation's directory no longer
+        #  builds, and nor does the management cluster's Kustomization, which applies it.
         "/management-clusters/MC_NAME/organizations/ORG_NAME/ORG_NAME.yaml",
     ]
 )
@@ -52,6 +54,11 @@ PRUNED_OBJECTS = [
 # the objects in the removed files that `kustomize.toolkit.fluxcd.io/prune: disabled`
 #  protects: deleting the organization deletes its clusters
 PROTECTED_OBJECTS = [("Organization", "", "org-name")]
+# P2: what the management cluster's Kustomization keeps, in its inventory and on the cluster,
+#  when it can't build the organisation without its Organization: it prunes nothing
+KEPT_BY_FAILED_BUILD = PROTECTED_OBJECTS + [
+    ("Kustomization", namespace, name) for namespace, name in CLUSTER_KUSTOMIZATIONS
+]
 # the app's workload in the workload cluster, which goes when its HelmRelease is deleted
 PRUNED_WORKLOAD = ("hello-world", "hello-world")
 # the cluster's HelmRelease, which deleting the cluster's Kustomization leaves

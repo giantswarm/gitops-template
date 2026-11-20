@@ -1,0 +1,16 @@
+# Forwards the events of the Kustomizations in the organisation's namespace to the Provider. An
+# event source without `namespace` matches only the Alert's own namespace. `info` forwards
+# successes as well as failures, so a commit shows when Flux applied it. If Kustomizations of
+# another repository live in this namespace, list this repository's by name.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-commit-status
+  namespace: org-ORG_NAME
+spec:
+  providerRef:
+    name: github-commit-status
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: "*"

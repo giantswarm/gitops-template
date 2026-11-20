@@ -1,4 +1,9 @@
-"""Reading a Flux Kustomization's inventory, without a cluster."""
+"""Reading a Flux Kustomization's inventory and whether it built, without a cluster."""
+
+from checks.conditions import obj_key
+
+# the reason of the Ready condition of a Kustomization whose kustomize build failed
+BUILD_FAILED = "BuildFailed"
 
 
 def inventory_keys(kustomization: dict) -> set[tuple[str, str, str]]:
@@ -16,3 +21,26 @@ def inventory_keys(kustomization: dict) -> set[tuple[str, str, str]]:
         name = "_".join(fields[1:-2]).replace("__", ":")
         keys.add((fields[-1], fields[0], name))
     return keys
+
+
+def build_failure_problems(
+    kustomization: dict, kept: set[tuple[str, str, str]]
+) -> list[str]:
+    """Why the Kustomization doesn't report that its build failed, or no longer lists the
+    objects `kept` in its inventory, if so. A Kustomization whose build fails applies and
+    prunes nothing, so its inventory stays as it was."""
+    key = obj_key(kustomization)
+    conditions = (kustomization.get("status") or {}).get("conditions") or []
+    ready: dict = next((c for c in conditions if c.get("type") == "Ready"), {})
+    problems = []
+    if ready.get("status") != "False" or ready.get("reason") != BUILD_FAILED:
+        problems.append(
+            f"Kustomization '{key}' doesn't report a failed build: "
+            f"Ready is {ready.get('status')} ({ready.get('reason')})"
+        )
+    missing = sorted(kept - inventory_keys(kustomization))
+    if missing:
+        problems.append(
+            f"Kustomization '{key}' no longer lists {missing} in its inventory"
+        )
+    return problems

@@ -1,0 +1,55 @@
+# The organisation's name is set once, as the `metadata.name` of its Organization in
+# ORG_NAME.yaml. The replacements below copy it into the workload clusters' Flux Kustomizations:
+# `organization` in their `spec.postBuild.substitute`, which their manifests use as
+# `${organization}`, and the organisation's namespace, `org-<name>`, wherever they name it as the
+# fixed placeholder `org-ORG_NAME`: in the health check of a Kustomization labelled
+# `giantswarm.io/health-check-cluster: "true"`, and as the namespace of the objects in it, such
+# as the commit-status Alert in notifications/. Leave `org-ORG_NAME` as it is: the replacements
+# keep `org-` and replace what follows it. An `organization` written in a `substitute` is
+# overwritten.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ORG_NAME.yaml
+  - notifications
+  - workload-clusters
+replacements:
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+        options:
+          create: true
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      # only the Kustomizations with the label: kustomize fails on one without a health check
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          labelSelector: giantswarm.io/health-check-cluster=true
+        fieldPaths:
+          - spec.healthChecks.[kind=Cluster].namespace
+        options:
+          delimiter: "-"
+          index: 1
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          namespace: org-ORG_NAME
+        fieldPaths:
+          - metadata.namespace
+        options:
+          delimiter: "-"
+          index: 1

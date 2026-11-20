@@ -19,20 +19,25 @@ The workflow offers the following jobs:
   (see [validate-helm-values](../../tools/README.md#validate-helm-values)), so values the chart's schema rejects fail
   the job. A variable that a `Kustomization`'s manifests use but its `spec.postBuild.substitute` doesn't set fails the
   job, where Flux would replace it with an empty string. `flux build` doesn't read `spec.postBuild.substituteFrom`, so
-  a variable set only there fails the job too, although Flux sets it on the cluster. It attaches a validation report as
-  a comment to your PR.
+  a variable set only there fails the job too, although Flux sets it on the cluster. It reads each `Kustomization` as
+  Flux applies it, from the build of the directories above its file that have a `kustomization.yaml`, such as the
+  organisation's, which sets `organization` and the organisation's namespace, see
+  [fake-flux](../../tools/README.md#fake-flux). It attaches a validation report as a comment to your PR.
 - `get_diff`: it templates your changed manifests and compares them to a templated version without your changes,
   then it generates and saves a diff between the two and attaches it to your PR
 - `test on kind`: deploys a full `flux` installation to a test `kind` cluster, then deploys your `Kustomizations`
   there to verify if they are deployed fine. It checks if all the `Kustomizations` are reconciled as expected
   and additionally if all the statements present in `tests/ats/assertions` are also available in objects in the
   cluster.
-  Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster. It leaves the organization out of
-  the `GitRepository` with `spec.ignore`, and drops an App Set from what the cluster's apps `Kustomization` builds with
-  `$patch: delete` patches in its `spec.patches`, as `app_sets/kustomization.yaml` lists the App Set and `spec.ignore`
-  can't change that list. Then it deletes the cluster's two `Kustomization`s. The App Set and everything the
-  `Kustomization`s applied have to go, and the `Organization` and the cluster's `HelmRelease` have to stay. It deletes
-  what the other tests check, so it runs last and fails if they didn't run before it.
+  Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster. It leaves the organisation's
+  `ORG_NAME.yaml` out of the `GitRepository` with `spec.ignore`, and drops an App Set from what the cluster's apps
+  `Kustomization` builds with `$patch: delete` patches in its `spec.patches`, as `app_sets/kustomization.yaml` lists
+  the App Set and `spec.ignore` can't change that list. The App Set has to go. The organisation's `kustomization.yaml`
+  takes the organisation's name from the `Organization`, so without `ORG_NAME.yaml` the management cluster's
+  `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its inventory keeps the
+  `Organization` and the cluster's `Kustomization`s, and they stay. Then it deletes the cluster's two
+  `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` has to stay. It deletes what
+  the other tests check, so it runs last and fails if they didn't run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 

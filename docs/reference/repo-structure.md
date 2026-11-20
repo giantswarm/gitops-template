@@ -7,6 +7,7 @@
   - [`[OTHER_RESOURCES]`](#other_resources)
   - [`[kustomization.yaml]`](#kustomizationyaml)
   - [`[organizations]` and `[workload-clusters]`](#organizations-and-workload-clusters)
+  - [The organisation's name](#the-organisations-name)
   - [`cluster`, `apps` and `[out-of-band]`](#cluster-apps-and-out-of-band)
 - [Flux Kustomizations](#flux-kustomizations)
 - [Objects the management cluster provides](#objects-the-management-cluster-provides)
@@ -41,9 +42,10 @@ management-clusters
     └── [organizations]
         ├── [kustomization.yaml]
         └── ORG_NAME
-            ├── [kustomization.yaml]                    (mandatory when there are no workload-clusters)
+            ├── kustomization.yaml                      sets the organisation's name, see below
             ├── [OTHER_RESOURCES]
             ├── ORG_NAME.yaml
+            ├── [notifications]                         the organisation's commit statuses
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
@@ -212,6 +214,7 @@ management-clusters
     └── organizations
         └── demo-gitops
             ├── demo-gitops.yaml
+            ├── kustomization.yaml
             ├── secrets
             |   └── org-secret-1.enc.yaml
             └── workload-clusters
@@ -232,6 +235,28 @@ management-clusters
         ├── demo0.yaml
         └── demo0
 ```
+
+### The organisation's name
+
+The organisation's name is set once, as the `metadata.name` of its `Organization` in `ORG_NAME.yaml`. The
+organisation's `kustomization.yaml` lists `ORG_NAME.yaml` and `workload-clusters`, and its `replacements` copy the
+name into what Flux applies from them:
+
+- into `spec.postBuild.substitute.organization` of every Flux `Kustomization`, which the cluster's files use as
+  `${organization}`. An `organization` written in a `substitute` by hand is overwritten;
+- into the namespace of a `Cluster` health check, in a `Kustomization` with the label
+  `giantswarm.io/health-check-cluster: "true"`, such as `WC_NAME.yaml`;
+- into `metadata.namespace` of every object in the namespace `org-ORG_NAME`, such as the `-direct` `Kustomization`
+  and the organisation's commit-status `Alert` in `notifications`.
+
+`org-ORG_NAME` is a fixed placeholder: write it as it is, and don't change it to your organisation's name. The
+replacements keep `org-` and put the name after it, so `org-ORG_NAME` becomes `org-demo-gitops` for the organisation
+`demo-gitops`.
+
+Flux applies the organisation's directory as its `kustomization.yaml` builds it, so list there everything else in the
+directory that Flux has to apply, such as `secrets`. Build the organisation's directory to see what Flux applies, for
+example with `kubectl kustomize management-clusters/MC_NAME/organizations/ORG_NAME`. Building `workload-clusters` on
+its own leaves the `Kustomization`s without `organization` and with the `org-ORG_NAME` placeholders.
 
 ### `cluster`, `apps` and `[out-of-band]`
 
@@ -258,6 +283,8 @@ management-clusters
     ├── MC_NAME.yaml                        # applies MC_NAME/, up to WC_NAME.yaml
     └── organizations
         └── ORG_NAME
+            ├── kustomization.yaml          # sets the organisation's name in what's below
+            ├── ORG_NAME.yaml
             └── workload-clusters
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml            # applies WC_NAME/cluster/
@@ -281,8 +308,9 @@ resources:
   - WC_NAME-apps.yaml
 ```
 
-Both set the variables, like `${cluster_name}`, that the bases use. See [How it works](../how-it-works.md) for why the
-management cluster's and the clusters' Kustomizations are separate.
+Both set the variables, like `${cluster_name}`, that the bases use, except `organization`, which the organisation's
+`kustomization.yaml` sets, see [The organisation's name](#the-organisations-name). See
+[How it works](../how-it-works.md) for why the management cluster's and the clusters' Kustomizations are separate.
 
 A cluster with apps has two Kustomizations:
 
@@ -299,8 +327,11 @@ A cluster with apps has two Kustomizations:
    `app_sets`, which its `kustomization.yaml` lists. It has the cluster's Kustomization in `dependsOn`, so Flux
    applies none of them until the cluster is `Available`. Until then, it reports `DependencyNotReady`.
 
-Name the cluster in `healthChecks` with its name and namespace written out, such as `capi-wc-name` and
-`org-org-name`: Flux doesn't substitute variables in a Kustomization's own spec. A cluster without apps, such as the
+Name the cluster in `healthChecks` with its name written out, such as `capi-wc-name`, and the namespace as the fixed
+placeholder `org-ORG_NAME`: Flux doesn't substitute variables in a Kustomization's own spec. The organisation's
+`kustomization.yaml` puts the organisation's name into the placeholder of a `Kustomization` with the label
+`giantswarm.io/health-check-cluster: "true"`, see [The organisation's name](#the-organisations-name). Without the label,
+the health check keeps the placeholder, and the `Kustomization` never gets `Ready`. A cluster without apps, such as the
 `HELLO_APP_*` examples, has only `WC_NAME.yaml`, which applies the cluster's directory, whose `kustomization.yaml`
 lists `cluster`, and needs no health check.
 
