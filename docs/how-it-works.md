@@ -90,8 +90,9 @@ Most clusters and apps look alike. The `bases` directory holds what they share, 
 
 - `bases/clusters` holds the cluster bases, grouped by provider. For example, `bases/clusters/capa/template`
   installs the `release-aws` chart, whose version is the Giant Swarm release.
-- `bases/apps` has App Templates: an app with its default values, ready to deploy to many clusters. An App Template
-  can also install several apps that work together, such as `bases/apps/hello-web`.
+- `bases/apps` has App Templates: an app with its default values, ready to deploy to many clusters.
+- `bases/stacks` has stacks: several apps deployed together that may depend on each other, such as
+  `bases/stacks/hello-web`, see [Stacks](./guides/stacks.md).
 - `bases/cluster_templates` and `bases/environments` combine these into clusters for stages like dev and production,
   or for regions.
 

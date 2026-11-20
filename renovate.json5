@@ -39,7 +39,7 @@
   // in the hand-authored workflows, the constants in `tools/test-all-ff` and
   // `tests/ats/conftest.py` and `tests/ats/external_secrets.py`, the Giant Swarm release where the `release`
   // variable is set, and the chart tags kustomize patches set (the release in
-  // each stage, the charts in `bases/apps/hello-web`, staging and prod). The release is
+  // each stage, the charts in `bases/stacks/hello-web`, staging and prod). The release is
   // the tag of the `release-aws` chart. The manifests only ever set it through
   // these comments; the flux manager finds `release-aws` only in the test
   // assertions and `tools/testdata`, which name the same dependency so that

@@ -28,7 +28,8 @@ bases
 ├── clusters
 ├── environments
 ├── secret_stores
-└── shared_objects
+├── shared_objects
+└── stacks                                              several apps deployed together, see guides/stacks.md
 management-clusters
 └── MC_NAME
     ├── .sops.keys
@@ -176,6 +177,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` of a cluster `kubectl gs gitops add workload-cluster` generates. A cluster made from a cluster template, such as `hello_app_cluster`, lists the template's `userconfig` component instead, which holds the same patch |
 | A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../guides/environments.md#regions). `kubectl gs gitops` doesn't generate it |
 | A cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER/template` |
+| A stack, several apps deployed together | `kustomization.yaml` and a values file per app, in `bases/stacks/STACK_NAME`, see [Stacks](../guides/stacks.md). `kubectl gs gitops` doesn't generate it |
 
 Repositories forked before the template used these names can move to them with
 [Move a fork to the kubectl-gs file and resource names](../guides/kubectl-gs-names.md).

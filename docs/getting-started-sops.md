@@ -939,8 +939,8 @@ the team from the cluster first, as that guide describes.
   [GPG key](./add_wc_structure.md#create-flux-gpg-regular-key-pair-optional-step) or
   [age key](./add_wc_structure.md#create-an-age-key-pair-optional-step) for the cluster, then
   [provide encrypted values](./guides/add-app.md#providing-encrypted-values).
-- Reuse an app's configuration across clusters, alone or with the apps it works with:
-  [App Templates](./guides/app-templates.md).
+- Reuse an app's configuration across clusters: [App Templates](./guides/app-templates.md). Deploy several apps
+  together: [Stacks](./guides/stacks.md).
 - Run dev, staging and production clusters from shared templates:
   [Add Workload Cluster environments](./guides/environments.md).
 - Understand how the repository is organized: [Repository structure](./reference/repo-structure.md).

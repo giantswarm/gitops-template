@@ -106,9 +106,8 @@ patches:
 ```
 
 Kustomize applies the App's patches after the Template's own, so the range replaces a version the Template pins, for
-this cluster only. Bear in mind that an
-[App Template with several apps](./app-templates.md#app-templates-with-several-apps) usually pins its versions on
-purpose, because its apps are known to work well together at those versions.
+this cluster only. The same goes for an app of a [stack](./stacks.md). Bear in mind that a stack usually pins its
+versions on purpose, because its apps are known to work well together at those versions.
 
 ## Checking the installed version
 

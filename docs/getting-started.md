@@ -958,8 +958,8 @@ the team from the cluster first, as that guide describes.
 - Keep secrets in the repository instead, encrypted with SOPS: [Getting started with SOPS](./getting-started-sops.md).
 - Learn more about ESO, and the risks of depending on it:
   [External Secrets Operator](https://docs.giantswarm.io/overview/security/external-secrets-operator/).
-- Reuse an app's configuration across clusters, alone or with the apps it works with:
-  [App Templates](./guides/app-templates.md).
+- Reuse an app's configuration across clusters: [App Templates](./guides/app-templates.md). Deploy several apps
+  together: [Stacks](./guides/stacks.md).
 - Run dev, staging and production clusters from shared templates:
   [Add Workload Cluster environments](./guides/environments.md).
 - Understand how the repository is organized: [Repository structure](./reference/repo-structure.md).
