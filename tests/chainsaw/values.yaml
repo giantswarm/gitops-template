@@ -1,6 +1,6 @@
-# The objects the Chainsaw tests look at, named as the template's examples name them. The kind
-# test runs the tests with this file. To run them against your management cluster, copy it and
-# set the names of your own objects: see docs/guides/ci-validation.md, "Chainsaw tests".
+# The objects the Chainsaw tests look at, named as the template's examples name them. To run
+# the tests against your management cluster, copy this file and set the names of your own
+# objects: see docs/guides/ci-validation.md, "Chainsaw tests".
 
 # readiness-ordering: a workload cluster, its two Kustomizations and two of its HelmReleases,
 # where `dependant` depends on `dependency`

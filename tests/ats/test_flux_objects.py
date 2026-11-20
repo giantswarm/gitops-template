@@ -2,11 +2,9 @@
 assertions. The checks are in `checks`."""
 
 from collections.abc import Iterator
-from pathlib import Path
 
 import pykube
 import pytest
-from chainsaw import run_chainsaw
 from checks.assertion_files import (
     EXISTS_ASSERTIONS_DIR,
     WORKLOAD_CLUSTER_ASSERTIONS_DIR,
@@ -173,24 +171,6 @@ def test_commit_status_notifications(
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
     # G1: a cluster's apps Kustomizations apply nothing until the cluster is Available
     assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
-
-
-def test_chainsaw(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    kube_config: str,
-    tmp_path: Path,
-    workload_cluster: pykube.HTTPClient,
-    cluster_gate_problems: list[str],
-    check_helm_release_successful: dict[str, dict],
-) -> None:
-    # the YAML tests in tests/chainsaw, once the stand-in clusters and the releases are ready;
-    #  Chainsaw reads the cluster from $KUBECONFIG
-    monkeypatch.setenv("KUBECONFIG", kube_config)
-    report = run_chainsaw(tmp_path)
-    # pytest shows captured output only for a failing test: print the report of a pass, too
-    with capsys.disabled():
-        print(report)
 
 
 # must stay last: it deletes what the tests above check
