@@ -28,7 +28,7 @@ management cluster.
 
 1. In the workload cluster, the platform team creates the team's namespace, and a `RoleBinding` there that gives the
    organisation's `automation` ServiceAccount the `admin` role in that namespace. Giant Swarm provides `automation`
-   in the organization namespace on the management cluster, and the `Kustomization`s of this repository run as it.
+   in the organisation namespace on the management cluster, and the `Kustomization`s of this repository run as it.
 1. On the management cluster, in the organization namespace, the platform team adds a `GitRepository` for the
    team's repository and a Flux `Kustomization` that applies it. The `Kustomization` reaches the workload cluster
    through its kubeconfig Secret, and has `serviceAccountName` set to `automation`. Flux then impersonates

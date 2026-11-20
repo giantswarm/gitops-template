@@ -20,7 +20,7 @@ roleRef:
 subjects:
   # Flux impersonates `system:serviceaccount:<namespace>:<serviceAccountName>` of the team's
   # Kustomization in the workload cluster. The Kustomization is on the management cluster, in
-  # the organization namespace, so the ServiceAccount needn't exist in the workload cluster.
+  # the organisation namespace, so the ServiceAccount needn't exist in the workload cluster.
   - kind: ServiceAccount
     name: automation
     namespace: org-${organization}

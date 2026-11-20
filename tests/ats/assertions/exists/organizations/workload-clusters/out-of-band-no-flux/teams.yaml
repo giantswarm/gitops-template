@@ -1,5 +1,5 @@
 # The hello-team application team's source and Kustomization, which the platform team owns:
-# the cluster's apps Kustomization applies them into the organization namespace. The
+# the cluster's apps Kustomization applies them into the organisation namespace. The
 # Kustomization runs as the organisation's automation ServiceAccount, which Giant Swarm provides.
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
