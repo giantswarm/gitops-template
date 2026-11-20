@@ -10,7 +10,7 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps"
   postBuild:
     substitute:
-      organization: "org-name"  # TODO: change 'org-name' to your organization name
+      organization: "ORG_NAME"  # ../kustomization.yaml sets it from the Organization's name
   prune: true
   retryInterval: 1m
   serviceAccountName: automation
