@@ -34,14 +34,36 @@ def source_config_map() -> dict:
         return yaml.safe_load(f)
 
 
+class MissingOrganizationError(ValueError):
+    """An organisation's kustomization.yaml lists no file with its Organization."""
+
+    def __init__(self, organisation_dir: Path) -> None:
+        super().__init__(f"No Organization in the resources of '{organisation_dir}'.")
+
+
+def organisation_name(organisation_dir: Path, resources: list[str]) -> str:
+    """The name of the Organization in the files of `resources`."""
+    for resource in resources:
+        path = organisation_dir / resource
+        if path.is_file():
+            with path.open() as f:
+                for doc in yaml.safe_load_all(f):
+                    if isinstance(doc, dict) and doc.get("kind") == "Organization":
+                        return doc["metadata"]["name"]
+    raise MissingOrganizationError(organisation_dir)
+
+
 def copy_namespaces(organisations_dir: Path) -> list[str]:
-    """The namespaces of the copies: the one each organisation directory's COPY_DIR sets."""
+    """The namespaces of the copies: `org-<name>` of every organisation whose kustomization.yaml
+    lists COPY_DIR. Its replacements put the Organization's name in place of the placeholder
+    namespace `org-ORG_NAME` that COPY_DIR sets."""
     namespaces = []
-    for kustomization_file in organisations_dir.glob(
-        f"*/{COPY_DIR}/kustomization.yaml"
-    ):
+    for kustomization_file in organisations_dir.glob("*/kustomization.yaml"):
         with kustomization_file.open() as f:
-            namespaces.append(yaml.safe_load(f)["namespace"])
+            resources = yaml.safe_load(f).get("resources", [])
+        if COPY_DIR in resources:
+            name = organisation_name(kustomization_file.parent, resources)
+            namespaces.append(f"org-{name}")
     return sorted(namespaces)
 
 

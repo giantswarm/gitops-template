@@ -1,7 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# The organisation's copy of the objects every organisation shares. MC_NAME.yaml applies it with
-# the rest of the organisation, and a change to the base reaches every organisation that lists it.
-namespace: org-org-name  # TODO: change 'org-name' to your organization name
+# The organisation's copy of the objects every organisation shares. The organisation's
+# kustomization.yaml lists it, and a change to the base reaches every organisation that lists it.
+# `org-ORG_NAME` is the placeholder the organisation's replacements put its name in: leave it.
+namespace: org-ORG_NAME
 resources:
   - ../../../../../bases/shared_objects

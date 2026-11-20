@@ -299,7 +299,9 @@ parts:
 - [bases/shared_objects](/bases/shared_objects/) holds the `shared-ca-bundle` ConfigMap, with no namespace, and the
   `kustomization.yaml` that lists it.
 - [management-clusters/MC_NAME/organizations/ORG_NAME/shared-objects](/management-clusters/MC_NAME/organizations/ORG_NAME/shared-objects/)
-  lists the base and sets the organisation's namespace:
+  lists the base and sets the placeholder namespace `org-ORG_NAME`. Leave the placeholder as it is: the
+  organisation's `kustomization.yaml` lists `shared-objects` and its replacements put the organisation's name in its
+  place, see [The organisation's name](./reference/repo-structure.md#the-organisations-name):
 
     ```yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
@@ -309,10 +311,11 @@ parts:
       - ../../../../../bases/shared_objects
     ```
 
-`MC_NAME.yaml` applies each organisation's `shared-objects` directory with the rest of the organisation, so Flux
-creates a copy in every `org-*` namespace whose directory lists the base. A change to the base in Git reaches every
-copy at the next reconcile, and Flux puts back a copy that someone changed in the cluster. To give a new organisation
-the object, add the same `shared-objects` directory to its directory, with its own namespace.
+`MC_NAME.yaml` applies each organisation's directory, and with it the `shared-objects` its `kustomization.yaml` lists,
+so Flux creates a copy in the namespace of every organisation that lists the base. A change to the base in Git reaches
+every copy at the next reconcile, and Flux puts back a copy that someone changed in the cluster. To give another
+organisation the object, copy the `shared-objects` directory into its directory and add `shared-objects` to the
+`resources` of its `kustomization.yaml`.
 
 To share a secret, such as a registry pull secret, put an `ExternalSecret` in the base rather than the Secret itself.
 Each organisation's copy then reads the value from your secret manager through the `SecretStore` in its own namespace,

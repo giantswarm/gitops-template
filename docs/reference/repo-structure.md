@@ -241,8 +241,8 @@ management-clusters
 ### The organisation's name
 
 The organisation's name is set once, as the `metadata.name` of its `Organization` in `ORG_NAME.yaml`. The
-organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `notifications` and `workload-clusters`, and its
-`replacements` copy the name into what Flux applies from them:
+organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `notifications`, `shared-objects` and `workload-clusters`,
+and its `replacements` copy the name into what Flux applies from them:
 
 - into `spec.postBuild.substitute.organization` of every Flux `Kustomization`, which the cluster's files use as
   `${organization}`. Every Flux `Kustomization` in the organisation's build writes `organization`, as
@@ -253,8 +253,9 @@ organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `notifications` and `
   `org-ORG_NAME`. The replacement replaces the second `-`-separated part of whatever namespace it finds, so a real
   namespace such as `org-acme-corp` would become `org-acme-corp-corp`. A health check with the real namespace works
   too, without the label;
-- into `metadata.namespace` of every object in the namespace `org-ORG_NAME`, such as the `-direct` `Kustomization`
-  and the organisation's commit-status `Alert` in `notifications`.
+- into `metadata.namespace` of every object in the namespace `org-ORG_NAME`, such as the `-direct` `Kustomization`,
+  the organisation's commit-status `Alert` in `notifications` and the copies of the shared objects in
+  `shared-objects`.
 
 `org-ORG_NAME` is a fixed placeholder: write it as it is, and don't change it to your organisation's name. The
 replacements keep `org-` and put the name after it, so `org-ORG_NAME` becomes `org-demo-gitops` for the organisation
@@ -267,8 +268,9 @@ would apply nothing.
 
 If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
 `ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the workload cluster
-`Kustomization`s in `workload-clusters`, the `-direct` ones included, and in the notification objects in
-`notifications`. The template's `kustomization.yaml` lists its own files of these kinds in a comment.
+`Kustomization`s in `workload-clusters`, the `-direct` ones included, in the notification objects in
+`notifications`, and in the `namespace` of `shared-objects/kustomization.yaml`. The template's `kustomization.yaml`
+lists its own files of these kinds in a comment.
 
 Flux applies the organisation's directory as its `kustomization.yaml` builds it, so list there everything else in the
 directory that Flux has to apply, such as `secrets`. Build the organisation's directory to see what Flux applies, for

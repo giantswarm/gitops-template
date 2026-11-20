@@ -34,7 +34,7 @@ You need:
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
   is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces,
 - a `SecretStore` in the `default` namespace that can read your secret manager. The guide reads secrets in `default`
-  and in `org-${ORG_NAME}`, so once the organization's namespace exists, in [step 2](#2-add-an-organization), it needs
+  and in `org-${ORG_NAME}`, so once the organisation's namespace exists, in [step 2](#2-add-an-organization), it needs
   a store of the same name there too. ESO runs on every Giant Swarm management cluster, and you can create
   `SecretStore`s in those namespaces yourself. To create one, see
   [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/) or the

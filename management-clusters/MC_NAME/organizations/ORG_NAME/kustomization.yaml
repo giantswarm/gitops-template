@@ -17,6 +17,7 @@ kind: Kustomization
 resources:
   - ORG_NAME.yaml
   - notifications
+  - shared-objects
   - workload-clusters
 replacements:
   # If you do not want to use kustomize replacements, you must update all references to
@@ -35,6 +36,7 @@ replacements:
   #   - notifications/commit-status-alert.yaml
   #   - notifications/commit-status-externalsecret.yaml
   #   - notifications/commit-status-provider.yaml
+  #   - shared-objects/kustomization.yaml
   - source:
       group: security.giantswarm.io
       kind: Organization

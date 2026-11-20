@@ -14,9 +14,9 @@ import pykube
 import pytest
 from conftest import HELM_URL, apply, run_tool
 from eso_kinds import SecretStoreCR
-from fake_store import FAKE_STORE_DATA
+from fake_store import secret_stores
 from pytest_helm_charts.clusters import Cluster
-from workload_cluster_secrets import COMMON, controller_egress
+from workload_cluster_secrets import controller_egress
 
 ESO_RELEASE_NAME = "external-secrets"
 ESO_NAMESPACE = "external-secrets"
@@ -29,34 +29,6 @@ ESO_READY_TIMEOUT_SEC = 300
 #  ESO's cert controller has given it its certificate
 STORE_CREATE_TIMEOUT_SEC = 120
 
-STORE_NAME = "gitops-test"
-# the namespaces whose ExternalSecrets read the store: the notification example's in `default`,
-#  the clusters' in the organization's
-STORE_NAMESPACES = ["default", "org-org-name"]
-STORE_SPEC = {
-    "provider": {
-        "fake": {
-            "data": [
-                *FAKE_STORE_DATA,
-                {"key": "workload-clusters-common-token", "value": COMMON.value},
-            ]
-        }
-    }
-}
-
-
-def secret_stores() -> list[dict]:
-    """The same store in each of STORE_NAMESPACES."""
-    return [
-        {
-            "apiVersion": "external-secrets.io/v1",
-            "kind": "SecretStore",
-            "metadata": {"name": STORE_NAME, "namespace": namespace},
-            "spec": STORE_SPEC,
-        }
-        for namespace in STORE_NAMESPACES
-    ]
-
 
 class StoreTimeoutError(TimeoutError):
     """ESO's webhook kept refusing the store."""
@@ -65,11 +37,27 @@ class StoreTimeoutError(TimeoutError):
         super().__init__(f"SecretStore '{name}' wasn't created in {timeout_sec} s.")
 
 
+class MissingNamespaceError(Exception):
+    """The namespace of a store doesn't exist, so no retry can create the store."""
+
+    def __init__(self, namespace: str) -> None:
+        super().__init__(
+            f"Namespace '{namespace}' doesn't exist, so its SecretStore can't be created."
+        )
+
+
+def namespace_exists(api: pykube.HTTPClient, name: str) -> bool:
+    return pykube.Namespace.objects(api).get_or_none(name=name) is not None
+
+
 def create_store(
     api: pykube.HTTPClient, manifest: dict, timeout_sec: int
 ) -> SecretStoreCR:
-    """Create the store, retrying while ESO's webhook refuses it."""
+    """Create the store, retrying while ESO's webhook refuses it. Fail at once when its
+    namespace doesn't exist."""
     store = SecretStoreCR(api, manifest)
+    if not namespace_exists(api, store.namespace):
+        raise MissingNamespaceError(store.namespace)
     deadline = time.monotonic() + timeout_sec
     while True:
         try:
