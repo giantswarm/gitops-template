@@ -5,6 +5,7 @@ from checks.kinds import REFERENCED_KINDS
 from conftest import FLUX_OBJECTS_NAMESPACE
 from eso_kinds import ExternalSecretCR, PasswordCR, PushSecretCR, SecretStoreCR
 from pykube.objects import APIObject
+from pytest_helm_charts.flux.kustomization import KustomizationCR
 
 
 class OrganizationCR(APIObject):
@@ -64,6 +65,8 @@ PRUNE_KINDS: dict[str, type[APIObject]] = {
     "SecretStore": SecretStoreCR,
     "PushSecret": PushSecretCR,
     "Password": PasswordCR,
+    # the Kustomization of the cluster's application team, hello-team
+    "Kustomization": KustomizationCR,
 }
 # the GitRepository and the Kustomizations reconcile when asked
 PRUNE_TIMEOUT_SEC = 180

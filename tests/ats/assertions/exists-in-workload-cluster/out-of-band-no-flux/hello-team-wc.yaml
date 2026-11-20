@@ -1,0 +1,55 @@
+# What the cluster's -direct Kustomization delivers to the workload cluster for the hello-team-wc
+# application team, whose Flux runs in the workload cluster. The test's workload cluster runs no
+# Flux, only has its CRDs: the objects have to exist, nothing reconciles them.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-direct
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-team-wc
+  namespace: hello-team-wc
+spec:
+  url: https://github.com/stefanprodan/podinfo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-direct
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-team-wc
+  namespace: hello-team-wc
+spec:
+  serviceAccountName: hello-team-wc
+  sourceRef:
+    kind: GitRepository
+    name: hello-team-wc
+  targetNamespace: hello-team-wc
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-direct
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-team-wc
+  namespace: hello-team-wc
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-direct
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-team-wc
+  namespace: hello-team-wc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+  - kind: ServiceAccount
+    name: hello-team-wc
+    namespace: hello-team-wc

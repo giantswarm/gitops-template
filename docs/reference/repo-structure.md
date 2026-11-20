@@ -44,6 +44,7 @@ management-clusters
             ├── [kustomization.yaml]                    (mandatory when there are no workload-clusters)
             ├── [OTHER_RESOURCES]
             ├── ORG_NAME.yaml
+            ├── [teams]                                 application teams' ServiceAccounts, see guides/app-teams.md
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
@@ -55,9 +56,10 @@ management-clusters
                     ├── [app_sets]
                     ├── apps
                     ├── cluster
-                    └── [out-of-band]
-                        ├── [kustomization.yaml]
-                        └── [OTHER_RESOURCES]
+                    ├── [out-of-band]
+                    |   ├── [kustomization.yaml]
+                    |   └── [OTHER_RESOURCES]
+                    └── [teams]                           application teams' repositories, see guides/app-teams.md
 ```
 
 How to read it:

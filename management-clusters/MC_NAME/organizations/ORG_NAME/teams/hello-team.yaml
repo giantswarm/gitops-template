@@ -1,0 +1,10 @@
+# The ServiceAccount of the hello-team application team, which the team's Kustomizations name in
+# `serviceAccountName`. It has no rights on the management cluster: Flux impersonates it in the
+# workload clusters, where a RoleBinding gives it the team's namespace. Flux checks that it exists
+# before it deletes what a Kustomization applied, so it belongs to the organization, not to a
+# cluster, and outlives the team's Kustomizations. See docs/guides/app-teams.md.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hello-team
+  namespace: org-org-name  # TODO: change 'org-name' to your organization name

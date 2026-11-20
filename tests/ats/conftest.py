@@ -23,8 +23,15 @@ from ci_context import master_gpg_key
 from flux_teardown import delete_without_prune
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
-# flux_install have fixtures; external_secrets installs External Secrets Operator.
-pytest_plugins = ["ci_context", "kyverno_install", "flux_install", "external_secrets"]
+# flux_install have fixtures; external_secrets installs External Secrets Operator;
+# workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster.
+pytest_plugins = [
+    "ci_context",
+    "kyverno_install",
+    "flux_install",
+    "external_secrets",
+    "workload_cluster_flux_crds",
+]
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
@@ -651,6 +658,7 @@ def gitops_environment(
     workload_cluster: pykube.HTTPClient,
     flux_app_deployment: None,
     flux_deployments: list[pykube.Deployment],
+    workload_cluster_flux_crds: None,
 ) -> None:
     return None
 

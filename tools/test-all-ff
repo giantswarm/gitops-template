@@ -70,14 +70,51 @@ function fetch_flux_schemas() {
 }
 
 ##
-# Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
-export KUSTOMIZATIONS=(
-	$(
-		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
-			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
-		done
+# Print the Flux Kustomizations below the current directory that apply this repository, one per
+# line: filename, name, namespace and path. They're the ones whose source is this repository's
+# GitRepository, the source of a Kustomization that applies the directory its file is in, such
+# as management-clusters/MC_NAME/MC_NAME.yaml, as in check-kustomization-paths. Another source,
+# such as an application team's own repository, has nothing to build here: say so on stderr.
+# Fail if no Kustomization applies the repository.
+function repository_kustomizations() {
+	local all=(
+		$(
+			for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -not -path './tests/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+				# $ns is a yq variable
+				# shellcheck disable=SC2016
+				yq --no-doc '(.metadata.namespace // "default") as $ns |
+					[filename,.metadata.name,.metadata.namespace,.spec.path,.kind,
+						.spec.sourceRef.kind + "/" + (.spec.sourceRef.namespace // $ns) + "/" + .spec.sourceRef.name] |
+					select(.[4] == "Kustomization") | join(",")' $f
+			done
+		)
 	)
-)
+	local k file path source sources=" " found=0
+	for k in "${all[@]}"; do
+		IFS=, read -r file _ _ path _ source <<<"${k}"
+		path="${path#./}"
+		path="${path%/}"
+		if [ "$(dirname "${file#./}")" == "${path:-.}" ] && [[ "${source}" == GitRepository/* ]]; then
+			sources+="${source} "
+		fi
+	done
+	for k in "${all[@]}"; do
+		if [[ "${sources}" == *" ${k##*,} "* ]]; then
+			echo "${k%,*,*}"
+			found=1
+		else
+			echo "Skipping kustomization $(cut -d, -f2 <<<"${k}"): its source, ${k##*,}, isn't this repository" >&2
+		fi
+	done
+	if [ "${found}" -eq 0 ]; then
+		echo "No kustomization applies this repository" >&2
+		return 1
+	fi
+}
+
+kustomizations=$(repository_kustomizations) || exit 1
+mapfile -t KUSTOMIZATIONS <<<"${kustomizations}"
+export KUSTOMIZATIONS
 
 ##
 # Check the manifests in the given files against the schema sources above.
@@ -218,6 +255,41 @@ function test() {
 		status=0
 		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build unset-variable:default -M 2>&1) || status=$?
 		if [ "${status}" -ne 0 ] && grep -q 'variable not set (strict mode): "release"' <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
+		# test-all-ff must leave out a Kustomization whose source is another repository, such as
+		# an application team's, even if its path exists here. It runs in a copy, as it only
+		# builds the Kustomizations it finds below the current directory.
+		echo -n "test-all-ff, a team's Kustomization: "
+		fixture_dir="${tmp_dir}/team-source"
+		mkdir -p "${fixture_dir}/.git"
+		cp -r "$(dirname $0)/testdata/team-source/." "${fixture_dir}"
+		script_path=$(realpath "$0")
+		status=0
+		output=$(cd "${fixture_dir}" && "${script_path}" template 2>&1) || status=$?
+		if [ "${status}" -eq 0 ] && grep -q "Skipping kustomization team:" <<<"${output}"; then
+			echo "OK, left out"
+		else
+			echo "built:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+
+		# It must build, and fail on, a Kustomization of this repository whose path is mistyped.
+		echo -n "test-all-ff, a mistyped path: "
+		fixture_dir="${tmp_dir}/mistyped-path"
+		mkdir -p "${fixture_dir}/.git"
+		cp -r "$(dirname $0)/testdata/mistyped-path/." "${fixture_dir}"
+		status=0
+		output=$(cd "${fixture_dir}" && "${script_path}" template 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && ! grep -q "Skipping kustomization mistyped-path" <<<"${output}"; then
 			echo "OK, reported"
 		else
 			echo "not reported:"

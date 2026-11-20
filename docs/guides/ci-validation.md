@@ -229,6 +229,10 @@ get `Ready`. The test also creates what they need:
   each comes from, so the test doesn't download them.
 - in the vCluster, the `giantswarm-critical` PriorityClass, which the cluster chart creates in every Giant Swarm
   workload cluster. The `envoy-gateway` Deployment's pods can't be created without it.
+- in the vCluster, Flux's `GitRepository` and `Kustomization` CRDs, copied from the test cluster, where flux-app
+  installed them. The `-direct` Kustomization delivers the `GitRepository` and `Kustomization` of the
+  [application team](./app-teams.md) `hello-team-wc`, whose Flux runs in the workload cluster. The vCluster runs no
+  Flux: the objects only have to exist.
 
 The vCluster runs CoreDNS, as the apps run pods there.
 
@@ -239,7 +243,10 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
   `helmRelease: <namespace>/<name>` key naming the `HelmRelease`. The key isn't a field of the object, so the
   comparison skips it. The test fails for a `HelmRelease` without one, so a new app needs an assertion. For
   `gateway-api-crds`, which runs no workload, it's the `gateways.gateway.networking.k8s.io` CRD the chart installs.
-- Every `Deployment` in them has to be available, too.
+- Every `Deployment` in them has to be available, too. That includes the `podinfo` `Deployment` that the
+  [application team](./app-teams.md) `hello-team` delivers from its own repository into its namespace.
+- The `GitRepository` and `Kustomization` of the application team `hello-team-wc` only have to exist, as nothing in
+  the vCluster reconciles them.
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
   its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
 
