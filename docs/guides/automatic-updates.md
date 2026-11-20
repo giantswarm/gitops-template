@@ -216,7 +216,7 @@ out to several workload clusters from one list.
   cluster to it. Like a new release, a change to the range reaches the cluster at the next window, or at once when you
   force the provider, see below.
 
-Flux Operator doesn't give the objects a `ResourceSet` renders a namespace, so both examples set it to their provider's,
+Both examples set the `metadata.namespace` of the objects their `ResourceSet` renders explicitly, to their provider's:
 `<< inputs.provider.namespace >>`, or `<< inputs.hello_world_scheduled_version.provider.namespace >>` with `Permute`.
 A `HelmRelease`'s `chartRef` needs none: Flux looks for the `OCIRepository` in the `HelmRelease`'s namespace.
 
@@ -237,17 +237,21 @@ spec:
     - cluster: out-of-band-flux-app
 ```
 
-To roll every app out to a new cluster, add its name to `clusters.yaml`. Removing a name uninstalls the apps from that
+To roll every app out to a new cluster, add its name to `clusters.yaml`. That's enough only when the cluster has what
+each app depends on, see below. Removing a name uninstalls the apps from that
 cluster. With `Permute`, a `ResourceSet` reads the name as `inputs.<its name>.cluster`, with `_` for `-`, such as
 `inputs.hello_world_scheduled.cluster`. To give one app a list of its own, add a patch after `clusters.yaml` in
 `kustomization.yaml` that targets that `ResourceSet` by name and sets its `spec.inputs`.
 
-A listed cluster may not exist or be ready yet. Its app `HelmRelease` doesn't install early: it has the cluster's
-`gateway-api-crds` release in `dependsOn`, which only gets ready once the cluster is up, and helm-controller retries
-until then. Nothing fails meanwhile: the `ResourceSet` applies the `HelmRelease` without waiting for it, and the
-`Kustomization` applies only the `ResourceSet`. Unlike a cluster's apps Kustomization, it doesn't wait for the Cluster
-API `Cluster` to be `Available`: a `HelmRelease` can only depend on other `HelmRelease`s, so an app without such a
-dependency would only wait for the cluster's kubeconfig `Secret`, and fail and retry until it exists.
+A listed cluster may not exist or be ready yet. The example app's `HelmRelease` doesn't install early: hello-world has
+the cluster's `gateway-api-crds` release in `dependsOn`, which only gets ready once the cluster is up, and
+helm-controller retries until then. That dependency is the example app's own, and needs envoy-gateway on that cluster:
+on a cluster without it, hello-world stays `DependencyNotReady` while the `Kustomization` and the `ResourceSet` report
+`Ready`. Nothing fails meanwhile: the `ResourceSet` applies the `HelmRelease` without waiting for it, and the
+`Kustomization` applies only the `ResourceSet` and its `ResourceSetInputProvider`. Unlike a cluster's apps
+Kustomization, it doesn't wait for the Cluster API `Cluster` to be `Available`: a `HelmRelease` can only depend on other
+`HelmRelease`s, so an app without such a dependency would only wait for the cluster's kubeconfig `Secret`, and fail and
+retry until it exists.
 
 ### Installing before the first window
 

@@ -368,7 +368,7 @@ protection of the cluster base.
 They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
 hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
 `tests/ats/assertions/exists-in-workload-cluster`; `test_prune` leaves it out of the apps it expects to go with the
-cluster's `Kustomization`s, as an organization `ResourceSet` installs it.
+cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
 
 ## Superseded runs
 
