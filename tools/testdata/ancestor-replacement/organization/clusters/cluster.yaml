@@ -1,0 +1,18 @@
+# Its `organization` is the placeholder ORG_NAME, which ../kustomization.yaml replaces; tools/test-all-ff
+# also checks that the build fails without it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ancestor-replacement
+  namespace: default
+spec:
+  interval: 1m
+  path: ./organization/clusters/cluster
+  postBuild:
+    substitute:
+      cluster_name: "ancestor-replacement"
+      organization: "ORG_NAME"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: ancestor-replacement

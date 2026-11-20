@@ -12,8 +12,11 @@ Follow the below instructions to add a new Organization to this repository. Orga
 
 ## Export environment variables
 
-**Note**, management cluster codename and organization name are needed in multiple places across this instruction, the
-least error prone way of providing them is by exporting as environment variables:
+The organisation's name is set once in the repository, as the name of its `Organization`. The organisation's
+`kustomization.yaml` copies it everywhere else Flux needs it, see
+[The organisation's name](./reference/repo-structure.md#the-organisations-name). The commands below still need the
+management cluster codename and the organisation's name for paths and file names, so export them as environment
+variables:
 
 ```sh
 export MC_NAME=CODENAME
@@ -83,6 +86,73 @@ export ORG_NAME=ORGANIZATION
     ```sh
     yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
       .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' ${ORG_NAME}.yaml
+    ```
+
+1. Create the organisation's `kustomization.yaml`. It lists the `Organization` and `workload-clusters`, and copies
+   the `Organization`'s name into the workload clusters' Flux `Kustomization`s: into `organization` in their
+   `spec.postBuild.substitute`, which every one of them writes and which fails the build where it's missing, and
+   wherever they name the organisation's namespace as `org-ORG_NAME`. The replacements win over what the files say.
+   `org-ORG_NAME` is a fixed placeholder: the quoted `'EOF'` keeps it, and everything else in the file, as it is, so
+   don't replace it with your organisation's name. The health check replacement applies only to a `Kustomization`
+   with the label `giantswarm.io/health-check-cluster: "true"`, whose health check keeps the placeholder namespace, as
+   kustomize fails on one without a health check. See
+   [The organisation's name](./reference/repo-structure.md#the-organisations-name), which also says how to do without
+   the replacements:
+
+    ```sh
+    cat <<'EOF' > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - ORGANIZATION_FILE
+      - workload-clusters
+    replacements:
+      - source:
+          group: security.giantswarm.io
+          kind: Organization
+          fieldPath: metadata.name
+        targets:
+          - select:
+              group: kustomize.toolkit.fluxcd.io
+              kind: Kustomization
+            fieldPaths:
+              - spec.postBuild.substitute.organization
+      - source:
+          group: security.giantswarm.io
+          kind: Organization
+          fieldPath: metadata.name
+        targets:
+          - select:
+              group: kustomize.toolkit.fluxcd.io
+              kind: Kustomization
+              labelSelector: giantswarm.io/health-check-cluster=true
+            fieldPaths:
+              - spec.healthChecks.[kind=Cluster].namespace
+            options:
+              delimiter: "-"
+              index: 1
+      - source:
+          group: security.giantswarm.io
+          kind: Organization
+          fieldPath: metadata.name
+        targets:
+          - select:
+              namespace: org-ORG_NAME
+            fieldPaths:
+              - metadata.namespace
+            options:
+              delimiter: "-"
+              index: 1
+    EOF
+    yq -i '.resources[0] = "'"${ORG_NAME}"'.yaml"' kustomization.yaml
+    ```
+
+    Flux applies the organisation's directory as this file builds it, so list here anything else you add to the
+    directory, such as `secrets` below. To see what Flux applies, build the directory, not `workload-clusters` on its
+    own, which leaves the placeholders:
+
+    ```sh
+    kubectl kustomize .
     ```
 
 After completing all the steps, you can open a pull request with the changes. Once it is merged, `Flux` should automatically
@@ -236,6 +306,19 @@ going to use 1Password (`op` CLI tool) for that:
     cd secrets
     ```
 
+1. List the directory in the organisation's `kustomization.yaml`, which Flux builds the organisation's directory
+   from, and give it a `kustomization.yaml` of its own that lists the Secret:
+
+    ```sh
+    yq -i '.resources += ["secrets"]' ../kustomization.yaml
+    cat <<EOF > kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - secret.enc.yaml
+    EOF
+    ```
+
 1. Place your Kubernetes Secret into this directory, for example:
 
     ```sh
@@ -247,7 +330,8 @@ going to use 1Password (`op` CLI tool) for that:
     ```
 
 1. Encrypt it with SOPS. The SOPS encryption rule configured earlier ensures it will get encrypted with the
-Organization's key:
+Organization's key. It names the real namespace, `org-${ORG_NAME}`, not the placeholder `org-ORG_NAME`: the
+replacement would change the encrypted file, which breaks its MAC, so Flux couldn't decrypt it:
 
     ```sh
     sops --encrypt --in-place secret.enc.yaml

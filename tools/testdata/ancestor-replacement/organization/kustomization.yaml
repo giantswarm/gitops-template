@@ -1,0 +1,33 @@
+# Fixture for tools/test-all-ff: the cluster Kustomizations in clusters/ get `organization`, and
+# the one in the placeholder namespace `org-ORG_NAME` its namespace, from this directory's
+# replacements, as a workload cluster's do from its organisation's kustomization.yaml.
+# tools/fake-flux has to build them as Flux applies them, from this directory. Both are named
+# `ancestor-replacement`, so it also has to tell them apart by namespace.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - organization.yaml
+  - clusters
+replacements:
+  - source:
+      kind: ConfigMap
+      name: from-the-ancestor
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+  - source:
+      kind: ConfigMap
+      name: from-the-ancestor
+      fieldPath: metadata.name
+    targets:
+      - select:
+          namespace: org-ORG_NAME
+        fieldPaths:
+          - metadata.namespace
+        options:
+          delimiter: "-"
+          index: 1

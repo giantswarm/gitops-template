@@ -10,7 +10,7 @@ spec:
     substitute:
       cluster_description: "description"
       cluster_name: "hello-app-staging-1"  # TODO: change 'hello-app-staging-1' to your cluster name; must be a correct k8s resource name (DNS-like)
-      organization: "org-name"  # TODO: change 'org-name' to your organization name
+      organization: "ORG_NAME"  # ../kustomization.yaml sets it from the Organization's name
   prune: true
   retryInterval: 1m
   serviceAccountName: automation

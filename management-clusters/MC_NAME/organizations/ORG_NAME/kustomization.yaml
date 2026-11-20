@@ -1,0 +1,75 @@
+# The organisation's name is set once, as the `metadata.name` of its Organization in
+# ORG_NAME.yaml. The replacements below copy it into what Flux applies from this directory:
+# - into `organization` in the `spec.postBuild.substitute` of every Flux Kustomization, which
+#   their manifests use as `${organization}`. Each one writes `organization: "ORG_NAME"`, which
+#   the replacement updates; one without it fails the build, naming the field;
+# - into the `Cluster` health check namespace of a Kustomization with the label
+#   `giantswarm.io/health-check-cluster: "true"`. Its health check must keep the namespace
+#   `org-ORG_NAME`: the replacement replaces the second `-`-separated part of whatever
+#   namespace it finds, so a real one such as `org-acme-corp` would become `org-acme-corp-corp`;
+# - into the namespace of every object in the namespace `org-ORG_NAME`, such as the -direct
+#   Kustomization and the commit-status Alert in notifications/.
+# `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
+# the name after it. A SOPS-encrypted file must name the real namespace, `org-<name>`, never the
+# placeholder: changing an encrypted file breaks its MAC, so Flux couldn't decrypt it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ORG_NAME.yaml
+  - notifications
+  - workload-clusters
+replacements:
+  # If you do not want to use kustomize replacements, you must update all references to
+  # `org-ORG_NAME` (and `ORG_NAME`) in the following files:
+  #   - workload-clusters/HELLO_APP_DEV_CLUSTER_1.yaml
+  #   - workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
+  #   - workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST.yaml
+  #   - workload-clusters/HELLO_APP_STAGING_CLUSTER_1.yaml
+  #   - workload-clusters/WC_NAME-apps.yaml
+  #   - workload-clusters/WC_NAME.yaml
+  #   - workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
+  #   - workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
+  #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
+  #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
+  #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
+  #   - notifications/commit-status-alert.yaml
+  #   - notifications/commit-status-externalsecret.yaml
+  #   - notifications/commit-status-provider.yaml
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      # only the Kustomizations with the label: kustomize fails on one without a health check,
+      # and changes a namespace that isn't the placeholder
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          labelSelector: giantswarm.io/health-check-cluster=true
+        fieldPaths:
+          - spec.healthChecks.[kind=Cluster].namespace
+        options:
+          delimiter: "-"
+          index: 1
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          namespace: org-ORG_NAME
+        fieldPaths:
+          - metadata.namespace
+        options:
+          delimiter: "-"
+          index: 1

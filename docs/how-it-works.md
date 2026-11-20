@@ -55,7 +55,9 @@ The protected objects are:
   cluster's `OCIRepository`, and sets `global.metadata.preventDeletion` so that the chart puts the label on the
   `Cluster`.
 - The `Organization`, such as `organizations/demoorg/demoorg.yaml`. Deleting it deletes the `org-demoorg` namespace,
-  with every cluster in it.
+  with every cluster in it. Its file can't go on its own anyway: the organisation's `kustomization.yaml` takes the
+  organisation's name from it, so without it the management cluster's Kustomization fails to build, and applies and
+  prunes nothing until the file is back.
 - The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`. Flux decrypts with them, so deleting one stops
   GitOps for every cluster that uses it. The keys are encrypted, so `secrets/kustomization.yaml` adds the annotation
   and the label instead: changing an encrypted file by hand breaks its SOPS checksum.
@@ -100,7 +102,7 @@ variables:
 | Variable | What it's for |
 | --- | --- |
 | `cluster_name` | The workload cluster's name. It names the cluster's resources and its apps, such as `${cluster_name}-hello-world`, and the `<cluster>-kubeconfig` Secret and `<cluster>-cluster-values` ConfigMap the apps read. |
-| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa/template` sets it as `global.metadata.organization` in the chart values. |
+| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa/template` sets it as `global.metadata.organization` in the chart values. The organisation's `kustomization.yaml` updates it to the name of its `Organization`, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). |
 | `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa/template`. |
 | `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa/template`. |
 

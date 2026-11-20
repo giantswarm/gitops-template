@@ -12,8 +12,8 @@ from checks.waits import fail_on_problems
 from flux_reconcile import wait_until
 from prune_cluster import delete_cluster_kustomizations, workload_problems
 from prune_objects import (
+    KEPT_BY_FAILED_BUILD,
     PROTECTED_CLUSTER,
-    PROTECTED_OBJECTS,
     PRUNE_IGNORE,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
@@ -58,8 +58,9 @@ def app_problems(
 def check_removed_files(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
-    """P1: removing an app's files removes the app. P2: removing the organization's file leaves
-    the organization."""
+    """P1: removing an app's files removes the app. P2: removing the organisation's
+    Organization alone fails the management cluster's build, which then prunes nothing: the
+    Organization and the cluster's Kustomizations stay."""
     remove_from_source(api, PRUNE_IGNORE, delete_patches(PRUNED_OBJECTS))
     wait_until(
         lambda: app_problems(api, workload_cluster),
@@ -67,7 +68,8 @@ def check_removed_files(
         "the removed app wasn't deleted",
     )
     fail_on_problems(
-        kept_problems(api, PROTECTED_OBJECTS), "protected objects weren't kept"
+        kept_problems(api, KEPT_BY_FAILED_BUILD),
+        "the failed build didn't keep the organisation's objects",
     )
 
 

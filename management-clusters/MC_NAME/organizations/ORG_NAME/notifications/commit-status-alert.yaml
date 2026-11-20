@@ -1,0 +1,19 @@
+# Forwards the events of this repository's Kustomizations in the organisation's namespace to the
+# Provider. An event source without `namespace` matches only the Alert's own namespace. The
+# source names the Kustomization, rather than `name: "*"`: an application team's Kustomization,
+# such as hello-team in WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams, lives in this namespace too, but
+# reads the team's repository, and GitHub refuses statuses for commits it doesn't know. List each
+# of this repository's Kustomizations in this namespace. `info` forwards successes as well as
+# failures, so a commit shows when Flux applied it.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-commit-status
+  namespace: org-ORG_NAME
+spec:
+  providerRef:
+    name: github-commit-status
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux-direct  # TODO: the name of WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml's Kustomization

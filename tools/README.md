@@ -111,6 +111,14 @@ Fake flux is a script that can emulate the behaviour of flux locally before comm
 It's purpose is to support you in the detection of issues which may arise from syntax errors, failing patches or other
 issues caused by incompatibilities with the flux ecosystem.
 
+It builds a Flux `Kustomization` as Flux applies it, not as its file is written. Flux's build of a directory without a
+`kustomization.yaml` stops at a directory with one and builds that whole, so a replacement there can change the
+`Kustomization`: the organisation's `kustomization.yaml` sets `organization` in `spec.postBuild.substitute` and the
+organisation's namespace in place of the `org-ORG_NAME` placeholder. `fake-flux` builds the file's directory with
+kustomize if it has a `kustomization.yaml`, and its parent if that has one too, and so on up, and takes the
+`Kustomization` from the build of the highest of those directories that has it. Without one, it reads the file as it
+is. `test-all-ff validate` checks this with the fixture in [testdata/ancestor-replacement](testdata/ancestor-replacement).
+
 For a detailed description of what this tool can do, please see `fake-flux usage` which includes a comprehensive set of
 examples.
 

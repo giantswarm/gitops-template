@@ -186,8 +186,15 @@ function _find_kustomization() {
 		fi
 		for k in "${KUSTOMIZATIONS[@]}"; do
 			if [ "$(cut -d, -f2 <<<$k)" == "${name}" ]; then
+				# the namespace its file names, or the one Flux applies it in. A build that fails
+				# while finding that out stops here, with its error.
 				if [ "${namespace}" == "" ] || [ "$(cut -d, -f3 <<<$k)" == "${namespace}" ]; then
 					matches+=("$k")
+				else
+					applied_namespace=$(_applied_namespace "$k") || exit 1
+					if [ "${applied_namespace}" == "${namespace}" ]; then
+						matches+=("$k")
+					fi
 				fi
 			fi
 		done
@@ -203,6 +210,60 @@ function _find_kustomization() {
 		echo ${matches[0]}
 		;;
 	esac
+}
+
+# kustomize if it's installed, otherwise the one built into kubectl
+if command -v kustomize >/dev/null; then
+	kustomize_build=(kustomize build --load-restrictor=LoadRestrictionsNone)
+else
+	kustomize_build=(kubectl kustomize --load-restrictor=LoadRestrictionsNone)
+fi
+
+# The namespace an organisation's kustomization.yaml completes with the organisation's name
+PLACEHOLDER_NAMESPACE="org-ORG_NAME"
+
+##
+# Write the Flux Kustomization named $2 in namespace $3, from file $1, to file $4 as Flux applies
+# it, or fail if a build fails. A Kustomization in the namespace PLACEHOLDER_NAMESPACE matches one
+# in any `org-` namespace of the build, as the replacement gives it the organisation's. Flux's
+# generated build of a directory without a kustomization.yaml stops at a directory with one and
+# builds it whole, so the file's directory is built by kustomize if it has one, and its parent
+# too if that has one, and so on. A replacement in such an ancestor, such as the one in an
+# organisation's kustomization.yaml that sets `organization`, changes the Kustomization. The
+# highest of those directories whose build has the Kustomization wins; without one, the file is
+# used as it is.
+function _as_applied() {
+	local file="$1" out="$4" dir dirs=()
+	dir=$(dirname "${file}")
+	while [ "${dir}" != "." ] && [ -e "${dir}/kustomization.yaml" ]; do
+		dirs=("${dir}" "${dirs[@]}")
+		dir=$(dirname "${dir}")
+	done
+	for dir in "${dirs[@]}"; do
+		"${kustomize_build[@]}" "${dir}" | name="$2" namespace="${3:-default}" placeholder="${PLACEHOLDER_NAMESPACE}" yq '
+			select(.apiVersion == "kustomize.toolkit.fluxcd.io/*" and .kind == "Kustomization" and
+				.metadata.name == strenv(name) and
+				((.metadata.namespace // "default") == strenv(namespace) or
+					(strenv(namespace) == strenv(placeholder) and ((.metadata.namespace // "") | test("^org-")))))' >"${out}" ||
+			return 1
+		[ -s "${out}" ] && return 0
+	done
+	cp "${file}" "${out}"
+}
+
+##
+# The namespace Flux applies the Kustomization $1, an entry of KUSTOMIZATIONS, in; fail if the
+# build that tells fails.
+function _applied_namespace() {
+	local file name namespace applied
+	IFS=, read -r file name namespace _ <<<"$1"
+	applied=$(mktemp)
+	if ! _as_applied "${file}" "${name}" "${namespace}" "${applied}"; then
+		rm -f "${applied}"
+		return 1
+	fi
+	yq '.metadata.namespace // "default"' "${applied}"
+	rm -f "${applied}"
 }
 
 ##
@@ -224,9 +285,15 @@ function build() {
 	path="$(cut -d, -f4 <<<${kustomization})"
 	kustomization="$(cut -d, -f1 <<<${kustomization})"
 
+	# the Kustomization as Flux applies it, and the kustomization.yaml --use-kustomize writes
+	applied=$(mktemp)
+	generated=""
 	cleanup() {
-		rm "${path}"/kustomization.yaml
+		rm -f "${applied}" ${generated:+"${generated}"}
 	}
+	trap cleanup EXIT SIGINT
+	_as_applied "${kustomization}" "${name}" "${namespace}" "${applied}"
+	namespace=$(yq '.metadata.namespace // "default"' "${applied}")
 
 	if [ -n "$2" ] && [ -e "$(realpath $path/$2)" ]; then
 		path="${path}/$2"
@@ -246,7 +313,7 @@ function build() {
 	fi
 
 	if ! $use_kustomize; then
-		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${kustomization} --dry-run --strict-substitute | drop_empty_documents | yq $yqflags "$*"
+		flux build kustomization -n ${namespace} ${name} --path ${path} --kustomization-file ${applied} --dry-run --strict-substitute | drop_empty_documents | yq $yqflags "$*"
 		return $?
 	fi
 
@@ -256,8 +323,8 @@ function build() {
 		declare -a resources=()
 		_find_resources "${path}" "${path}"
 
-		trap cleanup EXIT SIGINT
-		cat <<-EOF >"${path}/kustomization.yaml"
+		generated="${path}/kustomization.yaml"
+		cat <<-EOF >"${generated}"
 			apiVersion: kustomize.config.k8s.io/v1beta1
 			kind: Kustomization
 			buildMetadata: [originAnnotations]
@@ -266,7 +333,7 @@ function build() {
 		EOF
 	fi
 
-	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "$(cut -d, -f1 <<<$kustomization)")
+	toexport=$(yq '.spec.postBuild.substitute | to_entries | .[] | [ .key, .value ] | join("=")' "${applied}")
 	for v in $toexport; do
 		export "${v?}"
 	done

@@ -3,7 +3,7 @@ need no cluster."""
 
 import base64
 
-from commit_status import receiver_problems, suspended, token_problems
+from commit_status import receiver_problems, suspended, suspended_alerts, token_problems
 
 READY = {"conditions": [{"type": "Ready", "status": "True"}]}
 
@@ -16,6 +16,19 @@ def test_suspended_sets_suspend() -> None:
     }
     # the manifest read from the repository stays as it is
     assert "suspend" not in alert["spec"]
+
+
+def test_suspended_alerts_of_a_build() -> None:
+    # the organisation's build holds its Alert among other objects
+    alert = {"kind": "Alert", "metadata": {"name": "a"}, "spec": {}}
+    provider = {"kind": "Provider", "metadata": {"name": "p"}, "spec": {}}
+    assert suspended_alerts([provider, alert, None]) == [
+        {"kind": "Alert", "metadata": {"name": "a"}, "spec": {"suspend": True}}
+    ]
+
+
+def test_suspended_alerts_none() -> None:
+    assert suspended_alerts([{"kind": "Provider", "spec": {}}]) == []
 
 
 def test_receiver_problems_ready() -> None:

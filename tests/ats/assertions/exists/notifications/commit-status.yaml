@@ -1,7 +1,10 @@
-# N1: the notification example. The Provider names its token Secret, and the Alert names the
-# Provider, covers the Kustomizations in `default` and `org-org-name`, and stays suspended, so
-# the test posts nothing to GitHub. notification_objects.py waits until ESO has written both
-# token Secrets' `token` from the fake store and the Receiver is Ready.
+# N1: the notification example. Each Provider names its token Secret, and each Alert names its
+# Provider and stays suspended, so the test posts nothing to GitHub. The management cluster's
+# Alert covers the Kustomizations in `default`; the organisation's, in its namespace, which its
+# kustomization.yaml completes from the Organization's name, covers the repository's -direct
+# Kustomization in `org-org-name`, and not the application team's.
+# notification_objects.py waits until ESO has written the token Secrets' `token` from the fake
+# store and the Receiver is Ready.
 apiVersion: notification.toolkit.fluxcd.io/v1beta3
 kind: Provider
 metadata:
@@ -24,7 +27,28 @@ spec:
   eventSources:
     - kind: Kustomization
       name: "*"
+  suspend: true
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-commit-status
+  namespace: org-org-name
+spec:
+  type: github
+  secretRef:
+    name: github-commit-status-token
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-commit-status
+  namespace: org-org-name
+spec:
+  providerRef:
+    name: github-commit-status
+  eventSeverity: info
+  eventSources:
     - kind: Kustomization
-      name: "*"
-      namespace: org-org-name
+      name: mc-name-clusters-out-of-band-no-flux-direct
   suspend: true

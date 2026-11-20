@@ -3,17 +3,19 @@
 The kind test reads a branch it can't push to. The GitRepository's `spec.ignore` leaves the
 files out of the artifact Flux applies instead, as if they were deleted from Git. A file that a
 kustomization.yaml lists can't be left out that way, as the list would name a file that's gone:
-`$patch: delete` patches in the Kustomization's `spec.patches` drop its objects instead.
+`$patch: delete` patches in the Kustomization's `spec.patches` drop its objects instead. P2
+leaves out the Organization, which the organisation's kustomization.yaml lists, on purpose: the
+management cluster's Kustomization then fails to build and prunes nothing.
 """
 
 import pykube
 from checks.conditions import obj_key
 from conftest import FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE
-from flux_inventory import inventory_keys
+from flux_inventory import build_failure_problems, inventory_keys
 from flux_reconcile import repo_problems, request_reconcile, wait_until
 from prune_objects import (
     APPS_KUSTOMIZATION,
-    PROTECTED_OBJECTS,
+    KEPT_BY_FAILED_BUILD,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
     ROOT_KUSTOMIZATION,
@@ -36,18 +38,22 @@ def kustomization(api: pykube.HTTPClient, key: tuple[str, str]) -> APIObject:
     return KustomizationCR.objects(api).filter(namespace=namespace).get(name=name)
 
 
-def inventory_problems(kustomizations: list[APIObject]) -> list[str]:
-    """The Kustomizations whose inventory still lists objects of the removed files."""
-    removed = set(PRUNED_OBJECTS + PROTECTED_OBJECTS)
-    problems = []
-    for k in kustomizations:
-        k.reload()
-        left = sorted(inventory_keys(k.obj) & removed)
-        if left:
-            problems.append(
-                f"Kustomization '{obj_key(k.obj)}' still has removed objects: {left}"
-            )
-    return problems
+def inventory_problems(apps: APIObject) -> list[str]:
+    """P1: whether the apps Kustomization's inventory still lists objects of the removed app."""
+    apps.reload()
+    left = sorted(inventory_keys(apps.obj) & set(PRUNED_OBJECTS))
+    if left:
+        return [
+            f"Kustomization '{obj_key(apps.obj)}' still has removed objects: {left}"
+        ]
+    return []
+
+
+def root_problems(root: APIObject) -> list[str]:
+    """P2: why the management cluster's Kustomization doesn't report that it can't build the
+    organisation, or no longer lists what it applied from it, if so."""
+    root.reload()
+    return build_failure_problems(root.obj, set(KEPT_BY_FAILED_BUILD))
 
 
 def remove_from_source(
@@ -55,10 +61,12 @@ def remove_from_source(
 ) -> None:
     """Leave the files `ignore` matches out of the GitRepository's artifact, as if they were
     deleted from Git, drop what `patches` delete from what the apps Kustomization builds, and
-    wait until the Kustomizations that applied them have applied the change.
+    wait until the apps Kustomization has applied the change and the management cluster's
+    reports that it can't build without the files.
     """
     repo = git_repository(api)
-    kustomization(api, APPS_KUSTOMIZATION).patch({"spec": {"patches": patches}})
+    apps = kustomization(api, APPS_KUSTOMIZATION)
+    apps.patch({"spec": {"patches": patches}})
     repo.patch({"spec": {"ignore": ignore}})
     request_reconcile(repo)
     wait_until(
@@ -68,15 +76,18 @@ def remove_from_source(
     # The new artifact has a new digest but the same revision, the commit, and
     #  kustomize-controller only reacts to a new revision by itself. Without the request, the
     #  Kustomizations would apply it at their next interval.
-    kustomizations = [
-        kustomization(api, k) for k in (ROOT_KUSTOMIZATION, APPS_KUSTOMIZATION)
-    ]
-    for k in kustomizations:
+    root = kustomization(api, ROOT_KUSTOMIZATION)
+    for k in (root, apps):
         request_reconcile(k)
     wait_until(
-        lambda: inventory_problems(kustomizations),
+        lambda: inventory_problems(apps),
         PRUNE_TIMEOUT_SEC,
-        "the Kustomizations haven't applied the removal",
+        "the apps Kustomization hasn't applied the removal",
+    )
+    wait_until(
+        lambda: root_problems(root),
+        PRUNE_TIMEOUT_SEC,
+        "the management cluster's Kustomization doesn't report the failed build",
     )
 
 
