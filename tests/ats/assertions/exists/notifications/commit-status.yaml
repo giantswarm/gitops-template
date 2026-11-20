@@ -1,0 +1,30 @@
+# N1: the notification example. The Provider names its token Secret, and the Alert names the
+# Provider, covers the Kustomizations in `default` and `org-org-name`, and stays suspended, so
+# the test posts nothing to GitHub. notification_objects.py waits until ESO has written both
+# token Secrets' `token` from the fake store and the Receiver is Ready.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-commit-status
+  namespace: default
+spec:
+  type: github
+  secretRef:
+    name: github-commit-status-token
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-commit-status
+  namespace: default
+spec:
+  providerRef:
+    name: github-commit-status
+  eventSeverity: info
+  eventSources:
+    - kind: Kustomization
+      name: "*"
+    - kind: Kustomization
+      name: "*"
+      namespace: org-org-name
+  suspend: true

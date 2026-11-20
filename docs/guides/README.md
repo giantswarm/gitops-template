@@ -27,6 +27,7 @@ Repository:
 - [Configuring extra validation and diff previews on GitHub](./ci-validation.md)
 - [Move a fork to the kubectl-gs file and resource names](./kubectl-gs-names.md), for repositories forked before
   the template used them.
+- [Report reconcile status on GitHub commits](./commit-statuses.md), and fetch the repository on push.
 
 Secrets:
 

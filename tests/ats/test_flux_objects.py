@@ -18,6 +18,7 @@ from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate
 from conftest import GitOpsTestConfig
 from node_pools import node_pool_problems_in_cluster
+from notification_objects import check_notifications
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from shared_objects import check_shared_object_copied
@@ -27,7 +28,8 @@ from workload_cluster_secrets import check_secrets_pushed
 
 # Kyverno has to run before gitops_deployment applies the repository: pytest sets up the
 #  fixtures of `usefixtures` before the ones a test requests.
-pytestmark = pytest.mark.usefixtures("kyverno")
+#  The Alert of the notification example has to be suspended before then, too.
+pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert")
 
 
 @pytest.fixture(scope="module")
@@ -155,6 +157,15 @@ def test_shared_object_copied(
     check_kustomizations_successful: None,
 ) -> None:
     check_shared_object_copied(kube_cluster.kube_client)
+
+
+def test_commit_status_notifications(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    # N1: ESO wrote the tokens and the Receiver is Ready; assertions/exists/notifications checks
+    #  the Provider and the Alert
+    check_notifications(kube_cluster.kube_client)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:

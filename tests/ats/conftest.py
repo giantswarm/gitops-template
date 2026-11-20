@@ -24,13 +24,15 @@ from flux_teardown import delete_without_prune
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
 # flux_install have fixtures; external_secrets installs External Secrets Operator;
-# workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster.
+# workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster;
+# notification_objects suspends the notification example's Alert.
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
     "flux_install",
     "external_secrets",
     "workload_cluster_flux_crds",
+    "notification_objects",
 ]
 
 FLUX_GIT_REPO_NAME = "your-repo"
