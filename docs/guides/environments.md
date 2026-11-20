@@ -482,9 +482,7 @@ Relative to the root of the repository, let's change our working directory to ou
 cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
 ```
 
-Then let's tell Flux to manage our cluster instance. It doesn't set `organization`: the organisation's
-`kustomization.yaml` sets it from the name of the `Organization`, see
-[The organisation's name](../reference/repo-structure.md#the-organisations-name).
+Then let's tell Flux to manage our cluster instance.
 
 ```sh
 cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
@@ -500,6 +498,7 @@ spec:
     substitute:
       cluster_description: "description"
       cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
+      organization: "${ORG_NAME}"
   prune: true
   retryInterval: 1m
   serviceAccountName: automation

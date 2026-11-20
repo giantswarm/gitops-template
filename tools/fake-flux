@@ -186,7 +186,9 @@ function _find_kustomization() {
 		fi
 		for k in "${KUSTOMIZATIONS[@]}"; do
 			if [ "$(cut -d, -f2 <<<$k)" == "${name}" ]; then
-				if [ "${namespace}" == "" ] || [ "$(cut -d, -f3 <<<$k)" == "${namespace}" ]; then
+				# the namespace its file names, or the one Flux applies it in
+				if [ "${namespace}" == "" ] || [ "$(cut -d, -f3 <<<$k)" == "${namespace}" ] ||
+					[ "$(_applied_namespace "$k")" == "${namespace}" ]; then
 					matches+=("$k")
 				fi
 			fi
@@ -212,8 +214,13 @@ else
 	kustomize_build=(kubectl kustomize --load-restrictor=LoadRestrictionsNone)
 fi
 
+# The namespace an organisation's kustomization.yaml completes with the organisation's name
+PLACEHOLDER_NAMESPACE="org-ORG_NAME"
+
 ##
-# Write the Flux Kustomization named $2, from file $1, to file $3 as Flux applies it. Flux's
+# Write the Flux Kustomization named $2 in namespace $3, from file $1, to file $4 as Flux applies
+# it. A Kustomization in the namespace PLACEHOLDER_NAMESPACE matches one in any `org-` namespace
+# of the build, as the replacement gives it the organisation's. Flux's
 # generated build of a directory without a kustomization.yaml stops at a directory with one and
 # builds it whole, so the file's directory is built by kustomize if it has one, and its parent
 # too if that has one, and so on. A replacement in such an ancestor, such as the one in an
@@ -221,18 +228,32 @@ fi
 # highest of those directories whose build has the Kustomization wins; without one, the file is
 # used as it is.
 function _as_applied() {
-	local file="$1" out="$3" dir dirs=()
+	local file="$1" out="$4" dir dirs=()
 	dir=$(dirname "${file}")
 	while [ "${dir}" != "." ] && [ -e "${dir}/kustomization.yaml" ]; do
 		dirs=("${dir}" "${dirs[@]}")
 		dir=$(dirname "${dir}")
 	done
 	for dir in "${dirs[@]}"; do
-		"${kustomize_build[@]}" "${dir}" | name="$2" yq 'select(.apiVersion == "kustomize.toolkit.fluxcd.io/*" and
-			.kind == "Kustomization" and .metadata.name == strenv(name))' >"${out}"
+		"${kustomize_build[@]}" "${dir}" | name="$2" namespace="${3:-default}" placeholder="${PLACEHOLDER_NAMESPACE}" yq '
+			select(.apiVersion == "kustomize.toolkit.fluxcd.io/*" and .kind == "Kustomization" and
+				.metadata.name == strenv(name) and
+				((.metadata.namespace // "default") == strenv(namespace) or
+					(strenv(namespace) == strenv(placeholder) and ((.metadata.namespace // "") | test("^org-")))))' >"${out}"
 		[ -s "${out}" ] && return 0
 	done
 	cp "${file}" "${out}"
+}
+
+##
+# The namespace Flux applies the Kustomization $1, an entry of KUSTOMIZATIONS, in.
+function _applied_namespace() {
+	local file name namespace applied
+	IFS=, read -r file name namespace _ <<<"$1"
+	applied=$(mktemp)
+	_as_applied "${file}" "${name}" "${namespace}" "${applied}"
+	yq '.metadata.namespace // "default"' "${applied}"
+	rm -f "${applied}"
 }
 
 ##
@@ -261,7 +282,7 @@ function build() {
 		rm -f "${applied}" ${generated:+"${generated}"}
 	}
 	trap cleanup EXIT SIGINT
-	_as_applied "${kustomization}" "${name}" "${applied}"
+	_as_applied "${kustomization}" "${name}" "${namespace}" "${applied}"
 	namespace=$(yq '.metadata.namespace // "default"' "${applied}")
 
 	if [ -n "$2" ] && [ -e "$(realpath $path/$2)" ]; then

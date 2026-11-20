@@ -262,19 +262,40 @@ function test() {
 			has_validation_errors=1
 		fi
 
-		# fake-flux must build a Kustomization as Flux applies it: with the value a replacement
-		# in an ancestor directory's kustomization.yaml sets, as an organisation's sets
-		# `organization` in its workload clusters' Kustomizations.
-		echo -n "fake-flux, a variable an ancestor's replacement sets: "
+		# fake-flux must build a Kustomization as Flux applies it: with the values the replacements
+		# in an ancestor directory's kustomization.yaml set, as an organisation's sets
+		# `organization` and the organisation's namespace in its workload clusters'
+		# Kustomizations. The fixture has two Kustomizations of the same name: fake-flux tells
+		# them apart by namespace, the one Flux applies them in or the one their file names.
 		fixture_dir="${tmp_dir}/ancestor-replacement"
 		mkdir -p "${fixture_dir}/.git"
 		cp -r "$(dirname $0)/testdata/ancestor-replacement/." "${fixture_dir}"
+		for check in "default:name: ancestor-replacement$" \
+			"org-from-the-ancestor:name: ancestor-replacement-direct$" \
+			"org-ORG_NAME:name: ancestor-replacement-direct$"; do
+			echo -n "fake-flux, values an ancestor's replacements set, ancestor-replacement:${check%%:*}: "
+			status=0
+			output=$(cd "${fixture_dir}" && "${fakeflux_path}" build "ancestor-replacement:${check%%:*}" -M 2>&1) || status=$?
+			if [ "${status}" -eq 0 ] && grep -q "namespace: org-from-the-ancestor" <<<"${output}" &&
+				grep -q "${check#*:}" <<<"${output}"; then
+				echo "OK, set"
+			else
+				echo "not set:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
+
+		# The replacement only updates `organization`: a Kustomization in the ancestor's build
+		# without one fails the build, naming the field.
+		echo -n "fake-flux, a Kustomization without organization in an ancestor's build: "
+		yq -i 'del(.spec.postBuild.substitute.organization)' "${fixture_dir}/organization/clusters/cluster.yaml"
 		status=0
 		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build ancestor-replacement:default -M 2>&1) || status=$?
-		if [ "${status}" -eq 0 ] && grep -q "namespace: org-from-the-ancestor" <<<"${output}"; then
-			echo "OK, set"
+		if [ "${status}" -ne 0 ] && grep -q 'unable to find field "spec.postBuild.substitute.organization"' <<<"${output}"; then
+			echo "OK, reported"
 		else
-			echo "not set:"
+			echo "not reported:"
 			echo "${output}"
 			has_validation_errors=1
 		fi
