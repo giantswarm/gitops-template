@@ -70,15 +70,14 @@ mkdir -p bases/environments/stages/prod
 
 Each of these contain a `hello_app_cluster` example, built from the
 [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository. A
-cluster template bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa/template),
-the [envoy-gateway](/bases/apps/envoy-gateway) App Template and the [hello-web-app](/bases/app_sets/hello-web-app) App
-Set, with the per-cluster values that tie them together. None of the other docs create it, so if your repository doesn't
-have it, copy `bases/cluster_templates/hello_app_cluster` together with the bases it references.
+cluster template bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa/template)
+and the [hello-web](/bases/apps/hello-web) App Template, which installs hello-world served through Envoy Gateway. None
+of the other docs create it, so if your repository doesn't have it, copy `bases/cluster_templates/hello_app_cluster`
+together with the bases it references.
 
-The cluster template also orders hello-world after the Gateway API CRDs: a patch in its `kustomization.yaml` adds
-`${cluster_name}-gateway-api-crds` to the hello-world `HelmRelease`'s `dependsOn`, so every install and upgrade of
-hello-world waits until that envoy-gateway release is `Ready`. When you compose your own cluster template from these
-App Templates, add the same patch; see [App Templates](./app-templates.md).
+The hello-web App Template holds what ties its apps together: it orders hello-world after the Gateway API CRDs, sets
+the Gateway's `hello` subdomain next to hello-world's hostname, and pins the chart versions known to work together. See
+[App Templates with several apps](./app-templates.md#app-templates-with-several-apps).
 
 ```sh
 mkdir -p bases/environments/stages/dev/hello_app_cluster
@@ -132,10 +131,8 @@ cd bases/environments/stages/dev/hello_app_cluster
 ```
 
 The [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
-[hello-web-app app set](/bases/app_sets/hello-web-app) should be installed in all of these clusters. Values for the
-apps in that set come from the set itself, through [override_config_hello_world.yaml](
-/bases/cluster_templates/hello_app_cluster/app_sets/hello-web-app/override_config_hello_world.yaml) in the cluster
-template; what a stage adds on top is the chart version to run.
+[hello-web](/bases/apps/hello-web) App Template should be installed in all of these clusters. Values for its apps come
+from the App Template itself; what a stage adds on top is the chart version to run.
 
 The version of an app lives on its `OCIRepository`, and it can be either a fixed `spec.ref.tag` or a `spec.ref.semver`
 range. With a range, Flux deploys the highest chart tag that satisfies it and upgrades the app as soon as a newer
@@ -197,7 +194,8 @@ We will use the same environment variables for this cluster template as we did f
 
 It is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base, like the development
 cluster. Unlike it, staging doesn't follow a range: it pins the exact `hello-world` version and the release, so it only
-runs a version once you have promoted it from dev. The hello-world patch overrides the version the app set pins.
+runs a version once you have promoted it from dev. The hello-world patch overrides the version the hello-web App
+Template pins.
 
 ```sh
 cat <<EOF > kustomization.yaml

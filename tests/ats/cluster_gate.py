@@ -2,8 +2,8 @@
 
 A cluster with apps has two Kustomizations. The cluster's applies the cluster and its base apps,
 and its health check waits for the cluster's Cluster API `Cluster` to be Available. The apps
-Kustomization applies the secondary apps and App Sets, and depends on the cluster's. The check
-sets each stand-in `Cluster` to Available False. The base apps have to be applied all the same,
+Kustomization applies the secondary apps, and depends on the cluster's. The check sets each
+stand-in `Cluster` to Available False. The base apps have to be applied all the same,
 and the apps Kustomization has to wait for its dependency without applying anything. Then the
 check sets Available True, and the apps Kustomization has to get ready. cluster_gates lists the
 clusters and judges what Flux did; stand_in_clusters creates the `Cluster`s.

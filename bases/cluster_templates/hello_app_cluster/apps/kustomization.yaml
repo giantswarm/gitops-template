@@ -6,4 +6,4 @@ labels:
       giantswarm.io/managed-by: flux
 namespace: org-${organization}
 resources:
-  - envoy-gateway-from-template/
+  - ../../../apps/hello-web

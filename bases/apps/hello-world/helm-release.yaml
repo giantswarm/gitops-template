@@ -23,7 +23,7 @@ spec:
   # them in `dependsOn`, so it works without envoy-gateway; a layer that
   # installs it together with the envoy-gateway App Template adds
   # `dependsOn: [{name: ${cluster_name}-gateway-api-crds}]`, see
-  # bases/cluster_templates/hello_app_cluster.
+  # bases/apps/hello-web.
   install:
     # the target namespace does not exist in a new workload cluster
     createNamespace: true

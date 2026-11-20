@@ -13,10 +13,10 @@ generatorOptions:
     reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
 # (optional) pin the hello-world version and the Giant Swarm release that prod
-# runs; the hello-world patch overrides the app set's. Renovate updates these
-# pins in a pull request of their own, on a `renovate/prod-*` branch, that
-# isn't automerged. Prod renders the new version once this one is merged:
-# merge it after staging has run it.
+# runs; the hello-world patch overrides the one in bases/apps/hello-web.
+# Renovate updates these pins in a pull request of their own, on a
+# `renovate/prod-*` branch, that isn't automerged. Prod renders the new
+# version once this one is merged: merge it after staging has run it.
 patches:
   - patch: |-
       - op: replace

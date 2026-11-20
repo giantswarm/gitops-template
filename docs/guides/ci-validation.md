@@ -30,14 +30,15 @@ The workflow offers the following jobs:
   and additionally if all the statements present in `tests/ats/assertions` are also available in objects in the
   cluster.
   Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster. It leaves the organisation's
-  `ORG_NAME.yaml` out of the `GitRepository` with `spec.ignore`, and drops an App Set from what the cluster's apps
-  `Kustomization` builds with `$patch: delete` patches in its `spec.patches`, as `app_sets/kustomization.yaml` lists
-  the App Set and `spec.ignore` can't change that list. The App Set has to go. The organisation's `kustomization.yaml`
-  takes the organisation's name from the `Organization`, so without `ORG_NAME.yaml` the management cluster's
-  `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its inventory keeps the
-  `Organization` and the cluster's `Kustomization`s, and they stay. Then it deletes the cluster's two
-  `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and `OCIRepository` have to
-  stay. It deletes what the other tests check, so it runs last and fails if they didn't run before it.
+  `ORG_NAME.yaml` out of the `GitRepository` with `spec.ignore`, and drops an app, `apps/hello-world-from-template`,
+  from what the cluster's apps `Kustomization` builds with `$patch: delete` patches in its `spec.patches`, as
+  `apps/kustomization.yaml` lists the app and `spec.ignore` can't change that list. The app has to go. The
+  organisation's `kustomization.yaml` takes the organisation's name from the `Organization`, so without
+  `ORG_NAME.yaml` the management cluster's `Kustomization`, `mc-name-gitops`, has to report that its build failed
+  and prune nothing: its inventory keeps the `Organization` and the cluster's `Kustomization`s, and they stay. Then
+  it deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease`
+  and `OCIRepository` have to stay. It deletes what the other tests check, so it runs last and fails if they didn't
+  run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 
@@ -57,8 +58,8 @@ checking anything. Otherwise it fails, naming the `Kustomization`, its file and 
 - the path doesn't exist: restore the directory, or delete the `Kustomization`, its file and its entry in the
   `kustomization.yaml` that lists it;
 - the path is empty: delete the `Kustomization` the same way;
-- a `kustomization.yaml` lists something that's gone, for example the `app_sets/` of a cluster whose last App Set you
-  removed: remove the entry, or restore what it names.
+- a `kustomization.yaml` lists something that's gone, for example the directory of an app you removed from a
+  cluster's `apps/`: remove the entry, or restore what it names.
 
 On a cluster, each of these stops Flux applying the `Kustomization` until it's fixed, and it doesn't delete what the
 `Kustomization` applied before. `tools/test-all-ff validate` checks that the hook fails on the fixture in

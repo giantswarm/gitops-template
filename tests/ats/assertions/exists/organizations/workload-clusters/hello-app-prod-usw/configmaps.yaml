@@ -50,17 +50,21 @@ metadata:
 apiVersion: v1
 data:
   values: |
+    # replaces the hello-world App Template's default_config.yaml
     autoscaling:
-      minReplicas: 3
+      minReplicas: 2
     ingress:
       enabled: false
     route:
       enabled: true
       kind: HTTPRoute
-      parentRefs: # has to be in sync with the Gateway served by the cluster's Envoy Gateway
+      # the Gateway gateway_api_config.yaml configures
+      parentRefs:
         - name: giantswarm-default
           namespace: envoy-gateway-system
-      hostnames: # under the cluster's base domain and in the Gateway's `listeners.https.subdomains`
+      # under the cluster's base domain and in gateway_api_config.yaml's
+      # `listeners.https.subdomains`
+      hostnames:
         - "hello.{{ .Values.baseDomain }}"
 kind: ConfigMap
 metadata:
@@ -84,15 +88,19 @@ metadata:
 apiVersion: v1
 data:
   values: |
+    # replaces the envoy-gateway App Template's default_config_gateway_api_config.yaml
     gateways:
       default:
+        # hello_world.yaml's `route.parentRefs` attaches hello-world's HTTPRoute to
+        # this Gateway
+        name: giantswarm-default
         listeners:
           https:
-            # DNS record and certificate entry for the hello-world app's hostname,
-            # `hello.<cluster base domain>`
+            # DNS record and certificate entry for hello_world.yaml's
+            # `route.hostnames`, `hello.<cluster base domain>`
             subdomains:
               - hello
 kind: ConfigMap
 metadata:
-  name: hello-app-prod-usw-gateway-api-config-user-values
+  name: hello-app-prod-usw-gateway-api-config-values
   namespace: org-org-name

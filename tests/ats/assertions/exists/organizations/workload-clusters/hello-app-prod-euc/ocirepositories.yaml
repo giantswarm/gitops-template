@@ -52,7 +52,7 @@ kind: OCIRepository
 metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-euc
-    gitops.giantswarm.io/appSet: hello-web-app
+    giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-euc
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-euc-hello-world

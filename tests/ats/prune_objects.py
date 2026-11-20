@@ -28,7 +28,7 @@ PRUNE_IGNORE = "\n".join(
 )
 # the Kustomization of the management cluster, which applies the organization
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
-# the Kustomization of the out-of-band-no-flux cluster's secondary apps, which applies the app set
+# the Kustomization of the out-of-band-no-flux cluster's secondary apps, which applies the app
 APPS_KUSTOMIZATION = (
     FLUX_OBJECTS_NAMESPACE,
     "mc-name-clusters-out-of-band-no-flux-apps",
@@ -55,8 +55,8 @@ TEAM_OBJECTS = [
     ("Kustomization", "org-org-name", "out-of-band-no-flux-hello-team"),
 ]
 TEAM_WORKLOAD = ("hello-team", "podinfo")
-# P1: an app, the hello-web-app-1 app set of the out-of-band-no-flux cluster. spec.ignore can't
-#  leave its directory out of the source as P2 does: app_sets/kustomization.yaml lists it, so the
+# P1: an app, apps/hello-world-from-template of the out-of-band-no-flux cluster. spec.ignore can't
+#  leave its directory out of the source as P2 does: apps/kustomization.yaml lists it, so the
 #  apps Kustomization wouldn't build, while deleting it from Git deletes that entry too. Instead,
 #  `$patch: delete` patches in the apps Kustomization's `spec.patches` drop its objects from
 #  what the Kustomization builds, as deleting the directory and its entry does.

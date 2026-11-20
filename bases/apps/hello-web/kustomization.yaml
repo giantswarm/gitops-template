@@ -1,0 +1,79 @@
+# hello-world, served over HTTPS through Envoy Gateway: an App Template with
+# several apps. It installs the envoy-gateway and hello-world App Templates
+# together and holds what ties them together, so a cluster lists `hello-web`
+# in its apps to get the whole stack:
+#   - the order: hello-world waits for the Gateway API CRDs (dependsOn)
+#   - the values that have to agree: the Gateway's `hello` subdomain and
+#     hello-world's hostname and parentRefs, side by side in this directory
+#   - the chart versions known to work together, pinned in one place
+# See docs/guides/app-templates.md#app-templates-with-several-apps.
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+# The values replace the App Templates' whole `-values` ConfigMaps, so they
+# hold every default the charts need. The `-user-values` ConfigMaps and
+# `-user-secrets` Secrets stay free for a cluster's own overrides.
+configMapGenerator:
+  - behavior: replace
+    files:
+      - values=gateway_api_config.yaml
+    name: ${cluster_name}-gateway-api-config-values
+  - behavior: replace
+    files:
+      - values=hello_world.yaml
+    name: ${cluster_name}-hello-world-values
+generatorOptions:
+  disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+kind: Kustomization
+namespace: org-${organization} # the org namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
+# The `$` of a target name is escaped, as kustomize reads the name as a
+# regular expression.
+patches:
+  # hello-world's HTTPRoute needs the Gateway API CRDs: every install and
+  # upgrade of hello-world waits until the gateway-api-crds release is ready
+  - patch: |-
+      - op: add
+        path: /spec/dependsOn
+        value:
+          - name: ${cluster_name}-gateway-api-crds
+    target:
+      kind: HelmRelease
+      name: \${cluster_name}-hello-world
+  # the chart versions that work well together
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-crds versioning=docker
+        value: "1.9.1"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-gateway-api-crds
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/envoy-gateway versioning=docker
+        value: "1.10.3"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-envoy-gateway
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-config versioning=docker
+        value: "1.11.3"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-gateway-api-config
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
+        value: "3.2.2"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
+resources:
+  - ../envoy-gateway
+  - ../hello-world
