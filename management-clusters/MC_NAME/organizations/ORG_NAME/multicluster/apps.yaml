@@ -1,0 +1,20 @@
+# Applies apps/: the organisation's apps that roll out to several of its
+# workload clusters, one ResourceSet each, to the clusters in apps/clusters.yaml.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mc-name-multicluster-apps-org-name  # TODO: change 'mc-name' to your Management Cluster name and 'org-name' to your organization name; must be a correct k8s resource name (DNS-like)
+  namespace: default
+spec:
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps"
+  postBuild:
+    substitute:
+      organization: "org-name"  # TODO: change 'org-name' to your organization name
+  prune: true
+  retryInterval: 1m
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+  timeout: 2m

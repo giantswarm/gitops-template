@@ -48,7 +48,7 @@ spec:
           # nobody can delete it, Flux included, until this label is removed
           giantswarm.io/prevent-deletion: "true"
         name: ${cluster_name}
-        namespace: org-${organization}
+        namespace: << inputs.provider.namespace >>
       spec:
         interval: 10m0s
         provider: generic
@@ -74,12 +74,11 @@ spec:
           # nobody can delete it, Flux included, until this label is removed
           giantswarm.io/prevent-deletion: "true"
         name: ${cluster_name}
-        namespace: org-${organization}
+        namespace: << inputs.provider.namespace >>
       spec:
         chartRef:
           kind: OCIRepository
           name: ${cluster_name}
-          namespace: org-${organization}
         install:
           # Flux remediates a failed install by uninstalling it, which deletes the
           # cluster. Keep a failed install failed instead.

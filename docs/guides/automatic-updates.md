@@ -201,11 +201,12 @@ out to several workload clusters from one list.
 
 ### How the examples work
 
-- [resource-sets/hello-world-scheduled](/management-clusters/MC_NAME/organizations/ORG_NAME/resource-sets/hello-world-scheduled/resource-set.yaml)
-  installs hello-world on two workload clusters, which its `ResourceSet` lists in `spec.inputs`. Its provider picks the
-  highest release below `4.0.0` from Monday to Thursday, 09:00 to 17:00 in Berlin. With `inputStrategy: Permute`, the
-  `ResourceSet` renders an `OCIRepository` and a `HelmRelease` for every cluster at that version. Removing a cluster
-  from `spec.inputs` uninstalls the App from that cluster.
+- [multicluster/apps/hello-world-scheduled](/management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps/hello-world-scheduled/resource-set.yaml)
+  installs hello-world on the workload clusters in
+  [multicluster/apps/clusters.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps/clusters.yaml).
+  Its provider picks the highest release below `4.0.0` from Monday to Thursday, 09:00 to 17:00 in Berlin. With
+  `inputStrategy: Permute`, the `ResourceSet` renders an `OCIRepository` and a `HelmRelease` for every cluster at that
+  version, see [Apps on several clusters](#apps-on-several-clusters).
 - [WC_NAME_SCHEDULED_UPGRADES](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES/cluster/cluster-resource-set.yaml)
   is a cluster whose Giant Swarm release moves to the highest `v36` release only on Tuesdays, 02:00 to 05:00 UTC. Its
   `ResourceSet` renders the whole cluster, the `OCIRepository` and the `HelmRelease` as the cluster base has them, at
@@ -214,6 +215,39 @@ out to several workload clusters from one list.
   a `ResourceSet`. A new major release is a change to the range in Git, and an exact version in the range pins the
   cluster to it. Like a new release, a change to the range reaches the cluster at the next window, or at once when you
   force the provider, see below.
+
+Flux Operator doesn't give the objects a `ResourceSet` renders a namespace, so both examples set it to their provider's,
+`<< inputs.provider.namespace >>`, or `<< inputs.hello_world_scheduled_version.provider.namespace >>` with `Permute`.
+A `HelmRelease`'s `chartRef` needs none: Flux looks for the `OCIRepository` in the `HelmRelease`'s namespace.
+
+### Apps on several clusters
+
+An organisation's apps that roll out to several of its workload clusters live in `multicluster/apps`, one directory and
+one `ResourceSet` per app. The management cluster's Kustomization doesn't apply them: it creates the Flux
+`Kustomization` `MC_NAME-multicluster-apps-ORG_NAME`, in `multicluster/apps.yaml`, and that one applies
+`multicluster/apps`, with `${organization}` substituted.
+
+The clusters are listed once, in `multicluster/apps/clusters.yaml`. `multicluster/apps/kustomization.yaml` applies it as
+a patch to every `ResourceSet` in the directory, and sets their `spec.inputs`:
+
+```yaml
+spec:
+  inputs:
+    - cluster: out-of-band-no-flux
+    - cluster: out-of-band-flux-app
+```
+
+To roll every app out to a new cluster, add its name to `clusters.yaml`. Removing a name uninstalls the apps from that
+cluster. With `Permute`, a `ResourceSet` reads the name as `inputs.<its name>.cluster`, with `_` for `-`, such as
+`inputs.hello_world_scheduled.cluster`. To give one app a list of its own, add a patch after `clusters.yaml` in
+`kustomization.yaml` that targets that `ResourceSet` by name and sets its `spec.inputs`.
+
+A listed cluster may not exist or be ready yet. Its app `HelmRelease` doesn't install early: it has the cluster's
+`gateway-api-crds` release in `dependsOn`, which only gets ready once the cluster is up, and helm-controller retries
+until then. Nothing fails meanwhile: the `ResourceSet` applies the `HelmRelease` without waiting for it, and the
+`Kustomization` applies only the `ResourceSet`. Unlike a cluster's apps Kustomization, it doesn't wait for the Cluster
+API `Cluster` to be `Available`: a `HelmRelease` can only depend on other `HelmRelease`s, so an app without such a
+dependency would only wait for the cluster's kubeconfig `Secret`, and fail and retry until it exists.
 
 ### Installing before the first window
 
@@ -297,7 +331,7 @@ dependsOn:
   - apiVersion: fluxcd.controlplane.io/v1
     kind: ResourceSetInputProvider
     name: hello-world-scheduled-version
-    namespace: org-org-name
+    namespace: org-${organization}
     ready: true
     readyExpr: >-
       status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')

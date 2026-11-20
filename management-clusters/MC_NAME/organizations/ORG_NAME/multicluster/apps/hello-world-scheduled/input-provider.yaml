@@ -14,7 +14,7 @@ apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSetInputProvider
 metadata:
   name: hello-world-scheduled-version
-  namespace: org-org-name  # TODO: change 'org-name' to your organization name
+  namespace: org-${organization}
 spec:
   type: OCIArtifactTag
   url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

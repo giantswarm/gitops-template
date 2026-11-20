@@ -6,9 +6,9 @@ until the provider is Ready with a version. The check takes the version away in 
 can go: the registry can't be read, no tag matches the range, the provider is deleted. Each
 time, the ResourceSet has to wait for its provider, and the app has to stay.
 
-The management cluster's Kustomization, which applies the example, is suspended meanwhile, so
-Flux doesn't put the provider back; resuming it does. resource_set_cluster_guard does the same
-for the cluster example.
+The organisation's multi-cluster apps Kustomization, which applies the example, is suspended
+meanwhile, so Flux doesn't put the provider back; resuming it does. resource_set_cluster_guard
+does the same for the cluster example.
 """
 
 from collections.abc import Callable

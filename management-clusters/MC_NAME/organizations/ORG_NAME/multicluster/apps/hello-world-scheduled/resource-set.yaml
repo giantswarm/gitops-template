@@ -1,7 +1,8 @@
 # hello-world on several workload clusters, at the version its provider picks.
 # One ResourceSet per app: a ResourceSet deletes what it rendered for an input
-# that is gone, so apps that shared one would go together. Removing a cluster
-# from `inputs` uninstalls the app from that cluster.
+# that is gone, so apps that shared one would go together. The clusters are in
+# ../clusters.yaml, which sets `spec.inputs`; removing a cluster from it
+# uninstalls the app from that cluster.
 #
 # First install: until the provider exports a version, this ResourceSet waits
 # and the app isn't installed. The provider exports none until its first window
@@ -14,7 +15,7 @@ apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
   name: hello-world-scheduled
-  namespace: org-org-name  # TODO: change 'org-name' to your organization name
+  namespace: org-${organization}
 spec:
   # Losing the version, because no tag matches the range, the registry can't be
   # read or the provider is deleted, would render nothing and so uninstall the
@@ -24,17 +25,15 @@ spec:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSetInputProvider
       name: hello-world-scheduled-version
-      namespace: org-org-name  # TODO: change 'org-name' to your organization name
+      namespace: org-${organization}
       ready: true
       readyExpr: >-
         status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
         && has(status.exportedInputs)
-  # every cluster below with the version the provider exports
+  # every cluster in ../clusters.yaml, which sets `inputs`, with the version the
+  # provider exports
   inputStrategy:
     name: Permute
-  inputs:
-    - cluster: out-of-band-no-flux  # TODO: change to the names of your clusters
-    - cluster: out-of-band-flux-app
   inputsFrom:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSetInputProvider
@@ -49,7 +48,7 @@ spec:
         labels:
           giantswarm.io/cluster: << inputs.hello_world_scheduled.cluster >>
         name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
-        namespace: org-org-name  # TODO: change 'org-name' to your organization name
+        namespace: << inputs.hello_world_scheduled_version.provider.namespace >>
       spec:
         interval: 10m
         provider: generic
@@ -62,14 +61,15 @@ spec:
         labels:
           giantswarm.io/cluster: << inputs.hello_world_scheduled.cluster >>
         name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
-        namespace: org-org-name  # TODO: change 'org-name' to your organization name
+        namespace: << inputs.hello_world_scheduled_version.provider.namespace >>
       spec:
         chartRef:
           kind: OCIRepository
           name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
-          namespace: org-org-name  # TODO: change 'org-name' to your organization name
         # the HTTPRoute needs the Gateway API CRDs: every install and upgrade waits
-        # until the gateway-api-crds release of the cluster's envoy-gateway is ready
+        # until the gateway-api-crds release of the cluster's envoy-gateway is ready.
+        # That also holds the app back on a listed cluster that doesn't exist or
+        # isn't ready yet: helm-controller retries until the release is ready.
         dependsOn:
           - name: << inputs.hello_world_scheduled.cluster >>-gateway-api-crds
         install:

@@ -1,0 +1,13 @@
+# The workload clusters that every app in this directory is installed on. To roll
+# the apps out to a new cluster, add its name here; removing a name uninstalls
+# them from that cluster. kustomization.yaml applies this to every ResourceSet
+# here: with `inputStrategy: Permute`, each ResourceSet reads the name as
+# `inputs.<its name, with _ for ->.cluster`.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: every-resource-set  # kustomize puts the name of each ResourceSet it patches here
+spec:
+  inputs:
+    - cluster: out-of-band-no-flux  # TODO: change to the names of your clusters
+    - cluster: out-of-band-flux-app

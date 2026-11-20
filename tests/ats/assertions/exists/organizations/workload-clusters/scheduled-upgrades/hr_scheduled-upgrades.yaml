@@ -17,7 +17,6 @@ spec:
   chartRef:
     kind: OCIRepository
     name: scheduled-upgrades
-    namespace: org-org-name
   install:
     remediation:
       remediateLastFailure: false
