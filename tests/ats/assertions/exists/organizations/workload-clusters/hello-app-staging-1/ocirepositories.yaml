@@ -67,6 +67,8 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: hello-app-staging-1
     giantswarm.io/managed-by: flux

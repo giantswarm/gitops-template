@@ -27,15 +27,21 @@ from node_pools import node_pool_problems_in_cluster
 from notification_objects import check_notifications
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
+from resource_set_cluster_guard import check_cluster_input_loss
+from resource_set_guard import check_input_loss
+from resource_set_objects import EXAMPLES, install_now
+from resource_set_schedule import check_schedule_window
+from resource_set_upgrade import check_scheduled_cluster_upgrade
 from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
 from workload_cluster_secrets import check_secrets_pushed
 
-# Kyverno has to run before gitops_deployment installs External Secrets Operator: pytest sets up
-#  the fixtures of `usefixtures` before the ones a test requests.
+# Kyverno has to run before gitops_deployment installs External Secrets Operator, and Flux
+#  Operator before it applies the repository: pytest sets up the fixtures of `usefixtures`
+#  before the ones a test requests.
 #  The Alert of the notification example has to be suspended before then, too.
-pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert")
+pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert", "flux_operator")
 
 
 @pytest.fixture(scope="module")
@@ -80,9 +86,25 @@ def test_automation_access(
 
 
 @pytest.fixture(scope="module")
+def resource_sets_installed(
+    kube_cluster: Cluster, check_kustomizations_successful: None
+) -> None:
+    # The ResourceSets render sources and HelmReleases, so the checks of those wait for them.
+    for provider, resource_set in EXAMPLES:
+        install_now(kube_cluster.kube_client, provider, resource_set)
+
+
+def test_resource_sets_installed(resource_sets_installed: None) -> None:
+    # all the checks are done actually in the fixture, which the source and HelmRelease
+    #  checks need
+    pass
+
+
+@pytest.fixture(scope="module")
 def check_sources_successful(
     kube_cluster: Cluster,
     check_kustomizations_successful: None,
+    resource_sets_installed: None,
     gitops_test_config: GitOpsTestConfig,
 ) -> None:
     check_sources(kube_cluster.kube_client, gitops_test_config.ignored_objects)
@@ -98,6 +120,7 @@ def test_sources_successful(check_sources_successful: None) -> None:
 def check_helm_release_successful(
     kube_cluster: Cluster,
     check_kustomizations_successful: None,
+    resource_sets_installed: None,
     gitops_test_config: GitOpsTestConfig,
 ) -> dict[str, dict]:
     return check_helm_releases(
@@ -193,6 +216,30 @@ def test_commit_status_notifications(
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
     # G1: a cluster's apps Kustomizations apply nothing until the cluster is Available
     assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
+
+
+def test_schedule_window(kube_cluster: Cluster, resource_sets_installed: None) -> None:
+    check_schedule_window(kube_cluster.kube_client)
+
+
+def test_scheduled_cluster_upgrade(
+    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+) -> None:
+    check_scheduled_cluster_upgrade(kube_cluster.kube_client)
+
+
+def test_input_loss_keeps_the_app(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    check_input_loss(kube_cluster.kube_client, workload_cluster)
+
+
+def test_input_loss_keeps_the_cluster(
+    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+) -> None:
+    check_cluster_input_loss(kube_cluster.kube_client)
 
 
 # must stay last: it deletes what the tests above check

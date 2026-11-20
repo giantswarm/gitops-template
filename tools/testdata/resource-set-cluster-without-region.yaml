@@ -1,0 +1,69 @@
+# A release-aws cluster without a region, whose OCIRepository and HelmRelease a Flux
+# Operator ResourceSet renders, as in WC_NAME_SCHEDULED_UPGRADES. Its values are otherwise
+# valid, so the only error is the chart's own "Unable to default the region".
+# tools/test-all-ff checks that tools/validate-helm-values renders the HelmRelease inside
+# the ResourceSet and reports it.
+apiVersion: v1
+data:
+  values: |
+    global:
+      metadata:
+        name: rset-no-region
+        organization: demo
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: rset-no-region-config
+  namespace: org-demo
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: rset-no-region-release
+  namespace: org-demo
+spec:
+  type: OCIArtifactTag
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
+  filter:
+    semver: '>=36.0.0 <37.0.0'
+    limit: 1
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-no-region
+  namespace: org-demo
+spec:
+  inputsFrom:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      name: rset-no-region-release
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: rset-no-region
+        namespace: << inputs.provider.namespace >>
+      spec:
+        interval: 10m0s
+        ref:
+          tag: << inputs.tag | quote >>
+        url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: rset-no-region
+        namespace: << inputs.provider.namespace >>
+      spec:
+        chartRef:
+          kind: OCIRepository
+          name: rset-no-region
+        interval: 5m0s
+        valuesFrom:
+          - kind: ConfigMap
+            name: cluster-app-installation-values
+            valuesKey: values.yaml
+          - kind: ConfigMap
+            name: rset-no-region-config
+            valuesKey: values

@@ -35,7 +35,11 @@ repository, and says so. It fails if it finds none. `fake-flux` runs `flux build
 `--strict-substitute`, so a variable that the manifests use but `spec.postBuild.substitute` doesn't set fails the build.
 
 `kubeconform` runs with `-strict`, so unknown fields fail, and without `-ignore-missing-schemas`, so an object whose
-kind has no schema fails instead of being skipped. The script looks up schemas in this order:
+kind has no schema fails instead of being skipped. It also checks the objects a Flux Operator `ResourceSet` renders,
+which `validate-helm-values --expand` adds to the manifest: the `ResourceSet`'s own schema accepts any field in them.
+`test-all-ff validate` checks that with
+[testdata/resource-set-unknown-field.yaml](testdata/resource-set-unknown-field.yaml). The script looks up schemas in
+this order:
 
 1. Kubernetes `v1.36.5`, the version of the Giant Swarm management clusters, from
    [yannh/kubernetes-json-schema](https://github.com/yannh/kubernetes-json-schema) at a pinned commit.
@@ -69,6 +73,19 @@ the same way Flux does: maps are merged, and lists and scalars are replaced. The
 the `HelmRelease` references, or from a `HelmRepository`, and is cached under `${TMPDIR:-/tmp}/gitops-template-charts`.
 A semver range is resolved to the newest matching version, as Flux would resolve it.
 
+The `OCIRepository`s and `HelmRelease`s that a Flux Operator `ResourceSet` in the manifest renders are checked too.
+Their tag is only known on the cluster, so for an `OCIRepository` whose `spec.ref` is a `<< ... >>` template, the chart
+is the newest in the range of the `ResourceSetInputProvider` the `ResourceSet` reads; a fixed tag stays, as
+[testdata/resource-set-fixed-tag.yaml](testdata/resource-set-fixed-tag.yaml) checks. The script fails, rather than
+guess a version, when the `ResourceSet` doesn't have exactly one `inputsFrom` entry that names a provider in the same
+`Kustomization` with a `spec.filter.semver`, such as one that selects its providers by label. `test-all-ff validate`
+checks that with [testdata/resource-set-unresolved-version.yaml](testdata/resource-set-unresolved-version.yaml). It
+also fails for a `ResourceSet` without a namespace, or one that renders with `spec.resourcesTemplate`, whose objects
+it can't render, as [testdata/resource-set-unsupported.yaml](testdata/resource-set-unsupported.yaml) checks. The
+provider's namespace, `<< inputs.provider.namespace >>` or `<< inputs.SOURCE.provider.namespace >>` with `Permute`,
+is the `ResourceSet`'s own. Rendered objects that still have a `<< ... >>` template in them, such as the ones named
+after an entry of the `ResourceSet`'s `spec.inputs`, are left out.
+
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
 as soon as it's made, not at the `HelmRelease`'s next `interval`.
@@ -90,7 +107,9 @@ with the chart's own error, "Unable to default the region". On a management clus
 region of the management cluster's nodes instead, so the cluster would be created where nobody chose. A cluster sets
 its region with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
 `test-all-ff validate` checks that the script fails for
-[testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml).
+[testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml), and for
+[testdata/resource-set-cluster-without-region.yaml](testdata/resource-set-cluster-without-region.yaml), where a
+`ResourceSet` renders the cluster.
 
 The check leaves out:
 

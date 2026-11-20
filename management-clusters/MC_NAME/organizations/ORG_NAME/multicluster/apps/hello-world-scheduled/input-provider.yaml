@@ -1,0 +1,30 @@
+# The version of hello-world that the hello-world-scheduled ResourceSet installs:
+# the highest tag in the range, picked only inside the upgrade window. Outside it,
+# Flux Operator doesn't read the registry, so a new tag waits for the next window.
+#
+# First install: a new provider exports no version until its first window opens,
+# so the app isn't installed until then. To install it at once, force the
+# provider once after Flux has applied it:
+#
+#   flux-operator reconcile inputprovider hello-world-scheduled-version -n org-<organization> --force
+#
+# The force reads the registry once, outside the window. Later upgrades still
+# wait for the window. See docs/guides/scheduled-updates.md.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: hello-world-scheduled-version
+  namespace: org-${organization}
+spec:
+  type: OCIArtifactTag
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+  filter:
+    # every release below the next major version, which might bring breaking changes
+    semver: '>=3.0.0 <4.0.0'
+    # only the highest tag: each exported tag would be installed as a release of its own
+    limit: 1
+  schedule:
+    # Monday to Thursday, 09:00 to 17:00 in Berlin
+    - cron: "0 9 * * 1-4"
+      timeZone: Europe/Berlin
+      window: 8h

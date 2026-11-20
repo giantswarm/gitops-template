@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+components:
+  - ../../../../../../../bases/environments/regions/eu_central
+kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/managed-by: flux
+# The ResourceSet in cluster-resource-set.yaml renders the whole cluster, its
+# OCIRepository and its HelmRelease, at the release its provider in
+# release-input-provider.yaml picks inside the upgrade window. The patch drops
+# the base's two; the base and the region still give the cluster its values.
+patches:
+  - path: patch_delete_base_cluster.yaml
+resources:
+  - ../../../../../../../bases/clusters/capa/template
+  - release-input-provider.yaml
+  - cluster-resource-set.yaml

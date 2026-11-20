@@ -18,6 +18,9 @@ every `spec.interval`, and the `HelmRelease` upgrades the App as soon as a newer
 objects are needed, and Flux doesn't commit anything to this repository: the repository keeps the range, the cluster
 reports the version it installed.
 
+A range upgrades the App as soon as a new version is published. To hold upgrades back until an upgrade window
+instead, see [Schedule updates in upgrade windows](./scheduled-updates.md).
+
 ## Example
 
 An example of an App with automated updates is available in

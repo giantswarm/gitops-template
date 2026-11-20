@@ -1,0 +1,23 @@
+# A ResourceSet whose HelmRelease has a misspelled field. Flux Operator's schema keeps
+# whatever spec.resources holds, so only the rendered HelmRelease shows it. tools/test-all-ff
+# checks that kubeconform reports it on what tools/validate-helm-values --expand prints.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-unknown-field
+  namespace: org-demo
+spec:
+  resources:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: rset-unknown-field
+        namespace: org-demo
+      spec:
+        chartRef:
+          kind: OCIRepository
+          name: rset-unknown-field
+        install:
+          remediation:
+            remediateLastFailur: false
+        interval: 5m0s

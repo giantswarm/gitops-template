@@ -829,12 +829,13 @@ example, `semver: 3.2.x` installs every new patch version.
 Skip this step to keep the cluster. When you delete the cluster's files, Flux deletes its `Kustomization`s, its apps
 and its configuration, but not the cluster: its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled`
 annotation, so Flux keeps it, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label
-is removed. The cluster's `OCIRepository` and `Cluster` carry the label too. You remove the labels first, and delete
-the `HelmRelease` by hand at the end. See [How it works](./how-it-works.md).
+is removed. The cluster's `OCIRepository` has both too, and its `Cluster` the label. You remove the labels first, and
+delete the `HelmRelease` and the `OCIRepository` by hand at the end. See [How it works](./how-it-works.md).
 
 > **Warning:** `kubectl gs` doesn't write the annotation or the label yet. The `Organization` that `kubectl gs gitops
-> add organization` writes doesn't have them, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add
-> base` writes. Add them by hand before you rely on them to keep those objects when their files are deleted.
+> add organization` writes doesn't have them, nor do the cluster `HelmRelease` and `OCIRepository` of a base that
+> `kubectl gs gitops add base` writes. Add them by hand before you rely on them to keep those objects when their files
+> are deleted. Without them on the `OCIRepository`, Flux deletes it and the `HelmRelease` it keeps loses its chart.
 
 If an [application team](./guides/app-teams.md) delivers to the cluster with Flux on the management cluster, remove
 the team from the cluster first, as that guide describes.
@@ -897,10 +898,12 @@ the team from the cluster first, as that guide describes.
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
-1. Finally, delete the cluster's `HelmRelease`, which no longer has the label. This deletes the cluster:
+1. Finally, delete the cluster's `HelmRelease`, which no longer has the label. This deletes the cluster. Then delete
+   its `OCIRepository`:
 
     ```sh
     kubectl delete helmrelease ${WC_NAME} -n org-${ORG_NAME}
+    kubectl delete ocirepository ${WC_NAME} -n org-${ORG_NAME}
     ```
 
 ## Next steps

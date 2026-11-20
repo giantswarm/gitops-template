@@ -1,6 +1,8 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux

@@ -36,8 +36,8 @@ The workflow offers the following jobs:
   takes the organisation's name from the `Organization`, so without `ORG_NAME.yaml` the management cluster's
   `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its inventory keeps the
   `Organization` and the cluster's `Kustomization`s, and they stay. Then it deletes the cluster's two
-  `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` has to stay. It deletes what
-  the other tests check, so it runs last and fails if they didn't run before it.
+  `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and `OCIRepository` have to
+  stay. It deletes what the other tests check, so it runs last and fails if they didn't run before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 
@@ -339,6 +339,36 @@ Every organisation directory whose `shared-objects` lists the base has to have t
 namespace, with the data of the base in Git, so a change to the base reaches every copy. The test then changes one
 copy, asks Flux to reconcile the management cluster's `Kustomization`, and waits for Flux to put the copy back.
 `tests/ats/test_shared_objects.py` checks, without a cluster, that the example organisation lists the base.
+
+### Flux Operator
+
+The [upgrade window examples](./scheduled-updates.md) are Flux Operator
+`ResourceSetInputProvider`s and `ResourceSet`s, so the test installs Flux Operator before Flux applies the repository.
+It installs Giant Swarm's `flux-operator` chart 0.9.0 (Flux Operator v0.62.1), the version management-cluster-bases
+deploys, from `oci://gsoci.azurecr.io/charts/giantswarm`, into `flux-giantswarm`. The chart is pinned in
+`tests/ats/flux_operator_install.py`. [tests/ats/fixtures/flux-operator-values.yaml](../../tests/ats/fixtures/flux-operator-values.yaml)
+has the chart install the CRDs, which a management cluster gets from management-cluster-bases, and turns off the
+`VerticalPodAutoscaler` and the `ServiceMonitor`.
+
+A new provider whose window is closed exports no version, so once the `Kustomization`s are `Ready`, the test forces
+each example's provider once and waits for its `ResourceSet`, before it checks the sources and `HelmRelease`s. Then:
+
+- `test_schedule_window` checks what `schedule.window` does, on providers of its own.
+- `test_scheduled_cluster_upgrade` moves the `scheduled-upgrades` cluster to an older release, then to its range with
+  the window closed, where the release has to stay, then opens the window, where it has to move.
+- `test_input_loss_keeps_the_app` takes the version of the hello-world example away, by an unreadable registry, a
+  range no tag matches and a deleted provider, and checks that the `ResourceSet` waits and the App stays installed.
+- `test_input_loss_keeps_the_cluster` does the same to the `scheduled-upgrades` cluster, and then deletes its
+  `ResourceSet`. The cluster's `HelmRelease` and `OCIRepository` have to stay each time.
+
+The assertions in `tests/ats/assertions/exists/organizations/workload-clusters/scheduled-upgrades` check that the
+cluster's `ResourceSet`, not its `Kustomization`, renders the cluster's `OCIRepository` and `HelmRelease`, with the
+protection of the cluster base.
+
+They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
+hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
+`tests/ats/assertions/exists-in-workload-cluster`; `test_prune` leaves it out of the apps it expects to go with the
+cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
 
 ## Superseded runs
 

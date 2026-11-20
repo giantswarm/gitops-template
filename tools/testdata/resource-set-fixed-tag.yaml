@@ -1,0 +1,36 @@
+# A ResourceSet whose OCIRepository has a fixed tag, outside the range of the provider
+# the ResourceSet reads. tools/test-all-ff checks that tools/validate-helm-values keeps
+# the tag, rather than replacing it with the provider's range.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: rset-fixed-tag-version
+  namespace: org-demo
+spec:
+  type: OCIArtifactTag
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+  filter:
+    semver: '>=3.0.0 <4.0.0'
+    limit: 1
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-fixed-tag
+  namespace: org-demo
+spec:
+  inputsFrom:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      name: rset-fixed-tag-version
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: rset-fixed-tag
+        namespace: org-demo
+      spec:
+        interval: 10m0s
+        ref:
+          tag: 2.0.0
+        url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

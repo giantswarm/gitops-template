@@ -48,6 +48,13 @@ management-clusters
             ├── ORG_NAME.yaml
             ├── [notifications]                         the organisation's commit statuses
             ├── [shared-objects]                        objects every organisation shares, see add_mc.md
+            ├── [multicluster]                          apps on several clusters, see guides/scheduled-updates.md
+            |   ├── kustomization.yaml
+            |   ├── apps.yaml
+            |   └── apps                                apps.yaml responsibility
+            |       ├── kustomization.yaml
+            |       ├── clusters.yaml
+            |       └── APP_NAME
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml
@@ -164,6 +171,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME-apps.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux Kustomizations](#flux-kustomizations) |
 | An app's `HelmRelease` and `OCIRepository` when it's a base app, installed with the cluster | the same files, in `cluster/apps/APP_NAME` |
 | Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
+| Flux `Kustomization` of an organisation's apps on several clusters | `MC_NAME-multicluster-apps-ORG_NAME`, in `multicluster/apps.yaml`. `kubectl gs gitops` doesn't generate it |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `cluster` |
 | The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` of a cluster `kubectl gs gitops add workload-cluster` generates. A cluster made from a cluster template, such as `hello_app_cluster`, lists the template's `userconfig` component instead, which holds the same patch |
@@ -241,8 +249,8 @@ management-clusters
 ### The organisation's name
 
 The organisation's name is set once, as the `metadata.name` of its `Organization` in `ORG_NAME.yaml`. The
-organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `notifications`, `shared-objects` and `workload-clusters`,
-and its `replacements` copy the name into what Flux applies from them:
+organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `multicluster`, `notifications`, `shared-objects` and
+`workload-clusters`, and its `replacements` copy the name into what Flux applies from them:
 
 - into `spec.postBuild.substitute.organization` of every Flux `Kustomization`, which the cluster's files use as
   `${organization}`. Every Flux `Kustomization` in the organisation's build writes `organization`, as
@@ -268,9 +276,10 @@ would apply nothing.
 
 If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
 `ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the workload cluster
-`Kustomization`s in `workload-clusters`, the `-direct` ones included, in the notification objects in
-`notifications`, and in the `namespace` of `shared-objects/kustomization.yaml`. The template's `kustomization.yaml`
-lists its own files of these kinds in a comment.
+`Kustomization`s in `workload-clusters`, the `-direct` ones included, in the multi-cluster apps `Kustomization` in
+`multicluster/apps.yaml`, in the notification objects in `notifications`, and in the `namespace` of
+`shared-objects/kustomization.yaml`. The template's `kustomization.yaml` lists its own files of these kinds in a
+comment.
 
 Flux applies the organisation's directory as its `kustomization.yaml` builds it, so list there everything else in the
 directory that Flux has to apply, such as `secrets`. Build the organisation's directory to see what Flux applies, for
@@ -330,6 +339,10 @@ resources:
 Both set the variables, like `${cluster_name}`, that the bases use. The organisation's `kustomization.yaml` updates
 `organization` to the organisation's name, see [The organisation's name](#the-organisations-name). See
 [How it works](../how-it-works.md) for why the management cluster's and the clusters' Kustomizations are separate.
+
+In the same way, the `kustomization.yaml` in `multicluster` lists only `apps.yaml`, whose Kustomization applies the
+organisation's apps on several clusters in `multicluster/apps`, so the management cluster's Kustomization never applies
+their `ResourceSet`s itself. See [Apps on several clusters](../guides/scheduled-updates.md#apps-on-several-clusters).
 
 A cluster with apps has two Kustomizations:
 

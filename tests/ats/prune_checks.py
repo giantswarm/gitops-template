@@ -77,17 +77,19 @@ def check_removed_cluster(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
     """P3: deleting a cluster's Kustomizations deletes what they applied, except the
-    cluster's HelmRelease."""
+    cluster's HelmRelease and OCIRepository."""
     applied = delete_cluster_kustomizations(api)
-    if PROTECTED_CLUSTER not in applied:
-        pytest.fail(f"The cluster's Kustomizations didn't apply {PROTECTED_CLUSTER}.")
-    deleted = sorted(applied - {PROTECTED_CLUSTER})
+    not_applied = [o for o in PROTECTED_CLUSTER if o not in applied]
+    if not_applied:
+        pytest.fail(f"The cluster's Kustomizations didn't apply {not_applied}.")
+    deleted = sorted(applied - set(PROTECTED_CLUSTER))
     wait_until(
-        lambda: deleted_problems(api, deleted) + workload_problems(workload_cluster),
+        lambda: deleted_problems(api, deleted)
+        + workload_problems(workload_cluster, applied),
         UNINSTALL_TIMEOUT_SEC,
         "the cluster's objects weren't deleted",
     )
-    fail_on_problems(kept_problems(api, [PROTECTED_CLUSTER]), "the cluster wasn't kept")
+    fail_on_problems(kept_problems(api, PROTECTED_CLUSTER), "the cluster wasn't kept")
 
 
 def check_prune(

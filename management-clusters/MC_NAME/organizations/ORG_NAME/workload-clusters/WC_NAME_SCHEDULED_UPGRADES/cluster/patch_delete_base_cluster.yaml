@@ -1,0 +1,15 @@
+# drops the cluster base's OCIRepository and HelmRelease; cluster-resource-set.yaml
+# renders them. The base still gives the cluster its ${cluster_name}-config values.
+$patch: delete
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ${cluster_name}
+  namespace: org-${organization}
+---
+$patch: delete
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${cluster_name}
+  namespace: org-${organization}

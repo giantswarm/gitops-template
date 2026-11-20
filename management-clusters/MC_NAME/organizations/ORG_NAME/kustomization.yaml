@@ -16,12 +16,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ORG_NAME.yaml
+  - multicluster
   - notifications
   - shared-objects
   - workload-clusters
 replacements:
   # If you do not want to use kustomize replacements, you must update all references to
   # `org-ORG_NAME` (and `ORG_NAME`) in the following files:
+  #   - multicluster/apps.yaml
   #   - workload-clusters/HELLO_APP_DEV_CLUSTER_1.yaml
   #   - workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
   #   - workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST.yaml
@@ -33,6 +35,7 @@ replacements:
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
+  #   - workload-clusters/WC_NAME_SCHEDULED_UPGRADES.yaml
   #   - notifications/commit-status-alert.yaml
   #   - notifications/commit-status-externalsecret.yaml
   #   - notifications/commit-status-provider.yaml

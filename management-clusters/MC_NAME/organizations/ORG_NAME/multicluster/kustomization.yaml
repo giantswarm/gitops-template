@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/managed-by: flux
+# The management cluster's Kustomization creates only the Flux Kustomization in
+# apps.yaml, not what is in apps/: that Kustomization applies apps/.
+resources:
+  - apps.yaml
