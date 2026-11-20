@@ -12,6 +12,8 @@ ORG_DIR = (
     Path(__file__).resolve().parent
     / "../../management-clusters/MC_NAME/organizations/ORG_NAME"
 ).resolve()
+# the first line of the list's comment
+LIST_HEADING = "If you do not want to use kustomize replacements"
 # a file in the list: `#   - path`, relative to the organisation's directory
 LISTED = re.compile(r"^\s*#\s+- (\S+\.yaml)\s*$")
 
@@ -39,9 +41,19 @@ def names_the_organisation(text: str) -> bool:
 
 
 def listed_files(kustomization: str) -> set[str]:
-    return {
-        m.group(1) for line in kustomization.splitlines() if (m := LISTED.match(line))
-    }
+    """The files in the comment under LIST_HEADING, which ends at the first line that isn't a
+    comment. Other comments, such as a commented-out resource, don't count."""
+    lines = kustomization.splitlines()
+    start = next(
+        (i for i, line in enumerate(lines) if LIST_HEADING in line), len(lines)
+    )
+    files = set()
+    for line in lines[start:]:
+        if not line.lstrip().startswith("#"):
+            break
+        if m := LISTED.match(line):
+            files.add(m.group(1))
+    return files
 
 
 def test_names_the_organisation() -> None:
@@ -53,11 +65,24 @@ def test_names_the_organisation() -> None:
     assert not names_the_organisation("# org-ORG_NAME in a comment\na: b")
 
 
+HEADING = f"  # {LIST_HEADING}, you must update all references to\n"
+
+
 def test_listed_files() -> None:
-    assert listed_files("#   - a/b.yaml\n# other\n  #   - c.yaml\nx: y") == {
-        "a/b.yaml",
-        "c.yaml",
-    }
+    kustomization = (
+        HEADING + "  # `org-ORG_NAME` in:\n  #   - a/b.yaml\n  #   - c.yaml\n  - x: y\n"
+    )
+    assert listed_files(kustomization) == {"a/b.yaml", "c.yaml"}
+
+
+def test_listed_files_leaves_out_commented_out_resources() -> None:
+    # a commented-out resource, before the list or after it, isn't in the list
+    kustomization = (
+        "resources:\n  # - old.yaml\n  - a.yaml\nreplacements:\n"
+        + HEADING
+        + "  #   - b.yaml\n  - source: {}\n  # - c.yaml\n"
+    )
+    assert listed_files(kustomization) == {"b.yaml"}
 
 
 def test_kustomization_lists_every_file_that_names_the_organisation() -> None:

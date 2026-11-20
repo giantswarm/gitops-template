@@ -287,12 +287,31 @@ function test() {
 		done
 
 		# The replacement only updates `organization`: a Kustomization in the ancestor's build
-		# without one fails the build, naming the field.
-		echo -n "fake-flux, a Kustomization without organization in an ancestor's build: "
+		# without one fails the build, naming the field. fake-flux shows that error, also when it
+		# looks a Kustomization up by the namespace Flux applies it in, which builds the ancestor.
 		yq -i 'del(.spec.postBuild.substitute.organization)' "${fixture_dir}/organization/clusters/cluster.yaml"
+		echo -n "fake-flux, a failed ancestor's build, looking up ancestor-replacement:org-from-the-ancestor: "
+		status=0
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build ancestor-replacement:org-from-the-ancestor -M 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q 'unable to find field "spec.postBuild.substitute.organization"' <<<"${output}" &&
+			! grep -q "No kustomization found" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+
+		# Without the same-named Kustomization in direct.yaml, building ancestor-replacement:default
+		# looks nothing up, so only its own build can report the missing field. Reading the file
+		# as it is instead would fail on the unset variable.
+		echo -n "fake-flux, a Kustomization without organization in an ancestor's build: "
+		rm "${fixture_dir}/organization/clusters/direct.yaml"
+		yq -i 'del(.resources[] | select(. == "direct.yaml"))' "${fixture_dir}/organization/clusters/kustomization.yaml"
 		status=0
 		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build ancestor-replacement:default -M 2>&1) || status=$?
-		if [ "${status}" -ne 0 ] && grep -q 'unable to find field "spec.postBuild.substitute.organization"' <<<"${output}"; then
+		if [ "${status}" -ne 0 ] && grep -q 'unable to find field "spec.postBuild.substitute.organization"' <<<"${output}" &&
+			! grep -q "var substitution failed" <<<"${output}"; then
 			echo "OK, reported"
 		else
 			echo "not reported:"

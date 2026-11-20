@@ -243,7 +243,7 @@ organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `notifications` and `
 `replacements` copy the name into what Flux applies from them:
 
 - into `spec.postBuild.substitute.organization` of every Flux `Kustomization`, which the cluster's files use as
-  `${organization}`. Every Flux `Kustomization` in the organisation's directory writes `organization`, as
+  `${organization}`. Every Flux `Kustomization` in the organisation's build writes `organization`, as
   `organization: "ORG_NAME"` in this repository, and the replacement updates it. One without it fails the build,
   which names the field;
 - into the namespace of a `Cluster` health check, in a `Kustomization` with the label
@@ -264,8 +264,9 @@ the encrypted file, which breaks its MAC, so Flux couldn't decrypt it and the ma
 would apply nothing.
 
 If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
-`ORG_NAME` and `org-ORG_NAME` with your organisation's name in every file its comment lists: the cluster
-`Kustomization`s, the `-direct` one and the notification objects.
+`ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the workload cluster
+`Kustomization`s in `workload-clusters`, the `-direct` ones included, and in the notification objects in
+`notifications`. The template's `kustomization.yaml` lists its own files of these kinds in a comment.
 
 Flux applies the organisation's directory as its `kustomization.yaml` builds it, so list there everything else in the
 directory that Flux has to apply, such as `secrets`. Build the organisation's directory to see what Flux applies, for

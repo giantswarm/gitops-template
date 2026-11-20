@@ -336,7 +336,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    what you delete from the cluster's files, but not the cluster, if its `HelmRelease` has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
    cluster bases of this repository. See
-   [How it works](./how-it-works.md). Every Flux `Kustomization` in the organisation's directory writes `organization`:
+   [How it works](./how-it-works.md). Every Flux `Kustomization` in the organisation's build writes `organization`:
    the organisation's `kustomization.yaml` updates it to the name of the `Organization`, and fails to build without it,
    see [The organisation's name](./reference/repo-structure.md#the-organisations-name). Use one of the templates:
 

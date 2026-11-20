@@ -8,15 +8,15 @@
   - [Check the statuses](#check-the-statuses)
 - [Fetch on push (optional)](#fetch-on-push-optional)
 
-Flux's notification-controller can tell you on GitHub whether Flux applied a commit. A `Provider` of type `github`
-posts a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`s,
-every Flux `Kustomization` in the `default` namespace and in the organisation's namespace reports on the commit it
-applied: the management cluster's, in `MC_NAME.yaml`, the workload clusters', in the `workload-clusters` directories,
-and the `-direct` ones. Each `Kustomization` shows as its own check on the commit, green once it applied the commit and
-red when it failed. An event source without a `namespace` matches only the `Alert`'s own namespace, and an `Alert`
-reaches only a `Provider` in its own namespace. So the management cluster's `Alert` covers `default`, and each
-organisation has its own `Alert`, `Provider` and token in its namespace. Neither covers `flux-giantswarm`, where Giant
-Swarm's own `Kustomizations` live, so keep that namespace out of them. The organisation's `Alert` names this
+Flux's notification-controller can tell you on GitHub whether Flux applied a commit. A `Provider` of type `github` posts
+a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`s, this
+repository's Flux `Kustomization`s in the `default` namespace and in the organisation's namespace report on the commit
+they applied: the management cluster's, in `MC_NAME.yaml`, the workload clusters', in the `workload-clusters`
+directories, and the `-direct` ones. Each `Kustomization` shows as its own check on the commit, green once it applied
+the commit and red when it failed. An event source without a `namespace` matches only the `Alert`'s own namespace, and
+an `Alert` reaches only a `Provider` in its own namespace. So the management cluster's `Alert` covers `default`, and
+each organisation has its own `Alert`, `Provider` and token in its namespace. Neither covers `flux-giantswarm`, where
+Giant Swarm's own `Kustomizations` live, so keep that namespace out of them. The organisation's `Alert` names this
 repository's `Kustomization`s in its namespace, the `-direct` ones, instead of `name: "*"`: an application team's
 `Kustomization` lives there too, but reads the team's repository, see [Application teams](./app-teams.md). List each
 `-direct` `Kustomization` you add.
