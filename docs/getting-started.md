@@ -869,9 +869,9 @@ the team from the cluster first, as that guide describes.
       . == "'"${WC_NAME}"'-direct.yaml"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
-    If the cluster has out-of-band resources, a `-direct` `Kustomization` in `${WC_NAME}-direct.yaml` applies them to
-    the workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree).
-    The command above takes it out of the list too. Save the name of its SOPS key Secret, if it has one, for a later
+    If the cluster has a `-direct` `Kustomization` in `${WC_NAME}-direct.yaml`, which applies its out-of-band resources
+    to the workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree),
+    the command above takes it out of the list too. Save the name of its SOPS key Secret, if it has one, for a later
     step, and remove its file:
 
     ```sh
@@ -879,12 +879,21 @@ the team from the cluster first, as that guide describes.
     git rm ${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml
     ```
 
-    If `DIRECT_KEY` isn't empty, the key Secret is in `${MC_DIR}/secrets/${WC_NAME}-direct.gpgkey.enc.yaml`. Remove it
-    and its entry in `secrets/kustomization.yaml`:
+    If `DIRECT_KEY` isn't empty, the `-direct` `Kustomization` decrypts with a key Secret in the organisation's
+    namespace, which another cluster's `-direct` `Kustomization` may share. If this prints a file, it does, so keep the
+    key and unset `DIRECT_KEY`:
 
     ```sh
-    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'-direct.gpgkey.enc.yaml"))' ${MC_DIR}/secrets/kustomization.yaml
-    git rm ${MC_DIR}/secrets/${WC_NAME}-direct.gpgkey.enc.yaml
+    grep -rl "name: ${DIRECT_KEY}$" ${ORG_DIR}/workload-clusters
+    ```
+
+    Otherwise, find the key's file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, and remove it and its entry in
+    `secrets/kustomization.yaml`:
+
+    ```sh
+    export KEY_FILE=$(basename "$(grep -l "name: ${DIRECT_KEY}$" ${MC_DIR}/secrets/*.enc.yaml)")
+    yq -i 'del(.resources[] | select(. == strenv(KEY_FILE)))' ${MC_DIR}/secrets/kustomization.yaml
+    git rm ${MC_DIR}/secrets/${KEY_FILE}
     ```
 
     Remove the cluster's files, then commit and push everything in one go:
@@ -907,7 +916,7 @@ the team from the cluster first, as that guide describes.
       kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n default --timeout=10m
     ```
 
-    If the cluster has a `-direct` `Kustomization`, wait for it too. It's in the organization namespace:
+    If the cluster has a `-direct` `Kustomization`, wait for it too. It's in the organisation's namespace:
 
     ```sh
     kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME}-direct -n org-${ORG_NAME} --timeout=10m
