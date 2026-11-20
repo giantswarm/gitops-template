@@ -1,0 +1,61 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: external-secrets
+spec:
+  description: >-
+    The External Secrets Operator example: the ExternalSecret reads the secret store and
+    writes the app's values into its target Secret, with the label that makes Flux watch it,
+    and the HelmRelease that reads that Secret is Ready.
+  timeouts:
+    assert: 2m
+  steps:
+    - name: the ExternalSecret has synced
+      try:
+        - assert:
+            resource:
+              apiVersion: external-secrets.io/v1
+              kind: ExternalSecret
+              metadata:
+                name: ($values.externalSecret.name)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+                    reason: SecretSynced
+    - name: the Secret it writes is watched by Flux and has the values
+      bindings:
+        # the Secret the ExternalSecret writes: its target, which defaults to its own name
+        - name: secret
+          value: (x_k8s_get($client, 'external-secrets.io/v1', 'ExternalSecret', $values.organizationNamespace, $values.externalSecret.name).spec.target.name || $values.externalSecret.name)
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($secret)
+                namespace: ($values.organizationNamespace)
+                labels:
+                  reconcile.fluxcd.io/watch: Enabled
+                (contains(ownerReferences[?kind == 'ExternalSecret'].name, $values.externalSecret.name)): true
+              (lookup(data, $values.externalSecret.key) != null): true
+    - name: the HelmRelease reads the Secret and is Ready
+      bindings:
+        # the Secret the ExternalSecret writes: its target, which defaults to its own name
+        - name: secret
+          value: (x_k8s_get($client, 'external-secrets.io/v1', 'ExternalSecret', $values.organizationNamespace, $values.externalSecret.name).spec.target.name || $values.externalSecret.name)
+      try:
+        - assert:
+            resource:
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: ($values.externalSecret.helmRelease)
+                namespace: ($values.organizationNamespace)
+              spec:
+                # Flux reads the key `values.yaml` when valuesKey isn't set
+                (length(valuesFrom[?kind == 'Secret' && name == $secret && (valuesKey || 'values.yaml') == $values.externalSecret.key]) > `0`): true
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"

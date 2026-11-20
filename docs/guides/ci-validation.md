@@ -290,3 +290,76 @@ copied into it. It then changes the source, with the management cluster's
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to
 a pull request, the run for the previous commit is cancelled. Pushes to a branch, such as a merge to `main`, don't
 cancel the run in progress: it finishes, and GitHub keeps only the newest of the push runs waiting behind it.
+
+## Chainsaw tests
+
+[tests/chainsaw](../../tests/chainsaw) shows another way to test a GitOps repository: tests written in YAML for
+[Chainsaw](https://kyverno.github.io/chainsaw/), which you run against a management cluster that Flux reconciles from
+your repository. The pytest suite in `tests/ats` is what the kind test runs; Chainsaw is separate from it and runs as
+a step of its own. In your repository, you can keep `tests/ats`, use Chainsaw instead, or run both. This repository
+doesn't run Chainsaw in its CI.
+
+Each test is a `chainsaw-test.yaml` with steps that wait for an object to match what the step expects, such as its
+`Ready` condition. The tests only read objects. Every command here passes `--namespace default`: by default, Chainsaw
+creates a `chainsaw-*` namespace for each test, which a management cluster doesn't let you do, and with the flag it
+uses the existing `default` namespace and neither creates nor deletes one.
+
+| Test | What it checks |
+| --- | --- |
+| `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster` is `Available`, the cluster's `Kustomization` health-checks it and waits for it to be `Available`, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
+| `kyverno-generate` | The [shared-objects](../add_mc.md#share-an-object-with-every-organization) policy is `Ready`, and the organisation's namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. |
+| `external-secrets` | The [External Secrets Operator example](../getting-started.md#4-deploy-an-app)'s `ExternalSecret` has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads the values from that key is `Ready`. |
+
+To add a test, create a directory in `tests/chainsaw` with a `chainsaw-test.yaml`, and put the names it needs in the
+values file.
+
+### The values file
+
+The steps name no objects themselves: they read the names from a values file.
+[tests/chainsaw/values.yaml](../../tests/chainsaw/values.yaml) names the template's examples: the organisation's
+namespace, the `out-of-band-no-flux` cluster with its `Kustomization`s and two of its `HelmRelease`s, the
+`ExternalSecret` with the key of the values in its Secret and the `HelmRelease` that reads that Secret, and the Kyverno
+policy with the ConfigMap it copies. Copy it and set the names of your own objects. Run only the tests whose examples
+you use.
+
+### Run them from your machine
+
+1. Install [Chainsaw](https://kyverno.github.io/chainsaw/latest/quick-start/install/), the version that
+   `CHAINSAW_VERSION` in [chainsaw.yaml](../../.github/workflows/chainsaw.yaml) pins.
+2. With your kubeconfig's context on the management cluster, run:
+
+   ```sh
+   chainsaw test tests/chainsaw --values my-values.yaml --namespace default
+   ```
+
+   Add `--include-test-regex 'chainsaw/(readiness-ordering|external-secrets)'` to run some of the tests only. Chainsaw
+   runs each test as a subtest of one named `chainsaw`, so the expression has to match `chainsaw/<test>`: without the
+   prefix, it matches no test, and Chainsaw passes without running any.
+
+Your user needs to read the objects the tests check and the `default` namespace.
+
+### Run them in GitHub Actions
+
+[chainsaw.yaml](../../.github/workflows/chainsaw.yaml) is an example workflow that installs Chainsaw and runs the tests
+against a management cluster. It has only a manual trigger, so it doesn't run on pull requests or pushes, and this
+repository doesn't set the secret it needs. To use it:
+
+1. Create a repository secret `CHAINSAW_KUBECONFIG` with a kubeconfig for the management cluster. Use a credential
+   that works without a browser, such as a service account token, with the permissions above.
+2. Run the `chainsaw` workflow from the Actions tab, with the path of your values file as its `values` input. To run
+   it on a schedule or after a merge, add a `schedule` or `push` trigger.
+
+The workflow downloads the Chainsaw release that `CHAINSAW_VERSION` pins and checks it against `CHAINSAW_SHA256`.
+Renovate moves the version but not the checksum: set the checksum of the new release's `chainsaw_linux_amd64.tar.gz`,
+from its `checksums.txt`, in the same pull request. Nothing in CI runs the workflow, so no check would catch a stale
+checksum: `renovate.json5` never automerges a Chainsaw update, so that the pull request waits for you to set it.
+
+### Choose `tests/ats`, Chainsaw or both
+
+- `tests/ats` only: the template's default. `validate.yaml` runs it on a kind cluster for every pull request that
+  changes more than Markdown. Delete `tests/chainsaw` and `.github/workflows/chainsaw.yaml`.
+- Chainsaw only: keep `tests/chainsaw` and enable the workflow. The shared workflow that `validate.yaml` calls always
+  runs `tests/ats` in its kind test and has no input to turn it off. To test with Chainsaw alone, stop calling it from
+  `validate.yaml`, and run the checks you want to keep in a workflow of your own.
+- Both: keep everything. `tests/ats` checks pull requests on a kind cluster, and Chainsaw checks your management
+  cluster when you run it.
