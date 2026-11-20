@@ -336,9 +336,9 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    what you delete from the cluster's files, but not the cluster, if its `HelmRelease` has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
    cluster bases of this repository. See
-   [How it works](./how-it-works.md). It doesn't set `organization`: the organisation's `kustomization.yaml` sets it,
-   from the name of the `Organization`, and overwrites one written here, see
-   [The organisation's name](./reference/repo-structure.md#the-organisations-name). Use one of the templates:
+   [How it works](./how-it-works.md). Every Flux `Kustomization` in the organisation's directory writes `organization`:
+   the organisation's `kustomization.yaml` updates it to the name of the `Organization`, and fails to build without it,
+   see [The organisation's name](./reference/repo-structure.md#the-organisations-name). Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
@@ -357,6 +357,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
+            organization: "${ORG_NAME}"
         prune: true
         retryInterval: 1m
         serviceAccountName: automation
@@ -389,6 +390,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
+            organization: "${ORG_NAME}"
         prune: true
         retryInterval: 1m
         serviceAccountName: automation
@@ -404,7 +406,9 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    health check's namespace as the fixed placeholder `org-ORG_NAME`, and give the `Kustomization` the label
    `giantswarm.io/health-check-cluster: "true"`. The organisation's `kustomization.yaml` puts the organisation's name
    into the placeholder only with the label. Copying `WC_NAME.yaml` carries the label. Without it, the health check
-   keeps the placeholder namespace, and the `Kustomization` never gets `Ready`.
+   keeps the placeholder namespace, and the `Kustomization` never gets `Ready`. With the label, keep the placeholder:
+   the replacement changes the second `-`-separated part of any namespace, so a real `org-acme-corp` would become
+   `org-acme-corp-corp`. A health check that names the real namespace works without the label.
 
 1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
    directory and referencing the right `kubeconfig` Secret. Create it in the namespace of that Secret, which is the
@@ -425,6 +429,10 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
          # key: kubeConfig
          name: ${WC_NAME}-kubeconfig
      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
+     postBuild:
+       substitute:
+         cluster_name: "${WC_NAME}"
+         organization: "${ORG_NAME}"
      prune: true
      retryInterval: 1m
      sourceRef:

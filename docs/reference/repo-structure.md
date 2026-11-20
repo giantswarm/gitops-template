@@ -239,24 +239,38 @@ management-clusters
 ### The organisation's name
 
 The organisation's name is set once, as the `metadata.name` of its `Organization` in `ORG_NAME.yaml`. The
-organisation's `kustomization.yaml` lists `ORG_NAME.yaml` and `workload-clusters`, and its `replacements` copy the
-name into what Flux applies from them:
+organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `notifications` and `workload-clusters`, and its
+`replacements` copy the name into what Flux applies from them:
 
 - into `spec.postBuild.substitute.organization` of every Flux `Kustomization`, which the cluster's files use as
-  `${organization}`. An `organization` written in a `substitute` by hand is overwritten;
+  `${organization}`. Every Flux `Kustomization` in the organisation's directory writes `organization`, as
+  `organization: "ORG_NAME"` in this repository, and the replacement updates it. One without it fails the build,
+  which names the field;
 - into the namespace of a `Cluster` health check, in a `Kustomization` with the label
-  `giantswarm.io/health-check-cluster: "true"`, such as `WC_NAME.yaml`;
+  `giantswarm.io/health-check-cluster: "true"`, such as `WC_NAME.yaml`. Its health check must keep the namespace
+  `org-ORG_NAME`. The replacement replaces the second `-`-separated part of whatever namespace it finds, so a real
+  namespace such as `org-acme-corp` would become `org-acme-corp-corp`. A health check with the real namespace works
+  too, without the label;
 - into `metadata.namespace` of every object in the namespace `org-ORG_NAME`, such as the `-direct` `Kustomization`
   and the organisation's commit-status `Alert` in `notifications`.
 
 `org-ORG_NAME` is a fixed placeholder: write it as it is, and don't change it to your organisation's name. The
 replacements keep `org-` and put the name after it, so `org-ORG_NAME` becomes `org-demo-gitops` for the organisation
-`demo-gitops`.
+`demo-gitops`. The replacements win over what the files say, so a hand-written `organization` or namespace that names
+the organisation is updated to the `Organization`'s name.
+
+A SOPS-encrypted file must name the real namespace, `org-<name>`, never the placeholder: the replacement would change
+the encrypted file, which breaks its MAC, so Flux couldn't decrypt it and the management cluster's `Kustomization`
+would apply nothing.
+
+If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
+`ORG_NAME` and `org-ORG_NAME` with your organisation's name in every file its comment lists: the cluster
+`Kustomization`s, the `-direct` one and the notification objects.
 
 Flux applies the organisation's directory as its `kustomization.yaml` builds it, so list there everything else in the
 directory that Flux has to apply, such as `secrets`. Build the organisation's directory to see what Flux applies, for
 example with `kubectl kustomize management-clusters/MC_NAME/organizations/ORG_NAME`. Building `workload-clusters` on
-its own leaves the `Kustomization`s without `organization` and with the `org-ORG_NAME` placeholders.
+its own leaves the placeholders as they are.
 
 ### `cluster`, `apps` and `[out-of-band]`
 
@@ -308,8 +322,8 @@ resources:
   - WC_NAME-apps.yaml
 ```
 
-Both set the variables, like `${cluster_name}`, that the bases use, except `organization`, which the organisation's
-`kustomization.yaml` sets, see [The organisation's name](#the-organisations-name). See
+Both set the variables, like `${cluster_name}`, that the bases use. The organisation's `kustomization.yaml` updates
+`organization` to the organisation's name, see [The organisation's name](#the-organisations-name). See
 [How it works](../how-it-works.md) for why the management cluster's and the clusters' Kustomizations are separate.
 
 A cluster with apps has two Kustomizations:
@@ -331,7 +345,8 @@ Name the cluster in `healthChecks` with its name written out, such as `capi-wc-n
 placeholder `org-ORG_NAME`: Flux doesn't substitute variables in a Kustomization's own spec. The organisation's
 `kustomization.yaml` puts the organisation's name into the placeholder of a `Kustomization` with the label
 `giantswarm.io/health-check-cluster: "true"`, see [The organisation's name](#the-organisations-name). Without the label,
-the health check keeps the placeholder, and the `Kustomization` never gets `Ready`. A cluster without apps, such as the
+the health check keeps the placeholder, and the `Kustomization` never gets `Ready`. With the label, the namespace must be
+the placeholder. A cluster without apps, such as the
 `HELLO_APP_*` examples, has only `WC_NAME.yaml`, which applies the cluster's directory, whose `kustomization.yaml`
 lists `cluster`, and needs no health check.
 

@@ -214,13 +214,14 @@ An organization groups clusters and owns the `org-${ORG_NAME}` namespace they li
 exists, these steps bring it under GitOps.
 
 > **Shortcut:** [`kubectl gs gitops add organization`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-org/)
-> creates the same files, but without the annotation of the `Organization` below:
+> creates the same files, but without the annotation of the `Organization` below, and without the organisation's
+> `kustomization.yaml`, which you create as below:
 >
 > ```sh
 > kubectl gs gitops add organization --name ${ORG_NAME} --management-cluster ${MC_NAME}
 > ```
 >
-> Add it:
+> Add the annotation:
 >
 > ```sh
 > yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${ORG_DIR}/${ORG_NAME}.yaml
@@ -257,6 +258,60 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources: []
 EOF
+```
+
+Create the organisation's `kustomization.yaml`. Its replacements copy the name of the `Organization` into the
+`organization` that every cluster's `Kustomization` writes, and into the namespace of objects in the placeholder
+namespace `org-ORG_NAME`, such as the organisation's commit-status notifications, see
+[The organisation's name](./reference/repo-structure.md#the-organisations-name). The quoted `'EOF'` keeps the
+placeholders as they are:
+
+```sh
+cat <<'EOF' > ${ORG_DIR}/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ORGANIZATION_FILE
+  - workload-clusters
+replacements:
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          labelSelector: giantswarm.io/health-check-cluster=true
+        fieldPaths:
+          - spec.healthChecks.[kind=Cluster].namespace
+        options:
+          delimiter: "-"
+          index: 1
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          namespace: org-ORG_NAME
+        fieldPaths:
+          - metadata.namespace
+        options:
+          delimiter: "-"
+          index: 1
+EOF
+yq -i '.resources[0] = "'"${ORG_NAME}"'.yaml"' ${ORG_DIR}/kustomization.yaml
 ```
 
 Finally, commit and push:

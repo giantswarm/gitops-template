@@ -16,7 +16,10 @@ and the `-direct` ones. Each `Kustomization` shows as its own check on the commi
 red when it failed. An event source without a `namespace` matches only the `Alert`'s own namespace, and an `Alert`
 reaches only a `Provider` in its own namespace. So the management cluster's `Alert` covers `default`, and each
 organisation has its own `Alert`, `Provider` and token in its namespace. Neither covers `flux-giantswarm`, where Giant
-Swarm's own `Kustomizations` live, so keep that namespace out of them.
+Swarm's own `Kustomizations` live, so keep that namespace out of them. The organisation's `Alert` names this
+repository's `Kustomization`s in its namespace, the `-direct` ones, instead of `name: "*"`: an application team's
+`Kustomization` lives there too, but reads the team's repository, see [Application teams](./app-teams.md). List each
+`-direct` `Kustomization` you add.
 
 A `Receiver` does the opposite: GitHub calls it on a push, and Flux fetches the repository at once instead of
 waiting for the `GitRepository`'s interval. It's optional.
@@ -74,7 +77,8 @@ yq -i '.resources += ["notifications"]' ${ORG_DIR}/kustomization.yaml
 ```
 
 In both `commit-status-externalsecret.yaml`, set `secretStoreRef` to your store and `remoteRef.key` to the name of the
-token in your secret manager. In both `commit-status-provider.yaml`, set the repository:
+token in your secret manager. In the organisation's `commit-status-alert.yaml`, name your `-direct` `Kustomization`s. In
+both `commit-status-provider.yaml`, set the repository:
 
 ```sh
 for dir in ${MC_DIR}/notifications ${ORG_DIR}/notifications; do
@@ -85,8 +89,8 @@ done
 ### Token encrypted with SOPS
 
 If you keep secrets in the repository, encrypted, as in [Getting started with SOPS](../getting-started-sops.md),
-copy the `Provider`s and the `Alert`s only. The organisation's `notifications/kustomization.yaml` then lists the
-encrypted Secret instead of the `ExternalSecret`:
+copy the `Provider`s and the `Alert`s only, and name your `-direct` `Kustomization`s in the organisation's `Alert`. The
+organisation's `notifications/kustomization.yaml` then lists the encrypted Secret instead of the `ExternalSecret`:
 
 ```sh
 mkdir -p ${MC_DIR}/notifications ${ORG_DIR}/notifications
@@ -114,14 +118,15 @@ yq -i '.creation_rules += [{
 }]' .sops.yaml
 ```
 
-Then write the token into the Secrets, and encrypt them. The organisation's is in the fixed placeholder namespace
-`org-ORG_NAME`, which the organisation's `kustomization.yaml` completes:
+Then write the token into the Secrets, and encrypt them. The organisation's names its real namespace,
+`org-${ORG_NAME}`, not the placeholder `org-ORG_NAME`: the organisation's `kustomization.yaml` would change the encrypted
+file, which breaks its MAC, so Flux couldn't decrypt it:
 
 ```sh
 kubectl create secret generic github-commit-status-token --namespace=default \
   --from-literal=token=YOUR_GITHUB_TOKEN --dry-run=client -o yaml \
   > ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
-kubectl create secret generic github-commit-status-token --namespace=org-ORG_NAME \
+kubectl create secret generic github-commit-status-token --namespace=org-${ORG_NAME} \
   --from-literal=token=YOUR_GITHUB_TOKEN --dry-run=client -o yaml \
   > ${ORG_DIR}/notifications/github-commit-status-token.enc.yaml
 sops --encrypt --in-place ${MC_DIR}/notifications/github-commit-status-token.enc.yaml

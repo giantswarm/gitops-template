@@ -102,7 +102,7 @@ variables:
 | Variable | What it's for |
 | --- | --- |
 | `cluster_name` | The workload cluster's name. It names the cluster's resources and its apps, such as `${cluster_name}-hello-world`, and the `<cluster>-kubeconfig` Secret and `<cluster>-cluster-values` ConfigMap the apps read. |
-| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa/template` sets it as `global.metadata.organization` in the chart values. The organisation's `kustomization.yaml` sets it from the name of its `Organization`, so the cluster's `Kustomization` doesn't, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). |
+| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa/template` sets it as `global.metadata.organization` in the chart values. The organisation's `kustomization.yaml` updates it to the name of its `Organization`, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). |
 | `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa/template`. |
 | `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa/template`. |
 

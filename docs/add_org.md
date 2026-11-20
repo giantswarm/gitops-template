@@ -90,11 +90,14 @@ export ORG_NAME=ORGANIZATION
 
 1. Create the organisation's `kustomization.yaml`. It lists the `Organization` and `workload-clusters`, and copies
    the `Organization`'s name into the workload clusters' Flux `Kustomization`s: into `organization` in their
-   `spec.postBuild.substitute`, which overwrites an `organization` written there by hand, and wherever they name the
-   organisation's namespace as `org-ORG_NAME`. `org-ORG_NAME` is a fixed placeholder: the quoted `'EOF'` keeps it, and
-   everything else in the file, as it is, so don't replace it with your organisation's name. The health check
-   replacement applies only to a `Kustomization` with the label `giantswarm.io/health-check-cluster: "true"`, as
-   kustomize fails on one without a health check:
+   `spec.postBuild.substitute`, which every one of them writes and which fails the build where it's missing, and
+   wherever they name the organisation's namespace as `org-ORG_NAME`. The replacements win over what the files say.
+   `org-ORG_NAME` is a fixed placeholder: the quoted `'EOF'` keeps it, and everything else in the file, as it is, so
+   don't replace it with your organisation's name. The health check replacement applies only to a `Kustomization`
+   with the label `giantswarm.io/health-check-cluster: "true"`, whose health check keeps the placeholder namespace, as
+   kustomize fails on one without a health check. See
+   [The organisation's name](./reference/repo-structure.md#the-organisations-name), which also says how to do without
+   the replacements:
 
     ```sh
     cat <<'EOF' > kustomization.yaml
@@ -114,8 +117,6 @@ export ORG_NAME=ORGANIZATION
               kind: Kustomization
             fieldPaths:
               - spec.postBuild.substitute.organization
-            options:
-              create: true
       - source:
           group: security.giantswarm.io
           kind: Organization
@@ -329,7 +330,8 @@ going to use 1Password (`op` CLI tool) for that:
     ```
 
 1. Encrypt it with SOPS. The SOPS encryption rule configured earlier ensures it will get encrypted with the
-Organization's key:
+Organization's key. It names the real namespace, `org-${ORG_NAME}`, not the placeholder `org-ORG_NAME`: the
+replacement would change the encrypted file, which breaks its MAC, so Flux couldn't decrypt it:
 
     ```sh
     sops --encrypt --in-place secret.enc.yaml

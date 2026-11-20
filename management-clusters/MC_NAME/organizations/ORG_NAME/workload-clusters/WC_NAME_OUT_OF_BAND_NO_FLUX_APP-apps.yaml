@@ -18,6 +18,7 @@ spec:
     substitute:
       cluster_description: "description"
       cluster_name: "out-of-band-no-flux"
+      organization: "ORG_NAME"  # ../kustomization.yaml sets it from the Organization's name
       # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
       release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
   prune: true
