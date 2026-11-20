@@ -370,6 +370,26 @@ hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster instal
 `tests/ats/assertions/exists-in-workload-cluster`; `test_prune` leaves it out of the apps it expects to go with the
 cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
 
+### Workload cluster secret stores
+
+`test_workload_cluster_secret_store` checks the
+[workload cluster secret store example](../add_org.md#give-every-workload-cluster-a-secret-store), the organisation's
+Kyverno `Policy`, with the vCluster's kubeconfig Secret, which the test labels and types as Cluster API does. Kyverno's
+background controller needs rights in the organisation's namespace that Giant Swarm's rbac-operator grants on a
+management cluster and the example doesn't ship, so `tests/ats/kyverno_generate_rbac.py` creates the same ClusterRole,
+`write-kyverno-generated-externalsecrets`, and its `RoleBinding` in `org-org-name` before Flux applies the repository.
+The test waits for the organisation's `SecretStore` `default`, `out-of-band-no-flux-eso-cluster-auth` and the
+`out-of-band-no-flux-eso-cluster-store` `SecretStore`, then reads a Secret from the vCluster through that store and
+checks its value. It then waits for the
+[`PushSecret` example](../add_org.md#push-a-secret-into-a-workload-cluster) to get Ready and for the `pushed-password`
+Secret it writes into the vCluster's `default` namespace to have a `password` of the generator's 32 characters. On a
+management cluster, the ESO chart's `CiliumNetworkPolicy` lets ESO reach the cluster and the world; the kind cluster
+has no Cilium, so the `NetworkPolicy` in `tests/ats/workload_cluster_secrets.py`, which the
+[workload cluster secrets example](workload-cluster-secrets.md#how-its-tested) needs too, gives ESO the same egress.
+Last, the test writes a kubeconfig Secret for a new cluster, `new-cluster-kubeconfig`, with the vCluster's kubeconfig,
+and waits for the policy to react to it with `new-cluster-eso-cluster-auth` and a Ready `new-cluster-eso-cluster-store`
+in the organisation's namespace, then deletes the Secret.
+
 ## Superseded runs
 
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to

@@ -1,0 +1,131 @@
+# Reacts to every new workload cluster of the organisation: when Cluster API writes the
+# cluster's kubeconfig Secret, Kyverno generates an ExternalSecret that writes the cluster's
+# credentials into `<cluster>-eso-cluster-auth`, and from that Secret a SecretStore,
+# `<cluster>-eso-cluster-store`, that reaches the cluster. `generateExisting` covers the
+# clusters that exist already, and `synchronize` deletes the generated objects with the
+# cluster's kubeconfig Secret.
+#
+# A `Policy` applies only to its own namespace, so it can be applied as the organisation's
+# `automation` ServiceAccount, which may do anything in the namespace but create nothing
+# cluster-scoped. Kyverno's background controller needs rights in the namespace to manage what
+# the policy generates and to read the kubeconfig Secrets: on a Giant Swarm management cluster,
+# rbac-operator grants them in every organisation's namespace. Without them, Kyverno rejects the
+# policy.
+# `generate.namespace` names the namespace rather than templating it: Kyverno checks the
+# rights for a templated namespace across the whole cluster. `org-ORG_NAME` is a fixed
+# placeholder: ../kustomization.yaml completes it with the Organization's name.
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: generate-eso-cluster-auth-from-kubeconfig
+spec:
+  background: true
+  rules:
+    # When a cluster-kubeconfig is created by CAPI, this rule will
+    # generate an ExternalSecret that remaps the kubeconfig to a secret
+    # that ESO can use
+    - name: generate-external-secret-from-kubeconfig
+      match:
+        any:
+          - resources:
+              kinds:
+                - v1/Secret
+              # Cluster API labels and types every Secret it writes for a
+              # cluster this way, the kubeconfig among them
+              selector:
+                matchExpressions:
+                  - key: cluster.x-k8s.io/cluster-name
+                    operator: Exists
+      preconditions:
+        all:
+          - key: "{{ request.object.type }}"
+            operator: Equals
+            value: cluster.x-k8s.io/secret
+          # only the cluster's kubeconfig, <cluster_name>-kubeconfig: not its
+          # CA or other certificates, nor an EKS cluster's <cluster_name>-user-kubeconfig
+          - key: "{{ request.object.metadata.name }}"
+            operator: Equals
+            value: '{{ request.object.metadata.labels."cluster.x-k8s.io/cluster-name" }}-kubeconfig'
+
+      generate:
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        name: "{{ regex_replace_all('-kubeconfig$', request.object.metadata.name, '-eso-cluster-auth') }}"
+        namespace: org-ORG_NAME
+        synchronize: true
+        generateExisting: true
+        data:
+          spec:
+            refreshInterval: 1m
+            secretStoreRef:
+              name: default
+              kind: SecretStore
+
+            target:
+              # keep ExternalSecret target name in sync with metadata.name
+              name: "{{ regex_replace_all('-kubeconfig$', request.object.metadata.name, '-eso-cluster-auth') }}"
+              creationPolicy: Owner
+              deletionPolicy: Delete
+              template:
+                engineVersion: v2
+                mergePolicy: Replace
+                templateFrom:
+                  - target: Data
+                    literal: |-
+                      \{{ $kubeconfig := index . "{{request.object.metadata.name}}" | fromYaml }}
+                      \{{ $value := index $kubeconfig "value" | fromYaml }}
+                      \{{ $ca := index $value "clusters" 0 "cluster" "certificate-authority-data" | b64dec }}
+                      \{{ $crt := index $value "users" 0 "user" "client-certificate-data" | b64dec }}
+                      \{{ $key := index $value "users" 0 "user" "client-key-data" | b64dec }}
+                      \{{ $server := index $value "clusters" 0 "cluster" "server" }}
+                      tls.crt: "\{{ range $_, $v := $crt | splitList "\n" }}\{{ $v }}\n\{{ end }}"
+                      tls.key: "\{{ range $_, $v := $key | splitList "\n" }}\{{ $v }}\n\{{ end }}"
+                      ca.crt: "\{{ range $_, $v := $ca | splitList "\n" }}\{{ $v }}\n\{{ end }}"
+                      server: "\{{ $server }}"
+            dataFrom:
+              - find:
+                  name:
+                    # look up exactly the triggering Secret, i.e. <cluster_name>-kubeconfig
+                    regexp: "{{request.object.metadata.name}}"
+
+    # When the ExternalSecret has synced and written its secret out,
+    # generate a SecretStore that can be used to push into the cluster
+    - name: generate-secretstore-from-cluster-auth-secret
+      match:
+        any:
+          - resources:
+              kinds:
+                - v1/Secret
+              name: "*-eso-cluster-auth"
+      generate:
+        apiVersion: external-secrets.io/v1
+        kind: SecretStore
+        # <cluster>-eso-cluster-auth -> <cluster>-k8s-store
+        name: "{{ regex_replace_all('-eso-cluster-auth$', request.object.metadata.name, '-eso-cluster-store') }}"
+        namespace: org-ORG_NAME
+        # keep SecretStore in sync with the auth Secret and delete it when the Secret disappears
+        synchronize: true
+        generateExisting: true
+        data:
+          spec:
+            provider:
+              kubernetes:
+                # adjust this if you want to read from a different namespace on the target cluster;
+                # it has to exist there: the `org` namespaces exist only on the management cluster
+                remoteNamespace: default
+                server:
+                  # decode the base64-encoded "server" value from the Secret data
+                  # base64_decode() is the standard Kyverno JMESPath filter for this.
+                  url: "{{ request.object.data.server | base64_decode(@) }}"
+                  caProvider:
+                    type: Secret
+                    name: "{{ request.object.metadata.name }}"
+                    key: ca.crt
+                auth:
+                  cert:
+                    clientCert:
+                      name: "{{ request.object.metadata.name }}"
+                      key: tls.crt
+                    clientKey:
+                      name: "{{ request.object.metadata.name }}"
+                      key: tls.key

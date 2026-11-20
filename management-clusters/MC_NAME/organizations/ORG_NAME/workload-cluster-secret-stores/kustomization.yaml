@@ -1,0 +1,9 @@
+# A Kyverno Policy that gives every workload cluster of the organisation a SecretStore, and the
+# organisation's SecretStore it reads through. Everything is in the organisation's namespace: `org-ORG_NAME` is a fixed placeholder that
+# ../kustomization.yaml completes with the Organization's name.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: org-ORG_NAME
+resources:
+  - policy.yaml
+  - secret-store.yaml

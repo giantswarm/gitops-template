@@ -8,7 +8,9 @@
 #   `org-ORG_NAME`: the replacement replaces the second `-`-separated part of whatever
 #   namespace it finds, so a real one such as `org-acme-corp` would become `org-acme-corp-corp`;
 # - into the namespace of every object in the namespace `org-ORG_NAME`, such as the -direct
-#   Kustomization and the commit-status Alert in notifications/.
+#   Kustomization and the commit-status Alert in notifications/;
+# - into the namespaces the Kyverno Policy in workload-cluster-secret-stores/ generates in, and
+#   the one the organisation's SecretStore there reads.
 # `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
 # the name after it. A SOPS-encrypted file must name the real namespace, `org-<name>`, never the
 # placeholder: changing an encrypted file breaks its MAC, so Flux couldn't decrypt it.
@@ -19,6 +21,7 @@ resources:
   - multicluster
   - notifications
   - shared-objects
+  - workload-cluster-secret-stores
   - workload-clusters
 replacements:
   # If you do not want to use kustomize replacements, you must update all references to
@@ -40,6 +43,9 @@ replacements:
   #   - notifications/commit-status-externalsecret.yaml
   #   - notifications/commit-status-provider.yaml
   #   - shared-objects/kustomization.yaml
+  #   - workload-cluster-secret-stores/kustomization.yaml
+  #   - workload-cluster-secret-stores/policy.yaml
+  #   - workload-cluster-secret-stores/secret-store.yaml
   - source:
       group: security.giantswarm.io
       kind: Organization
@@ -71,6 +77,28 @@ replacements:
       kind: Organization
       fieldPath: metadata.name
     targets:
+      # where the Kyverno Policy in workload-cluster-secret-stores generates its objects
+      - select:
+          group: kyverno.io
+          kind: Policy
+          namespace: org-ORG_NAME
+        fieldPaths:
+          - spec.rules.*.generate.namespace
+        options:
+          delimiter: "-"
+          index: 1
+      # the namespace the organisation's SecretStore in workload-cluster-secret-stores reads
+      - select:
+          group: external-secrets.io
+          kind: SecretStore
+          name: default
+          namespace: org-ORG_NAME
+        fieldPaths:
+          - spec.provider.kubernetes.remoteNamespace
+        options:
+          delimiter: "-"
+          index: 1
+      # last: the targets above select the objects by the placeholder namespace this one changes
       - select:
           namespace: org-ORG_NAME
         fieldPaths:

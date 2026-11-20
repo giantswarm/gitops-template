@@ -339,6 +339,67 @@ replacement would change the encrypted file, which breaks its MAC, so Flux could
 
 1. Push changes to the repository.
 
+## Give every workload cluster a secret store
+
+External Secrets Operator (ESO) on the management cluster can read Secrets from a workload cluster and push Secrets to
+it, through a `SecretStore` that reaches the cluster's API server. Rather than adding that store and its credentials to
+Git for each new cluster, let a Kyverno `Policy`, managed with GitOps like everything else here, react to every new
+cluster and generate them from the kubeconfig Secret Cluster API writes for it. The example in
+[organizations/ORG_NAME/workload-cluster-secret-stores](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-cluster-secret-stores/)
+has two files, both in the organisation's namespace, since customers on a Giant Swarm management cluster can't create
+cluster-scoped objects:
+
+- `policy.yaml`: the Kyverno `Policy` `generate-eso-cluster-auth-from-kubeconfig`, with two `generate` rules that chain:
+    1. Every kubeconfig Secret Cluster API writes for a cluster gets an `ExternalSecret` that reads it through
+       `default` and writes the client certificate and key, the cluster's CA and its API server into
+       `<cluster>-eso-cluster-auth`, as `tls.crt`, `tls.key`, `ca.crt` and `server`. The rule matches the Secret by
+       its type, `cluster.x-k8s.io/secret`, its `cluster.x-k8s.io/cluster-name` label and its name,
+       `<cluster>-kubeconfig`, so the other Secrets Cluster API writes for the cluster, such as its CA or the
+       `<cluster>-user-kubeconfig` of an EKS cluster, don't match.
+    1. Every `<cluster>-eso-cluster-auth` Secret gets a `SecretStore` `<cluster>-eso-cluster-store` that reaches the
+       workload cluster with them. It reads and writes Secrets in the workload cluster's `default` namespace: the
+       `org-*` namespaces exist only on the management cluster. Change `remoteNamespace` to use another one that exists
+       on every cluster.
+
+    The rules name the namespace they generate in, `org-ORG_NAME`, rather than templating it: for a templated namespace
+    Kyverno checks the rights of the policy's author and of its own controllers across the whole cluster, which a
+    customer can't grant. `generateExisting: true` covers the clusters that exist already, and `synchronize: true`
+    deletes the generated objects again when the cluster's kubeconfig Secret goes. Deleting the policy, or its file from
+    Git, which Flux then prunes, deletes every store and `ExternalSecret` it generated at once, and ESO deletes each
+    `<cluster>-eso-cluster-auth` Secret with the `ExternalSecret` that owns it (`creationPolicy: Owner`): the apps'
+    `ExternalSecret`s and `PushSecret`s that use the stores stop syncing until the policy is back, though the Secrets
+    they already wrote stay.
+- `secret-store.yaml`: the `SecretStore` `default` that the generated `ExternalSecret`s read the kubeconfig Secrets
+  through. It reads the organisation's namespace as the `automation` ServiceAccount Giant Swarm's rbac-operator creates
+  there.
+
+Kyverno's background controller, the ServiceAccount `kyverno-background-controller` in `kyverno`, needs rights in the
+organisation's namespace to manage the `ExternalSecret`s and `SecretStore`s the policy generates and to read the
+kubeconfig Secrets that trigger it. Giant Swarm's rbac-operator grants them in every organisation's namespace, with the
+ClusterRole `write-kyverno-generated-externalsecrets`, so the example doesn't. Without them, Kyverno rejects the policy.
+
+The organisation's `kustomization.yaml` lists the directory, and its replacements complete `org-ORG_NAME` in the
+objects' namespace, in the namespace the policy generates in and in the one the `default` store reads, see
+[The organisation's name](reference/repo-structure.md#the-organisations-name). A cluster's apps then read from or push
+to the cluster with `secretStoreRef: {kind: SecretStore, name: <cluster>-eso-cluster-store}` in the organisation's
+namespace. For another organisation, copy the directory into its own and list it in its `kustomization.yaml`.
+
+### Push a Secret into a workload cluster
+
+The `out-of-band-no-flux` cluster's apps have an example that uses its generated store:
+[apps/pushed-password/pushed-password.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/pushed-password/pushed-password.yaml).
+External Secrets Operator's `Password` generator makes a password, so no value is kept in Git, and a `PushSecret` in
+`org-${organization}` writes it through `${cluster_name}-eso-cluster-store` into the Secret `pushed-password`, key
+`password`, in the workload cluster's `default` namespace. `updatePolicy: IfNotExists` keeps the first password there,
+though the generator makes a new one at every refresh. The cluster's apps Kustomization applies the example once the
+cluster is ready; if Kyverno and ESO haven't made the store yet, ESO retries the `PushSecret` until they have.
+
+To push a Secret into another cluster, copy the file into that cluster's `apps/` directory and list it in its
+`apps/kustomization.yaml`: `${cluster_name}` and `${organization}` come from the cluster's apps Kustomization, so the
+store name follows the cluster. To push a Secret you already have instead of a generated one, replace the
+`selector.generatorRef` with `selector.secret.name`, remove the `Password`, and use `updatePolicy: Replace`, ESO's
+default, so that a change to the Secret, such as a rotation, reaches the workload cluster.
+
 ## Recommended next steps
 
 - [Add a new Workload Cluster](./add_wc.md)

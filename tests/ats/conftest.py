@@ -484,11 +484,16 @@ def workload_cluster(
         kubeconfig_secret = pykube.Secret(
             kube_cluster.kube_client,
             {
+                # labelled and typed as Cluster API writes it, which the Kyverno policy
+                # `generate-eso-cluster-auth-from-kubeconfig` matches
                 "metadata": {
                     "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
                     "namespace": WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
+                    "labels": {
+                        "cluster.x-k8s.io/cluster-name": WORKLOAD_CLUSTER_VCLUSTER_NAME
+                    },
                 },
-                "type": "Opaque",
+                "type": "cluster.x-k8s.io/secret",
                 "stringData": {
                     "value": yaml.safe_dump(
                         kubeconfig_with_server(
