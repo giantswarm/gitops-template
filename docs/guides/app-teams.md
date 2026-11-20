@@ -73,9 +73,10 @@ What the team can't do: create objects outside its namespace, or cluster-wide ob
 
 Nor can it create Flux objects in a workload cluster that runs Giant Swarm's flux-app: its `flux-edit` role doesn't
 add Flux's kinds to the `admin` role. Upstream Flux's does, so in a workload cluster that runs upstream Flux the team
-could create a `Kustomization` of its own, which Flux runs as kustomize-controller, with the rights of a cluster
-admin. There, start kustomize-controller with `--default-service-account` and `--no-cross-namespace-refs`, see
-[Flux multi-tenancy lockdown](https://fluxcd.io/flux/installation/configuration/multitenancy/).
+could create a `Kustomization` or a `HelmRelease` of its own. Without `serviceAccountName`, Flux would apply it as
+kustomize-controller or helm-controller, with the rights of a cluster admin. There, start both kustomize-controller
+and helm-controller with `--default-service-account`, so that Flux applies such an object as that ServiceAccount of
+the object's namespace instead.
 
 ## Example
 
@@ -133,7 +134,12 @@ The cluster needs a `-direct` Kustomization, which applies its `out-of-band` dir
     EOF
     ```
 
-    The management cluster's `Kustomization` applies it, as the organization directory has no `kustomization.yaml`.
+    The management cluster's `Kustomization` applies it. If the organization directory has a `kustomization.yaml`,
+    list the file there, or Flux never applies it:
+
+    ```sh
+    [ -f management-clusters/${MC_NAME}/organizations/${ORG_NAME}/kustomization.yaml ] && yq -i '.resources += ["teams/'"${TEAM_NAME}"'.yaml"] | .resources |= unique' management-clusters/${MC_NAME}/organizations/${ORG_NAME}/kustomization.yaml
+    ```
 
 1. Create the team's namespace and `RoleBinding` in the workload cluster:
 
@@ -228,7 +234,7 @@ The cluster needs a `-direct` Kustomization, which applies its `out-of-band` dir
 
     ```sh
     [ -f ${WC_DIR}/teams/kustomization.yaml ] || printf 'apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources: []\n' > ${WC_DIR}/teams/kustomization.yaml
-    yq -i '.resources += ["'"${TEAM_NAME}"'/"]' ${WC_DIR}/teams/kustomization.yaml
+    yq -i '.resources += ["'"${TEAM_NAME}"'/"] | .resources |= unique' ${WC_DIR}/teams/kustomization.yaml
     yq -i '.resources += ["teams/"] | .resources |= unique' ${WC_DIR}/kustomization.yaml
     ```
 

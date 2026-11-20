@@ -760,6 +760,9 @@ the `HelmRelease` by hand at the end. See [How it works](./how-it-works.md).
 > add organization` writes doesn't have them, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add
 > base` writes. Add them by hand before you rely on them to keep those objects when their files are deleted.
 
+If an [application team](./guides/app-teams.md) delivers to the cluster with Flux on the management cluster, remove
+the team from the cluster first, as that guide describes.
+
 1. Remove the label from the cluster's `OCIRepository` and `HelmRelease`, and set
    `global.metadata.preventDeletion` to `false`, so that the chart removes it from the cluster's `Cluster` too:
 

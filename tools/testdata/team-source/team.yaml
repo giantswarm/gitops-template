@@ -1,0 +1,16 @@
+# Fixture for tools/test-all-ff: an application team's Kustomization, whose source is the team's
+# own repository. Its path happens to exist in this one too, but it has nothing to build here,
+# and its namespace only gets a value on the management cluster, so tools/test-all-ff has to
+# leave it out.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: team
+  namespace: org-${organization}
+spec:
+  interval: 1m
+  path: ./docs
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: team
