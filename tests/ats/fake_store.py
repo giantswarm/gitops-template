@@ -18,8 +18,8 @@ FAKE_STORE_DATA = [
 ]
 
 STORE_NAME = "gitops-test"
-# the namespaces whose ExternalSecrets read the store: the notification example's in `default`,
-#  the clusters' in the organisation's
+# the namespaces whose ExternalSecrets read the store: the management cluster's notifications in
+#  `default`, and the organisation's notifications and the clusters' in the organisation's
 STORE_NAMESPACES = ["default", "org-org-name"]
 STORE_SPEC = {
     "provider": {

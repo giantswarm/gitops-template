@@ -80,10 +80,11 @@ Keep the placeholder namespace `org-ORG_NAME` and add `secret-stores` to the `re
 replacements put its name in place of the placeholder, see
 [The organisation's name](../reference/repo-structure.md#the-organisations-name). A `SecretStore` only serves the
 `ExternalSecret`s in its own namespace, so `common-secret.yaml`, in `org-ORG_NAME`, needs this store in
-`org-ORG_NAME`. For the store in
-`default` that [Getting started](../getting-started.md) also reads, use the base the same way with
-`namespace: default`, and add that namespace's subject to the managed identity's federated credentials or the IAM
-role's trust policy: `system:serviceaccount:default:external-secrets-azure-key-vault` or
+`org-ORG_NAME`. For the store in `default` that [Getting started](../getting-started.md) also reads, use the base the
+same way with `namespace: default`, but only once, in the management cluster's directory rather than an
+organisation's, so that no two organisations apply the same store. Add that namespace's subject to the managed
+identity's federated credentials or the IAM role's trust policy:
+`system:serviceaccount:default:external-secrets-azure-key-vault` or
 `system:serviceaccount:default:external-secrets-aws-secrets-manager`. Then point the `ExternalSecret` at the store:
 
 ```yaml

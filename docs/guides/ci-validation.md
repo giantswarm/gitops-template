@@ -275,10 +275,9 @@ Kyverno runs on every Giant Swarm management cluster, and the External Secrets O
 `PolicyException`s only when Kyverno's CRDs are there, so the test installs Kyverno before ESO. It installs Giant
 Swarm's charts, the ones team Shield ships to the management clusters, from `oci://gsoci.azurecr.io/charts/giantswarm`:
 `kyverno-crds` 1.19.2, as the `kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.1, the chart of
-`kyverno-app`. Kyverno's pods use the
-`giantswarm-critical` PriorityClass and its `PolicyException`s go in the `giantswarm` namespace, which every management
-cluster has, so the test first installs Giant Swarm's `priority-classes` 0.3.1 chart and creates the namespace. The
-charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
+`kyverno-app`. Kyverno's pods use the `giantswarm-critical` PriorityClass and its `PolicyException`s go in the
+`giantswarm` namespace, which every management cluster has, so the test first installs Giant Swarm's
+`priority-classes` 0.3.1 chart and creates the namespace. The charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
 turns off the objects whose CRDs the kind cluster doesn't have: the `CiliumNetworkPolicy`s, `PodLogs`,
 `VerticalPodAutoscaler`s and `ServiceMonitor`s. It also lowers the background and reports controllers' requests from
 the chart's 500m CPU and 1Gi, sized for a management cluster, so that Flux still fits on the single kind node.
