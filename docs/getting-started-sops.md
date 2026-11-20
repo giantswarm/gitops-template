@@ -848,29 +848,30 @@ the team from the cluster first, as that guide describes.
       . == "'"${WC_NAME}"'-direct.yaml"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
-    If the cluster has a `-direct` `Kustomization` in `${WC_NAME}-direct.yaml`, which applies its out-of-band resources
-    to the workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree),
-    the command above takes it out of the list too. Save the name of its SOPS key Secret, if it has one, for a later
-    step, and remove its file:
+    If the cluster has out-of-band resources, its `-direct` `Kustomization` in `${WC_NAME}-direct.yaml` applies them to
+    the workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree).
+    The command above takes it out of the list too. Skip to the cluster's files below if the cluster has no
+    `${WC_NAME}-direct.yaml`. Otherwise, save the name of its SOPS key Secret, if it has one, and remove its file:
 
     ```sh
+    unset DIRECT_KEY KEY_FILE
     export DIRECT_KEY=$(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml)
     git rm ${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml
     ```
 
     If `DIRECT_KEY` isn't empty, the `-direct` `Kustomization` decrypts with a key Secret in the organisation's
-    namespace, which another cluster's `-direct` `Kustomization` may share. If this prints a file, it does, so keep the
-    key and unset `DIRECT_KEY`:
+    namespace, which another cluster's `-direct` `Kustomization` may share. Check whether one does:
 
     ```sh
-    grep -rl "name: ${DIRECT_KEY}$" ${ORG_DIR}/workload-clusters
+    yq ea 'select(.metadata.namespace == "org-ORG_NAME" and .spec.decryption.secretRef.name == strenv(DIRECT_KEY)) | filename' \
+      ${ORG_DIR}/workload-clusters/*.yaml
     ```
 
-    Otherwise, find the key's file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, and remove it and its entry in
-    `secrets/kustomization.yaml`:
+    If this prints a file, that cluster uses the key: keep it and run `unset DIRECT_KEY`. Otherwise, find the key's
+    file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, and remove it and its entry in `secrets/kustomization.yaml`:
 
     ```sh
-    export KEY_FILE=$(basename "$(grep -l "name: ${DIRECT_KEY}$" ${MC_DIR}/secrets/*.enc.yaml)")
+    export KEY_FILE=$(basename "$(yq ea 'select(.metadata.name == strenv(DIRECT_KEY) and .metadata.namespace == "org-" + strenv(ORG_NAME)) | filename' ${MC_DIR}/secrets/*.enc.yaml)")
     yq -i 'del(.resources[] | select(. == strenv(KEY_FILE)))' ${MC_DIR}/secrets/kustomization.yaml
     git rm ${MC_DIR}/secrets/${KEY_FILE}
     ```
