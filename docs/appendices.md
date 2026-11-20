@@ -70,20 +70,24 @@ You need the following tools installed to use [test-all-ff](/tools/test-all-ff) 
 
 ## Secret store for testing
 
-[Getting started](./getting-started.md) reads secrets through a `ClusterSecretStore` that points at your secret
-manager. If you only want to try the guide and have no store yet, create one with the
-[fake provider](https://external-secrets.io/latest/provider/fake/) of External Secrets Operator. It keeps the values
-in the store object itself, so it needs no secret manager and no extra credentials.
+[Getting started](./getting-started.md) reads secrets through a `SecretStore` in the `default` namespace and one of
+the same name in `org-${ORG_NAME}`, both pointing at your secret manager. If you only want to try the guide and have
+no store yet, create them with the [fake provider](https://external-secrets.io/latest/provider/fake/) of External
+Secrets Operator. It keeps the values in the store object itself, so it needs no secret manager and no extra
+credentials. You can create `SecretStore`s in `default` and the `org-*` namespaces yourself.
 
-Note that the token ends up in plain text in the cluster. Use this only for testing, and delete the store when you're
-done. Creating a `ClusterSecretStore` also needs permissions beyond the `default` and `org-*` namespaces.
+Note that the token ends up in plain text in the cluster. Use this only for testing, and delete the stores when you're
+done.
 
-First, create the store with the values the guides read. Put your GitHub token in place of `YOUR_GITHUB_TOKEN`:
+Create a store with the values the guides read, first in `default`, then again in `org-${ORG_NAME}` once
+[step 2](./getting-started.md#2-add-an-organization) of the guide has created that namespace. Put your GitHub token in
+place of `YOUR_GITHUB_TOKEN`:
 
 ```sh
-cat <<'EOF' | kubectl apply -f -
+export STORE_NAMESPACE=default  # then org-${ORG_NAME}
+cat <<'EOF' | kubectl apply -n "${STORE_NAMESPACE}" -f -
 apiVersion: external-secrets.io/v1
-kind: ClusterSecretStore
+kind: SecretStore
 metadata:
   name: gitops-test
 spec:
@@ -102,20 +106,21 @@ EOF
 ```
 
 To try [Report reconcile status on GitHub commits](./guides/commit-statuses.md) too, add its two values to the list
-under `data`: `gitops/github-commit-status-token`, a GitHub token that can write commit statuses, and
-`gitops/github-webhook-token`, the secret of the optional webhook.
+under `data` of the store in `default`: `gitops/github-commit-status-token`, a GitHub token that can write commit
+statuses, and `gitops/github-webhook-token`, the secret of the optional webhook.
 
 Check that the store is `Ready`:
 
 ```sh
-kubectl get clustersecretstore gitops-test
+kubectl get secretstore gitops-test -n "${STORE_NAMESPACE}"
 ```
 
 Then set `SECRET_STORE=gitops-test` in the guide and keep its default secret names, `gitops/github-token` and
 `gitops/hello-world-values`.
 
-When you're done testing, delete the store:
+When you're done testing, delete the stores:
 
 ```sh
-kubectl delete clustersecretstore gitops-test
+kubectl delete secretstore gitops-test -n default
+kubectl delete secretstore gitops-test -n org-${ORG_NAME}
 ```

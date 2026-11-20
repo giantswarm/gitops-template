@@ -33,10 +33,13 @@ You need:
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
   is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces,
-- a `ClusterSecretStore` on the management cluster that can read your secret manager. ESO runs on every Giant Swarm
-  management cluster. To create a store, see
-  [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/). To
-  only try this guide, create a [secret store for testing](./appendices.md#secret-store-for-testing),
+- a `SecretStore` in the `default` namespace that can read your secret manager. The guide reads secrets in `default`
+  and in `org-${ORG_NAME}`, so once the organization's namespace exists, in [step 2](#2-add-an-organization), it needs
+  a store of the same name there too. ESO runs on every Giant Swarm management cluster, and you can create
+  `SecretStore`s in those namespaces yourself. To create one, see
+  [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/) or the
+  bases in [Use your secret manager](./guides/workload-cluster-secrets.md#use-your-secret-manager). To only try this
+  guide, create the [secret stores for testing](./appendices.md#secret-store-for-testing),
 - a fork of this repository, cloned locally. Run all commands from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so you
@@ -50,7 +53,7 @@ export ORG_NAME=ORGANIZATION         # organization name, without the `org-` pre
 export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits, at most 20 characters
 export GITOPS_REPO=REPO_NAME         # name for the Flux GitRepository, for example `gitops`
 export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
-export SECRET_STORE=STORE_NAME       # name of the ClusterSecretStore
+export SECRET_STORE=STORE_NAME       # name of the SecretStores in `default` and `org-${ORG_NAME}`
 
 export MC_DIR=management-clusters/${MC_NAME}
 export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
@@ -58,9 +61,6 @@ export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 ```
 
 Note that the variables only live in your current shell. If you open a new one, run the exports again.
-
-If you use namespaced `SecretStore`s instead, you need one in `default` and one in `org-${ORG_NAME}`. Then set
-`kind: SecretStore` in the `ExternalSecret`s below.
 
 ## 1. Connect the management cluster
 
@@ -141,7 +141,7 @@ directory to apply. ESO gives it the repository credentials from your secret man
     spec:
       refreshInterval: 1h
       secretStoreRef:
-        kind: ClusterSecretStore
+        kind: SecretStore
         name: ${SECRET_STORE}
       target:
         name: github-https-credentials
@@ -324,6 +324,15 @@ git add ${ORG_DIR} && git commit -m "Add organization ${ORG_NAME}" && git push
 
 ```sh
 kubectl get namespace org-${ORG_NAME}
+```
+
+Then create the `SecretStore` named `${SECRET_STORE}` in `org-${ORG_NAME}`, the same way as the one in `default`. The
+app in [step 4](#4-deploy-an-app) reads its secret values through it.
+
+**Check:** the store is `Ready`:
+
+```sh
+kubectl get secretstore ${SECRET_STORE} -n org-${ORG_NAME}
 ```
 
 ## 3. Create a workload cluster
@@ -717,7 +726,7 @@ Here you deploy the [hello-world](https://github.com/giantswarm/hello-world-app)
     spec:
       refreshInterval: 1h
       secretStoreRef:
-        kind: ClusterSecretStore
+        kind: SecretStore
         name: ${SECRET_STORE}
       target:
         name: \${cluster_name}-hello-world-user-secrets

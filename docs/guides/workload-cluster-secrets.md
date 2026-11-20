@@ -75,7 +75,10 @@ resources:
   - ../../../../../bases/secret_stores/azure-key-vault
 ```
 
-`MC_NAME.yaml` applies it with the rest of the organisation. Then point the `ExternalSecret` at the store:
+`MC_NAME.yaml` applies it with the rest of the organisation. For a store in another namespace, such as the one in
+`default` that [Getting started](../getting-started.md) reads, set that namespace instead and add its subject,
+`system:serviceaccount:default:...`, to the managed identity's federated credentials or the IAM role's trust policy.
+Then point the `ExternalSecret` at the store:
 
 ```yaml
 spec:

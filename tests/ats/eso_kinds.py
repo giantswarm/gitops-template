@@ -2,19 +2,13 @@
 `ExternalSecret`s of the examples, and what apps/workload-cluster-secrets pushes with.
 """
 
-from pykube.objects import APIObject, NamespacedAPIObject
+from pykube.objects import NamespacedAPIObject
 
 
 class ExternalSecretCR(NamespacedAPIObject):
     version = "external-secrets.io/v1"
     endpoint = "externalsecrets"
     kind = "ExternalSecret"
-
-
-class ClusterSecretStoreCR(APIObject):
-    version = "external-secrets.io/v1"
-    endpoint = "clustersecretstores"
-    kind = "ClusterSecretStore"
 
 
 class SecretStoreCR(NamespacedAPIObject):

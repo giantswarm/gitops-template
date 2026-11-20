@@ -76,9 +76,10 @@ cp -r management-clusters/MC_NAME/organizations/ORG_NAME/notifications ${ORG_DIR
 yq -i '.resources += ["notifications"]' ${ORG_DIR}/kustomization.yaml
 ```
 
-In both `commit-status-externalsecret.yaml`, set `secretStoreRef` to your store and `remoteRef.key` to the name of the
-token in your secret manager. In the organisation's `commit-status-alert.yaml`, name your `-direct` `Kustomization`s. In
-both `commit-status-provider.yaml`, set the repository:
+In both `commit-status-externalsecret.yaml`, set `secretStoreRef` to your `SecretStore` in the same namespace,
+`default` or `org-${ORG_NAME}`, and `remoteRef.key` to the name of the token in your secret manager. In the
+organisation's `commit-status-alert.yaml`, name your `-direct` `Kustomization`s. In both `commit-status-provider.yaml`,
+set the repository:
 
 ```sh
 for dir in ${MC_DIR}/notifications ${ORG_DIR}/notifications; do
