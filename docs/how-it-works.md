@@ -69,9 +69,10 @@ hand, see [Delete the cluster](./getting-started.md#6-delete-the-cluster-optiona
 
 The rest of the cluster's objects, such as its values ConfigMaps and its apps, don't delete the cluster, so Flux
 deletes them. Add the annotation and the label to anything else
-that must outlive its file, such as the `HelmRelease` of a cluster base you write yourself. `kubectl gs` doesn't add
-them yet: add them by hand to the `Organization` that `kubectl gs gitops add organization` writes, and to the cluster
-`HelmRelease` of a base that `kubectl gs gitops add base` writes.
+that must outlive its file, such as the cluster `HelmRelease` and `OCIRepository` of a cluster base you write yourself:
+without them on the `OCIRepository`, Flux deletes it and the `HelmRelease` it keeps loses its chart. `kubectl gs`
+doesn't add them yet: add them by hand to the `Organization` that `kubectl gs gitops add organization` writes, and to
+the cluster `HelmRelease` and `OCIRepository` of a base that `kubectl gs gitops add base` writes.
 
 The split between the two kinds of Kustomization matters. The management cluster's Kustomization creates the
 cluster's Kustomizations, and they apply the cluster's directory. Each cluster gets its own

@@ -72,9 +72,10 @@ function object() {
 
 # Print the objects each Flux Operator ResourceSet in the manifest renders, with the version
 # range of its provider in place of an OCIRepository's templated tag. Objects with a template
-# left in them are left out. Fail when a ResourceSet renders an OCIRepository whose range
-# can't be found: its one `inputsFrom` entry has to name a provider in the manifest that has a
-# `spec.filter.semver`. A guess, such as the newest chart, would validate the wrong values.
+# left in them are left out. Fail when a ResourceSet renders an OCIRepository with a template
+# only in its ref, whose range can't be found: its one `inputsFrom` entry has to name a
+# provider in the manifest that has a `spec.filter.semver`. A guess, such as the newest chart,
+# would validate the wrong values.
 # Fail too for a ResourceSet without a namespace or with `spec.resourcesTemplate`, whose
 # objects this can't render.
 function resource_set_objects() {
@@ -100,7 +101,7 @@ function resource_set_objects() {
 			fi
 		fi
 		templated='.kind == "OCIRepository" and (.spec.ref // {} | to_yaml | test("<<"))'
-		if [ -z "${range}" ] && [ "$(yq "[.spec.resources[] | select(${templated})] | length" <<<"${rset}")" != "0" ]; then
+		if [ -z "${range}" ] && [ "$(yq "[.spec.resources[] | select(${templated}) | select(del(.spec.ref) | to_yaml | test(\"<<\") | not)] | length" <<<"${rset}")" != "0" ]; then
 			echo "ResourceSet ${ns}/${name}: can't resolve the chart version of its OCIRepository: it needs one inputsFrom entry that names a ResourceSetInputProvider in the same Kustomization, with a spec.filter.semver" >&2
 			errors=1
 			continue

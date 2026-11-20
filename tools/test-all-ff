@@ -264,6 +264,21 @@ function test() {
 	fi
 
 	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must leave out, not fail for, a ResourceSet's OCIRepository
+		# that keeps a template in more than its tag.
+		echo -n "helm values, ResourceSet OCIRepository with a templated name: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/resource-set-templated-name.yaml" 2>&1) || status=$?
+		if [ "${status}" -eq 0 ]; then
+			echo "OK, left out"
+		else
+			echo "not left out:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
 		# validate-helm-values must keep a fixed tag of a ResourceSet's OCIRepository; only a
 		# templated one gets the provider's range.
 		echo -n "helm values, ResourceSet OCIRepository with a fixed tag: "

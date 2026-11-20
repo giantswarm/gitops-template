@@ -247,6 +247,9 @@ A cluster that the cluster base creates can move to the layout of `WC_NAME_SCHED
 version. Forcing the provider picks the highest release in the range at once, outside the window, so pin the range to
 the release the cluster runs first:
 
+1. Wait until Flux has applied the updated cluster base, so that the cluster's live `OCIRepository` has the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. Without it, the move tries to prune the `OCIRepository`,
+   which the `giantswarm.io/prevent-deletion` label refuses, and the prune fails.
 1. Set the provider's `spec.filter.semver` to the cluster's current release, the `release` in its `Kustomization`, for
    example `'36.2.0'`. Move the cluster's files to the example's layout, then commit and push.
 1. Once Flux has applied the provider, force it as above. The `ResourceSet` takes over the `OCIRepository` and the

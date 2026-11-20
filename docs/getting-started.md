@@ -833,8 +833,9 @@ is removed. The cluster's `OCIRepository` has both too, and its `Cluster` the la
 delete the `HelmRelease` and the `OCIRepository` by hand at the end. See [How it works](./how-it-works.md).
 
 > **Warning:** `kubectl gs` doesn't write the annotation or the label yet. The `Organization` that `kubectl gs gitops
-> add organization` writes doesn't have them, nor does the cluster `HelmRelease` of a base that `kubectl gs gitops add
-> base` writes. Add them by hand before you rely on them to keep those objects when their files are deleted.
+> add organization` writes doesn't have them, nor do the cluster `HelmRelease` and `OCIRepository` of a base that
+> `kubectl gs gitops add base` writes. Add them by hand before you rely on them to keep those objects when their files
+> are deleted. Without them on the `OCIRepository`, Flux deletes it and the `HelmRelease` it keeps loses its chart.
 
 If an [application team](./guides/app-teams.md) delivers to the cluster with Flux on the management cluster, remove
 the team from the cluster first, as that guide describes.

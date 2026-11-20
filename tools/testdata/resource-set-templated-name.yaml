@@ -1,0 +1,24 @@
+# A ResourceSet with spec.inputs and no inputsFrom, whose OCIRepository has a templated
+# name as well as a templated tag. tools/validate-helm-values leaves out objects with a
+# template left in them, so tools/test-all-ff checks that it passes, rather than failing
+# because it can't resolve the chart version of an OCIRepository it doesn't check.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-templated-name
+  namespace: org-demo
+spec:
+  inputs:
+    - name: hello
+      version: 4.0.0
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: app-<< inputs.name >>
+        namespace: org-demo
+      spec:
+        interval: 10m0s
+        ref:
+          tag: << inputs.version | quote >>
+        url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
