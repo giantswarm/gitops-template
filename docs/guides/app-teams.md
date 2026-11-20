@@ -36,9 +36,9 @@ happens in the workload cluster, not on the management cluster.
 1. The team pushes plain Kubernetes manifests, or a `kustomization.yaml`, to its repository. Flux applies them at
    the next `interval`, and deletes what the team deletes, as the `Kustomization` has `prune: true`.
 
-The cluster's apps `Kustomization` applies the team's `GitRepository` and `Kustomization`, as the organization's
-`automation` ServiceAccount, so they can only live in the organization's namespace, see
-[Tenancy](../how-it-works.md#tenancy).
+The cluster's apps `Kustomization` applies the team's `GitRepository` and `Kustomization` into the organization
+namespace. That's where the cluster's kubeconfig Secret is, and a `Kustomization` reads its kubeconfig Secret from its
+own namespace.
 
 ## Flux in the workload cluster
 
