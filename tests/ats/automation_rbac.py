@@ -30,23 +30,22 @@ OBJECT_KINDS: dict[str, type[pykube.objects.APIObject]] = {
 logger = logging.getLogger(__name__)
 
 
+def get_json(api: pykube.HTTPClient, version: str) -> dict:
+    # pykube asks /api/v1 for the core group and /apis/<group>/<version> for the others
+    response = api.get(version=version)
+    response.raise_for_status()
+    return response.json()
+
+
 def discover(api: pykube.HTTPClient) -> list[dict]:
     """The APIResourceLists of every group version the API server serves, the core group first
     and each group's preferred version first, as client-go's discovery lists them."""
     group_versions = ["v1"]
-    response = api.get(version="/apis")
-    response.raise_for_status()
-    for group in response.json()["groups"]:
+    for group in get_json(api, "/apis")["groups"]:
         preferred = group["preferredVersion"]["groupVersion"]
         others = [v["groupVersion"] for v in group["versions"]]
         group_versions += [preferred] + [v for v in others if v != preferred]
-    lists = []
-    for group_version in group_versions:
-        # pykube asks /api/v1 for the core group and /apis/<group>/<version> for the others
-        response = api.get(version=group_version)
-        response.raise_for_status()
-        lists.append(response.json())
-    return lists
+    return [get_json(api, group_version) for group_version in group_versions]
 
 
 def needs_update(desired: dict, existing: dict) -> bool:
@@ -65,9 +64,7 @@ def create_or_update(
         return kube_obj
     api.raise_for_status(response)
     if needs_update(obj, response.json()):
-        logger.info(
-            f"Replacing {obj['kind']} {kube_obj.namespace or ''}/{kube_obj.name}"
-        )
+        logger.info(f"Replacing {obj['kind']} {kube_obj.name}")
         api.raise_for_status(api.put(**kube_obj.api_kwargs(data=json.dumps(obj))))
     return None
 

@@ -257,8 +257,9 @@ beyond those.
 The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, and the `RoleBinding`s
 of Giant Swarm's Flux from management-cluster-bases at `52aa8ee8a4ddb0c95e693bac67556150e33d956f` and flux-app at
 `02f4e84fa7a585de8e0deb95983ea47a4cbf828c`. [tests/ats/automation_roles.py](../../tests/ats/automation_roles.py) holds the
-rules and [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py) the bindings, and both name the
-file and lines each object comes from. rbac-operator builds `read-all` from the API server's discovery, so the test
+rules, [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py) and
+[tests/ats/automation_accounts.py](../../tests/ats/automation_accounts.py) the bindings, and each names the file and
+lines each object comes from. rbac-operator builds `read-all` from the API server's discovery, so the test
 does too: it covers the resources served when the fixture runs. The test leaves out the binding to Crossplane's
 `crossplane-edit`, which rbac-operator creates only where Crossplane runs, and Kyverno policies that limit Flux on a
 management cluster. When rbac-operator changes the rights, update the modules and the commits.

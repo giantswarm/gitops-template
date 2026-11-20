@@ -11,11 +11,8 @@ from collections.abc import Callable
 from typing import NamedTuple
 
 import pykube
-from automation_bindings import (
-    DEFAULT_NAMESPACE,
-    ORG_NAMESPACE_PREFIX,
-    PROTECTED_NAMESPACE,
-)
+from automation_accounts import DEFAULT_NAMESPACE, PROTECTED_NAMESPACE
+from automation_bindings import ORG_NAMESPACE_PREFIX
 from rbac_manifests import AUTOMATION
 
 
