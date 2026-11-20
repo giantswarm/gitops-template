@@ -25,7 +25,8 @@ from flux_teardown import delete_without_prune
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
 # flux_install have fixtures; external_secrets installs External Secrets Operator;
 # workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster;
-# notification_objects suspends the notification example's Alert.
+# notification_objects suspends the notification example's Alert; automation_rbac gives the
+# `automation` ServiceAccounts the rights they have on a management cluster.
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
@@ -33,13 +34,13 @@ pytest_plugins = [
     "external_secrets",
     "workload_cluster_flux_crds",
     "notification_objects",
+    "automation_rbac",
 ]
 
 FLUX_GIT_REPO_NAME = "your-repo"
 
 FLUX_OBJECTS_NAMESPACE = "default"
 FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secret here
-FLUX_IMPERSONATION_SA_NAME = "automation"
 
 # The test cluster has the Cluster API core CRDs (cluster.x-k8s.io and its
 # addons, ipam and runtime groups), and nothing else of Cluster API: no
@@ -264,9 +265,12 @@ def installation_values_config_map(
 def init_namespaces(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Any]:
+    """Create the namespaces of GITOPS_INIT_NAMESPACES that don't exist.
+
+    The `automation` ServiceAccounts in them, and their rights, come from the
+    `automation_rbac` fixture, once every CRD of the test is installed.
+    """
     created_namespaces: list[pykube.Namespace] = []
-    created_cluster_role_bindings: list[pykube.ClusterRoleBinding] = []
-    created_service_accounts: list[pykube.ServiceAccount] = []
 
     for ns in gitops_test_config.init_namespaces:
         ns_on_cluster = pykube.Namespace.objects(kube_cluster.kube_client).get_or_none(
@@ -279,51 +283,10 @@ def init_namespaces(
             new_ns.create()
             created_namespaces.append(new_ns)
 
-        sa_on_cluster = (
-            pykube.ServiceAccount.objects(kube_cluster.kube_client)
-            .filter(namespace=ns)
-            .get_or_none(name=FLUX_IMPERSONATION_SA_NAME)
-        )
-        if not sa_on_cluster:
-            sa = pykube.ServiceAccount(
-                kube_cluster.kube_client,
-                {"metadata": {"name": FLUX_IMPERSONATION_SA_NAME, "namespace": ns}},
-            )
-            sa.create()
-            created_service_accounts.append(sa)
-
-        crb_name = f"{FLUX_IMPERSONATION_SA_NAME}-cluster-admin-{ns}"
-        crb_on_cluster = pykube.ClusterRoleBinding.objects(
-            kube_cluster.kube_client
-        ).get_or_none(name=crb_name)
-        if not crb_on_cluster:
-            crb = pykube.ClusterRoleBinding(
-                kube_cluster.kube_client,
-                {
-                    "metadata": {
-                        "name": crb_name,
-                    },
-                    "roleRef": {"kind": "ClusterRole", "name": "cluster-admin"},
-                    "subjects": [
-                        {
-                            "kind": "ServiceAccount",
-                            "name": FLUX_IMPERSONATION_SA_NAME,
-                            "namespace": ns,
-                        }
-                    ],
-                },
-            )
-            crb.create()
-            created_cluster_role_bindings.append(crb)
-
     yield
 
-    for sa in created_service_accounts:
-        sa.delete()
     for namespace in created_namespaces:
         namespace.delete()
-    for crb in created_cluster_role_bindings:
-        crb.delete()
 
 
 @pytest.fixture(scope="module")
@@ -661,6 +624,7 @@ def gitops_environment(
     flux_app_deployment: None,
     flux_deployments: list[pykube.Deployment],
     workload_cluster_flux_crds: None,
+    automation_rbac: None,
 ) -> None:
     return None
 
