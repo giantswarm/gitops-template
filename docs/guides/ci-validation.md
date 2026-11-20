@@ -200,9 +200,11 @@ This build step requires additional configuration using the following environmen
 
 - `GITOPS_FLUX_APP_VERSION`: the version of [flux-app](https://github.com/giantswarm/flux-app/releases)
   version provided by Giant Swarm
-- `GITOPS_INIT_NAMESPACES`: namespaces used for testing need to be initialized (RBAC permissions) before
-  they can be used; as such this variable needs to hold a comma separated list of namespaces, where you want
-  to deploy `Kustomization` objects during the test (example: `default,org-org-name`)
+- `GITOPS_INIT_NAMESPACES`: a comma-separated list of the namespaces where the test deploys `Kustomization` objects
+  (example: `default,org-org-name`). The test creates the ones that don't exist, and an `automation` ServiceAccount
+  in each, with the rights it has on a management cluster: see
+  [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts). They have to be
+  `default` or `org-*` namespaces, the only ones where a management cluster has `automation`.
 - `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) `HelmRelease`s and sources that the test doesn't
   look at (example: "org-org-name/my-helmrelease"). It doesn't apply to `Kustomization`s, which all have to get
   `Ready`. [validate.yaml](../../.github/workflows/validate.yaml) sets it with the `gitops_ignored_objects` input of
@@ -215,6 +217,54 @@ This build step requires additional configuration using the following environmen
   An empty key fails the test, also in a fork's own runs, with one exception: on a pull request from a fork, which
   GitHub gives no secrets, the test skips every test that needs the cluster and says so in a warning on the run; the
   checks that need no cluster still run.
+
+### The rights of the `automation` ServiceAccounts
+
+A `Kustomization` or `HelmRelease` with `serviceAccountName: automation` runs as the `automation` ServiceAccount of its
+namespace, which [rbac-operator](https://github.com/giantswarm/rbac-operator) creates in `default` and in every
+`org-*` namespace of a management cluster. The test gives these ServiceAccounts exactly the rights they have there, so
+an example that a management cluster would refuse with `Forbidden` fails the test too. The `automation_rbac` fixture
+in [tests/ats/automation_rbac.py](../../tests/ats/automation_rbac.py) creates them once every CRD of the test is
+installed. It replaces an existing one whose rules or subjects differ, as rbac-operator does, and deletes and creates
+again a binding whose role differs, which the API server doesn't let it change, as `kubectl auth reconcile` does.
+`test_automation_access` in [tests/ats/test_flux_objects.py](../../tests/ats/test_flux_objects.py) then asks the
+cluster with `SubjectAccessReview`s whether each ServiceAccount may and may not do the things that
+[tests/ats/automation_access.py](../../tests/ats/automation_access.py) lists, so it also fails when something else,
+such as an object left over from an earlier run, grants more. Everything else the test sets up, such as Flux,
+Kyverno, External Secrets Operator, the vCluster, the stand-in clusters and the fixtures, uses the test's admin client.
+
+`default/automation`:
+
+- `cluster-admin` in `default`, through a `RoleBinding`, and in every `org-*` namespace except `org-giantswarm`;
+- `read-all` in every namespace: `get`, `list` and `watch` on every resource the API server serves, except
+  `ConfigMap`s and `Secret`s, and `get` and `list` on `pods/log`;
+- all verbs on `Organization`s and, on CAPA management clusters, `AWSClusterRoleIdentity`s, which are
+  cluster-scoped;
+- in every namespace: all verbs on `CertConfig`s, `Silence`s and Kyverno `PolicyException`s.
+
+`org-<organisation>/automation`:
+
+- `cluster-admin` in its own namespace only;
+- in every namespace: all verbs on `Silence`s;
+- `get`, `list` and `watch` on the cluster-scoped `Release`s, `Node`s and `AWSClusterRoleIdentity`s, which the
+  cluster charts look up;
+- all verbs on `PolicyException`s in `kube-system`, `giantswarm` and `policy-exceptions`, and `get`, `list` and `patch`
+  on `Chart`s in `giantswarm`;
+- the role of the Kamaji app, where it runs, which the kind cluster doesn't.
+
+Neither can create namespaces, cluster-scoped objects other than `Organization`s and `AWSClusterRoleIdentity`s, or
+RBAC outside the namespaces where it's `cluster-admin`. `org-<organisation>/automation` can't read other namespaces
+beyond those.
+
+The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, and the `RoleBinding`s
+of Giant Swarm's Flux from management-cluster-bases at `52aa8ee8a4ddb0c95e693bac67556150e33d956f` and flux-app at
+`02f4e84fa7a585de8e0deb95983ea47a4cbf828c`. [tests/ats/automation_roles.py](../../tests/ats/automation_roles.py) holds the
+rules, [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py) and
+[tests/ats/automation_accounts.py](../../tests/ats/automation_accounts.py) the bindings, and each names the file and
+lines each object comes from. rbac-operator builds `read-all` from the API server's discovery, so the test
+does too: it covers the resources served when the fixture runs. The test leaves out the binding to Crossplane's
+`crossplane-edit`, which rbac-operator creates only where Crossplane runs, and Kyverno policies that limit Flux on a
+management cluster. When rbac-operator changes the rights, update the modules and the commits.
 
 ### The workload cluster of the `out-of-band-no-flux` example
 
@@ -251,7 +301,7 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
 - Every `Deployment` in them has to be available, too. That includes the `podinfo` `Deployment` that the
   [application team](./app-teams.md) `hello-team` delivers from its own repository into its namespace. Its
   `Kustomization` runs as the `automation` ServiceAccount, which the test creates in every namespace of
-  `GITOPS_INIT_NAMESPACES`, `org-org-name` among them, as a Giant Swarm management cluster has it.
+  `GITOPS_INIT_NAMESPACES`, `org-org-name` among them, with the rights a Giant Swarm management cluster gives it.
 - The `GitRepository` and `Kustomization` of the application team `hello-team-wc` only have to exist, as nothing in
   the vCluster reconciles them.
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for

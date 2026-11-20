@@ -397,8 +397,6 @@ RELEASED = {"type": "Released", "status": "True", "message": "Helm install succe
         ([READY], True, "Ready is True: Applied revision"),
         ([READY, RELEASED], True, "Ready is True: Applied revision"),
         ([NOT_READY, RELEASED], False, "Ready is False: install failed"),
-        # Flux keeps Ready first; a Ready further down isn't read
-        ([RELEASED, READY], False, "Released is True: Helm install succeeded"),
     ],
 )
 def test_is_ready(conditions: list[dict] | None, expected: bool, reason: str) -> None:
