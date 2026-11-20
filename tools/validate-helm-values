@@ -71,8 +71,9 @@ function object() {
 }
 
 # Print the objects each Flux Operator ResourceSet in the manifest renders, with the version
-# range of its provider in place of an OCIRepository's templated tag. Objects with a template
-# left in them are left out. Fail when a ResourceSet renders an OCIRepository with a template
+# range of its provider in place of an OCIRepository's templated tag, and the ResourceSet's
+# namespace in place of the provider's namespace. Objects with a template left in them are left
+# out. Fail when a ResourceSet renders an OCIRepository with a template
 # only in its ref, whose range can't be found: its one `inputsFrom` entry has to name a
 # provider in the manifest that has a `spec.filter.semver`. A guess, such as the newest chart,
 # would validate the wrong values.
@@ -106,7 +107,9 @@ function resource_set_objects() {
 			errors=1
 			continue
 		fi
-		objects=$(NS="${ns}" RANGE="${range}" yq "(.spec.resources[] | select(${templated}) | .spec.ref) = {\"semver\": strenv(RANGE)} | .spec.resources[] | select(to_yaml | test(\"<<\") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc" <<<"${rset}")
+		# the namespace of the provider, which is the ResourceSet's: `inputsFrom` reads only its own
+		provider_ns='(.spec.resources[] | .. | select(tag == "!!str")) |= sub("<<\\s*inputs\\.(\\w+\\.)?provider\\.namespace\\s*>>", strenv(NS))'
+		objects=$(NS="${ns}" RANGE="${range}" yq "${provider_ns} | (.spec.resources[] | select(${templated}) | .spec.ref) = {\"semver\": strenv(RANGE)} | .spec.resources[] | select(to_yaml | test(\"<<\") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc" <<<"${rset}")
 		echo "---"
 		echo "${objects}"
 	done < <(yq -N 'select(.kind == "ResourceSet") | (.metadata.namespace // "") + "/" + .metadata.name' "${manifest}")

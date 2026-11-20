@@ -44,7 +44,7 @@ spec:
       kind: OCIRepository
       metadata:
         name: rset-no-region
-        namespace: org-demo
+        namespace: << inputs.provider.namespace >>
       spec:
         interval: 10m0s
         ref:
@@ -54,12 +54,11 @@ spec:
       kind: HelmRelease
       metadata:
         name: rset-no-region
-        namespace: org-demo
+        namespace: << inputs.provider.namespace >>
       spec:
         chartRef:
           kind: OCIRepository
           name: rset-no-region
-          namespace: org-demo
         interval: 5m0s
         valuesFrom:
           - kind: ConfigMap

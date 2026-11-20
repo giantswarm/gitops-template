@@ -81,9 +81,10 @@ guess a version, when the `ResourceSet` doesn't have exactly one `inputsFrom` en
 `Kustomization` with a `spec.filter.semver`, such as one that selects its providers by label. `test-all-ff validate`
 checks that with [testdata/resource-set-unresolved-version.yaml](testdata/resource-set-unresolved-version.yaml). It
 also fails for a `ResourceSet` without a namespace, or one that renders with `spec.resourcesTemplate`, whose objects
-it can't render, as [testdata/resource-set-unsupported.yaml](testdata/resource-set-unsupported.yaml) checks. Rendered
-objects that still have a `<< ... >>` template in them, such as the ones named after an entry of the `ResourceSet`'s
-`spec.inputs`, are left out.
+it can't render, as [testdata/resource-set-unsupported.yaml](testdata/resource-set-unsupported.yaml) checks. The
+provider's namespace, `<< inputs.provider.namespace >>` or `<< inputs.SOURCE.provider.namespace >>` with `Permute`,
+is the `ResourceSet`'s own. Rendered objects that still have a `<< ... >>` template in them, such as the ones named
+after an entry of the `ResourceSet`'s `spec.inputs`, are left out.
 
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
