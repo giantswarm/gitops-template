@@ -26,8 +26,8 @@ from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
 from workload_cluster_secrets import check_secrets_pushed
 
-# Kyverno has to run before gitops_deployment applies the repository: pytest sets up the
-#  fixtures of `usefixtures` before the ones a test requests.
+# Kyverno has to run before gitops_deployment installs External Secrets Operator: pytest sets up
+#  the fixtures of `usefixtures` before the ones a test requests.
 #  The Alert of the notification example has to be suspended before then, too.
 pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert")
 
