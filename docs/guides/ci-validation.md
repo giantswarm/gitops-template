@@ -317,8 +317,9 @@ values file.
 The steps name no objects themselves: they read the names from a values file.
 [tests/chainsaw/values.yaml](../../tests/chainsaw/values.yaml) names the template's examples: the organization
 namespace, the `out-of-band-no-flux` cluster with its `Kustomization`s and two of its `HelmRelease`s, the
-`ExternalSecret` and the `HelmRelease` that reads its Secret, and the Kyverno policy with the ConfigMap it copies. Copy
-it and set the names of your own objects. Run only the tests whose examples you use.
+`ExternalSecret` with the key of the values in its Secret and the `HelmRelease` that reads that Secret, and the Kyverno
+policy with the ConfigMap it copies. Copy it and set the names of your own objects. Run only the tests whose examples
+you use.
 
 ### Run them from your machine
 
@@ -330,7 +331,9 @@ it and set the names of your own objects. Run only the tests whose examples you 
    chainsaw test tests/chainsaw --values my-values.yaml
    ```
 
-   Add `--include-test-regex 'readiness-ordering|external-secrets'` to run some of the tests only.
+   Add `--include-test-regex 'chainsaw/(readiness-ordering|external-secrets)'` to run some of the tests only. Chainsaw
+   runs each test as a subtest of one named `chainsaw`, so the expression has to match `chainsaw/<test>`: without the
+   prefix, it matches no test, and Chainsaw passes without running any.
 
 Your user needs to read the objects the tests check, and to create and delete Chainsaw's namespaces.
 
@@ -347,14 +350,15 @@ repository doesn't set the secret it needs. To use it:
 
 The workflow downloads the Chainsaw release that `CHAINSAW_VERSION` pins and checks it against `CHAINSAW_SHA256`.
 Renovate moves the version but not the checksum: set the checksum of the new release's `chainsaw_linux_amd64.tar.gz`,
-from its `checksums.txt`, in the same pull request.
+from its `checksums.txt`, in the same pull request. Nothing in CI runs the workflow, so no check would catch a stale
+checksum: `renovate.json5` never automerges a Chainsaw update, so that the pull request waits for you to set it.
 
 ### Choose `tests/ats`, Chainsaw or both
 
-- `tests/ats` only: the template's default. `validate.yaml` runs it on a kind cluster for every pull request. Delete
-  `tests/chainsaw` and `.github/workflows/chainsaw.yaml`.
+- `tests/ats` only: the template's default. `validate.yaml` runs it on a kind cluster for every pull request that
+  changes more than Markdown. Delete `tests/chainsaw` and `.github/workflows/chainsaw.yaml`.
 - Chainsaw only: keep `tests/chainsaw` and enable the workflow. The shared workflow that `validate.yaml` calls always
   runs `tests/ats` in its kind test and has no input to turn it off. To test with Chainsaw alone, stop calling it from
   `validate.yaml`, and run the checks you want to keep in a workflow of your own.
-- Both: keep everything. `tests/ats` checks every pull request on a kind cluster, and Chainsaw checks your management
+- Both: keep everything. `tests/ats` checks pull requests on a kind cluster, and Chainsaw checks your management
   cluster when you run it.

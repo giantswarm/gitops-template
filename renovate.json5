@@ -117,5 +117,14 @@
       "matchDepNames": ["gsoci.azurecr.io/charts/giantswarm/release-aws"],
       "automerge": false,
     },
+    {
+      // `.github/workflows/chainsaw.yaml` pins Chainsaw's version next to the
+      // checksum of its archive, which Renovate doesn't update. Nothing in CI
+      // runs that workflow, so no check catches a stale checksum: the PR
+      // waits for a person to set it.
+      "description": "Never automerge a Chainsaw update: its checksum is set by hand",
+      "matchDepNames": ["kyverno/chainsaw"],
+      "automerge": false,
+    },
   ],
 }

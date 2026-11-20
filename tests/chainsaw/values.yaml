@@ -14,10 +14,11 @@ helmReleases:
   dependency: out-of-band-no-flux-gateway-api-crds
   dependant: out-of-band-no-flux-hello-world-standalone
 
-# external-secrets: an ExternalSecret in the organization namespace, and the HelmRelease that
-# reads the Secret it writes
+# external-secrets: an ExternalSecret in the organization namespace, the key of the values in
+# the Secret it writes, and the HelmRelease that reads that Secret
 externalSecret:
   name: out-of-band-no-flux-hello-world-standalone-user-secrets
+  key: values
   helmRelease: out-of-band-no-flux-hello-world-standalone
 
 # kyverno-generate: the policy that copies a ConfigMap into every `org-*` namespace, and the

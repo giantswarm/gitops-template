@@ -39,7 +39,7 @@ spec:
                 labels:
                   reconcile.fluxcd.io/watch: Enabled
                 (contains(ownerReferences[?kind == 'ExternalSecret'].name, $values.externalSecret.name)): true
-              (data.values != null): true
+              (lookup(data, $values.externalSecret.key) != null): true
     - name: the HelmRelease reads the Secret and is Ready
       bindings:
         # the Secret the ExternalSecret writes: its target, which defaults to its own name
