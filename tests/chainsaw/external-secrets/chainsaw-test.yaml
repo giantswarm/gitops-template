@@ -54,7 +54,8 @@ spec:
                 name: ($values.externalSecret.helmRelease)
                 namespace: ($values.organizationNamespace)
               spec:
-                (contains(valuesFrom[?kind == 'Secret'].name, $secret)): true
+                # Flux reads the key `values.yaml` when valuesKey isn't set
+                (length(valuesFrom[?kind == 'Secret' && name == $secret && (valuesKey || 'values.yaml') == $values.externalSecret.key]) > `0`): true
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"

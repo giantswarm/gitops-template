@@ -300,14 +300,15 @@ a step of its own. In your repository, you can keep `tests/ats`, use Chainsaw in
 doesn't run Chainsaw in its CI.
 
 Each test is a `chainsaw-test.yaml` with steps that wait for an object to match what the step expects, such as its
-`Ready` condition. The tests only read objects: Chainsaw itself creates a `chainsaw-*` namespace for each test and
-deletes it again.
+`Ready` condition. The tests only read objects. Every command here passes `--namespace default`: by default, Chainsaw
+creates a `chainsaw-*` namespace for each test, which a management cluster doesn't let you do, and with the flag it
+uses the existing `default` namespace and neither creates nor deletes one.
 
 | Test | What it checks |
 | --- | --- |
 | `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster` is `Available`, the cluster's `Kustomization` health-checks it and waits for it to be `Available`, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
 | `kyverno-generate` | The [shared-objects](../add_mc.md#share-an-object-with-every-organization) policy is `Ready`, and the organization namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. |
-| `external-secrets` | The [External Secrets Operator example](../getting-started.md#4-deploy-an-app)'s `ExternalSecret` has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads it is `Ready`. |
+| `external-secrets` | The [External Secrets Operator example](../getting-started.md#4-deploy-an-app)'s `ExternalSecret` has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads the values from that key is `Ready`. |
 
 To add a test, create a directory in `tests/chainsaw` with a `chainsaw-test.yaml`, and put the names it needs in the
 values file.
@@ -328,14 +329,14 @@ you use.
 2. With your kubeconfig's context on the management cluster, run:
 
    ```sh
-   chainsaw test tests/chainsaw --values my-values.yaml
+   chainsaw test tests/chainsaw --values my-values.yaml --namespace default
    ```
 
    Add `--include-test-regex 'chainsaw/(readiness-ordering|external-secrets)'` to run some of the tests only. Chainsaw
    runs each test as a subtest of one named `chainsaw`, so the expression has to match `chainsaw/<test>`: without the
    prefix, it matches no test, and Chainsaw passes without running any.
 
-Your user needs to read the objects the tests check, and to create and delete Chainsaw's namespaces.
+Your user needs to read the objects the tests check and the `default` namespace.
 
 ### Run them in GitHub Actions
 

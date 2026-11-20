@@ -54,4 +54,6 @@ jobs:
         env:
           KUBECONFIG: ${{ runner.temp }}/kubeconfig
           VALUES: ${{ inputs.values }}
-        run: chainsaw test tests/chainsaw --values "${VALUES}"
+        # A management cluster doesn't let you create namespaces, so the tests
+        # run in `default` instead of a namespace of their own.
+        run: chainsaw test tests/chainsaw --values "${VALUES}" --namespace default
