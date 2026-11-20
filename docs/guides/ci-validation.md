@@ -256,7 +256,17 @@ Neither can create namespaces, cluster-scoped objects other than `Organization`s
 RBAC outside the namespaces where it's `cluster-admin`. `org-<organisation>/automation` can't read other namespaces
 beyond those.
 
-The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, and the `RoleBinding`s
+Kyverno's background controller, `kyverno/kyverno-background-controller`, gets the `ClusterRole`
+`write-kyverno-generated-externalsecrets` in every `org-*` namespace, through a `RoleBinding`: all verbs but
+`deletecollection` on `ExternalSecret`s and `SecretStore`s, and `get`, `list` and `watch` on `Secret`s. It lets a
+Kyverno policy in an organisation's namespace generate them, such as the
+[workload cluster secret store example](../add_org.md#give-every-workload-cluster-a-secret-store).
+[tests/ats/kyverno_rbac.py](../../tests/ats/kyverno_rbac.py) holds the role and its bindings, and
+`test_automation_access` checks, with [tests/ats/kyverno_access.py](../../tests/ats/kyverno_access.py), that it may
+create `ExternalSecret`s in the organisation's namespace and not in `default`.
+
+The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, Kyverno's from the
+not yet released `80aed29e11e49eac3a7f77b601c6df124e66cfe4`, and the `RoleBinding`s
 of Giant Swarm's Flux from management-cluster-bases at `52aa8ee8a4ddb0c95e693bac67556150e33d956f` and flux-app at
 `02f4e84fa7a585de8e0deb95983ea47a4cbf828c`. [tests/ats/automation_roles.py](../../tests/ats/automation_roles.py) holds the
 rules, [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py) and
@@ -375,9 +385,10 @@ cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
 `test_workload_cluster_secret_store` checks the
 [workload cluster secret store example](../add_org.md#give-every-workload-cluster-a-secret-store), the organisation's
 Kyverno `Policy`, with the vCluster's kubeconfig Secret, which the test labels and types as Cluster API does. Kyverno's
-background controller needs rights in the organisation's namespace that Giant Swarm's rbac-operator grants on a
-management cluster and the example doesn't ship, so `tests/ats/kyverno_generate_rbac.py` creates the same ClusterRole,
-`write-kyverno-generated-externalsecrets`, and its `RoleBinding` in `org-org-name` before Flux applies the repository.
+background controller needs rights in the organisation's namespace that rbac-operator grants on a management cluster
+and the example doesn't ship; the `automation_rbac` fixture creates them with the others, see
+[The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts). Flux applies the
+`Policy` as `default/automation`, and the `default` store reads the organisation's namespace as its `automation`.
 The test waits for the organisation's `SecretStore` `default`, `out-of-band-no-flux-eso-cluster-auth` and the
 `out-of-band-no-flux-eso-cluster-store` `SecretStore`, then reads a Secret from the vCluster through that store and
 checks its value. It then waits for the

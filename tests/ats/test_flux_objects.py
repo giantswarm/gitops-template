@@ -23,6 +23,7 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate
 from conftest import GitOpsTestConfig
+from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster
 from notification_objects import check_notifications
 from prune_checks import check_prune
@@ -82,7 +83,8 @@ def test_automation_access(
     org = org_namespace(gitops_test_config.init_namespaces)
     assert org, "GITOPS_INIT_NAMESPACES has no `org-*` namespace"
     review = api_server_review(kube_cluster.kube_client)
-    problems = access_problems(review, expected_access(org))
+    # and Kyverno's background controller has the rights rbac-operator gives it
+    problems = access_problems(review, expected_access(org) + kyverno_access(org))
     assert not problems, "\n".join(problems)
 
 

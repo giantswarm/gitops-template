@@ -16,6 +16,9 @@ from these sources; the comment of each says from where:
 - giantswarm/management-cluster-bases at 52aa8ee8a4ddb0c95e693bac67556150e33d956f
   (MC_BASES): bases/flux-app-v2/common/resource-rbac.yaml.
 
+kyverno_rbac adds what rbac-operator gives Kyverno's background controller in the organisation
+namespaces.
+
 Left out: the ClusterRoleBinding to Crossplane's `crossplane-edit`, which rbac-operator creates
 only where Crossplane runs, and the kind cluster runs no Crossplane; and the Roles of legacy
 per-cluster namespaces, which Cluster API management clusters don't have.
@@ -32,6 +35,7 @@ from automation_roles import (
     cluster_roles,
     read_all_rules,
 )
+from kyverno_rbac import kyverno_objects
 from rbac_manifests import automation, role, role_binding, role_ref
 
 # rbac-operator's org namespace test is the prefix: pkg/key/key.go IsOrgNamespace
@@ -85,4 +89,6 @@ def automation_rbac_objects(
     objects += default_automation_objects(existing_namespaces)
     for ns in orgs:
         objects += org_automation_objects(ns)
-    return objects + shared_role_objects(orgs, existing_namespaces)
+    return (
+        objects + shared_role_objects(orgs, existing_namespaces) + kyverno_objects(orgs)
+    )

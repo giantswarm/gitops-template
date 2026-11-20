@@ -49,3 +49,27 @@ def test_namespaces_other_than_default_and_org_are_refused() -> None:
     # rbac-operator creates `automation` in `default` and the `org-*` namespaces only
     with pytest.raises(NotAutomationNamespaceError, match="team-a"):
         automation_rbac_objects(["default", "team-a"], {"default"}, [CORE])
+
+
+KYVERNO = "write-kyverno-generated-externalsecrets"
+
+
+def test_kyverno_cluster_role() -> None:
+    meta = objects(["default", "org-a"])[("ClusterRole", "", KYVERNO)]["metadata"]
+    assert (meta["labels"], list(meta["annotations"])) == (
+        {"giantswarm.io/managed-by": "rbac-operator"},
+        ["giantswarm.io/notes"],
+    )
+
+
+@pytest.mark.parametrize("namespace", ["org-a", "org-b"])
+def test_kyverno_binding_in_each_org_namespace(namespace: str) -> None:
+    rb = objects(["default", "org-a", "org-b"])[("RoleBinding", namespace, KYVERNO)]
+    assert (rb["roleRef"], rb["subjects"]) == (
+        ref("ClusterRole", KYVERNO),
+        [sa("kyverno", "kyverno-background-controller")],
+    )
+
+
+def test_no_kyverno_binding_in_default() -> None:
+    assert ("RoleBinding", "default", KYVERNO) not in objects(["default", "org-a"])
