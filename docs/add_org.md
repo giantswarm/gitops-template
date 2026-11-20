@@ -392,7 +392,9 @@ External Secrets Operator's `Password` generator makes a password, so no value i
 `org-${organization}` writes it through `${cluster_name}-eso-cluster-store` into the Secret `pushed-password`, key
 `password`, in the workload cluster's `default` namespace. `updatePolicy: IfNotExists` keeps the first password there,
 though the generator makes a new one at every refresh. The cluster's apps Kustomization applies the example once the
-cluster is ready; if Kyverno and ESO haven't made the store yet, ESO retries the `PushSecret` until they have.
+cluster is ready; if Kyverno and ESO haven't made the store yet, ESO retries the `PushSecret` until they have. The same
+cluster also pushes Secrets through a store of its own in Git, which needs no Kyverno, see
+[Push secrets into a new Workload Cluster](guides/workload-cluster-secrets.md).
 
 To push a Secret into another cluster, copy the file into that cluster's `apps/` directory and list it in its
 `apps/kustomization.yaml`: `${cluster_name}` and `${organization}` come from the cluster's apps Kustomization, so the

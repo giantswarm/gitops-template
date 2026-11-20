@@ -81,6 +81,7 @@ replacements:
       - select:
           group: kyverno.io
           kind: Policy
+          name: generate-eso-cluster-auth-from-kubeconfig
           namespace: org-ORG_NAME
         fieldPaths:
           - spec.rules.*.generate.namespace
