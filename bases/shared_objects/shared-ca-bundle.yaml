@@ -1,0 +1,13 @@
+# The shared object. Every organisation's directory lists this base, with the organisation's
+# namespace set there, so Flux applies a copy into each `org-*` namespace and keeps every copy
+# in sync with this file. See docs/add_mc.md, "Share an object with every organization".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared-ca-bundle
+data:
+  # TODO: replace with the PEM certificates of the CAs your clusters trust
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    REPLACE_WITH_YOUR_CA_CERTIFICATE
+    -----END CERTIFICATE-----

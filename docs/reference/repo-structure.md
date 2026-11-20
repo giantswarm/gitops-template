@@ -28,7 +28,8 @@ bases
 ├── cluster_templates
 ├── clusters
 ├── environments
-└── secret_stores
+├── secret_stores
+└── shared_objects
 management-clusters
 └── MC_NAME
     ├── .sops.keys
@@ -46,6 +47,7 @@ management-clusters
             ├── [OTHER_RESOURCES]
             ├── ORG_NAME.yaml
             ├── [notifications]                         the organisation's commit statuses
+            ├── [shared-objects]                        objects every organisation shares, see add_mc.md
             └── [workload-clusters]
                 ├── kustomization.yaml
                 ├── WC_NAME.yaml

@@ -1,7 +1,8 @@
 """Kyverno in the test cluster, as on a Giant Swarm management cluster.
 
-The shared-objects example is a Kyverno ClusterPolicy, so Kyverno has to run before Flux applies
-the repository: test_flux_objects.py requests the `kyverno` fixture before any other.
+Kyverno runs on every Giant Swarm management cluster, and the External Secrets Operator chart
+creates its PolicyExceptions only when Kyverno's CRDs are there, so Kyverno has to run before ESO
+is installed: test_flux_objects.py requests the `kyverno` fixture before any other.
 
 The charts are the ones Giant Swarm ships, from team Shield's kyverno-app and kyverno-crds, at
 the versions on the management clusters. kyverno-app leaves the CRDs to kyverno-crds, so that

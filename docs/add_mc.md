@@ -291,26 +291,32 @@ e.g. additional sources, more Kustomize CRs, Helm-related CRs, can be entirely p
 
 ## Share an object with every organization
 
-Every organization may need the same object, such as a registry pull secret or a CA bundle. Rather than a copy in
-Git for each organization, keep one in the management cluster's directory and let Kyverno, which runs on every Giant Swarm
-management cluster, copy it into each `org-*` namespace. The example in
-[management-clusters/MC_NAME/shared-objects](/management-clusters/MC_NAME/shared-objects/) has three files:
+Every organisation may need the same object, such as a registry pull secret or a CA bundle. Rather than a copy in
+Git for each organisation, keep one in a base and list that base in every organisation's directory. It's plain
+kustomize, with only namespaced objects, so it needs no rights beyond the `org-*` namespaces. The example has two
+parts:
 
-- `shared-ca-bundle.yaml`: the `shared-ca-bundle` ConfigMap in the `default` namespace, the source of the copies.
-- `copy-shared-ca-bundle.yaml`: a Kyverno `ClusterPolicy` with a `generate` rule that clones the ConfigMap into
-  every `org-*` namespace when it's created. `generateExisting: true` copies it into the existing organizations, too,
-  and `synchronize: true` keeps the copies in sync: a change to the source in Git reaches every organization.
-- `kyverno-generate-configmaps.yaml`: a ClusterRole that lets Kyverno's background controller create, update and
-  delete ConfigMaps, which it does for the copies. Kyverno rejects a `generate` rule for a kind its background
-  controller can't manage. The Kyverno chart grants this for ConfigMaps, but not for Secrets; the
-  `rbac.kyverno.io/aggregate-to-background-controller: "true"` label adds the role to the controller's permissions.
+- [bases/shared_objects](/bases/shared_objects/) holds the `shared-ca-bundle` ConfigMap, with no namespace, and the
+  `kustomization.yaml` that lists it.
+- [management-clusters/MC_NAME/organizations/ORG_NAME/shared-objects](/management-clusters/MC_NAME/organizations/ORG_NAME/shared-objects/)
+  lists the base and sets the organisation's namespace:
 
-`MC_NAME.yaml` applies the directory with everything else in `MC_NAME/`. To share a Secret instead, such as a
-registry pull secret, change `kind: ConfigMap` in the policy to `kind: Secret` and encrypt the source with SOPS, in a
-file that a `path_regex` of your `.sops.yaml` covers. Grant the background controller `secrets` as well, in a second
-rule with the verbs `get`, `list` and `watch` besides the four above: Kyverno checks that the controller can read the
-source and the copies, and its chart only lets it read ConfigMaps, so it would reject the policy and the management
-cluster's `Kustomization` would fail.
+    ```yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    namespace: org-ORG_NAME
+    resources:
+      - ../../../../../bases/shared_objects
+    ```
+
+`MC_NAME.yaml` applies each organisation's `shared-objects` directory with the rest of the organisation, so Flux
+creates a copy in every `org-*` namespace whose directory lists the base. A change to the base in Git reaches every
+copy at the next reconcile, and Flux puts back a copy that someone changed in the cluster. To give a new organisation
+the object, add the same `shared-objects` directory to its directory, with its own namespace.
+
+To share a secret, such as a registry pull secret, put an `ExternalSecret` in the base rather than the Secret itself.
+Each organisation's copy then reads the value from your secret manager through the `SecretStore` in its own namespace,
+see [Getting started](./getting-started.md#before-you-start).
 
 ## Recommended next steps
 
