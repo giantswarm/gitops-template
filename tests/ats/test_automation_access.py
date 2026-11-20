@@ -45,14 +45,16 @@ def test_access_problems_name_each_answer_that_differs() -> None:
         lambda access: True, [CREATE_DEPLOYMENTS, CREATE_NAMESPACES]
     )
     assert problems == [
-        "`default/automation` can create namespaces cluster-wide, which a management cluster refuses"
+        "`default/automation` can create namespaces cluster-wide, "
+        "which a management cluster refuses"
     ]
 
 
 def test_access_problems_of_a_refused_access() -> None:
     problems = access_problems(lambda access: False, [CREATE_DEPLOYMENTS])
     assert problems == [
-        "`org-a/automation` can't create deployments.apps in `org-a`, which a management cluster allows"
+        "`org-a/automation` can't create deployments.apps in `org-a`, "
+        "which a management cluster allows"
     ]
 
 

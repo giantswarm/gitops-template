@@ -5,8 +5,14 @@ and names the sources of the line numbers below.
 """
 
 from automation_roles import READ_PODS_AND_LOGS_RULES
-from rbac_manifests import automation, cluster_role_binding, role, role_binding
-from rbac_manifests import role_ref, service_account
+from rbac_manifests import (
+    automation,
+    cluster_role_binding,
+    role,
+    role_binding,
+    role_ref,
+    service_account,
+)
 
 DEFAULT_NAMESPACE = "default"
 # a RoleBinding from a RoleBindingTemplate in it keeps only subjects of its own namespace and

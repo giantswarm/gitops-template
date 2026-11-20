@@ -61,7 +61,7 @@ EXAMPLE_V2_VERBLESS = api_list("example.io/v2", {"widgets": []})
     ],
 )
 def test_read_all_rules(discovery: list[dict], expected: list[dict]) -> None:
-    assert read_all_rules(discovery) == expected + [POD_LOGS]
+    assert read_all_rules(discovery) == [*expected, POD_LOGS]
 
 
 class FakeResponse:

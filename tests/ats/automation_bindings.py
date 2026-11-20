@@ -21,10 +21,17 @@ only where Crossplane runs, and the kind cluster runs no Crossplane; and the Rol
 per-cluster namespaces, which Cluster API management clusters don't have.
 """
 
-from automation_accounts import DEFAULT_NAMESPACE
-from automation_accounts import default_automation_objects, org_automation_objects
-from automation_roles import PATCH_CHARTS_RULES, WRITE_POLICY_EXCEPTIONS_RULES
-from automation_roles import cluster_roles, read_all_rules
+from automation_accounts import (
+    DEFAULT_NAMESPACE,
+    default_automation_objects,
+    org_automation_objects,
+)
+from automation_roles import (
+    PATCH_CHARTS_RULES,
+    WRITE_POLICY_EXCEPTIONS_RULES,
+    cluster_roles,
+    read_all_rules,
+)
 from rbac_manifests import automation, role, role_binding, role_ref
 
 # rbac-operator's org namespace test is the prefix: pkg/key/key.go IsOrgNamespace
