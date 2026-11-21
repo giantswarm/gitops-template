@@ -26,7 +26,8 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 
 ### Advanced
 
-- [Out-of-band resources](./tutorials/advanced/out-of-band.md): apply resources straight to a workload cluster.
+- [Out-of-band resources](./tutorials/advanced/out-of-band.md): apply resources straight to a workload cluster, pushed
+  from the management cluster or pulled by the workload cluster's own Flux.
 - [Scheduled upgrades](./tutorials/advanced/scheduled-upgrades.md): hold app and release upgrades until an upgrade
   window, with ResourceSets.
 - [Multicluster apps](./tutorials/advanced/multicluster-apps.md): roll one app out to many clusters of an
