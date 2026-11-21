@@ -21,9 +21,10 @@ from pytest_helm_charts.clusters import Cluster
 MC_DIR = Path(__file__).resolve().parents[2] / "management-clusters/MC_NAME"
 # the management cluster's Alert, for the Kustomizations in `default`
 ALERT_FILE = MC_DIR / "notifications/commit-status-alert.yaml"
-# the organisation's directory, whose build holds its own Alert, in the organisation's
-#  namespace: its kustomization.yaml completes the namespace, so it's built, not read
-ORG_DIR = MC_DIR / "organizations/ORG_NAME"
+# the organisation's namespace/ directory, whose build holds its own Alert. It names no
+#  namespace: the organisation's namespace Kustomization puts it in the organisation's, and so
+#  does the test
+ORG_NAMESPACE_DIR = MC_DIR / "organizations/ORG_NAME/namespace"
 KUBECTL_URL = "https://kubernetes.io/docs/tasks/tools/"
 # not starting with `kubectl`: Flux removes the fields of those managers when it applies
 FIELD_MANAGER = "gitops-template-test"
@@ -69,28 +70,45 @@ def _problems(api: pykube.HTTPClient) -> list[str]:
     )
 
 
-@pytest.fixture(scope="module")
-def suspended_alert(
-    kube_cluster: Cluster, flux_app_deployment: None, init_namespaces: None
-) -> None:
-    """Create the example's Alerts, suspended, before Flux applies the repository: the
-    management cluster's, and the organisation's as its directory builds it, in the
-    organisation's namespace, which init_namespaces creates.
-
-    Server-side, under a field manager of its own: Flux takes over the fields of the manifests
-    and leaves `suspend`. They aren't deleted: the test cluster goes away with them.
-    """
-    org_build = run_tool("kubectl", KUBECTL_URL, "kustomize", str(ORG_DIR))
-    alerts = [
-        suspended(yaml.safe_load(ALERT_FILE.read_text())),
-        *suspended_alerts(list(yaml.safe_load_all(org_build))),
-    ]
-    if len(alerts) != 2:
-        pytest.fail(f"The organisation's build in {ORG_DIR} has no single Alert.")
+def apply_alerts(kube_cluster: Cluster, alerts: list[dict]) -> None:
+    """Create the suspended Alerts server-side, under a field manager of its own: Flux takes
+    over the fields of the manifests and leaves `suspend`. They aren't deleted: the test cluster
+    goes away with them."""
     kube_cluster.kubectl(
         f"apply --server-side --field-manager={FIELD_MANAGER}",
         std_input=yaml.safe_dump_all(alerts),
     )
+
+
+@pytest.fixture(scope="module")
+def suspended_alert(kube_cluster: Cluster, flux_app_deployment: None) -> None:
+    """Create the management cluster's Alert, suspended, before Flux applies the repository.
+    organization_operator creates the organisation's with `organization_alert`."""
+    apply_alerts(kube_cluster, [suspended(yaml.safe_load(ALERT_FILE.read_text()))])
+
+
+def organization_alerts(build: str, namespace: str) -> list[dict]:
+    """The Alerts of the organisation's namespace/ build `build`, suspended, in its
+    `namespace`, which `kubectl kustomize` doesn't set, as Flux's `targetNamespace` does.
+    """
+    alerts = suspended_alerts(list(yaml.safe_load_all(build)))
+    for alert in alerts:
+        alert["metadata"]["namespace"] = namespace
+    return alerts
+
+
+def organization_alert(kube_cluster: Cluster, namespace: str) -> list:
+    """Create the organisation's Alert, suspended, in its `namespace`, before Flux applies it.
+    Return nothing to delete: the Alert stays, as the management cluster's does."""
+    alerts = organization_alerts(
+        run_tool("kubectl", KUBECTL_URL, "kustomize", str(ORG_NAMESPACE_DIR)), namespace
+    )
+    if len(alerts) != 1:
+        pytest.fail(
+            f"The organisation's build in {ORG_NAMESPACE_DIR} has no single Alert."
+        )
+    apply_alerts(kube_cluster, alerts)
+    return []
 
 
 def check_notifications(api: pykube.HTTPClient) -> None:

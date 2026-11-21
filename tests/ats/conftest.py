@@ -7,7 +7,8 @@ import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
 import time
 import urllib.request
-from typing import Iterable, Any
+from collections.abc import Callable
+from typing import Iterable, Any, NamedTuple
 
 import pykube
 import pytest
@@ -27,7 +28,9 @@ from flux_teardown import delete_without_prune
 # workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster;
 # notification_objects suspends the notification example's Alert; automation_rbac gives the
 # `automation` ServiceAccounts the rights they have on a management cluster;
-# flux_operator_install installs Flux Operator.
+# flux_operator_install installs Flux Operator; organization_operator stands in for
+# organization-operator, which creates the organisation's namespace once Flux has applied its
+# Organization.
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
@@ -37,6 +40,7 @@ pytest_plugins = [
     "notification_objects",
     "automation_rbac",
     "flux_operator_install",
+    "organization_operator",
 ]
 
 FLUX_GIT_REPO_NAME = "your-repo"
@@ -83,8 +87,8 @@ WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE = "org-org-name"
 # On a Giant Swarm management cluster, the `cluster-app-installation-values` ConfigMap holds the
 # management cluster's values, such as its name and base domain. It exists in the `giantswarm`
 # namespace, and the Kyverno policy `sync-cluster-app-configmap-to-org-namespaces` copies it into
-# every `org-*` namespace. The cluster HelmReleases read it, so the test creates a stand-in in
-# each organization namespace it initialises, with the placeholder values validate-helm-values uses.
+# every `org-*` namespace. The cluster HelmReleases read it, so the test creates a stand-in in the
+# organisation's namespace once it exists, with the placeholder values validate-helm-values uses.
 INSTALLATION_VALUES_CONFIG_MAP_NAME = "cluster-app-installation-values"
 INSTALLATION_VALUES_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -195,6 +199,13 @@ def parse_ignored_objects(value: str) -> list[str]:
     return [o.strip() for o in value.split(",") if o.strip()]
 
 
+def organization_init_namespaces(namespaces: list[str]) -> list[str]:
+    """The organisation namespaces among GITOPS_INIT_NAMESPACES. The test bootstraps the
+    repository as a new management cluster does, where only organization-operator creates them,
+    once Flux has applied the Organization, so there must be none."""
+    return [ns for ns in namespaces if ns.startswith("org-")]
+
+
 @pytest.fixture(scope="module")
 def gitops_test_config() -> GitOpsTestConfig:
     return GitOpsTestConfig()
@@ -267,11 +278,18 @@ def installation_values_config_map(
 def init_namespaces(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
 ) -> Iterable[Any]:
-    """Create the namespaces of GITOPS_INIT_NAMESPACES that don't exist.
+    """Create the namespaces of GITOPS_INIT_NAMESPACES that don't exist; fail if it names an
+    organisation namespace, which organization_operator creates.
 
     The `automation` ServiceAccounts in them, and their rights, come from the
     `automation_rbac` fixture, once every CRD of the test is installed.
     """
+    refused = organization_init_namespaces(gitops_test_config.init_namespaces)
+    if refused:
+        pytest.fail(
+            f"GITOPS_INIT_NAMESPACES names organisation namespaces, {refused}: the test "
+            "creates them after Flux has applied the Organization, as organization-operator does"
+        )
     created_namespaces: list[pykube.Namespace] = []
 
     for ns in gitops_test_config.init_namespaces:
@@ -291,27 +309,12 @@ def init_namespaces(
         namespace.delete()
 
 
-@pytest.fixture(scope="module")
 def installation_values(
-    kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig, init_namespaces: Any
-) -> Iterable[list[pykube.ConfigMap]]:
-    """Create the stand-in `cluster-app-installation-values` in every `org-*` namespace that lacks it.
-
-    Only ConfigMaps the fixture created are deleted afterwards.
-    """
-    created: list[pykube.ConfigMap] = []
-    for ns in gitops_test_config.init_namespaces:
-        if not ns.startswith("org-"):
-            continue
-        cm = installation_values_config_map(kube_cluster.kube_client, ns)
-        if not cm.exists():
-            cm.create()
-            created.append(cm)
-
-    yield created
-
-    for cm in created:
-        cm.delete()
+    api: pykube.HTTPClient, namespace: str
+) -> list[pykube.objects.APIObject]:
+    """Create the stand-in `cluster-app-installation-values` in the organisation's `namespace`,
+    as the management cluster's Kyverno policy copies it there."""
+    return [apply(installation_values_config_map(api, namespace))]
 
 
 @pytest.fixture(scope="module")
@@ -367,19 +370,28 @@ def kubeconfig_with_server(kubeconfig: dict, server: str) -> dict:
     return kubeconfig
 
 
+class VCluster(NamedTuple):
+    """The vCluster standing in for a workload cluster: the runner's client for it, and the
+    kubeconfig the management cluster's controllers reach it with."""
+
+    api: pykube.HTTPClient
+    kubeconfig: dict
+
+
 @pytest.fixture(scope="module")
-def workload_cluster(
+def vcluster(
     kube_cluster: Cluster, kube_config: str, init_namespaces: Any
-) -> Iterable[pykube.HTTPClient]:
+) -> Iterable[VCluster]:
     """A vCluster in the test cluster, standing in for the workload cluster of the out-of-band examples.
 
     `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload
     cluster, and the cluster's HelmReleases install their apps there, through the kubeconfig
-    Secret a management cluster has for it. The fixture creates that Secret in the test cluster
-    with the vCluster's kubeconfig, so Flux reconciles the example for real. It also creates
-    what the apps need from the management cluster, the cluster values, and in the vCluster
-    the CRDs they need. kustomize-controller and helm-controller reach the vCluster API server
-    through its Service; the runner reaches it on the Service's node port.
+    Secret a management cluster has for it. Once the organisation's namespace exists,
+    `workload_cluster_objects` creates that Secret in the test cluster with the vCluster's
+    kubeconfig, so Flux reconciles the example for real, and what the apps need from the
+    management cluster, the cluster values. This fixture creates in the vCluster the CRDs they
+    need. kustomize-controller and helm-controller reach the vCluster API server through its
+    Service; the runner reaches it on the Service's node port.
     """
     node = next(iter(pykube.Node.objects(kube_cluster.kube_client)))
     node_ip = next(
@@ -413,8 +425,6 @@ def workload_cluster(
     )
     with values_file:
         yaml.safe_dump(values, values_file)
-    # what the fixture created in the test cluster, deleted again in the end
-    created: list[pykube.objects.APIObject] = []
     try:
         run_tool(
             "helm",
@@ -468,47 +478,56 @@ def workload_cluster(
         # the vCluster goes away in the end, and its objects with it
         apply(PriorityClass(vcluster_api, WORKLOAD_CLUSTER_PRIORITY_CLASS))
 
-        with open(CLUSTER_VALUES_STUB) as f:
-            cluster_values = pykube.ConfigMap(
-                kube_cluster.kube_client,
-                {
-                    "metadata": {
-                        "name": WORKLOAD_CLUSTER_VALUES_NAME,
-                        "namespace": WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
-                    },
-                    "data": {"values": f.read()},
-                },
-            )
-        created.append(apply(cluster_values))
+        yield VCluster(
+            vcluster_api,
+            kubeconfig_with_server(
+                vc_kubeconfig, f"https://{service_host}:{https_port['port']}"
+            ),
+        )
+    finally:
+        remove_workload_cluster(kube_config, values_file.name)
 
-        kubeconfig_secret = pykube.Secret(
-            kube_cluster.kube_client,
+
+@pytest.fixture(scope="module")
+def workload_cluster(vcluster: VCluster) -> pykube.HTTPClient:
+    """The runner's client for the vCluster that stands in for the workload cluster."""
+    return vcluster.api
+
+
+def workload_cluster_objects(
+    api: pykube.HTTPClient, namespace: str, kubeconfig: dict
+) -> list[pykube.objects.APIObject]:
+    """Create in the organisation's `namespace` what the management cluster has there for the
+    workload cluster: its kubeconfig Secret, as Cluster API writes it, and its cluster values,
+    as cluster-apps-operator writes them."""
+    with open(CLUSTER_VALUES_STUB) as f:
+        cluster_values = pykube.ConfigMap(
+            api,
             {
-                # labelled and typed as Cluster API writes it, which the Kyverno policy
-                # `generate-eso-cluster-auth-from-kubeconfig` matches
                 "metadata": {
-                    "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
-                    "namespace": WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
-                    "labels": {
-                        "cluster.x-k8s.io/cluster-name": WORKLOAD_CLUSTER_VCLUSTER_NAME
-                    },
+                    "name": WORKLOAD_CLUSTER_VALUES_NAME,
+                    "namespace": namespace,
                 },
-                "type": "cluster.x-k8s.io/secret",
-                "stringData": {
-                    "value": yaml.safe_dump(
-                        kubeconfig_with_server(
-                            vc_kubeconfig,
-                            f"https://{service_host}:{https_port['port']}",
-                        )
-                    )
-                },
+                "data": {"values": f.read()},
             },
         )
-        created.append(apply(kubeconfig_secret))
-
-        yield vcluster_api
-    finally:
-        remove_workload_cluster(created, kube_config, values_file.name)
+    kubeconfig_secret = pykube.Secret(
+        api,
+        {
+            # labelled and typed as Cluster API writes it, which the Kyverno policy
+            # `generate-eso-cluster-auth-from-kubeconfig` matches
+            "metadata": {
+                "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
+                "namespace": namespace,
+                "labels": {
+                    "cluster.x-k8s.io/cluster-name": WORKLOAD_CLUSTER_VCLUSTER_NAME
+                },
+            },
+            "type": "cluster.x-k8s.io/secret",
+            "stringData": {"value": yaml.safe_dump(kubeconfig)},
+        },
+    )
+    return [apply(cluster_values), apply(kubeconfig_secret)]
 
 
 def vcluster_kubeconfig_secret(
@@ -538,14 +557,9 @@ def vcluster_kubeconfig_secret(
         ) from e
 
 
-def remove_workload_cluster(
-    created: list[pykube.objects.APIObject], kube_config: str, values_file: str
-) -> None:
-    """Undo the `workload_cluster` fixture: delete what it created in the test cluster, uninstall
-    the vCluster and remove its values file."""
+def remove_workload_cluster(kube_config: str, values_file: str) -> None:
+    """Undo the `vcluster` fixture: uninstall the vCluster and remove its values file."""
     try:
-        for obj in reversed(created):
-            obj.delete()
         run_tool(
             "helm",
             HELM_URL,
@@ -620,11 +634,55 @@ def install_crds(api: pykube.HTTPClient, directory: str) -> None:
 
 
 @pytest.fixture(scope="module")
+def organization_objects(
+    kube_cluster: Cluster,
+    external_secrets: None,
+    workload_cluster: pykube.HTTPClient,
+    automation_rbac: None,
+) -> Iterable[list[pykube.objects.APIObject]]:
+    """What organization_operator creates in the organisation's namespace, and the namespace
+    itself. They're deleted, the namespace last, once the repository's Kustomizations are gone,
+    and before the fixtures this one depends on remove what they installed."""
+    created: list[pykube.objects.APIObject] = []
+
+    yield created
+
+    for obj in reversed(created):
+        if obj.exists():
+            obj.delete()
+
+
+@pytest.fixture(scope="module")
+def organization_namespace_setups(
+    kube_cluster: Cluster,
+    vcluster: VCluster,
+) -> list[Callable[[pykube.HTTPClient, str], list[pykube.objects.APIObject]]]:
+    """What organization_operator creates in the organisation's namespace once it exists, in
+    order, as the management cluster's operators do: the organisation's Alert, suspended before
+    Flux applies it; `automation` and its rights (rbac-operator); the installation values
+    (Kyverno); the test's secret store; the workload cluster's kubeconfig Secret and cluster
+    values (Cluster API and cluster-apps-operator)."""
+    # imported here: these modules import conftest
+    from automation_rbac import organization_rbac
+    from external_secrets import organization_store
+    from notification_objects import organization_alert
+
+    return [
+        lambda api, namespace: organization_alert(kube_cluster, namespace),
+        organization_rbac,
+        installation_values,
+        organization_store,
+        lambda api, namespace: workload_cluster_objects(
+            api, namespace, vcluster.kubeconfig
+        ),
+    ]
+
+
+@pytest.fixture(scope="module")
 def gitops_environment(
     gs_crds: None,
     capi_crds: None,
     init_namespaces: Any,
-    installation_values: list[pykube.ConfigMap],
     gpg_master_key: Secret,
     external_secrets: None,
     workload_cluster: pykube.HTTPClient,
@@ -632,17 +690,29 @@ def gitops_environment(
     flux_deployments: list[pykube.Deployment],
     workload_cluster_flux_crds: None,
     automation_rbac: None,
+    organization_objects: list[pykube.objects.APIObject],
 ) -> None:
     return None
 
 
 @pytest.fixture(scope="module")
-def gitops_deployment(
+def gitops_deployment(organization_operator: None) -> None:
+    """The repository bootstrapped as on a new management cluster: Flux has applied the root
+    Kustomization, and the organisation's namespace Kustomization is ready, once
+    organization_operator has created the namespace."""
+    return None
+
+
+@pytest.fixture(scope="module")
+def gitops_root(
     kube_cluster: Cluster,
     gitops_environment: None,
+    no_organization_before_bootstrap: None,
     git_repository_factory: GitRepositoryFactoryFunc,
     gitops_test_config: GitOpsTestConfig,
 ) -> Iterable[Any]:
+    """Apply the root Kustomization of every management cluster in the repository, with the
+    GitRepository it reads."""
     git_repository_factory(
         FLUX_GIT_REPO_NAME,
         FLUX_OBJECTS_NAMESPACE,
