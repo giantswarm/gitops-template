@@ -428,6 +428,32 @@ function test() {
 			echo "${output}"
 			has_validation_errors=1
 		fi
+
+		# fake-flux must build a Kustomization that another Flux Kustomization applies as that
+		# parent applies it: in the namespace the parent's `targetNamespace` puts it in, with the
+		# values the parent's `postBuild` substitutes, and the parent itself as the replacements
+		# of its own parent's build set it. An organisation's namespace Kustomization applies its
+		# -direct Kustomizations this way. The checks look the Kustomization in namespace/ up by
+		# the namespace Flux applies it in, and by none, as its file names none.
+		fixture_dir="${tmp_dir}/parent-kustomization"
+		mkdir -p "${fixture_dir}/.git"
+		cp -r "$(dirname $0)/testdata/parent-kustomization/." "${fixture_dir}"
+		for check in "parent-direct:org-from-the-parent|name: parent-direct$" \
+			"parent-direct:|name: parent-direct$" \
+			"parent-namespace:default|name: parent-direct$"; do
+			lookup="${check%%|*}"
+			echo -n "fake-flux, a Kustomization its parent applies, ${lookup}: "
+			status=0
+			output=$(cd "${fixture_dir}" && "${fakeflux_path}" build "${lookup}" -M 2>&1) || status=$?
+			if [ "${status}" -eq 0 ] && grep -q "namespace: org-from-the-parent" <<<"${output}" &&
+				grep -q "${check#*|}" <<<"${output}"; then
+				echo "OK, set"
+			else
+				echo "not set:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
 	fi
 
 	if [ "${mode}" == "validate" ]; then
