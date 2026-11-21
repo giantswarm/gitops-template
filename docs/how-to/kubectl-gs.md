@@ -41,18 +41,33 @@ Then change:
       management-clusters/${MC_NAME}/${MC_NAME}.yaml
     ```
 
-1. With a master key, rename its public key to the name the docs use, encrypt the private key, and protect it with a
-   `secrets/kustomization.yaml`, as in the
-   [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster). Keep the private key in
-   your password manager first, see
-   [Keep a private key in a password manager](./sops.md#keep-a-private-key-in-a-password-manager): the file is the
-   only copy.
+1. With a master key, the private key is only in `secrets/MC_NAME.gpgkey.enc.yaml`, unencrypted, under the key
+   `master.FINGERPRINT.asc`: kubectl-gs made it in memory and never put it in your keyring. Rename its public key to
+   the name the docs use, and import the private key from the Secret:
 
     ```sh
-    git mv management-clusters/${MC_NAME}/.sops.keys/master.*.asc management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
-    gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
-    sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    export MC_DIR=management-clusters/${MC_NAME}
+    export KEY_FP=$(basename ${MC_DIR}/.sops.keys/master.*.asc .asc | sed 's/^master\.//')
+    mv ${MC_DIR}/.sops.keys/master.${KEY_FP}.asc ${MC_DIR}/.sops.keys/.sops.master.asc
+    yq ".data[\"master.${KEY_FP}.asc\"]" ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml | base64 -d | gpg --import
     ```
+
+1. Save the private key in your password manager now, with `KEY_FP` set as above and
+   `ITEM="GPG private key (${MC_NAME}, master, Flux)"`, see
+   [Keep a private key in a password manager](./sops.md#keep-a-private-key-in-a-password-manager). Once the file is
+   encrypted and the key is gone from your keyring, the password manager holds the only copy you can read.
+
+1. Encrypt the Secret with the rule kubectl-gs wrote, protect it with a `secrets/kustomization.yaml`, as in the
+   [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster), and delete the private
+   key from your keyring:
+
+    ```sh
+    sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    gpg --batch --yes --delete-secret-keys "${KEY_FP}"
+    ```
+
+    Flux on the management cluster needs the same Secret, `sops-gpg-master` in `default`, before it can decrypt
+    anything: create it once from your keyring, as the basic tutorial does, before you delete the key.
 
 1. Add the `.sops.yaml` rule for the workload clusters' keys in the organisations' `namespace/secrets`, which the
    command doesn't write, see [SOPS keys](../reference/sops-keys.md#encryption-rules).
@@ -177,14 +192,21 @@ Then change:
 
 ## App
 
-The template's apps all have the same shape, which [Add an app to a cluster](./add-app.md) writes out: an
-`OCIRepository` and a `HelmRelease` in `apps/APP_NAME`, with a `kustomization.yaml` of their own, and a `HelmRelease`
-whose `valuesFrom` reads the cluster's values first, then the optional `-user-values` ConfigMap and `-user-secrets`
-Secret. The cluster values give the chart what only the management cluster knows about the cluster, such as its
-`baseDomain`, and as the first layer, your values can override them, see
-[App values](../reference/values.md#app-values).
+An app's `HelmRelease` in this template reads the cluster's values first, then the optional `-user-values` ConfigMap
+and `-user-secrets` Secret, with `${cluster_name}` in every name, so the same files work for any cluster. The cluster
+values give the chart what only the management cluster knows about the cluster, such as its `baseDomain`, and as the
+first layer, your values can override them, see [App values](../reference/values.md#app-values).
 
-Two commands write an app, and neither writes that shape.
+The apps come in two layouts, and [Add an app to a cluster](./add-app.md) describes both:
+
+- **Files listed one by one.** The app's directory holds only its manifests, and the cluster's `apps/kustomization.yaml`
+  lists each file, as the `cert-manager`, `flux`, `hello-world` and `hello-world-automatic-updates` examples do. It
+  fits an app written out in full, whose values, if any, are a plain ConfigMap or Secret file next to it.
+- **A `kustomization.yaml` of the app's own**, which the cluster's list names as a directory, as the
+  `*-from-template` examples do. An app from an App Template or a stack needs it, to list the base and patch it, and
+  so does an app whose values a `configMapGenerator` makes from `override_config.yaml`.
+
+Two commands write an app, and neither writes the `HelmRelease` this template uses.
 
 `kubectl gs gitops add app` is deprecated since kubectl-gs 5.2.0, without a replacement:
 
@@ -196,17 +218,21 @@ kubectl gs gitops add app --name ${APP_NAME} --app ${APP_CHART} --version ${APP_
 
 It writes `apps/APP_NAME/oci-repository.yaml` and `helm-release.yaml`, and with `--user-configmap` or `--user-secret`,
 a `configmap.yaml` or an unencrypted `secret.enc.yaml`, both named `WC_NAME-APP_NAME-user-values`. It lists the files
-one by one in `apps/kustomization.yaml`, and writes no `kustomization.yaml` for the app. The `HelmRelease` writes the
-cluster's name out, such as `demowc-hello-world` and `demowc-kubeconfig`, and its `valuesFrom` has no cluster values.
-To get to the template's shape:
+one by one in `apps/kustomization.yaml`, and writes no `kustomization.yaml` for the app: the first layout above. The
+`HelmRelease` writes the cluster's name out, such as `demowc-hello-world` and `demowc-kubeconfig`, and its `valuesFrom`
+has no cluster values. To get to the template's `HelmRelease`:
 
 1. Change the names to `${cluster_name}-APP_NAME`, `${cluster_name}-kubeconfig` and the namespace to
    `org-${organization}`, so the files work for any cluster.
 1. Set the `HelmRelease`'s `valuesFrom` to the three layers above.
-1. Rename `configmap.yaml` to `override_config.yaml` with only the values in it, and let a `configMapGenerator` make
-   the ConfigMap, with the `reconcile.fluxcd.io/watch` label. Rename the Secret to `-user-secrets`, add the label and
-   encrypt it, see [Encrypt an app's values](./sops.md#encrypt-an-apps-values).
-1. Add the app's `kustomization.yaml`, and list the app's directory in `apps/kustomization.yaml` instead of its files.
+1. Rename the ConfigMap in `configmap.yaml` to `${cluster_name}-APP_NAME-user-values`, and give it the
+   `reconcile.fluxcd.io/watch: Enabled` label, which CI requires. Rename the Secret in `secret.enc.yaml` to
+   `${cluster_name}-APP_NAME-user-secrets`, add the label and encrypt it, see
+   [Encrypt an app's values](./sops.md#encrypt-an-apps-values).
+1. Keep the files listed one by one. To keep the values in a plain `override_config.yaml` instead, switch to the second
+   layout: replace `configmap.yaml` with a `kustomization.yaml` in the app's directory whose `configMapGenerator`
+   makes the ConfigMap, and list the app's directory in `apps/kustomization.yaml` instead of its files, as
+   [Add an app directly](./add-app.md#add-an-app-directly) does.
 
 With `--base`, it writes a `kustomization.yaml` that lists the base, and a `patch_app_userconfig.yaml` that appends the
 `-user-values` ConfigMap to the `HelmRelease`. The App Templates here list that layer already, so leave the patch out.
@@ -226,8 +252,8 @@ kubectl gs deploy chart --chart-name ${APP_CHART} --version ${APP_VERSION} \
     {"HelmRelease": "helm-release", "OCIRepository": "oci-repository"}[$k] + ".yaml"'
 ```
 
-This writes `oci-repository.yaml` and `helm-release.yaml`. Change the names as for `gitops add app`, and add the app's
-`kustomization.yaml`.
+This writes `oci-repository.yaml` and `helm-release.yaml`. Change the names as for `gitops add app`, and list the
+files in `apps/kustomization.yaml`, or add an app `kustomization.yaml` as in the second layout.
 
 ## Automatic updates
 

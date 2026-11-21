@@ -79,16 +79,10 @@ Kustomizations stay in `workload-clusters`, but `namespace.yaml` applies them to
 with their SOPS keys in `namespace/secrets`, see
 [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations).
 
-kubectl-gs doesn't know version 3 yet: `kubectl gs gitops upgrade` has no migration to it, and `check` reports
-nothing about it. Move an existing repository by hand, in this order:
-
-1. For each workload cluster with a `mapi` directory, move what's in it up into the cluster's directory and split its
-   `Kustomization`, as [Workload cluster](./kubectl-gs.md#workload-cluster) describes for a cluster kubectl-gs has
-   just written. The cluster's `Kustomization` is still in `default` at this point; keep it there until the last step.
-1. [Move an organisation's namespace objects](#move-an-organisations-namespace-objects).
-1. [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations).
-
-The [CHANGELOG](/CHANGELOG.md) lists every change of the structure.
+kubectl-gs doesn't know version 3 yet: `kubectl gs gitops add workload-cluster` still generates `mapi`, the version 2
+layout, and `kubectl gs gitops upgrade` has no migration to version 3. Move an existing cluster by hand, as the
+[CHANGELOG](/CHANGELOG.md) describes: its "To split a running cluster's `Kustomization`" and "To move a running
+cluster" steps keep every object while it changes owner.
 
 Note that layers recorded without a structure version can't be upgraded. If you know the version they were created
 with, set their `structureVersion` by hand. Otherwise, remove their entries and run
@@ -209,10 +203,11 @@ kubectl delete configmap WC_NAME-user-config -n org-ORG_NAME
 
 Renaming a Flux `Kustomization` creates a new one. If the `Kustomization` that applies it has `prune: true`, as in this
 template, Flux deletes the old one. If it has `prune: false`, as in earlier versions, the old one stays, and both apply
-the same resources until you delete it. The workload cluster `Kustomization`s are in the organisation's namespace,
-`org-ORG_NAME`, and the organisation's namespace `Kustomization` applies them. If yours are still in `default`, and
-the management cluster's `Kustomization` applies them, use `-n default` below, see
-[Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations).
+the same resources until you delete it. A fork old enough to need this section still has its workload cluster
+`Kustomization`s in `default`, which the management cluster's `Kustomization` applies, so the commands below use
+`-n default`. Rename them before you
+[move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations). If you have already moved
+them into the organisation's namespace, use `-n org-ORG_NAME` instead.
 
 > [!Caution]
 > Check that the old workload cluster `Kustomization` has `prune: false` before you go on. Deleting a
@@ -224,7 +219,7 @@ the management cluster's `Kustomization` applies them, use `-n default` below, s
 1. Check the `prune` setting of the old `Kustomization`:
 
     ```sh
-    kubectl get kustomization clusters-WC_NAME -n org-ORG_NAME -o jsonpath='{.spec.prune}'
+    kubectl get kustomization clusters-WC_NAME -n default -o jsonpath='{.spec.prune}'
     ```
 
     If it prints `true`, set `prune: false` in its file first, push, and wait until Flux has applied it.
@@ -240,7 +235,7 @@ the management cluster's `Kustomization` applies them, use `-n default` below, s
    delete the old one by hand:
 
     ```sh
-    kubectl delete kustomization clusters-WC_NAME -n org-ORG_NAME
+    kubectl delete kustomization clusters-WC_NAME -n default
     ```
 
 1. If you set `prune: false` in the first step, set `prune: true` again in the renamed file, and push.

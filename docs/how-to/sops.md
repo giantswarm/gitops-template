@@ -41,8 +41,8 @@ namespace, with the cluster's `Kustomization`s that decrypt with it. The master 
 > it, move its key as the steps below place it, and replace its rule with the one in the last steps, which covers
 > `cluster` and `apps`: `--target /` covers the whole cluster directory, `out-of-band` included.
 
-If you need more granular encryption, repeat the steps to make several keys with a rule each, but keep all their
-private keys in the one `WC_NAME.gpgkey.enc.yaml` Secret: a `Kustomization` reads one Secret.
+For more granular encryption, such as a key per app, see [Add another key to a cluster](#add-another-key-to-a-cluster):
+a `Kustomization` reads one Secret, so every key of the cluster goes into the same one.
 
 1. Generate a GPG key with no passphrase (`%no-protection`), as Flux has to use it unattended:
 
@@ -162,6 +162,52 @@ private keys in the one `WC_NAME.gpgkey.enc.yaml` Secret: a `Kustomization` read
     ```
 
 Then tell the cluster's `Kustomization`s to use it, see [Decrypt a cluster's files](#decrypt-a-clusters-files).
+
+### Add another key to a cluster
+
+A cluster's `Kustomization`s read one key Secret, so a second key, for example one that only an app's files are
+encrypted with, goes into the cluster's existing `WC_NAME.gpgkey.enc.yaml`, next to the first. Don't repeat the steps
+above for it: they would replace the Secret and list it twice.
+
+1. Generate the key as in the first two steps above, with a name of its own, and keep its fingerprint:
+
+    ```sh
+    export KEY_NAME="${WC_NAME}-APP_NAME"
+    # gpg --batch --full-generate-key as above, with Name-Real: ${KEY_NAME}
+    export KEY_FP=$(gpg --list-secret-keys --with-colons "${KEY_NAME}" | awk -F: '/^fpr/{print $10; exit}')
+    ```
+
+1. Import the master private key from your password manager, see
+   [Keep a private key in a password manager](#keep-a-private-key-in-a-password-manager), then decrypt the cluster's
+   key Secret, add the new private key to it, and encrypt it again, as the
+   [organisation key](#add-an-organisation-key) steps do with the master Secret:
+
+    ```sh
+    export KEY_FILE=${ORG_SECRETS}/${WC_NAME}.gpgkey.enc.yaml
+    sops --decrypt --in-place ${KEY_FILE}
+    (
+    cat <<EOF
+    data:
+      ${KEY_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64 | tr -d '\n')
+    EOF
+    ) | kubectl patch --local -f ${KEY_FILE} --patch-file=/dev/stdin -o yaml > ${KEY_FILE}.new
+    mv ${KEY_FILE}.new ${KEY_FILE}
+    sops --encrypt --in-place ${KEY_FILE}
+    ```
+
+1. Share its public key, and put its rule ahead of the cluster's, so `sops` picks it for the files it covers:
+
+    ```sh
+    gpg --export --armor "${KEY_FP}" > management-clusters/${MC_NAME}/.sops.keys/.sops.${KEY_NAME}.asc
+    yq -i '.creation_rules = [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/apps/APP_NAME/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }] + .creation_rules' .sops.yaml
+    ```
+
+1. Save the new private key in your password manager, delete it and the master key from your keychain, and commit
+   the Secret, the public key and `.sops.yaml` together.
 
 ## Add a workload cluster key (age)
 

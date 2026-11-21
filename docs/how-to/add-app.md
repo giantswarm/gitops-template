@@ -5,12 +5,22 @@ points at the chart. Both live on the management cluster, in the organisation's 
 own under the cluster's `apps`. This page adds one, either written out in full or from an App Template that already
 holds the app's defaults.
 
+The app's directory comes in one of two layouts:
+
+- **Files listed one by one.** The directory holds only the app's manifests, and the cluster's
+  `apps/kustomization.yaml` lists each file. It fits an app written out in full whose values, if it has any, are a
+  plain ConfigMap or Secret file next to it. `kubectl gs gitops add app` writes this layout.
+- **A `kustomization.yaml` of the app's own**, and the cluster's list names the directory. An app from an App Template
+  or a stack needs it, to list the base and patch it. So does an app whose values a `configMapGenerator` makes from
+  `override_config.yaml`, as the steps below do.
+
 The [basic tutorial](../tutorials/basic/getting-started.md#4-deploy-an-app) walks through a first app step by step, and
 [Reuse an app's configuration](../tutorials/intermediate/app-templates.md) explains App Templates. Examples:
 
-- an app without configuration:
+- an app without configuration, its files listed one by one in the cluster's
+  [apps/kustomization.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/kustomization.yaml):
   [WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world/);
-- an app from an App Template:
+- an app from an App Template, with a `kustomization.yaml` of its own:
   [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template/);
 - base apps from a [stack](../tutorials/intermediate/stacks.md), with plain and SOPS-encrypted overrides:
   [cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
@@ -30,12 +40,10 @@ cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${
 can be deployed to several clusters of an organisation. When you use an App Template, it has to be the app name the
 template uses, for example `hello-world` for [bases/apps/hello-world](/bases/apps/hello-world/).
 
-> [!Note]
-> `kubectl gs gitops add app` wrote these files once, and `kubectl gs deploy chart --dry-run` prints an
-> `OCIRepository` and a `HelmRelease` you can start from. `gitops add app` is deprecated, without a replacement, and
-> what both write differs from what this page writes: no cluster values, a literal cluster name instead of
-> `${cluster_name}`, and no app `kustomization.yaml`. [App](./kubectl-gs.md#app) shows what they write and how to get
-> from it to the shape below.
+`kubectl gs gitops add app` wrote these files once, and `kubectl gs deploy chart --dry-run` prints an `OCIRepository`
+and a `HelmRelease` you can start from. `gitops add app` is deprecated, without a replacement, and what both write
+differs from what this page writes: no cluster values and a literal cluster name instead of `${cluster_name}`.
+[App](./kubectl-gs.md#app) shows what they write and how to get from it to the `HelmRelease` below.
 
 ## Add an app directly
 
@@ -133,7 +141,8 @@ and the like, and so that your values can override them, see [App values](../ref
 
 1. Create the app's `kustomization.yaml`. The `configMapGenerator` turns `override_config.yaml` into the
    `-user-values` ConfigMap, with the label that makes Flux apply a change at once; leave it out if you didn't create
-   the file:
+   the file. For an app without values, you can skip this file and list the app's files one by one instead, see
+   [List the app in the cluster](#list-the-app-in-the-cluster):
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -320,10 +329,17 @@ above.
     cd ..
     ```
 
-1. Add the app's directory to the resources of the `kustomization.yaml` there:
+1. Add the app to the resources of the `kustomization.yaml` there. If the app has a `kustomization.yaml` of its own,
+   list its directory:
 
     ```sh
     yq -i ".resources += \"${APP_NAME}\" | .resources style=\"\"" kustomization.yaml
+    ```
+
+    If it hasn't, list each of its files instead:
+
+    ```sh
+    for f in ${APP_NAME}/*.yaml; do yq -i ".resources += \"${f}\"" kustomization.yaml; done
     ```
 
 1. Commit and push. Once the cluster is ready, the cluster's apps `Kustomization` applies the app.

@@ -59,11 +59,13 @@ its own failures:
 
 - The management cluster's `Kustomization` creates the organisations and the namespaces' `Kustomization`s. It works
   before any organisation's namespace exists, and it never waits for an organisation.
-- Each organisation's `namespace.yaml` runs as that organisation's `automation` ServiceAccount, which may write only in
-  the organisation's namespace. A mistake in one organisation's files stops only that organisation.
+- Each organisation's `namespace.yaml` lives in `default` and runs as `default/automation`. It applies the
+  organisation's `namespace` directory into the organisation's namespace with `targetNamespace`, and a mistake in one
+  organisation's files stops only that organisation.
 - Each cluster gets its own `Kustomization`s, with its own variables, so one base works for every cluster, and a
-  mistake in one cluster's directory doesn't stop the others. Splitting a cluster's `Kustomization` in two lets the
-  apps wait for the cluster.
+  mistake in one cluster's directory doesn't stop the others. They live in the organisation's namespace and run as
+  `org-<organisation>/automation`, which may write only in that namespace, so one organisation's clusters can't
+  touch another's. Splitting a cluster's `Kustomization` in two lets the apps wait for the cluster.
 
 Everything in `cluster` and `apps` is a resource on the management cluster that configures the workload cluster.
 Resources that must be applied inside the workload cluster directly go into an optional `out-of-band` directory next

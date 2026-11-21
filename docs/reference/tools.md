@@ -50,7 +50,7 @@ version 2. [Let kubectl-gs write the files](../how-to/kubectl-gs.md) says what t
 | `kubectl gs gitops add management-cluster --skip-encryption` | 5.12.0 | |
 | `kubectl gs gitops add organization`, with `--name` and `--management-cluster` | 2.20.0 | Before 6.0.0 it records the organisation at structure version 1. Writes the `Organization` without the deletion protection |
 | `kubectl gs gitops add workload-cluster`, with `--name`, `--organization`, `--management-cluster`, `--repository-name`, `--base` and `--cluster-user-config` | 2.20.0 | Before 6.0.0 it generates the cluster as an App CR, in repository structure version 1. From 6.0.0 it generates structure version 2, with the `mapi` directory. This repository uses structure version 3, without `mapi`, see [Workload cluster](../how-to/kubectl-gs.md#workload-cluster) |
-| `kubectl gs gitops add workload-cluster --skip-mapi` | 4.0.0 | |
+| `kubectl gs gitops add workload-cluster --skip-mapi` | 2.20.0 | |
 | `kubectl gs gitops add workload-cluster --release` | 4.0.0 | Replaced `--cluster-release`. Sets the cluster app version and the `release` since 5.12.0 |
 | `kubectl gs gitops add base`, with `--provider` | 2.30.0 | Before 6.0.0 it generates an App CR, in repository structure version 1. Writes into `bases/clusters/PROVIDER/template` |
 | `kubectl gs gitops add base --prevent-deletion` | 7.0.0 | Defaults to `true` |
