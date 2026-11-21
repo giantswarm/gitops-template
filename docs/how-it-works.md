@@ -63,9 +63,10 @@ The protected objects are:
   with every cluster in it. Its file can't go on its own anyway: the organisation's `kustomization.yaml` takes the
   organisation's name from it, so without it the management cluster's Kustomization fails to build, and applies and
   prunes nothing until the file is back.
-- The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`. Flux decrypts with them, so deleting one stops
-  GitOps for every cluster that uses it. The keys are encrypted, so `secrets/kustomization.yaml` adds the annotation
-  and the label instead: changing an encrypted file by hand breaks its SOPS checksum.
+- The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`, and in an organisation's `namespace/secrets/`, such
+  as a `-direct` `Kustomization`'s key. Flux decrypts with them, so deleting one stops GitOps for every cluster that
+  uses it. The keys are encrypted, so each directory's `kustomization.yaml` adds the annotation and the label instead:
+  changing an encrypted file by hand breaks its SOPS checksum.
 
 When you delete their files, they stay on the management cluster and the cluster keeps running, but Flux no longer
 manages them. A cluster `HelmRelease` that stays without its ConfigMaps can't reconcile, and reports it as not ready.

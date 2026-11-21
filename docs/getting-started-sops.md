@@ -916,7 +916,26 @@ the team from the cluster first, as that guide describes.
 
     If this prints a file, that cluster uses the key: keep it and run `unset DIRECT_KEY`. Otherwise, find the key's
     file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, in the organisation's `namespace/secrets`, where everything in
-    the organisation's namespace goes, and remove it and its entry in `namespace/secrets/kustomization.yaml`:
+    the organisation's namespace goes, and remove it and its entry in `namespace/secrets/kustomization.yaml`. That
+    file protects the keys as the management cluster's `secrets/kustomization.yaml` does, see
+    [Add an organization](./add_org.md):
+
+    ```yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    # Flux decrypts with the SOPS keys here: deleting one stops GitOps for what uses it
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
+    labels:
+      - pairs:
+          giantswarm.io/managed-by: flux
+          # nobody can delete them, Flux included, until this label is removed
+          giantswarm.io/prevent-deletion: "true"
+    resources:
+      - ${WC_NAME}-direct.gpgkey.enc.yaml
+    ```
+
+    Remove it:
 
     ```sh
     export KEY_FILE=$(basename "$(yq ea 'select(.metadata.name == strenv(DIRECT_KEY)) | filename' ${ORG_DIR}/namespace/secrets/*.enc.yaml)")

@@ -22,6 +22,7 @@ replacements:
       - select:
           group: kustomize.toolkit.fluxcd.io
           kind: Kustomization
+          name: parent-namespace
         fieldPaths:
           - spec.targetNamespace
         options:
