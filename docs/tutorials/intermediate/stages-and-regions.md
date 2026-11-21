@@ -267,8 +267,9 @@ A stage holds versions only. The prod clusters' bigger nodes are their own value
     ```sh
     git checkout -- bases/environments/stages
     pin() {  # pin STAGE CHART VERSION
-      sed -i "/depName=gsoci.azurecr.io\/charts\/giantswarm\/$2 /{n;s/value: \".*\"/value: \"$3\"/;}" \
-        bases/environments/stages/$1/kustomization.yaml
+      f=bases/environments/stages/$1/kustomization.yaml
+      sed -i.bak "/depName=gsoci.azurecr.io\/charts\/giantswarm\/$2 /{n;s/value: \".*\"/value: \"$3\"/;}" "${f}" &&
+        rm "${f}.bak"
     }
     pin dev release-aws "${DEV_RELEASE}"
     pin staging hello-world "${STAGING_HELLO_WORLD}"
