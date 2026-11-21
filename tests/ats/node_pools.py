@@ -20,7 +20,7 @@ from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from values_sources import ValuesSourceError
 
 # The node pools in the values of each workload cluster's HelmRelease, by `namespace/name`.
-#  Every cluster has to be listed. Production clusters get the stage's `nodepool0` and their
+#  Every cluster has to be listed. Production clusters get their own `nodepool0` and their
 #  region's extra pool. Dev and staging have no pools of their own and get the chart's defaults,
 #  as does scheduled-upgrades.
 EXPECTED_NODE_POOLS: dict[str, set[str]] = {

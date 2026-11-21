@@ -1,11 +1,23 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-kind: Kustomization
-# The components append to the cluster's HelmRelease `valuesFrom` in the order
-# they are listed: the region, the region's extra node pool, then the cluster's own values last.
+# The region, its extra node pool and the stage. kustomize applies components
+# before this kustomization's own patches, so the cluster's own values come last
+# in `valuesFrom`.
 components:
   - ../../../../../../../bases/environments/regions/eu_central
   - ../../../../../../../bases/environments/regions/eu_central/node_pool
-  - ../../../../../../../bases/clusters/hello_app_cluster/userconfig
+  - ../../../../../../../bases/environments/stages/prod
+kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/managed-by: flux
+patches:
+  - path: patch_cluster_userconfig.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \${cluster_name}
 resources:
-  - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
+  - ../../../../../../../bases/clusters/capa
+  - cluster_userconfig.yaml
+  - apps/

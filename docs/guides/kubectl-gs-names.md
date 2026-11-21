@@ -75,7 +75,7 @@ Nothing changes in the clusters: Flux applies the same resources from the new fi
 
 ## Rename the cluster user config
 
-1. Rename the files of every workload cluster, and of the cluster bases and environments that have them:
+1. Rename the files of every workload cluster, and of the environments that have them:
 
     ```sh
     for f in $(git ls-files '*cluster_user_config.yaml'); do
@@ -87,8 +87,7 @@ Nothing changes in the clusters: Flux applies the same resources from the new fi
     ```
 
 1. Rename the ConfigMap, in the ConfigMaps, in the patches, and in the `configMapGenerator`s with
-   `behavior: replace` that replace it, like the ones in
-   [bases/environments/stages](/bases/environments/stages/prod/hello_app_cluster/kustomization.yaml):
+   `behavior: replace` that replace it:
 
     ```sh
     git ls-files '*.yaml' ':!:*.enc.yaml' | xargs sed -i \

@@ -162,7 +162,7 @@ If yours is older, update it with `kubectl gs selfupdate`.
 | `ORG_NAME` | The organization's name, in lowercase and without the `org-` prefix |
 | `WC_NAME` | Any name, but the workload cluster's name is clearest |
 | `PROVIDER` | The Cluster API provider, such as `capa`, as `kubectl gs gitops add base --provider` names it |
-| `BASE_NAME` | Any name other than a provider's, such as `hello_app_cluster` |
+| `BASE_NAME` | Any name other than a provider's, such as `my-defaults` |
 
 Files and resources use the names `kubectl gs gitops` generates, so it recognizes them in `gitops check`,
 `gitops upgrade` and `gitops add automatic-update`:
@@ -177,8 +177,9 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | Flux `Kustomization` of an organisation's apps on several clusters | `MC_NAME-multicluster-apps-ORG_NAME`, in `multicluster/apps.yaml`. `kubectl gs gitops` doesn't generate it |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `cluster` |
-| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` of a cluster `kubectl gs gitops add workload-cluster` generates. A cluster made from a cluster base with a `userconfig` component, such as `hello_app_cluster`, lists that component instead, which holds the same patch |
+| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` |
 | A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../guides/environments.md#regions). `kubectl gs gitops` doesn't generate it |
+| A workload cluster's stage | a `components:` entry for `bases/environments/stages/STAGE`, in `cluster/kustomization.yaml`, optional, see [Stages](../guides/environments.md#stages). `kubectl gs gitops` doesn't generate it |
 | A provider's cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER` |
 | A cluster base built on a provider's base | `kustomization.yaml` and its own files, in `bases/clusters/BASE_NAME`, next to the provider's base and never inside it, see [Cluster bases](../guides/clusters.md) |
 | A stack, several apps deployed together | `kustomization.yaml` and a values file per app, in `bases/stacks/STACK_NAME`, see [Stacks](../guides/stacks.md). `kubectl gs gitops` doesn't generate it |
@@ -373,7 +374,7 @@ placeholder `org-ORG_NAME`: Flux doesn't substitute variables in a Kustomization
 `kustomization.yaml` puts the organisation's name into the placeholder of a `Kustomization` with the label
 `giantswarm.io/health-check-cluster: "true"`, see [The organisation's name](#the-organisations-name). Without the label,
 the health check keeps the placeholder, and the `Kustomization` never gets `Ready`. With the label, the namespace must be
-the placeholder. A cluster without apps, such as the
+the placeholder. A cluster without secondary apps, such as the
 `HELLO_APP_*` examples, has only `WC_NAME.yaml`, which applies the cluster's directory, whose `kustomization.yaml`
 lists `cluster`, and needs no health check.
 

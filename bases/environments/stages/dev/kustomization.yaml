@@ -1,6 +1,5 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
 # (optional) here we can enforce the app versions that we want in this stage.
 # The dev stage follows the highest dev build of hello-world: `semver` with the
 # `-0` suffix makes pre-releases eligible, `semverFilter` keeps only dev builds
@@ -29,5 +28,3 @@ patches:
       kind: OCIRepository
       name: \${cluster_name}
 # block end
-resources:
-  - ../../../../clusters/hello_app_cluster

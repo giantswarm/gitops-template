@@ -90,12 +90,11 @@ Most clusters and apps look alike. The `bases` directory holds what they share, 
 
 - `bases/clusters` holds the cluster bases. A provider's base is named after the provider: for example,
   `bases/clusters/capa` installs the `release-aws` chart, whose version is the Giant Swarm release. A cluster base built
-  on it, such as `bases/clusters/hello_app_cluster`, sits next to it and adds what a kind of cluster gets.
+  on it sits next to it, see [Cluster bases](./guides/clusters.md).
 - `bases/apps` has App Templates: an app with its default values, ready to deploy to many clusters.
 - `bases/stacks` has stacks: several apps deployed together that may depend on each other, such as
   `bases/stacks/hello-web`, see [Stacks](./guides/stacks.md).
-- `bases/environments` combines these into clusters for stages like dev and production,
-  or for regions.
+- `bases/environments` has the stages and regions a cluster adds as components.
 
 A cluster's directory points at bases in its `kustomization.yaml` and only adds what's different, such as its own
 values. The bases use variables like `${cluster_name}` where every cluster needs its own name. The cluster's Flux

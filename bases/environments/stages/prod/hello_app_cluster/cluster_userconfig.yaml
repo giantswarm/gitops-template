@@ -1,6 +1,0 @@
-global:
-  nodePools:
-    nodepool0:
-      instanceType: m6a.8xlarge
-      maxSize: 50
-      minSize: 10
