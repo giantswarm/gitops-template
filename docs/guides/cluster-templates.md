@@ -100,27 +100,24 @@ that replaces the `${cluster_name}-config` ConfigMap.
     mkdir -p bases/clusters/capa/${BASE_NAME}
     ```
 
-1. Write the defaults into `cluster_config.yaml`. They follow the `values.yaml` schema of the cluster chart. Keep the
-   `metadata` block, because it replaces the one of the base below:
+1. Copy the `cluster_config.yaml` of the base below. Your file replaces the base's values as a whole, so start from
+   a copy and change only what you need. A value you leave out is lost, such as `global.metadata.preventDeletion`,
+   which gives the cluster's `Cluster` the `giantswarm.io/prevent-deletion` label:
 
     ```sh
-    cat <<'EOF' > bases/clusters/capa/${BASE_NAME}/cluster_config.yaml
-    global:
-      metadata:
-        description: ${cluster_description}
-        name: ${cluster_name}
-        organization: ${organization}
-      nodePools:
-        nodepool0:
-          instanceType: m6i.xlarge
-          maxSize: 10
-          minSize: 3
-    EOF
+    cp bases/clusters/capa/template/cluster_config.yaml bases/clusters/capa/${BASE_NAME}/cluster_config.yaml
     ```
 
-    To start from complete values instead, run
+1. Add your defaults to the copy. They follow the `values.yaml` schema of the cluster chart. For example, a node pool:
+
+    ```sh
+    yq -i '.global.nodePools.nodepool0 = {"instanceType": "m6i.xlarge", "maxSize": 10, "minSize": 3}' \
+      bases/clusters/capa/${BASE_NAME}/cluster_config.yaml
+    ```
+
+    To find more values to set, run
     [`kubectl gs template cluster`](https://docs.giantswarm.io/reference/kubectl-gs/template-cluster/) with
-    `--provider capa` and a release, and keep the values of the ConfigMap it prints.
+    `--provider capa` and a release, and copy the ones you need from the ConfigMap it prints.
 
 1. Create the `kustomization.yaml`. It replaces the base's ConfigMap with one generated from `cluster_config.yaml`:
 
