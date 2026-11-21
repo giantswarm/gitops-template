@@ -52,7 +52,7 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     export REGION=eu_central
     ```
 
-    To create a cluster together with a set of apps from an environment template instead, see
+    To pin the release and app versions of a cluster to a stage, such as dev, staging or prod, see
     [Add Workload Cluster environments](./guides/environments.md).
 
 1. Go to the Workload Cluster definition directory:

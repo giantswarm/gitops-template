@@ -1012,7 +1012,7 @@ the team from the cluster first, as that guide describes.
   [provide encrypted values](./guides/add-app.md#providing-encrypted-values).
 - Reuse an app's configuration across clusters: [App Templates](./guides/app-templates.md). Deploy several apps
   together: [Stacks](./guides/stacks.md).
-- Run dev, staging and production clusters from shared templates:
+- Pin the release and app versions of dev, staging and production clusters per stage:
   [Add Workload Cluster environments](./guides/environments.md).
 - Understand how the repository is organized: [Repository structure](./reference/repo-structure.md).
 - See which key decrypts which files: [SOPS keys](./reference/sops-keys.md).

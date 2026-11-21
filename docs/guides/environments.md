@@ -73,8 +73,10 @@ the versions its clusters run: the Giant Swarm release and the versions of their
 `components:`, next to its [region](#regions). A stage patches objects it doesn't create, the cluster's `OCIRepository`
 and those of its apps, which is why it is a Component, see
 [A base or a Component](./stacks.md#a-base-or-a-component). Its patches add nothing to the cluster's `valuesFrom`, so
-its place in the `components:` list doesn't matter. Any CAPA cluster can use a stage: a patch for an app the cluster
-doesn't have changes nothing.
+its place in the `components:` list doesn't matter. A CAPA cluster made from the [CAPA cluster base](/bases/clusters/capa)
+can use a stage: a patch for an app the cluster doesn't have changes nothing. The release pin has no effect on a
+cluster whose release comes from a `ResourceSet`, such as `WC_NAME_SCHEDULED_UPGRADES`: its own patch deletes the base's
+`OCIRepository`, and the `ResourceSet` picks the release, see [Scheduled updates](./scheduled-updates.md).
 
 The example clusters of the stages install the [hello-web](/bases/stacks/hello-web) stack, which installs hello-world
 served through Envoy Gateway. The hello-web stack holds what ties its apps together: it orders hello-world after the

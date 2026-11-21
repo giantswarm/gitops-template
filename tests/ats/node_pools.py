@@ -1,9 +1,10 @@
 """The node pools of every workload cluster, as Flux applies them in the kind test.
 
-A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its HelmRelease: the
-stage sets `nodepool0`, and a production cluster's region adds an extra pool. No assertion file
-shows the result, so this check reads the HelmRelease and its ConfigMaps from the test cluster,
-merges them as helm-controller does and compares the node pools with `EXPECTED_NODE_POOLS`.
+A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its HelmRelease: a
+production cluster's own values set `nodepool0`, and its region adds an extra pool. No assertion
+file shows the result, so this check reads the HelmRelease and its ConfigMaps from the test
+cluster, merges them as helm-controller does and compares the node pools with
+`EXPECTED_NODE_POOLS`.
 
 test_flux_objects.py runs the check with that module's fixtures: after Flux has applied the
 repository and the HelmReleases' references have been checked.

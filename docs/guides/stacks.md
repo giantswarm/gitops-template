@@ -146,10 +146,11 @@ When that isn't enough, two other ways fit better:
 
 Make a stack a base, under `resources:`, as hello-web is. Use a
 [kustomize Component](https://kubectl.docs.kubernetes.io/guides/config_management/components/) only when the piece has
-to patch objects outside itself, in an order that matters, as the [regions](./environments.md#regions) do when they
-append to the cluster's `valuesFrom`, or as the [stages](./environments.md#stages) do when they pin the versions of
-the cluster and its apps. A stack only adds objects. A base also builds on its own, so it can be the path
-of a Flux `Kustomization`, and a Component can't.
+to patch objects outside itself, as the [regions](./environments.md#regions) do when they append to the cluster's
+`valuesFrom`, and the [stages](./environments.md#stages) do when they pin the versions of the cluster and its apps. For
+some Components the order in `components:` matters, such as the regions, whose entries land in `valuesFrom` in that
+order; for others, such as the stages, it doesn't. A stack only adds objects. A base also builds on its own, so it
+can be the path of a Flux `Kustomization`, and a Component can't.
 
 ## Recommended next steps
 
