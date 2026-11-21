@@ -32,9 +32,10 @@ Kustomization for all of its directory.
 Examples of creating apps are available in following locations:
 
 - An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world/)
-- An example of an app created from an App Template, with plain and SOPS-encrypted (`secret.enc.yaml`) overrides, is
-  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
-  It's a base app.
+- An example of apps created from a [stack](./stacks.md), with plain and SOPS-encrypted (`secret.enc.yaml`) overrides,
+  is available in [WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
+  They're base apps. [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template/)
+  is an app created from an App Template.
 
 ## Common steps
 
@@ -258,9 +259,9 @@ path to the directory in an env variable:
           name: \${cluster_name}-hello-world
     ```
 
-    A patch also orders the app after a release of another App Template it needs. `hello-world` needs the Gateway
-    API CRDs, so in a cluster that has the envoy-gateway App Template, add `${cluster_name}-gateway-api-crds` to its
-    `dependsOn`, as described in [App Templates](./app-templates.md).
+    A patch also orders the app after a release of another base it needs. `hello-world` needs the Gateway API CRDs,
+    so in a cluster that has the [envoy-gateway](/bases/stacks/envoy-gateway/) stack, add
+    `${cluster_name}-gateway-api-crds` to its `dependsOn`, as described in [App Templates](./app-templates.md).
 
 1. Continue with [Listing the App in the cluster](#listing-the-app-in-the-cluster).
 

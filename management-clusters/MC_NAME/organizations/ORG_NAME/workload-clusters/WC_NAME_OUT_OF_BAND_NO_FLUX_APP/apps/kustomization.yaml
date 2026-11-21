@@ -11,6 +11,7 @@ resources:
   - hello-world/oci-repository.yaml
   - hello-world-automatic-updates/helm-release.yaml
   - hello-world-automatic-updates/oci-repository.yaml
+  - hello-world-from-template/
   - workload-cluster-secrets/secret-store.yaml
   - workload-cluster-secrets/common-secret.yaml
   - workload-cluster-secrets/generated-password.yaml

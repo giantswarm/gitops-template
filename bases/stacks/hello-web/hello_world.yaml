@@ -1,0 +1,16 @@
+# replaces the hello-world App Template's default_config.yaml
+autoscaling:
+  minReplicas: 2
+ingress:
+  enabled: false
+route:
+  enabled: true
+  kind: HTTPRoute
+  # the Gateway gateway_api_config.yaml configures
+  parentRefs:
+    - name: giantswarm-default
+      namespace: envoy-gateway-system
+  # under the cluster's base domain and in gateway_api_config.yaml's
+  # `listeners.https.subdomains`
+  hostnames:
+    - "hello.{{ .Values.baseDomain }}"

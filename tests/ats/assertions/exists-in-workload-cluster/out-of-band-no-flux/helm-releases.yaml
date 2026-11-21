@@ -32,7 +32,7 @@ metadata:
     meta.helm.sh/release-name: hello-world-app-auto
     meta.helm.sh/release-namespace: hello-world-auto
 ---
-# of the hello-web-app-1 app set
+# of apps/hello-world-from-template, made from the hello-world App Template
 helmRelease: org-org-name/out-of-band-no-flux-hello-world
 apiVersion: apps/v1
 kind: Deployment

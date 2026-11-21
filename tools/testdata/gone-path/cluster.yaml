@@ -8,7 +8,7 @@ metadata:
   namespace: default
 spec:
   interval: 1m
-  # mapi/kustomization.yaml lists app_sets/, which has been deleted
+  # mapi/kustomization.yaml lists teams/, which has been deleted
   path: ./mapi
   prune: true
   sourceRef:

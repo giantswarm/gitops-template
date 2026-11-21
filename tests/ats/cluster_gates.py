@@ -17,7 +17,7 @@ class Gate(NamedTuple):
 
 
 CLUSTERS_NAMESPACE = "org-org-name"
-# the base apps of the out-of-band clusters: the Gateway API stack of bases/apps/envoy-gateway
+# the base apps of the out-of-band clusters: the Gateway API stack of bases/stacks/envoy-gateway
 GATEWAY_API_STACK = ["gateway-api-crds", "envoy-gateway", "gateway-api-config"]
 # the clusters with apps, by the name of their `Cluster`
 GATES: dict[str, Gate] = {

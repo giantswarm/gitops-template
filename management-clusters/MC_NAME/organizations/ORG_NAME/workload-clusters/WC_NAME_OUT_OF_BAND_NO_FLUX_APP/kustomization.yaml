@@ -4,5 +4,4 @@ kind: Kustomization
 # cluster and its base apps, in cluster/, have a Kustomization of their own.
 resources:
   - apps/
-  - app_sets/
   - teams/

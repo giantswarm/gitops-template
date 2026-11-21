@@ -1,7 +1,7 @@
 """P1, P3: dropping objects from what a Flux Kustomization builds, as deleting their files does.
 
-The App Set and the application team test_prune removes are listed in kustomization.yaml files,
-so leaving their files out of the source would leave the apps Kustomization unable to build.
+The app and the application team test_prune removes are listed in kustomization.yaml files, so
+leaving their files out of the source would leave the apps Kustomization unable to build.
 `$patch: delete` patches in its `spec.patches` drop the objects instead. Flux applies them
 before it substitutes the variables, so they name the objects as the Kustomization builds them,
 with `${cluster_name}` and `${organization}`.

@@ -23,13 +23,13 @@ has workload clusters.
 ```text
 .sops.yaml
 bases
-├── app_sets
 ├── apps
 ├── cluster_templates
 ├── clusters
 ├── environments
 ├── secret_stores
-└── shared_objects
+├── shared_objects
+└── stacks                                              several apps deployed together, see guides/stacks.md
 management-clusters
 └── MC_NAME
     ├── .sops.keys
@@ -64,7 +64,6 @@ management-clusters
                 └── WC_NAME                             managed from MC_NAME.yaml
 -----------------------------------------------------------------------------------
                     ├── kustomization.yaml                WC_NAME.yaml responsibility
-                    ├── [app_sets]
                     ├── apps
                     ├── cluster
                     ├── [out-of-band]
@@ -140,8 +139,8 @@ every layer that still deploys or patches an App CR. Move those first, see the
 [App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
 Then it rewrites the user config patch of each workload cluster for the `HelmRelease`.
 
-Version 3 drops the `mapi` directory of workload clusters. Its `cluster`, `apps` and `app_sets` move up into the
-cluster's directory, next to `out-of-band`, and the cluster's `kustomization.yaml` lists what the cluster's
+Version 3 drops the `mapi` directory of workload clusters. Its `cluster`, `apps` and any other directories move up
+into the cluster's directory, next to `out-of-band`, and the cluster's `kustomization.yaml` lists what the cluster's
 Kustomizations apply, never `out-of-band`, see [Flux Kustomizations](#flux-kustomizations). kubectl-gs doesn't know
 version 3 yet: `kubectl gs gitops add workload-cluster` still generates `mapi`, the version 2 layout, and
 `kubectl gs gitops upgrade` has no migration to version 3. Move an existing cluster by hand, as the
@@ -178,6 +177,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` of a cluster `kubectl gs gitops add workload-cluster` generates. A cluster made from a cluster template, such as `hello_app_cluster`, lists the template's `userconfig` component instead, which holds the same patch |
 | A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../guides/environments.md#regions). `kubectl gs gitops` doesn't generate it |
 | A cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER/template` |
+| A stack, several apps deployed together | `kustomization.yaml` and a values file per app, in `bases/stacks/STACK_NAME`, see [Stacks](../guides/stacks.md). `kubectl gs gitops` doesn't generate it |
 
 Repositories forked before the template used these names can move to them with
 [Move a fork to the kubectl-gs file and resource names](../guides/kubectl-gs-names.md).
@@ -295,7 +295,7 @@ its own leaves the placeholders as they are.
 ### `cluster`, `apps` and `[out-of-band]`
 
 Every workload cluster directory holds the resources on the management cluster that configure the workload
-cluster, through the Management API, in `cluster`, `apps` and `app_sets`. Examples are the `HelmRelease` and
+cluster, through the Management API, in `cluster` and `apps`. Examples are the `HelmRelease` and
 `OCIRepository` resources of the cluster and its apps, and the ConfigMaps and Secrets with their values. Its
 `kustomization.yaml` lists the directories the cluster's Kustomizations apply, and never `out-of-band`, which must not
 be applied to the management cluster.
@@ -324,8 +324,7 @@ management-clusters
                 ├── WC_NAME.yaml            # applies WC_NAME/cluster/
                 ├── WC_NAME-apps.yaml       # applies WC_NAME/, once the cluster is ready
                 └── WC_NAME
-                    ├── kustomization.yaml  # lists apps and app_sets, not cluster or out-of-band
-                    ├── [app_sets]
+                    ├── kustomization.yaml  # lists apps, not cluster or out-of-band
                     ├── apps                # the secondary apps
                     ├── cluster
                     |   ├── kustomization.yaml
@@ -352,18 +351,18 @@ their `ResourceSet`s itself. See [Apps on several clusters](../guides/scheduled-
 
 A cluster with apps has two Kustomizations:
 
-1. `WC_NAME.yaml` applies `cluster`: the cluster's `HelmRelease` and its base apps, in `cluster/apps`.
-   Base apps are the ones the cluster needs from the start, such as the Gateway API stack of
-   [envoy-gateway](/bases/apps/envoy-gateway/) in the out-of-band examples. Flux applies them with the cluster, and
-   their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name the
-   Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available` condition
-   is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster coming up.
-   While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you push to
-   the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
+1. `WC_NAME.yaml` applies `cluster`: the cluster's `HelmRelease` and its base apps, in `cluster/apps`. Base apps are the
+   ones the cluster needs from the start, such as the Gateway API charts of the
+   [envoy-gateway](/bases/stacks/envoy-gateway/) stack in the out-of-band examples. Flux applies them with the cluster,
+   and their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name
+   the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available`
+   condition is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster
+   coming up. While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you
+   push to the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
    Kustomization reports `DependencyNotReady` all the while.
-1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps` and the App Sets in
-   `app_sets`, which its `kustomization.yaml` lists. It has the cluster's Kustomization in `dependsOn`, so Flux
-   applies none of them until the cluster is `Available`. Until then, it reports `DependencyNotReady`.
+1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps`, which its `kustomization.yaml`
+   lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster is
+   `Available`. Until then, it reports `DependencyNotReady`.
 
 Name the cluster in `healthChecks` with its name written out, such as `capi-wc-name`, and the namespace as the fixed
 placeholder `org-ORG_NAME`: Flux doesn't substitute variables in a Kustomization's own spec. The organisation's

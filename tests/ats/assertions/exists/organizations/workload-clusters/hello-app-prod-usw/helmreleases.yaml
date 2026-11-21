@@ -152,7 +152,7 @@ kind: HelmRelease
 metadata:
   labels:
     giantswarm.io/cluster: hello-app-prod-usw
-    gitops.giantswarm.io/appSet: hello-web-app
+    giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
     kustomize.toolkit.fluxcd.io/namespace: default
   name: hello-app-prod-usw-hello-world

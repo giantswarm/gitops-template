@@ -5,7 +5,6 @@ metadata:
   labels:
     giantswarm.io/cluster: out-of-band-flux-app
     giantswarm.io/managed-by: flux
-    gitops.giantswarm.io/appSet: hello-web-app
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-flux-app-apps
     kustomize.toolkit.fluxcd.io/namespace: default
   name: out-of-band-flux-app-hello-world

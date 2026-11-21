@@ -23,8 +23,7 @@ To encrypt files of a workload cluster, add a key pair for it:
   encrypted with the master key.
 
 The cluster's two Kustomizations reference that Secret in `spec.decryption` and use it to decrypt what they apply:
-`WC_NAME.yaml` the `WC_NAME/cluster` directory, and `WC_NAME-apps.yaml` the `WC_NAME/apps` and `WC_NAME/app_sets`
-directories.
+`WC_NAME.yaml` the `WC_NAME/cluster` directory, and `WC_NAME-apps.yaml` the `WC_NAME/apps` directory.
 
 ```text
                 MC_NAME.yaml
@@ -105,10 +104,10 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/(cluster|apps|app_sets)/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/(cluster|apps)/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/(cluster|apps|app_sets)/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/(cluster|apps)/.*\.enc\.yaml
     age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 ```
 

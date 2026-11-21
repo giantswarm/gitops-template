@@ -8,8 +8,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-gpg-from-template-wc-name
-  # the secondary apps, in apps/ and app_sets/, install once the
-  # cluster is up, see WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
+  # the secondary apps, in apps/, install once the cluster is up, see WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
   dependsOn:
     - name: mc-name-clusters-out-of-band-no-flux  # TODO: the name of WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml's Kustomization
   interval: 10m

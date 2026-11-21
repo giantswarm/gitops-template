@@ -11,7 +11,7 @@ spec:
     name: ${cluster_name}-hello-world-standalone
     namespace: org-${organization}
   # the HTTPRoute needs the Gateway API CRDs: every install and upgrade waits
-  # until the gateway-api-crds release of the envoy-gateway App Template is ready
+  # until the gateway-api-crds release of the envoy-gateway stack is ready
   dependsOn:
     - name: ${cluster_name}-gateway-api-crds
   install:

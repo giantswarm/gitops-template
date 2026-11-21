@@ -10,10 +10,6 @@ generatorOptions:
   labels:
     reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
-labels:
-  - pairs:
-      giantswarm.io/cluster: ${cluster_name}
-      giantswarm.io/managed-by: flux
 namespace: org-${organization}
 # hello-world's HTTPRoute needs the Gateway API CRDs, which the envoy-gateway app
 # of this cluster installs: every install and upgrade of hello-world waits until
@@ -28,4 +24,4 @@ patches:
       kind: HelmRelease
       name: \${cluster_name}-hello-world
 resources:
-  - ../../../../../../../../bases/app_sets/hello-web-app
+  - ../../../../../../../../bases/apps/hello-world

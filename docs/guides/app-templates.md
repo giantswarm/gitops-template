@@ -161,19 +161,14 @@ registry.
 
 At this point, you should have a ready App Template.
 
-An App Template that installs several charts, like [envoy-gateway](/bases/apps/envoy-gateway/), gives each chart a
-directory of its own with a `helm-release.yaml` and an `oci-repository.yaml`, and lists all of them in one
-`kustomization.yaml`. Every file then holds a single resource, as the files `kubectl gs gitops` writes do, so commands
-like `yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` change only the chart you mean.
-
 When a chart needs something another `HelmRelease` installs first, such as its CRDs, list that `HelmRelease` in
 `dependsOn`. helm-controller checks `dependsOn` on every reconciliation, so every install and upgrade of the chart
 waits until the other release is `Ready`, and the install retries can stay bounded, so a broken install still fails.
 A `HelmRelease` that `dependsOn` names has to exist, or the release waits forever. So an App Template that can be
-used on its own leaves the dependency out, and the layer that installs it together with the other App Template adds
-it. [hello-world](/bases/apps/hello-world/helm-release.yaml) is an example: its `HTTPRoute` needs the Gateway API CRDs
-that the envoy-gateway App Template installs, and the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster/)
-cluster template, which installs both, adds the dependency with a patch:
+used on its own leaves the dependency out, and the layer that installs it together with the other release adds it.
+[hello-world](/bases/apps/hello-world/helm-release.yaml) is an example: its `HTTPRoute` needs the Gateway API CRDs
+that the [envoy-gateway](/bases/stacks/envoy-gateway/) stack installs, and the [hello-web](/bases/stacks/hello-web/)
+stack, which installs both, adds the dependency with a patch:
 
 ```yaml
 patches:
@@ -189,17 +184,21 @@ patches:
 
 The `$` of the target name is escaped, as `kustomize` reads the name as a regular expression.
 
-`dependsOn` doesn't order deletes: when a Kustomization prunes the `HelmRelease`s of an App Template, helm-controller
-uninstalls them all at once. In the envoy-gateway App Template, the `gateway-api-config` release therefore sets
+`dependsOn` doesn't order deletes: when a Kustomization prunes several `HelmRelease`s, such as those of a
+[stack](./stacks.md), helm-controller uninstalls them all at once. In the envoy-gateway stack, the `gateway-api-config`
+release therefore sets
 `spec.uninstall.disableWait`, so its uninstall doesn't wait for the `giantswarm-default` `GatewayClass` to go. If
 Envoy Gateway is removed before it has cleared the `GatewayClass`'s finalizer, the `GatewayClass` stays `Terminating`.
-That only matters when you remove the stack from a workload cluster that stays up. Clear the finalizer there with:
+That only matters when you remove the envoy-gateway stack from a workload cluster that stays up. Clear the finalizer
+there with:
 
 ```sh
 kubectl patch gatewayclass giantswarm-default --type=merge -p '{"metadata":{"finalizers":null}}'
 ```
 
+To deploy several apps together, with their order, shared values and versions in one place, see [Stacks](./stacks.md).
+
 ## Recommended next steps
 
 - [Add a new App to a Workload Cluster](./add-app.md)
-- [Creating and using App Sets](./app-sets.md)
+- [Deploy several apps together as a stack](./stacks.md)

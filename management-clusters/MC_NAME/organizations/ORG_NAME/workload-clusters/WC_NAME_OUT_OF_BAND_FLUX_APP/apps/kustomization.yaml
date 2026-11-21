@@ -13,3 +13,4 @@ resources:
   - hello-world/oci-repository.yaml
   - hello-world-automatic-updates/helm-release.yaml
   - hello-world-automatic-updates/oci-repository.yaml
+  - hello-world-from-template/

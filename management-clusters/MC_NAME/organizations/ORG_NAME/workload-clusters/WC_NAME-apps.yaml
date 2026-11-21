@@ -9,8 +9,7 @@ spec:
     provider: sops
     secretRef:
       name: sops-age-wc-name
-  # the secondary apps, in apps/ and app_sets/, install once the
-  # cluster is up, see WC_NAME.yaml
+  # the secondary apps, in apps/, install once the cluster is up, see WC_NAME.yaml
   dependsOn:
     - name: mc-name-clusters-capi-wc-name  # TODO: the name of WC_NAME.yaml's Kustomization
   interval: 10m

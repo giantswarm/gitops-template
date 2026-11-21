@@ -39,7 +39,7 @@
   // in the hand-authored workflows, the constants in `tools/test-all-ff` and
   // `tests/ats/conftest.py` and `tests/ats/external_secrets.py`, the Giant Swarm release where the `release`
   // variable is set, and the chart tags kustomize patches set (the release in
-  // each stage, hello-world in the app set, staging and prod). The release is
+  // each stage, the charts in `bases/stacks/hello-web`, staging and prod). The release is
   // the tag of the `release-aws` chart. The manifests only ever set it through
   // these comments; the flux manager finds `release-aws` only in the test
   // assertions and `tools/testdata`, which name the same dependency so that
@@ -70,7 +70,7 @@
       // Staging and prod each get their own PR for each version their stage
       // pins (hello-world and the release), on a `renovate/staging-*` and a
       // `renovate/prod-*` branch. Dev follows a semver range for hello-world,
-      // so the other PR moves the bases, the app set, the out-of-band examples
+      // so the other PR moves the bases, the out-of-band examples
       // and dev's release; staging's and prod's stage patches keep the old
       // version until their own PR is merged. Merging them in turn promotes a
       // version from dev to staging to prod. The files are the stage and the

@@ -19,7 +19,7 @@ OCI registry, and the `HelmRelease` installs it into the workload cluster. See
 - [Enable automatic updates of an existing App](./automatic-updates.md)
 - [Schedule updates in upgrade windows](./scheduled-updates.md) of an App or a cluster, with Flux Operator.
 - [Add a new App Template to the repository](./app-templates.md) to reuse an app's configuration across clusters.
-- [Create and use App Sets](./app-sets.md) to deploy several apps together.
+- [Deploy several apps together as a stack](./stacks.md), with their order, shared values and versions in one place.
 - [Give an application team its own repository](./app-teams.md), which Flux applies into the team's namespace of a
   workload cluster.
 
