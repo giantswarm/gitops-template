@@ -1,0 +1,37 @@
+# workload-clusters/WC_NAME
+
+The plain example: one cluster on AWS from the CAPA cluster base, with one secondary app whose values are encrypted
+with SOPS and the cluster's own age key. Start here if you want a cluster and nothing clever.
+
+Two Flux Kustomizations, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
+the age key `sops-age-wc-name`, from the organisation's `namespace/secrets/`:
+
+- `WC_NAME.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster Available.
+- `WC_NAME-apps.yaml` then applies this directory, whose `kustomization.yaml` lists only `apps/`.
+
+## What's here
+
+- `kustomization.yaml`: lists `apps/`, so the apps Kustomization never applies `cluster/` a second time.
+- `cluster/`: the cluster.
+  - `kustomization.yaml`: the CAPA base, the `eu_central` region, and a patch with the cluster's own values.
+  - `cluster_userconfig.yaml`: the cluster's own values, here a node pool.
+  - `patch_cluster_userconfig.yaml`: appends those values to the cluster `HelmRelease`'s `valuesFrom`, last.
+- `apps/`: the secondary apps, installed once the cluster is up.
+  - `kustomization.yaml`: lists the apps, puts them in `org-<name>`, labels them with the cluster, and patches every
+    `HelmRelease` with the cluster's kubeconfig.
+  - `patch_cluster_config.yaml`: that patch.
+- `apps/cert-manager/`: cert-manager, as an `oci-repository.yaml` and a `helm-release.yaml`, with
+  `secret.enc.yaml`, its `-user-secrets` values encrypted with the cluster's age key.
+
+## When you copy it
+
+Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name`, `release` and
+the health check's cluster name in both. Give the cluster its own key, add its public half to `.sops.keys/` and a rule
+to `.sops.yaml`, and encrypt `secret.enc.yaml` again with it, or delete the file. Pick your region in
+`cluster/kustomization.yaml`. Keep the split between `cluster/` and `apps/`: the apps need a running cluster.
+
+## Read more
+
+- [3. Create a workload cluster](/docs/tutorials/basic/getting-started.md#3-create-a-workload-cluster)
+- [Add a workload cluster key (age)](/docs/how-to/sops.md#add-a-workload-cluster-key-age)
+- [Encrypt an app's values](/docs/how-to/sops.md#encrypt-an-apps-values)

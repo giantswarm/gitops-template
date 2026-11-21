@@ -616,6 +616,35 @@ function test() {
 		fi
 	fi
 
+	if [ "${mode}" == "validate" ]; then
+		# check-directory-readmes must fail, in a copy of the repository, for a directory without
+		# a README, for a covered leaf that's gone, and for a covered leaf its parent's README
+		# doesn't name.
+		readmes_path=$(realpath "$(dirname $0)/check-directory-readmes")
+		fixture_dir="${tmp_dir}/readmes"
+		readmes_cases=(
+			"a directory without a README|rm bases/apps/README.md|bases/apps has no README.md"
+			"a covered leaf that's gone|rm -r bases/environments/stages/dev|bases/environments/stages/dev is listed in COVERED"
+			"a covered leaf its parent's README doesn't name|sed -i s@prod/@production@g bases/environments/stages/README.md|bases/environments/stages/README.md covers bases/environments/stages/prod, but doesn't name it"
+		)
+		for c in "${readmes_cases[@]}"; do
+			IFS='|' read -r description change message <<<"${c}"
+			echo -n "check-directory-readmes, ${description}: "
+			rm -rf "${fixture_dir}"
+			mkdir -p "${fixture_dir}"
+			cp -r bases management-clusters "${fixture_dir}"
+			status=0
+			output=$(cd "${fixture_dir}" && ${change} && "${readmes_path}" 2>&1) || status=$?
+			if [ "${status}" -ne 0 ] && grep -qF "${message}" <<<"${output}"; then
+				echo "OK, reported"
+			else
+				echo "not reported:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
+	fi
+
 	if [[ ${has_validation_errors} -ne 0 ]]; then
 		echo "There are validation errors, please check the above output!"
 		exit 2
