@@ -2,6 +2,10 @@
 on a Giant Swarm management cluster, so that an example a management cluster would refuse fails
 here too. automation_bindings says which objects; the test's own setup keeps using the test's
 admin client.
+
+The fixture gives `default/automation` its rights before Flux applies the repository.
+organization_operator calls `organization_rbac` once it has created the organisation's
+namespace, as rbac-operator does for a new organisation namespace.
 """
 
 import logging
@@ -9,6 +13,7 @@ from collections.abc import Iterator
 
 import pykube
 import pytest
+from automation_accounts import DEFAULT_NAMESPACE
 from automation_bindings import automation_rbac_objects
 from automation_roles import FLUX_APP, MC_BASES, RBAC_OPERATOR
 from conftest import GitOpsTestConfig
@@ -44,6 +49,38 @@ def discover(api: pykube.HTTPClient) -> list[dict]:
     return [get_json(api, group_version) for group_version in group_versions]
 
 
+def give_rights(
+    api: pykube.HTTPClient,
+    namespaces: list[str],
+    created: list[pykube.objects.APIObject],
+) -> None:
+    """Give the `automation` ServiceAccounts of `namespaces` their rights. `read-all` covers the
+    resources served now, as rbac-operator's covers the ones served when it last reconciled.
+    rbac_reconcile brings an object that exists already in line. Add the objects it creates to
+    `created` as it goes, so a caller can delete them also when it fails part of the way.
+    """
+    existing = {ns.name for ns in pykube.Namespace.objects(api)}
+    for obj in automation_rbac_objects(namespaces, existing, discover(api)):
+        kube_obj = OBJECT_KINDS[obj["kind"]](api, obj)
+        if create_or_update(kube_obj):
+            created.append(kube_obj)
+    logger.info(
+        f"Gave `automation` in {namespaces} the rights of a management cluster, from "
+        f"{RBAC_OPERATOR}, {MC_BASES} and {FLUX_APP}: {len(created)} objects created"
+    )
+
+
+def organization_rbac(
+    api: pykube.HTTPClient, namespace: str
+) -> list[pykube.objects.APIObject]:
+    """What rbac-operator creates for a new organisation namespace: its `automation`, the
+    RoleBinding that gives `default/automation` and it `cluster-admin` there, and the rest of
+    automation_bindings for it. Return the objects it created."""
+    created: list[pykube.objects.APIObject] = []
+    give_rights(api, [DEFAULT_NAMESPACE, namespace], created)
+    return created
+
+
 @pytest.fixture(scope="module")
 def automation_rbac(
     kube_cluster: Cluster,
@@ -56,26 +93,14 @@ def automation_rbac(
     flux_app_deployment: None,
     workload_cluster_flux_crds: None,
 ) -> Iterator[None]:
-    """Give `automation` its management-cluster rights, once every CRD of the test is installed.
-
-    `read-all` covers the resources served when it's created, as rbac-operator's covers the ones
-    served when it last reconciled. rbac_reconcile brings an object that exists already in line.
-    The fixture deletes what it created, also when the setup fails part of the way.
+    """Give `automation` in GITOPS_INIT_NAMESPACES its management-cluster rights, once every CRD
+    of the test is installed. The fixture deletes what it created, also when the setup fails
+    part of the way.
     """
-    api = kube_cluster.kube_client
-    existing = {ns.name for ns in pykube.Namespace.objects(api)}
-    objects = automation_rbac_objects(
-        gitops_test_config.init_namespaces, existing, discover(api)
-    )
-    created = []
+    created: list[pykube.objects.APIObject] = []
     try:
-        for obj in objects:
-            kube_obj = OBJECT_KINDS[obj["kind"]](api, obj)
-            if create_or_update(kube_obj):
-                created.append(kube_obj)
-        logger.info(
-            f"Gave `automation` the rights of a management cluster, from {RBAC_OPERATOR}, "
-            f"{MC_BASES} and {FLUX_APP}: created {len(created)} objects"
+        give_rights(
+            kube_cluster.kube_client, gitops_test_config.init_namespaces, created
         )
         yield None
     finally:

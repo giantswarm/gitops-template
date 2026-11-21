@@ -748,7 +748,7 @@ def test_remove_workload_cluster_removes_the_values_file_when_the_uninstall_fail
 
     monkeypatch.setattr(conftest, "run_tool", failing_helm)
     with pytest.raises(Exception, match="`helm uninstall` failed"):
-        conftest.remove_workload_cluster([], "kubeconfig", str(values_file))
+        conftest.remove_workload_cluster("kubeconfig", str(values_file))
     assert not values_file.exists()
 
 

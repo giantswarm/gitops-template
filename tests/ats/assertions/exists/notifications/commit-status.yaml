@@ -1,7 +1,7 @@
 # N1: the notification example. Each Provider names its token Secret, and each Alert names its
 # Provider and stays suspended, so the test posts nothing to GitHub. The management cluster's
-# Alert covers the Kustomizations in `default`; the organisation's, in its namespace, which its
-# kustomization.yaml completes from the Organization's name, covers the repository's -direct
+# Alert covers the Kustomizations in `default`; the organisation's, in its namespace, where the
+# organisation's namespace Kustomization applies it, covers the repository's -direct
 # Kustomization in `org-org-name`, and not the application team's.
 # notification_objects.py waits until ESO has written the token Secrets' `token` from the fake
 # store and the Receiver is Ready.

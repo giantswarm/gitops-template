@@ -1,0 +1,30 @@
+# The root applies this directory, as a management cluster's root applies an organisation's.
+# The replacements complete the `targetNamespace` and `organization` of the Kustomization in
+# namespace.yaml, which applies namespace/. tools/fake-flux has to build the Kustomization in
+# namespace/ as Flux applies it: in the namespace `targetNamespace` puts it in, with the
+# `organization` the parent's `postBuild` sets.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - organization.yaml
+  - namespace.yaml
+replacements:
+  - source:
+      kind: ConfigMap
+      name: from-the-parent
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          name: parent-namespace
+        fieldPaths:
+          - spec.targetNamespace
+        options:
+          delimiter: "-"
+          index: 1

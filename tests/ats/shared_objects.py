@@ -1,6 +1,6 @@
 """The shared-objects example: the ConfigMap `shared-ca-bundle` in bases/shared_objects, which
-every organisation's directory lists with the organisation's namespace set there. Flux applies a
-copy into each of those `org-*` namespaces and keeps every copy in sync with the base.
+every organisation's namespace/ directory lists. The organisation's namespace Kustomization
+applies a copy into each of those `org-*` namespaces and keeps every copy in sync with the base.
 
 The check compares every copy with the base in Git, so an organisation that lists the base gets
 it, and a change to the base reaches every copy. It then changes a copy and waits for Flux to put
@@ -18,11 +18,14 @@ from values_watch import owning_kustomization
 REPO_DIR = Path(__file__).resolve().parents[2]
 SOURCE_FILE = REPO_DIR / "bases" / "shared_objects" / "shared-ca-bundle.yaml"
 ORGANIZATIONS_DIR = REPO_DIR / "management-clusters" / "MC_NAME" / "organizations"
-# the directory in an organisation's directory that lists the base
+# the directory of an organisation that its namespace Kustomization applies, into the
+#  organisation's namespace
+NAMESPACE_DIR = "namespace"
+# the directory in NAMESPACE_DIR that lists the base
 COPY_DIR = "shared-objects"
 CONFIG_MAP = "shared-ca-bundle"
-# Flux applies the copies with the rest of the management cluster, and puts a changed copy back
-#  at its next reconcile, which the check asks for
+# Flux applies the copies with the rest of the organisation's namespace, and puts a changed copy
+#  back at its next reconcile, which the check asks for
 SYNC_TIMEOUT_SEC = 120
 # the change to a copy, which Flux has to undo
 CHANGED_DATA = "changed by the shared-objects check"
@@ -53,16 +56,23 @@ def organisation_name(organisation_dir: Path, resources: list[str]) -> str:
     raise MissingOrganizationError(organisation_dir)
 
 
+def _resources(kustomization_file: Path) -> list[str]:
+    if not kustomization_file.is_file():
+        return []
+    with kustomization_file.open() as f:
+        return yaml.safe_load(f).get("resources", [])
+
+
 def copy_namespaces(organisations_dir: Path) -> list[str]:
-    """The namespaces of the copies: `org-<name>` of every organisation whose kustomization.yaml
-    lists COPY_DIR. Its replacements put the Organization's name in place of the placeholder
-    namespace `org-ORG_NAME` that COPY_DIR sets."""
+    """The namespaces of the copies: `org-<name>` of every organisation whose
+    NAMESPACE_DIR/kustomization.yaml lists COPY_DIR. The organisation's namespace Kustomization
+    applies NAMESPACE_DIR into that namespace: its replacements put the Organization's name in
+    its `targetNamespace`."""
     namespaces = []
     for kustomization_file in organisations_dir.glob("*/kustomization.yaml"):
-        with kustomization_file.open() as f:
-            resources = yaml.safe_load(f).get("resources", [])
-        if COPY_DIR in resources:
-            name = organisation_name(kustomization_file.parent, resources)
+        directory = kustomization_file.parent
+        if COPY_DIR in _resources(directory / NAMESPACE_DIR / "kustomization.yaml"):
+            name = organisation_name(directory, _resources(kustomization_file))
             namespaces.append(f"org-{name}")
     return sorted(namespaces)
 

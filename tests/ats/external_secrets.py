@@ -4,7 +4,9 @@ ESO runs on every Giant Swarm management cluster, and the customer creates a `Se
 that reads their secret manager in each namespace that reads secrets, `default` and their
 `org-*` namespace: they can't create a `ClusterSecretStore`. The test installs ESO and creates
 the stores of docs/appendices.md, "Secret store for testing", whose fake provider keeps the
-values in the store itself. The examples' `ExternalSecret`s read them.
+values in the store itself. The examples' `ExternalSecret`s read them. The fixture creates the
+store in `default` before Flux applies the repository; organization_operator calls
+`organization_store` once it has created the organisation's namespace.
 """
 
 import time
@@ -14,7 +16,7 @@ import pykube
 import pytest
 from conftest import HELM_URL, apply, run_tool
 from eso_kinds import SecretStoreCR
-from fake_store import secret_stores
+from fake_store import DEFAULT_STORE_NAMESPACE, secret_stores
 from pytest_helm_charts.clusters import Cluster
 from workload_cluster_secrets import controller_egress
 
@@ -72,6 +74,14 @@ def create_store(
         time.sleep(2)
 
 
+def organization_store(api: pykube.HTTPClient, namespace: str) -> list[SecretStoreCR]:
+    """Create the test's store in the organisation's `namespace`, as the customer does."""
+    return [
+        create_store(api, s, STORE_CREATE_TIMEOUT_SEC)
+        for s in secret_stores([namespace])
+    ]
+
+
 def helm(kube_config: str, *args: str) -> None:
     run_tool("helm", HELM_URL, *args, "--kubeconfig", kube_config)
 
@@ -80,8 +90,7 @@ def helm(kube_config: str, *args: str) -> None:
 def external_secrets(
     kube_cluster: Cluster, kube_config: str, init_namespaces: object
 ) -> Iterator[None]:
-    """Install ESO and create the fake stores, in the namespaces init_namespaces creates;
-    remove them all again in the end."""
+    """Install ESO and create the fake store in `default`; remove them again in the end."""
     helm(
         kube_config,
         "upgrade",
@@ -114,7 +123,7 @@ def external_secrets(
         ):
             stores = [
                 create_store(kube_cluster.kube_client, s, STORE_CREATE_TIMEOUT_SEC)
-                for s in secret_stores()
+                for s in secret_stores([DEFAULT_STORE_NAMESPACE])
             ]
             yield
             for store in stores:

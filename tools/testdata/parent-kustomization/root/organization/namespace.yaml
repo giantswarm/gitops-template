@@ -1,0 +1,17 @@
+# Applies namespace/ into the namespace the replacements in kustomization.yaml complete.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: parent-namespace
+  namespace: default
+spec:
+  interval: 1m
+  path: ./root/organization/namespace
+  postBuild:
+    substitute:
+      organization: "ORG_NAME"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: parent-kustomization
+  targetNamespace: org-ORG_NAME

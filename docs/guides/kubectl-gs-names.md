@@ -138,7 +138,8 @@ both apply the same resources until you delete it.
     If it prints `true`, set `prune: false` in its file first, push, and wait until Flux has applied it.
 
 1. Change `metadata.name` in `management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml` to
-   `MC_NAME-clusters-WC_NAME`, and the same for `WC_NAME-direct.yaml` if you have one. If your repository runs the
+   `MC_NAME-clusters-WC_NAME`, and the same for `namespace/workload-clusters/WC_NAME-direct.yaml` in the organisation's
+   directory if you have one. If your repository runs the
    [CI validation](./ci-validation.md), rename the `Kustomization` in the `gitops_ignored_objects` input of
    `.github/workflows/validate.yaml` and in the `kustomize.toolkit.fluxcd.io/name` labels of `tests/ats/assertions`
    too.

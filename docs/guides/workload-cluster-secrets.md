@@ -65,22 +65,20 @@ issues for a ServiceAccount, so no cloud credential is stored in the cluster or 
 
 Ask Giant Swarm support for your management cluster's service account issuer URL.
 
-The bases have no namespace. Use one in your organisation's directory, so the store is in the organisation's
-namespace next to the clusters' `ExternalSecret`s, for example in
-`management-clusters/MC_NAME/organizations/ORG_NAME/secret-stores/kustomization.yaml`:
+The bases have no namespace. Use one in your organisation's `namespace` directory, so the store is in the
+organisation's namespace next to the clusters' `ExternalSecret`s, for example in
+`management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secret-stores/kustomization.yaml`:
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: org-ORG_NAME
 resources:
-  - ../../../../../bases/secret_stores/azure-key-vault
+  - ../../../../../../bases/secret_stores/azure-key-vault
 ```
 
-Keep the placeholder namespace `org-ORG_NAME` and add `secret-stores` to the `resources` of the organisation's
-`kustomization.yaml`: `MC_NAME.yaml` then applies it with the rest of the organisation, and the organisation's
-replacements put its name in place of the placeholder, see
-[The organisation's name](../reference/repo-structure.md#the-organisations-name). A `SecretStore` only serves the
+Add `secret-stores` to the `resources` of the organisation's `namespace/kustomization.yaml`: the organisation's
+namespace `Kustomization`, `namespace.yaml`, then applies it into the organisation's namespace, see
+[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). A `SecretStore` only serves the
 `ExternalSecret`s in its own namespace, so `common-secret.yaml`, in `org-ORG_NAME`, needs this store in
 `org-ORG_NAME`. For the store in `default` that [Getting started](../getting-started.md) also reads, use the base the
 same way with `namespace: default`, but only once, in the management cluster's directory rather than an

@@ -28,6 +28,8 @@ PRUNE_IGNORE = "\n".join(
 )
 # the Kustomization of the management cluster, which applies the organization
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
+# the organisation's namespace Kustomization, which applies the -direct Kustomization
+ORGANIZATION_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-organization-org-name")
 # the Kustomization of the out-of-band-no-flux cluster's secondary apps, which applies the app set
 APPS_KUSTOMIZATION = (
     FLUX_OBJECTS_NAMESPACE,
@@ -40,7 +42,8 @@ CLUSTER_KUSTOMIZATIONS = [
     APPS_KUSTOMIZATION,
 ]
 # the cluster's -direct Kustomization, which applies its out-of-band directory to the workload
-#  cluster. It is in the namespace of the cluster's kubeconfig Secret, the organisation's.
+#  cluster. It is in the namespace of the cluster's kubeconfig Secret, the organisation's, and
+#  ORGANIZATION_KUSTOMIZATION applies it.
 DIRECT_KUSTOMIZATION = (
     "org-org-name",
     "mc-name-clusters-out-of-band-no-flux-direct",
