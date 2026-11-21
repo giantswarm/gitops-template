@@ -1,134 +1,27 @@
 # Update an existing App
 
-- [Update an existing App](#update-an-existing-app)
-  - [Export environment variables](#export-environment-variables)
-  - [Updating App](#updating-app)
-    - [Updating the chart version](#updating-the-chart-version)
-    - [Updating the HelmRelease](#updating-the-helmrelease)
-    - [Updating ConfigMap-based user values](#updating-configmap-based-user-values)
-    - [Updating Secret-based user values](#updating-secret-based-user-values)
-
-Follow the below instructions to update an existing App.
+This page moved to [Change an app](../how-to/update-app.md). The sections below keep old links working.
 
 ## Export environment variables
 
-**Note**, Management Cluster codename, Organization name, Workload Cluster name and App name are needed in multiple
-places across this instruction, the least error prone way of providing them is by exporting as environment variables:
-
-```sh
-export MC_NAME=CODENAME
-export ORG_NAME=ORGANIZATION
-export WC_NAME=CLUSTER_NAME
-export APP_NAME=APP_NAME
-```
+See [Change an app](../how-to/update-app.md).
 
 ## Updating App
 
-  App update and reconfiguration must be done in a correct resource:
-
-- the chart version lives in the `OCIRepository`, in the `oci-repository.yaml` file,
-- how the chart is installed, for example the target namespace, timeouts or retries, lives in the `HelmRelease`, in
-  the `helm-release.yaml` file,
-- plain text configuration lives in the `-user-values` ConfigMap, generated from the `override_config.yaml` file,
-- encrypted configuration lives in the `-user-secrets` Secret, in the `secret.enc.yaml` file.
-
-  Both carry the `reconcile.fluxcd.io/watch: Enabled` label, so Flux applies a change to them as soon as it's merged,
-  not at the `HelmRelease`'s next `interval`. Keep the label on every ConfigMap and Secret a `HelmRelease` lists in
-  `valuesFrom`: CI fails without it. To label a Secret that's already encrypted, don't edit the file: add a patch
-  to the App's `kustomization.yaml`, as the `envoy-gateway-from-template` example of the
-  `WC_NAME_OUT_OF_BAND_FLUX_APP` cluster does, or edit it with `sops edit`.
-
-  For an App created from an [App Template](./app-templates.md), the `oci-repository.yaml` and `helm-release.yaml`
-  files are part of the Template. Changing them there changes the App in every cluster that uses the Template. To change
-  them for a single cluster, add a patch to the App's `kustomization.yaml`, see
-  [Adding App using App Template](./add-app.md#adding-app-using-app-template).
+See [Change an app](../how-to/update-app.md).
 
 ### Updating the chart version
 
-1. Go to the App directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
-    ```
-
-1. Set the new chart version in the `OCIRepository`:
-
-    ```sh
-    yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml
-    ```
-
-    To have Flux pick up new versions by itself, use a version range instead, see
-    [Enable automatic updates of an existing App](./automatic-updates.md).
+See [Change the chart version](../how-to/update-app.md#change-the-chart-version).
 
 ### Updating the HelmRelease
 
-1. Go to the App directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
-    ```
-
-1. Edit the `helm-release.yaml`. For all the supported fields reference
-   [the HelmRelease documentation](https://fluxcd.io/flux/components/helm/helmreleases/).
+See [Change how the chart is installed](../how-to/update-app.md#change-how-the-chart-is-installed).
 
 ### Updating ConfigMap-based user values
 
-1. Go to the App directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
-    ```
-
-1. Edit the `override_config.yaml` if you want to update a non-secret user configuration
+See [Change the values](../how-to/update-app.md#change-the-values).
 
 ### Updating Secret-based user values
 
-1. Go to the App directory:
-
-    ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
-    ```
-
-1. Import the WC's regular GPG private key from your safe storage into your keychain. In our example, we're gonna
-   use 1Password's CLI `op` for that:
-
-    ```sh
-    eval $(op signin)
-    op item get "GPG private key (${MC_NAME}, ${WC_NAME}, Flux)" --vault 'Dev Common' --format json |
-    jq -j '.fields[] | select(.id == "notesPlain") | .value' |
-    gpg --import
-    ```
-
-1. Decrypt the `secret.enc.yaml` file with SOPS:
-
-    ```sh
-    sops --decrypt --in-place secret.enc.yaml
-    ```
-
-1. Edit the values under `.stringData.values` if you want to update a secret user configuration.
-
-    If the Secret holds them base64-encoded under `.data.values` instead, as Secrets created with
-    `kubectl create secret` do, decode them into a temporary file, edit it, and encode them back:
-
-    ```sh
-    yq eval .data.values secret.enc.yaml | base64 -d > values.tmp.yaml
-    # edit values.tmp.yaml
-    export NEW_USER_VALUES=$(base64 < values.tmp.yaml | tr -d '\n')
-    yq -i eval ".data.values = \"${NEW_USER_VALUES}\"" secret.enc.yaml
-    rm values.tmp.yaml
-    ```
-
-1. Re-encrypt the Kubernetes Secret:
-
-    ```sh
-    sops --encrypt --in-place secret.enc.yaml
-    ```
-
-1. Remove the private GPG key from your keychain and submit the PR.
-
-    ```sh
-    export KEY_FP=$(gpg --show-keys --with-colons \
-    "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc" |
-    awk -F: '/^fpr/{print $10; exit}')
-    gpg --delete-secret-keys "${KEY_FP}"
-    ```
+See [Change encrypted values](../how-to/sops.md#change-encrypted-values).

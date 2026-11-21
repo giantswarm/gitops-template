@@ -3,10 +3,10 @@
 ESO runs on every Giant Swarm management cluster, and the customer creates a `SecretStore`
 that reads their secret manager in each namespace that reads secrets, `default` and their
 `org-*` namespace: they can't create a `ClusterSecretStore`. The test installs ESO and creates
-the stores of docs/appendices.md, "Secret store for testing", whose fake provider keeps the
-values in the store itself. The examples' `ExternalSecret`s read them. The fixture creates the
-store in `default` before Flux applies the repository; organization_operator calls
-`organization_store` once it has created the organisation's namespace.
+the stores of docs/how-to/external-secrets.md, "A secret store for testing", whose fake
+provider keeps the values in the store itself. The examples' `ExternalSecret`s read them. The
+fixture creates the store in `default` before Flux applies the repository; organization_operator
+calls `organization_store` once it has created the organisation's namespace.
 """
 
 import time

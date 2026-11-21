@@ -1,6 +1,6 @@
 # Optional. Flux fetches the repository when GitHub calls the webhook on a push, instead of
 # waiting for the GitRepository's interval. GitHub has to reach the `webhook-receiver` Service
-# of notification-controller, see docs/guides/commit-statuses.md.
+# of notification-controller, see docs/how-to/commit-statuses.md.
 apiVersion: notification.toolkit.fluxcd.io/v1
 kind: Receiver
 metadata:

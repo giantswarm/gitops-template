@@ -5,7 +5,7 @@ name: chainsaw
 # has no trigger but a manual one, and no CHAINSAW_KUBECONFIG secret. To use it
 # in your repository, set the secret to a kubeconfig for your management
 # cluster and run the workflow from the Actions tab, or add the triggers you
-# want. See docs/guides/ci-validation.md, "Chainsaw tests".
+# want. See docs/tutorials/advanced/testing.md, "Test with Chainsaw".
 
 on:
   workflow_dispatch:
