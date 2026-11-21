@@ -1,36 +1,4 @@
 # Guides
 
-These guides cover what comes after [Getting started](../getting-started.md). Each one solves a single task.
-
-Clusters:
-
-- [Add a CAPx Workload Cluster base](./clusters.md) to create many clusters from one definition.
-- [Add Workload Cluster environments](./environments.md) to pin the release and app versions of dev, staging and
-  production clusters per stage.
-
-Apps:
-
-Apps in this repository are Flux `HelmRelease` + `OCIRepository` pairs. The `OCIRepository` points at the chart in an
-OCI registry, and the `HelmRelease` installs it into the workload cluster. See
-[bases/apps/hello-world](/bases/apps/hello-world/) for an example.
-
-- [Add a new App to a Workload Cluster](./add-app.md)
-- [Update an existing App](./update-app.md)
-- [Enable automatic updates of an existing App](./automatic-updates.md)
-- [Schedule updates in upgrade windows](./scheduled-updates.md) of an App or a cluster, with Flux Operator.
-- [Add a new App Template to the repository](./app-templates.md) to reuse an app's configuration across clusters.
-- [Deploy several apps together as a stack](./stacks.md), with their order, shared values and versions in one place.
-- [Give an application team its own repository](./app-teams.md), which Flux applies into the team's namespace of a
-  workload cluster.
-
-Repository:
-
-- [Configuring extra validation and diff previews on GitHub](./ci-validation.md)
-- [Move a fork to the kubectl-gs file and resource names](./kubectl-gs-names.md), for repositories forked before
-  the template used them.
-- [Report reconcile status on GitHub commits](./commit-statuses.md), and fetch the repository on push.
-
-Secrets:
-
-- [Push secrets into a new Workload Cluster](./workload-cluster-secrets.md) with External Secrets Operator, from
-  your secret manager or made by a generator.
+The guides moved to the [documentation home](../README.md), which sorts them into tutorials, how-to guides,
+reference and explanation. Each old guide keeps a page that points to its new place.
