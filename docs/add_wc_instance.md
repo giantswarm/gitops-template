@@ -160,10 +160,11 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     cd ../../
     ```
 
-1. Edit the Kustomization CR for the workload cluster and set the variables of the base, `release` included:
+1. Edit the Kustomization CR for the workload cluster, in the organisation's `namespace/workload-clusters`, and set
+   the variables of the base, `release` included:
 
     ```yaml
-    # cat ${WC_NAME}.yaml
+    # cat ../namespace/workload-clusters/${WC_NAME}.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     ...
@@ -173,7 +174,7 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
         substitute:
           cluster_description: "My GitOps Cluster"
           cluster_name: "demo0"
-          organization: "gitops-demo"
+          organization: "${organization}"
           release: "36.2.0"
       ...
     ```
@@ -182,8 +183,9 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     upgrade the cluster later, change `release` to a newer release.
 
 1. If the cluster gets apps, make them wait for it, as the
-   [WC_NAME](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) example does. Set
-   the Kustomization's `path` to `${WC_NAME}/cluster`, its `timeout` to `30m`, and add a health check of the cluster:
+   [WC_NAME](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-clusters/WC_NAME.yaml) example
+   does. Set the Kustomization's `path` to `${WC_NAME}/cluster`, its `timeout` to `30m`, and add a health check of the
+   cluster, in the organisation's namespace, which the organisation's namespace Kustomization fills in:
 
     ```yaml
     spec:
@@ -195,16 +197,17 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
           name: demo0
-          namespace: org-gitops-demo
+          namespace: org-${organization}
     ```
 
-    Base apps, which install with the cluster, go into `cluster/apps`, listed in `cluster/kustomization.yaml`.
-    Then remove `cluster/` from the cluster's `kustomization.yaml`, so it lists `apps/`, and add `${WC_NAME}-apps.yaml`
-    for `${WC_NAME}`, with the same `postBuild` and the cluster's Kustomization in `dependsOn`, as in
-    [WC_NAME-apps.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME-apps.yaml). List
-    it in `kustomization.yaml`. See [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations) for the
-    order. `kubectl gs gitops add workload-cluster` still generates a `mapi` directory and a single Kustomization for
-    all of it, see [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations) for how to move it.
+    Base apps, which install with the cluster, go into `cluster/apps`, listed in `cluster/kustomization.yaml`. Then
+    remove `cluster/` from the cluster's `kustomization.yaml`, so it lists `apps/`, and add `${WC_NAME}-apps.yaml` for
+    `${WC_NAME}`, with the same `postBuild` and the cluster's Kustomization in `dependsOn`, as in
+    [WC_NAME-apps.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-clusters/WC_NAME-apps.yaml).
+    List it in `namespace/workload-clusters/kustomization.yaml`. See
+    [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations) for the order.
+    `kubectl gs gitops add workload-cluster` still generates a `mapi` directory and a single Kustomization for all of
+    it, see [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations) for how to move it.
 
 1. Create a Pull Request with the changes you have just done. Once it is merged, Flux should reconcile resources
 you have just created.

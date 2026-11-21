@@ -130,16 +130,18 @@ Fake flux is a script that can emulate the behaviour of flux locally before comm
 It's purpose is to support you in the detection of issues which may arise from syntax errors, failing patches or other
 issues caused by incompatibilities with the flux ecosystem.
 
-It builds a Flux `Kustomization` as Flux applies it, not as its file is written.
+It builds a Flux `Kustomization` as Flux applies it, not as its file is written. It finds them in the repository's
+YAML files outside `tests` and `tools/testdata`: the kind test's assertions in `tests/ats/assertions` name the
+repository's `Kustomization`s too, but aren't ones to build.
 
 A `Kustomization` that another Flux `Kustomization` of the repository applies is read from that parent's `flux build`:
 in the namespace the parent's `targetNamespace` puts it in, with the values the parent's `postBuild` substitutes. An
-organisation's namespace `Kustomization`, `namespace.yaml`, applies its `-direct` `Kustomization`s this way, with no
-namespace in their files and `organization: "${organization}"`. The parent is itself built as Flux applies it, the same
-way, so the values its own parent's replacements set reach the child. The parents are this repository's
-`Kustomization`s, the ones whose source is the `GitRepository` of a `Kustomization` that applies the directory its own
-file is in, such as `MC_NAME.yaml`, and whose path holds the file. The one with the deepest path whose build has the
-`Kustomization` wins. `test-all-ff validate` checks this with the fixture in
+organisation's namespace `Kustomization`, `namespace.yaml`, applies its workload clusters' `Kustomization`s this way,
+`-direct` ones included, with no namespace in their files and `organization: "${organization}"`. The parent is itself
+built as Flux applies it, the same way, so the values its own parent's replacements set reach the child. The parents are
+this repository's `Kustomization`s, the ones whose source is the `GitRepository` of a `Kustomization` that applies the
+directory its own file is in, such as `MC_NAME.yaml`, and whose path holds the file. The one with the deepest path whose
+build has the `Kustomization` wins. `test-all-ff validate` checks this with the fixture in
 [testdata/parent-kustomization](testdata/parent-kustomization).
 
 Without such a parent, as for `MC_NAME.yaml` itself, it builds the directories above the file. Flux's build of a

@@ -37,22 +37,10 @@ export ORG_NAME=ORGANIZATION
     mkdir ${ORG_NAME}
     ```
 
-1. Go to the newly created directory and create the `workload-clusters` directory there:
+1. Go to the newly created directory:
 
     ```sh
     cd ${ORG_NAME}
-    mkdir workload-clusters
-    ```
-
-1. Create the mandatory `kustomization.yaml` under `workload-clusters` directory and populate it with empty resources
-   for now:
-
-    ```sh
-    cat <<EOF > workload-clusters/kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    kind: Kustomization
-    resources: []
-    EOF
     ```
 
 1. Create the Organization CR. Deleting it deletes the organization's namespace, with every cluster in it, so the
@@ -88,13 +76,21 @@ export ORG_NAME=ORGANIZATION
       .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' ${ORG_NAME}.yaml
     ```
 
-1. Create the `namespace` directory, for everything the organisation keeps in its namespace, `org-${ORG_NAME}`, with
-   a `kustomization.yaml` that lists nothing yet. The files in it name no namespace: the `Kustomization` of the next
-   step puts them in the organisation's.
+1. Create the `namespace` directory, for everything the organisation keeps in its namespace, `org-${ORG_NAME}`. The
+   files in it name no namespace: the `Kustomization` of the next step puts them in the organisation's. Its
+   `workload-clusters` directory holds the workload clusters' Flux `Kustomization`s, with a `kustomization.yaml` that
+   lists none yet. The cluster directories they apply go in `workload-clusters` next to `namespace`, see
+   [Add a new Workload Cluster](./add_wc.md):
 
     ```sh
-    mkdir namespace
+    mkdir -p namespace/workload-clusters
     cat <<EOF > namespace/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources:
+      - workload-clusters
+    EOF
+    cat <<EOF > namespace/workload-clusters/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources: []
@@ -143,15 +139,13 @@ export ORG_NAME=ORGANIZATION
     yq -i '.spec.path = "./management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/namespace"' namespace.yaml
     ```
 
-1. Create the organisation's `kustomization.yaml`. It lists the `Organization`, `namespace.yaml` and
-   `workload-clusters`, and copies the `Organization`'s name into the Flux `Kustomization`s: into `organization` in
-   their `spec.postBuild.substitute`, which every one of them writes and which fails the build where it's missing,
-   into the namespace of a cluster's health check, and into the `targetNamespace` of `namespace.yaml`. The
-   replacements win over what the files say. `org-ORG_NAME` is a fixed placeholder: the quoted `'EOF'` keeps it, and
-   everything else in the file, as it is, so don't replace it with your organisation's name. The health check
-   replacement applies only to a `Kustomization` with the label `giantswarm.io/health-check-cluster: "true"`, whose
-   health check keeps the placeholder namespace, and the last one only to the one with the label
-   `giantswarm.io/organization-namespace: "true"`, as kustomize fails on one without the field. See
+1. Create the organisation's `kustomization.yaml`. It lists the `Organization` and `namespace.yaml`, and copies the
+   `Organization`'s name into the Flux `Kustomization`s: into `organization` in their `spec.postBuild.substitute`,
+   which every one of them writes and which fails the build where it's missing, and into the `targetNamespace` of
+   `namespace.yaml`. The replacements win over what the files say. `org-ORG_NAME` is a fixed placeholder: the quoted
+   `'EOF'` keeps it, and everything else in the file, as it is, so don't replace it with your organisation's name. The
+   last replacement applies only to the `Kustomization` with the label `giantswarm.io/organization-namespace: "true"`,
+   as kustomize fails on one without the field. See
    [The organisation's name](./reference/repo-structure.md#the-organisations-name), which also says how to do without
    the replacements:
 
@@ -162,7 +156,6 @@ export ORG_NAME=ORGANIZATION
     resources:
       - ORGANIZATION_FILE
       - namespace.yaml
-      - workload-clusters
     replacements:
       - source:
           group: security.giantswarm.io
@@ -174,20 +167,6 @@ export ORG_NAME=ORGANIZATION
               kind: Kustomization
             fieldPaths:
               - spec.postBuild.substitute.organization
-      - source:
-          group: security.giantswarm.io
-          kind: Organization
-          fieldPath: metadata.name
-        targets:
-          - select:
-              group: kustomize.toolkit.fluxcd.io
-              kind: Kustomization
-              labelSelector: giantswarm.io/health-check-cluster=true
-            fieldPaths:
-              - spec.healthChecks.[kind=Cluster].namespace
-            options:
-              delimiter: "-"
-              index: 1
       - source:
           group: security.giantswarm.io
           kind: Organization
@@ -208,9 +187,9 @@ export ORG_NAME=ORGANIZATION
 
     The management cluster's `Kustomization` applies the organisation's directory as this file builds it, so list
     here anything else you add to the directory that goes in `default`. What goes in the organisation's namespace,
-    such as `secrets` below, goes in `namespace` and `namespace/kustomization.yaml`. To see what the management
-    cluster's `Kustomization` applies, build the directory, not `workload-clusters` on its own, which leaves the
-    placeholders:
+    such as `secrets` below and the workload clusters' `Kustomization`s, goes in `namespace` and
+    `namespace/kustomization.yaml`. To see what the management cluster's `Kustomization` applies, build the directory,
+    not a file in it on its own, which leaves the placeholders:
 
     ```sh
     kubectl kustomize .
@@ -280,7 +259,11 @@ new GPG key-pair dedicated for an organization.
     > management-clusters/${MC_NAME}/.sops.keys/.sops.${ORG_NAME}.asc
     ```
 
-1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml):
+1. Configure automatic key selection rule in the [SOPS configuration file](/.sops.yaml). `sops` uses the first rule
+   that matches a file, so this rule has to come after the management cluster's rule for the workload clusters' SOPS
+   keys in `namespace/secrets`, from [Add a new Management Cluster](./add_mc.md), which encrypts them with the master
+   key. `+=` appends it at the end of the list, after that rule. If your `.sops.yaml` doesn't have that rule yet, add
+   it first, see [SOPS keys](./reference/sops-keys.md#encryption-rules):
 
     ```sh
     touch .sops.yaml
@@ -370,8 +353,8 @@ going to use 1Password (`op` CLI tool) for that:
 
 1. List the directory in `namespace/kustomization.yaml`, and give it a `kustomization.yaml` of its own that lists the
    Secret. Like the management cluster's `secrets/kustomization.yaml`, it gives every Secret here the
-   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label: a
-   `-direct` `Kustomization`'s SOPS key Secret goes here too, and deleting it would stop that `Kustomization`
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label: the
+   workload clusters' SOPS key Secrets go here too, and deleting one would stop its cluster's `Kustomization`s
    decrypting. Flux then keeps a Secret here when its file or `namespace.yaml` goes; delete it by hand, after removing
    the label, see [How it works](./how-it-works.md):
 
