@@ -7,6 +7,7 @@ import yaml
 from shared_objects import (
     CONFIG_MAP,
     COPY_DIR,
+    NAMESPACE_DIR,
     ORGANIZATIONS_DIR,
     copy_namespaces,
     copy_problems,
@@ -33,16 +34,19 @@ def test_copy_problems_other_data() -> None:
 
 
 def write_organisation(organisations: Path, name: str, resources: list[str]) -> None:
-    """An organisation's directory: its Organization and the kustomization.yaml that lists
-    `resources`."""
+    """An organisation's directory: its Organization, the kustomization.yaml that lists it and
+    namespace.yaml, and namespace/kustomization.yaml, which lists `resources`."""
     directory = organisations / name.upper()
-    directory.mkdir()
+    (directory / NAMESPACE_DIR).mkdir(parents=True)
     (directory / f"{name.upper()}.yaml").write_text(
         f"apiVersion: security.giantswarm.io/v1alpha1\nkind: Organization\n"
         f"metadata:\n  name: {name}\n"
     )
     (directory / "kustomization.yaml").write_text(
-        yaml.safe_dump({"resources": [f"{name.upper()}.yaml", *resources]})
+        yaml.safe_dump({"resources": [f"{name.upper()}.yaml", "namespace.yaml"]})
+    )
+    (directory / NAMESPACE_DIR / "kustomization.yaml").write_text(
+        yaml.safe_dump({"resources": resources})
     )
 
 
@@ -61,12 +65,18 @@ def test_copy_namespaces_of_the_example() -> None:
     assert copy_namespaces(ORGANIZATIONS_DIR) == ["org-org-name"]
 
 
-def test_example_copy_is_in_the_placeholder_namespace() -> None:
-    # the organisation's replacements put its name in place of the placeholder
+def test_example_copy_names_no_namespace() -> None:
+    # the organisation's namespace Kustomization puts it in the organisation's namespace
     kustomization = yaml.safe_load(
-        (ORGANIZATIONS_DIR / "ORG_NAME" / COPY_DIR / "kustomization.yaml").read_text()
+        (
+            ORGANIZATIONS_DIR
+            / "ORG_NAME"
+            / NAMESPACE_DIR
+            / COPY_DIR
+            / "kustomization.yaml"
+        ).read_text()
     )
-    assert kustomization["namespace"] == "org-ORG_NAME"
+    assert "namespace" not in kustomization
 
 
 def test_source_has_no_namespace() -> None:

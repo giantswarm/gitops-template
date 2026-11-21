@@ -7,26 +7,30 @@
 #   `giantswarm.io/health-check-cluster: "true"`. Its health check must keep the namespace
 #   `org-ORG_NAME`: the replacement replaces the second `-`-separated part of whatever
 #   namespace it finds, so a real one such as `org-acme-corp` would become `org-acme-corp-corp`;
-# - into the namespace of every object in the namespace `org-ORG_NAME`, such as the -direct
-#   Kustomization and the commit-status Alert in notifications/;
-# - into the namespaces the Kyverno Policy in workload-cluster-secret-stores/ generates in, and
-#   the one the organisation's SecretStore there reads.
+# - into the `targetNamespace` of the Kustomization in namespace.yaml, the one with the label
+#   `giantswarm.io/organization-namespace: "true"`. It applies namespace/, everything the
+#   organisation keeps in its namespace, with that namespace. The files in namespace/ name no
+#   namespace, and use `${organization}` where they need the name, which that Kustomization's
+#   `postBuild` sets.
 # `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
-# the name after it. A SOPS-encrypted file must name the real namespace, `org-<name>`, never the
-# placeholder: changing an encrypted file breaks its MAC, so Flux couldn't decrypt it.
+# the name after it. A SOPS-encrypted Secret in namespace/ must name the real namespace,
+# `org-<name>`, never the placeholder: changing an encrypted file breaks its MAC, so Flux
+# couldn't decrypt it. `targetNamespace` sets the same namespace, so it keeps the MAC.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# The management cluster's Kustomization applies these: only the Organization and objects in
+# `default`. What goes in the organisation's namespace is in namespace/, which the Kustomization
+# in namespace.yaml applies once organization-operator has created the namespace.
 resources:
   - ORG_NAME.yaml
+  - namespace.yaml
   - multicluster
-  - notifications
-  - shared-objects
-  - workload-cluster-secret-stores
   - workload-clusters
 replacements:
   # If you do not want to use kustomize replacements, you must update all references to
   # `org-ORG_NAME` (and `ORG_NAME`) in the following files:
   #   - multicluster/apps.yaml
+  #   - namespace.yaml
   #   - workload-clusters/HELLO_APP_DEV_CLUSTER_1.yaml
   #   - workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
   #   - workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST.yaml
@@ -36,16 +40,10 @@ replacements:
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
-  #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
   #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
   #   - workload-clusters/WC_NAME_SCHEDULED_UPGRADES.yaml
-  #   - notifications/commit-status-alert.yaml
-  #   - notifications/commit-status-externalsecret.yaml
-  #   - notifications/commit-status-provider.yaml
-  #   - shared-objects/kustomization.yaml
-  #   - workload-cluster-secret-stores/kustomization.yaml
-  #   - workload-cluster-secret-stores/policy.yaml
-  #   - workload-cluster-secret-stores/secret-store.yaml
+  # The files in namespace/ get the name from namespace.yaml's `targetNamespace` and
+  # `organization`.
   - source:
       group: security.giantswarm.io
       kind: Organization
@@ -77,33 +75,13 @@ replacements:
       kind: Organization
       fieldPath: metadata.name
     targets:
-      # where the Kyverno Policy in workload-cluster-secret-stores generates its objects
+      # only the Kustomization with the label: kustomize fails on one without `targetNamespace`
       - select:
-          group: kyverno.io
-          kind: Policy
-          name: generate-eso-cluster-auth-from-kubeconfig
-          namespace: org-ORG_NAME
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          labelSelector: giantswarm.io/organization-namespace=true
         fieldPaths:
-          - spec.rules.*.generate.namespace
-        options:
-          delimiter: "-"
-          index: 1
-      # the namespace the organisation's SecretStore in workload-cluster-secret-stores reads
-      - select:
-          group: external-secrets.io
-          kind: SecretStore
-          name: default
-          namespace: org-ORG_NAME
-        fieldPaths:
-          - spec.provider.kubernetes.remoteNamespace
-        options:
-          delimiter: "-"
-          index: 1
-      # last: the targets above select the objects by the placeholder namespace this one changes
-      - select:
-          namespace: org-ORG_NAME
-        fieldPaths:
-          - metadata.namespace
+          - spec.targetNamespace
         options:
           delimiter: "-"
           index: 1

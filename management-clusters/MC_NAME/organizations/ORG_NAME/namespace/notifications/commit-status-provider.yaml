@@ -4,7 +4,6 @@ apiVersion: notification.toolkit.fluxcd.io/v1beta3
 kind: Provider
 metadata:
   name: github-commit-status
-  namespace: org-ORG_NAME
 spec:
   type: github
   address: https://github.com/YOUR_ORG/YOUR_REPO  # TODO: change to the repository the GitRepository reads
