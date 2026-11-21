@@ -366,13 +366,25 @@ going to use 1Password (`op` CLI tool) for that:
     ```
 
 1. List the directory in `namespace/kustomization.yaml`, and give it a `kustomization.yaml` of its own that lists the
-   Secret:
+   Secret. Like the management cluster's `secrets/kustomization.yaml`, it gives every Secret here the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label: a
+   `-direct` `Kustomization`'s SOPS key Secret goes here too, and deleting it would stop that `Kustomization`
+   decrypting. Flux then keeps a Secret here when its file or `namespace.yaml` goes; delete it by hand, after removing
+   the label, see [How it works](./how-it-works.md):
 
     ```sh
     yq -i '.resources += ["secrets"]' ../kustomization.yaml
     cat <<EOF > kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
+    # Flux decrypts with the SOPS keys here: deleting one stops GitOps for what uses it
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
+    labels:
+      - pairs:
+          giantswarm.io/managed-by: flux
+          # nobody can delete them, Flux included, until this label is removed
+          giantswarm.io/prevent-deletion: "true"
     resources:
       - secret.enc.yaml
     EOF

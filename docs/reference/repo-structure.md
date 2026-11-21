@@ -50,7 +50,8 @@ management-clusters
             ├── namespace                               namespace.yaml responsibility, never MC_NAME.yaml's
             |   ├── kustomization.yaml
             |   ├── [OTHER_RESOURCES]                   in the organisation's namespace
-            |   ├── [secrets]
+            |   ├── [secrets]                           kept by Flux, as MC_NAME's secrets are
+            |   |   ├── kustomization.yaml
             |   |   └── [WC_NAME-direct.gpgkey.enc.yaml]
             |   ├── [notifications]                     the organisation's commit statuses
             |   ├── [shared-objects]                    objects every organisation shares, see add_mc.md
@@ -178,7 +179,9 @@ To move them without a deletion, use three commits, and let Flux apply each one 
 1. Move the objects into `namespace`, add `namespace.yaml`, and take them out of the organisation's
    `kustomization.yaml`, as in [Add an organization](../add_org.md). The organisation's namespace `Kustomization`
    takes the objects over.
-1. Remove the annotation, so Flux deletes the objects again when you delete them from Git.
+1. Remove the annotation, so Flux deletes the objects again when you delete them from Git. Leave it on SOPS key
+   Secrets, such as a `-direct` `Kustomization`'s key in `namespace/secrets`: like the ones in `MC_NAME/secrets`,
+   they keep `kustomize.toolkit.fluxcd.io/prune: disabled` for good, from `namespace/secrets/kustomization.yaml`.
 
 A new management cluster needs none of this: its organisations' namespaces don't exist yet.
 
@@ -256,8 +259,12 @@ management-clusters
         └── demo-gitops
             ├── demo-gitops.yaml
             ├── kustomization.yaml
-            ├── secrets
-            |   └── org-secret-1.enc.yaml
+            ├── namespace.yaml
+            ├── namespace
+            |   ├── kustomization.yaml
+            |   └── secrets
+            |       ├── kustomization.yaml
+            |       └── org-secret-1.enc.yaml
             └── workload-clusters
                 ├── kustomization.yaml
                 ├── demo0.yaml
@@ -339,7 +346,10 @@ ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are tw
 - Add another Flux Kustomization on the management cluster that uses the workload cluster's kubeconfig. That's the
   optional `WC_NAME-direct.yaml`, with its own `WC_NAME-direct.gpgkey.enc.yaml`. It lives in the namespace of the
   kubeconfig Secret, the organisation's, so it goes in `namespace/workload-clusters`, and its key Secret, which has to
-  be in the same namespace, in `namespace/secrets`. The organisation's namespace `Kustomization` applies both. A
+  be in the same namespace, in `namespace/secrets`. The organisation's namespace `Kustomization` applies both.
+  `namespace/secrets/kustomization.yaml` gives its Secrets the `kustomize.toolkit.fluxcd.io/prune: disabled`
+  annotation and the `giantswarm.io/prevent-deletion` label, as the management cluster's `secrets/kustomization.yaml`
+  does, see [Add an organization](../add_org.md). A
   legacy cluster's kubeconfig Secret is in `default`: its `-direct.yaml` goes in `workload-clusters`, with
   `namespace: default`, and its key Secret in the management cluster's `secrets`.
 
