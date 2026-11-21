@@ -7,7 +7,9 @@ root applies the `Organization`, and the organisation's namespace Kustomization,
 until the namespace exists. The stand-in then does what the management cluster does: it creates
 the namespace, as organization-operator does for the `Organization`, and in it what the other
 operators create, such as `automation` and its rights (rbac-operator). The organisation's
-Kustomization has to get ready on its own next retry, without being asked to reconcile.
+Kustomization has to get ready on its own next retry, without being asked to reconcile. The
+workload clusters' Kustomizations are in its namespace/, so they appear only then, and run as the
+organisation's `automation`.
 """
 
 import logging

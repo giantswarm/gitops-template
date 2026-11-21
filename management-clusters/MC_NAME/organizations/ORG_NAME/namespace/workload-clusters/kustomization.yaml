@@ -1,6 +1,6 @@
-# The workload clusters' Flux Kustomizations that live in the organisation's namespace, because
-# the kubeconfig Secret they read is there: the -direct ones. The other Kustomizations of a
-# cluster live in `default`, in ../../workload-clusters.
+# The workload clusters' Flux Kustomizations, which live in the organisation's namespace. They
+# apply the clusters' directories in ../../workload-clusters as the organisation's `automation`
+# ServiceAccount, and decrypt with the cluster keys in ../secrets.
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
@@ -8,4 +8,15 @@ labels:
   - pairs:
       giantswarm.io/managed-by: flux
 resources:
+  - WC_NAME.yaml
+  - WC_NAME-apps.yaml
+  - HELLO_APP_DEV_CLUSTER_1.yaml
+  - HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
+  - HELLO_APP_PROD_CLUSTER_US_WEST.yaml
+  - HELLO_APP_STAGING_CLUSTER_1.yaml
+  - WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
+  - WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
+  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
+  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
   - WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
+  - WC_NAME_SCHEDULED_UPGRADES.yaml

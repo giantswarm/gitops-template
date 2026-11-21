@@ -22,13 +22,37 @@ def test_gates_of_reports_a_dependency_without_a_cluster_health_check() -> None:
             "spec": {"path": "./wc", "dependsOn": [{"name": "wc"}]},
         },
     ]
-    assert gates_of(kustomizations) == (
+    assert gates_of(kustomizations, "mc-organization") == (
         {},
         [
             "Kustomization 'wc-apps' depends on 'wc', which doesn't health-check a Cluster: "
             "give it the cluster's health check, and add the cluster to GATES in "
             "cluster_gates.py"
         ],
+    )
+
+
+def test_gates_of_leaves_out_the_organisation_namespace_kustomization() -> None:
+    # every cluster Kustomization depends on the organisation's namespace Kustomization, which
+    #  applies it: that's no cluster's gate
+    organization = {"name": "mc-organization", "namespace": "default"}
+    kustomizations: list[dict] = [
+        {
+            "metadata": {"name": "wc"},
+            "spec": {
+                "path": "./wc/cluster",
+                "dependsOn": [organization],
+                "healthChecks": [{"kind": "Cluster", "name": "wc"}],
+            },
+        },
+        {
+            "metadata": {"name": "wc-apps"},
+            "spec": {"path": "./wc", "dependsOn": [{"name": "wc"}]},
+        },
+    ]
+    assert gates_of(kustomizations, "mc-organization") == (
+        {"wc": [("wc", "./wc/cluster"), ("wc-apps", "./wc")]},
+        [],
     )
 
 

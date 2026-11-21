@@ -3,15 +3,11 @@
 # - into `organization` in the `spec.postBuild.substitute` of every Flux Kustomization, which
 #   their manifests use as `${organization}`. Each one writes `organization: "ORG_NAME"`, which
 #   the replacement updates; one without it fails the build, naming the field;
-# - into the `Cluster` health check namespace of a Kustomization with the label
-#   `giantswarm.io/health-check-cluster: "true"`. Its health check must keep the namespace
-#   `org-ORG_NAME`: the replacement replaces the second `-`-separated part of whatever
-#   namespace it finds, so a real one such as `org-acme-corp` would become `org-acme-corp-corp`;
 # - into the `targetNamespace` of the Kustomization in namespace.yaml, the one with the label
 #   `giantswarm.io/organization-namespace: "true"`. It applies namespace/, everything the
-#   organisation keeps in its namespace, with that namespace. The files in namespace/ name no
-#   namespace, and use `${organization}` where they need the name, which that Kustomization's
-#   `postBuild` sets.
+#   organisation keeps in its namespace, with that namespace: the workload clusters'
+#   Kustomizations and their keys among them. The files in namespace/ name no namespace, and use
+#   `${organization}` where they need the name, which that Kustomization's `postBuild` sets.
 # `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
 # the name after it. A SOPS-encrypted Secret in namespace/ must name the real namespace,
 # `org-<name>`, never the placeholder: changing an encrypted file breaks its MAC, so Flux
@@ -25,23 +21,11 @@ resources:
   - ORG_NAME.yaml
   - namespace.yaml
   - multicluster
-  - workload-clusters
 replacements:
   # If you do not want to use kustomize replacements, you must update all references to
   # `org-ORG_NAME` (and `ORG_NAME`) in the following files:
   #   - multicluster/apps.yaml
   #   - namespace.yaml
-  #   - workload-clusters/HELLO_APP_DEV_CLUSTER_1.yaml
-  #   - workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml
-  #   - workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST.yaml
-  #   - workload-clusters/HELLO_APP_STAGING_CLUSTER_1.yaml
-  #   - workload-clusters/WC_NAME-apps.yaml
-  #   - workload-clusters/WC_NAME.yaml
-  #   - workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
-  #   - workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
-  #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
-  #   - workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
-  #   - workload-clusters/WC_NAME_SCHEDULED_UPGRADES.yaml
   # The files in namespace/ get the name from namespace.yaml's `targetNamespace` and
   # `organization`.
   - source:
@@ -54,22 +38,6 @@ replacements:
           kind: Kustomization
         fieldPaths:
           - spec.postBuild.substitute.organization
-  - source:
-      group: security.giantswarm.io
-      kind: Organization
-      fieldPath: metadata.name
-    targets:
-      # only the Kustomizations with the label: kustomize fails on one without a health check,
-      # and changes a namespace that isn't the placeholder
-      - select:
-          group: kustomize.toolkit.fluxcd.io
-          kind: Kustomization
-          labelSelector: giantswarm.io/health-check-cluster=true
-        fieldPaths:
-          - spec.healthChecks.[kind=Cluster].namespace
-        options:
-          delimiter: "-"
-          index: 1
   - source:
       group: security.giantswarm.io
       kind: Organization

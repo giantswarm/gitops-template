@@ -3,8 +3,7 @@ without a cluster."""
 
 from typing import NamedTuple
 
-from conftest import FLUX_OBJECTS_NAMESPACE
-from flux_inventory import inventory_keys
+from flux_inventory import DEPENDENCY_NOT_READY, inventory_keys
 
 
 class Gate(NamedTuple):
@@ -16,6 +15,7 @@ class Gate(NamedTuple):
     base_apps: list[str]
 
 
+# the namespace of the clusters, and of their Kustomizations
 CLUSTERS_NAMESPACE = "org-org-name"
 # the base apps of the out-of-band clusters: the Gateway API stack of bases/stacks/envoy-gateway
 GATEWAY_API_STACK = ["gateway-api-crds", "envoy-gateway", "gateway-api-config"]
@@ -36,12 +36,10 @@ GATES: dict[str, Gate] = {
     ),
 }
 OWNER_LABEL = "kustomize.toolkit.fluxcd.io/name"
-# kustomize-controller's reason while a Kustomization in `dependsOn` isn't ready
-DEPENDENCY_NOT_READY = "DependencyNotReady"
 
 
 def apps_key(gate: Gate) -> str:
-    return f"{FLUX_OBJECTS_NAMESPACE}/{gate.apps_kustomization}"
+    return f"{CLUSTERS_NAMESPACE}/{gate.apps_kustomization}"
 
 
 def ready_condition(obj: dict) -> dict:

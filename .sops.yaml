@@ -2,6 +2,11 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/secrets/.*\.enc\.yaml
     pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
+  # the workload clusters' SOPS keys in an organisation's namespace/secrets: before any rule of an
+  # organisation's own key for that directory, as sops uses the first rule that matches
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/organizations/[^/]+/namespace/secrets/.*\.(gpg|age)key\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/(cluster|apps)/.*\.enc\.yaml
     pgp: F385 A864 5CA5 5C0A A5D1  263D 9B05 BF26 4528 D991

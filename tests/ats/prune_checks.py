@@ -18,6 +18,7 @@ from prune_cluster import (
 )
 from prune_objects import (
     KEPT_BY_FAILED_BUILD,
+    KEPT_BY_WAITING_ORGANIZATION,
     PROTECTED_CLUSTER,
     PRUNE_IGNORE,
     PRUNE_TIMEOUT_SEC,
@@ -28,7 +29,7 @@ from prune_objects import (
     kept_problems,
 )
 from prune_patches import delete_patches
-from prune_source import remove_from_source, restore_source
+from prune_source import recover_source, remove_from_source, restore_source
 
 
 def tests_not_run_before(request: pytest.FixtureRequest) -> list[str]:
@@ -64,8 +65,10 @@ def check_removed_files(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
     """P1: removing an app's files removes the app. P2: removing the organisation's
-    Organization alone fails the management cluster's build, which then prunes nothing: the
-    Organization and the cluster's Kustomizations stay."""
+    Organization alone fails the management cluster's build, which then prunes nothing, and the
+    organisation's namespace Kustomization waits for it: the Organization, the organisation's
+    namespace Kustomization and the cluster's Kustomizations stay. Once the files are back,
+    they're Ready again, so P3's apps Kustomization doesn't wait for them."""
     remove_from_source(api, PRUNE_IGNORE, delete_patches(PRUNED_OBJECTS))
     wait_until(
         lambda: app_problems(api, workload_cluster),
@@ -73,9 +76,10 @@ def check_removed_files(
         "the removed app wasn't deleted",
     )
     fail_on_problems(
-        kept_problems(api, KEPT_BY_FAILED_BUILD),
+        kept_problems(api, KEPT_BY_FAILED_BUILD + KEPT_BY_WAITING_ORGANIZATION),
         "the failed build didn't keep the organisation's objects",
     )
+    recover_source(api)
 
 
 def check_removed_cluster(

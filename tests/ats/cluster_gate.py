@@ -28,8 +28,9 @@ from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 from stand_in_clusters import CAPICluster, set_available
 
-# The root Kustomization creates the apps Kustomizations, which then reconcile once. Once the
-#  cluster is Available, they retry their dependency every 30 s, kustomize-controller's default.
+# The organisation's namespace Kustomization creates the apps Kustomizations, which then
+#  reconcile once. Once the cluster is Available, they retry their dependency every 30 s,
+#  kustomize-controller's default.
 GATE_TIMEOUT_SEC = 180
 
 

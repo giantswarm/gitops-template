@@ -6,7 +6,7 @@ metadata:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: hello-app-dev-1-gateway-api-crds
   namespace: org-org-name
 spec:
@@ -22,7 +22,7 @@ metadata:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: hello-app-dev-1-envoy-gateway
   namespace: org-org-name
 spec:
@@ -38,7 +38,7 @@ metadata:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: hello-app-dev-1-gateway-api-config
   namespace: org-org-name
 spec:
@@ -54,7 +54,7 @@ metadata:
     giantswarm.io/cluster: hello-app-dev-1
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: hello-app-dev-1-hello-world
   namespace: org-org-name
 spec:
@@ -75,7 +75,7 @@ metadata:
     giantswarm.io/managed-by: flux
     giantswarm.io/prevent-deletion: "true"
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-dev-1
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: hello-app-dev-1
   namespace: org-org-name
 spec:

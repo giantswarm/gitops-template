@@ -3,8 +3,9 @@
 # source names the Kustomization, rather than `name: "*"`: an application team's Kustomization,
 # such as hello-team in WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams, lives in this namespace too, but
 # reads the team's repository, and GitHub refuses statuses for commits it doesn't know. List each
-# of this repository's Kustomizations in this namespace. `info` forwards successes as well as
-# failures, so a commit shows when Flux applied it.
+# of this repository's Kustomizations in this namespace: the workload clusters', in
+# ../workload-clusters. `info` forwards successes as well as failures, so a commit shows when Flux
+# applied it.
 apiVersion: notification.toolkit.fluxcd.io/v1beta3
 kind: Alert
 metadata:
@@ -13,6 +14,29 @@ spec:
   providerRef:
     name: github-commit-status
   eventSeverity: info
+  # TODO: the names of the Kustomizations in ../workload-clusters
   eventSources:
     - kind: Kustomization
-      name: mc-name-clusters-out-of-band-no-flux-direct  # TODO: the name of WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml's Kustomization
+      name: mc-name-clusters-capi-wc-name
+    - kind: Kustomization
+      name: mc-name-clusters-capi-wc-name-apps
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-dev-1
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-prod-euc
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-prod-usw
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-staging-1
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-flux-app
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-flux-app-apps
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux-apps
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux-direct
+    - kind: Kustomization
+      name: mc-name-clusters-scheduled-upgrades

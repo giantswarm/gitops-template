@@ -1,8 +1,8 @@
 # N1: the notification example. Each Provider names its token Secret, and each Alert names its
 # Provider and stays suspended, so the test posts nothing to GitHub. The management cluster's
 # Alert covers the Kustomizations in `default`; the organisation's, in its namespace, where the
-# organisation's namespace Kustomization applies it, covers the repository's -direct
-# Kustomization in `org-org-name`, and not the application team's.
+# organisation's namespace Kustomization applies it, covers the repository's Kustomizations in
+# `org-org-name`, the workload clusters', and not the application team's.
 # notification_objects.py waits until ESO has written the token Secrets' `token` from the fake
 # store and the Receiver is Ready.
 apiVersion: notification.toolkit.fluxcd.io/v1beta3
@@ -50,5 +50,27 @@ spec:
   eventSeverity: info
   eventSources:
     - kind: Kustomization
+      name: mc-name-clusters-capi-wc-name
+    - kind: Kustomization
+      name: mc-name-clusters-capi-wc-name-apps
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-dev-1
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-prod-euc
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-prod-usw
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-staging-1
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-flux-app
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-flux-app-apps
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux-apps
+    - kind: Kustomization
       name: mc-name-clusters-out-of-band-no-flux-direct
+    - kind: Kustomization
+      name: mc-name-clusters-scheduled-upgrades
   suspend: true

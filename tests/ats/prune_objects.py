@@ -28,26 +28,21 @@ PRUNE_IGNORE = "\n".join(
 )
 # the Kustomization of the management cluster, which applies the organization
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
-# the organisation's namespace Kustomization, which applies the -direct Kustomization
+# the organisation's namespace Kustomization, which applies the cluster's Kustomizations
 ORGANIZATION_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-organization-org-name")
+# the organisation's namespace, where the cluster's Kustomizations are
+ORG_NAMESPACE = "org-org-name"
 # the Kustomization of the out-of-band-no-flux cluster's secondary apps, which applies the app
-APPS_KUSTOMIZATION = (
-    FLUX_OBJECTS_NAMESPACE,
-    "mc-name-clusters-out-of-band-no-flux-apps",
-)
+APPS_KUSTOMIZATION = (ORG_NAMESPACE, "mc-name-clusters-out-of-band-no-flux-apps")
 # the Kustomizations of the out-of-band-no-flux cluster: the cluster's, which applies the
 #  cluster's HelmRelease and its base apps, and the one of its secondary apps
 CLUSTER_KUSTOMIZATIONS = [
-    (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
+    (ORG_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
     APPS_KUSTOMIZATION,
 ]
 # the cluster's -direct Kustomization, which applies its out-of-band directory to the workload
-#  cluster. It is in the namespace of the cluster's kubeconfig Secret, the organisation's, and
-#  ORGANIZATION_KUSTOMIZATION applies it.
-DIRECT_KUSTOMIZATION = (
-    "org-org-name",
-    "mc-name-clusters-out-of-band-no-flux-direct",
-)
+#  cluster. It is in the namespace of the cluster's kubeconfig Secret, the organisation's.
+DIRECT_KUSTOMIZATION = (ORG_NAMESPACE, "mc-name-clusters-out-of-band-no-flux-direct")
 # P3: the cluster's application team, hello-team, which the getting-started guides remove
 #  before they delete the cluster: its GitRepository and Kustomization, which the apps
 #  Kustomization applies from the cluster's teams/ directory, and the team's workload, which
@@ -76,6 +71,11 @@ PROTECTED_OBJECTS = [("Organization", "", "org-name")]
 # P2: what the management cluster's Kustomization keeps, in its inventory and on the cluster,
 #  when it can't build the organisation without its Organization: it prunes nothing
 KEPT_BY_FAILED_BUILD = PROTECTED_OBJECTS + [
+    ("Kustomization", *ORGANIZATION_KUSTOMIZATION)
+]
+# P2: what the organisation's namespace Kustomization keeps meanwhile: it waits for the
+#  management cluster's, in its `dependsOn`, so it applies and prunes nothing either
+KEPT_BY_WAITING_ORGANIZATION = [
     ("Kustomization", namespace, name) for namespace, name in CLUSTER_KUSTOMIZATIONS
 ]
 # the app's workload in the workload cluster, which goes when its HelmRelease is deleted

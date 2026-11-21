@@ -143,3 +143,60 @@ def root_dependency_problems(objects: list[dict], root: str) -> list[str]:
         ):
             problems.append(f"{describe(k)} doesn't depend on '{root}'")
     return problems
+
+
+def _kustomizations(objects: list[dict]) -> list[dict]:
+    return [o for o in objects if o.get("kind") == "Kustomization"]
+
+
+def source_problems(objects: list[dict], parent: dict) -> list[str]:
+    """The Kustomizations of `parent`'s namespace build that read its GitRepository without
+    naming the namespace it's in: a `sourceRef` without one is in the Kustomization's own
+    namespace."""
+    source = parent["spec"]["sourceRef"]
+    namespace = source.get(
+        "namespace", parent["metadata"].get("namespace", DEFAULT_NAMESPACE)
+    )
+    return [
+        f"{describe(k)} reads {source['kind']} '{source['name']}' without "
+        f"`sourceRef.namespace: {namespace}`"
+        for k in _kustomizations(objects)
+        if (ref := k["spec"].get("sourceRef") or {}).get("kind") == source["kind"]
+        and ref.get("name") == source["name"]
+        and ref.get("namespace") != namespace
+    ]
+
+
+def namespace_dependency_problems(objects: list[dict], parent: dict) -> list[str]:
+    """The Kustomizations of `parent`'s namespace build that depend neither on `parent`, in its
+    own namespace, nor on another Kustomization of the build that does."""
+    name = parent["metadata"]["name"]
+    namespace = parent["metadata"].get("namespace", DEFAULT_NAMESPACE)
+    kustomizations = _kustomizations(objects)
+    names = {k["metadata"]["name"] for k in kustomizations}
+    problems = []
+    for k in kustomizations:
+        depends_on = k["spec"].get("dependsOn") or []
+        if not any(
+            (d.get("name") == name and d.get("namespace") == namespace)
+            or (d.get("name") in names and "namespace" not in d)
+            for d in depends_on
+        ):
+            problems.append(f"{describe(k)} doesn't depend on '{namespace}/{name}'")
+    return problems
+
+
+def decryption_problems(objects: list[dict]) -> list[str]:
+    """The Kustomizations in `objects` that decrypt with a Secret the same build doesn't hold:
+    `decryption.secretRef` names a Secret in the Kustomization's own namespace."""
+    secrets = {o["metadata"]["name"] for o in objects if o.get("kind") == "Secret"}
+    return [
+        f"{describe(k)} decrypts with Secret '{ref}', which isn't in its build"
+        for k in _kustomizations(objects)
+        if (
+            ref := ((k["spec"].get("decryption") or {}).get("secretRef") or {}).get(
+                "name"
+            )
+        )
+        and ref not in secrets
+    ]

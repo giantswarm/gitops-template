@@ -52,7 +52,7 @@ CLUSTER_RESOURCE_SET = "scheduled-upgrades"
 CLUSTER_NAME = "scheduled-upgrades"
 # the Kustomizations that apply them, (namespace, name)
 APP_KUSTOMIZATION = ("default", "mc-name-multicluster-apps-org-name")
-CLUSTER_KUSTOMIZATION = ("default", "mc-name-clusters-scheduled-upgrades")
+CLUSTER_KUSTOMIZATION = (NAMESPACE, "mc-name-clusters-scheduled-upgrades")
 EXAMPLES = [(APP_PROVIDER, APP_RESOURCE_SET), (CLUSTER_PROVIDER, CLUSTER_RESOURCE_SET)]
 
 

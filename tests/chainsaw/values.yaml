@@ -7,7 +7,7 @@
 organizationNamespace: org-org-name
 cluster: out-of-band-no-flux
 kustomizations:
-  namespace: default
+  namespace: org-org-name
   cluster: mc-name-clusters-out-of-band-no-flux
   apps: mc-name-clusters-out-of-band-no-flux-apps
 helmReleases:

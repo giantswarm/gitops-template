@@ -4,6 +4,8 @@ from checks.conditions import obj_key
 
 # the reason of the Ready condition of a Kustomization whose kustomize build failed
 BUILD_FAILED = "BuildFailed"
+# its reason while a Kustomization in its `dependsOn` isn't ready
+DEPENDENCY_NOT_READY = "DependencyNotReady"
 
 
 def inventory_keys(kustomization: dict) -> set[tuple[str, str, str]]:
@@ -23,19 +25,16 @@ def inventory_keys(kustomization: dict) -> set[tuple[str, str, str]]:
     return keys
 
 
-def build_failure_problems(
-    kustomization: dict, kept: set[tuple[str, str, str]]
+def _held_problems(
+    kustomization: dict, reason: str, what: str, kept: set[tuple[str, str, str]]
 ) -> list[str]:
-    """Why the Kustomization doesn't report that its build failed, or no longer lists the
-    objects `kept` in its inventory, if so. A Kustomization whose build fails applies and
-    prunes nothing, so its inventory stays as it was."""
     key = obj_key(kustomization)
     conditions = (kustomization.get("status") or {}).get("conditions") or []
     ready: dict = next((c for c in conditions if c.get("type") == "Ready"), {})
     problems = []
-    if ready.get("status") != "False" or ready.get("reason") != BUILD_FAILED:
+    if ready.get("status") != "False" or ready.get("reason") != reason:
         problems.append(
-            f"Kustomization '{key}' doesn't report a failed build: "
+            f"Kustomization '{key}' doesn't {what}: "
             f"Ready is {ready.get('status')} ({ready.get('reason')})"
         )
     missing = sorted(kept - inventory_keys(kustomization))
@@ -44,6 +43,26 @@ def build_failure_problems(
             f"Kustomization '{key}' no longer lists {missing} in its inventory"
         )
     return problems
+
+
+def build_failure_problems(
+    kustomization: dict, kept: set[tuple[str, str, str]]
+) -> list[str]:
+    """Why the Kustomization doesn't report that its build failed, or no longer lists the
+    objects `kept` in its inventory, if so. A Kustomization whose build fails applies and
+    prunes nothing, so its inventory stays as it was."""
+    return _held_problems(kustomization, BUILD_FAILED, "report a failed build", kept)
+
+
+def dependency_wait_problems(
+    kustomization: dict, kept: set[tuple[str, str, str]]
+) -> list[str]:
+    """Why the Kustomization doesn't wait for a Kustomization in its `dependsOn`, or no longer
+    lists the objects `kept` in its inventory, if so. A Kustomization that waits applies and
+    prunes nothing, so its inventory stays as it was."""
+    return _held_problems(
+        kustomization, DEPENDENCY_NOT_READY, "wait for a dependency", kept
+    )
 
 
 def applied_deployments(
