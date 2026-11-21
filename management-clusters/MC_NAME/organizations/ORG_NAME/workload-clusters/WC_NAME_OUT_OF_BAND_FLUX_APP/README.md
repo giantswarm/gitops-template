@@ -2,9 +2,11 @@
 
 `management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP`
 
-A cluster with Flux of its own. The management cluster installs flux-app into the workload cluster, and that Flux
-applies `out-of-band/` from inside the cluster. Use it for what you'd rather the workload cluster reconciled itself.
-The cluster also shows App Templates, a stack as base apps, and an app that updates itself.
+A cluster with Flux of its own: out-of-band delivery that the workload cluster pulls. The management cluster installs
+flux-app into the workload cluster, and that Flux applies `out-of-band/` from inside the cluster. Use it for what you'd
+rather the workload cluster reconciled itself. The other way round, the management cluster pushing `out-of-band/`
+through the cluster's kubeconfig, is [`WC_NAME_OUT_OF_BAND_NO_FLUX_APP`](../WC_NAME_OUT_OF_BAND_NO_FLUX_APP/). The
+cluster also shows App Templates, a stack as base apps, and an app that updates itself.
 
 Two Flux Kustomizations, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
 the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:

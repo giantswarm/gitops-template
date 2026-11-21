@@ -2,9 +2,11 @@
 
 `management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP`
 
-A cluster without Flux of its own, which still gets objects applied straight into it: the management cluster's Flux
-applies `out-of-band/` through the cluster's kubeconfig. It also shows ESO and SOPS side by side, secrets pushed into
-the cluster, and application teams that deliver from their own repositories.
+A cluster without Flux of its own, which still gets objects applied straight into it: out-of-band delivery that the
+management cluster pushes. The management cluster's Flux applies `out-of-band/` through the cluster's kubeconfig, with
+the Kustomization this template names `-direct`. The other way, the workload cluster's own Flux pulling `out-of-band/`,
+is [`WC_NAME_OUT_OF_BAND_FLUX_APP`](../WC_NAME_OUT_OF_BAND_FLUX_APP/). It also shows ESO and SOPS side by side, secrets
+pushed into the cluster, and application teams that deliver from their own repositories.
 
 Three Flux Kustomizations, next to this directory in `workload-clusters/`, apply it:
 
