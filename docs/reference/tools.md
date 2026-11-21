@@ -8,7 +8,7 @@ needs each one.
 | Tool | Used for | Needed by |
 | --- | --- | --- |
 | `git` | your fork of the repository | everything |
-| GNU core utilities, such as `base64`, `sed` and `tr` | the shell snippets. On macOS, the BSD versions differ: use `sed -i ''`, or install the GNU ones | everything |
+| GNU core utilities, such as `base64`, `sed` and `tr` | the shell snippets, which use GNU options such as `sed -i`. On macOS, install the GNU versions (for example `brew install coreutils gnu-sed`) and put them first in your `PATH` | everything |
 | [`yq`](https://github.com/mikefarah/yq/), the Go version by Mike Farah | changing YAML files from the command line. The Python `yq` takes other arguments | everything |
 | `kubectl` | applying the first objects to the management cluster, and creating manifests with `--dry-run=client` | everything |
 | [`kubectl gs`](https://github.com/giantswarm/kubectl-gs), 6.0.0 or newer | logging in, and the shortcuts that write files for you, see [kubectl-gs version](#kubectl-gs-version) | everything |
