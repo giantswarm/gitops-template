@@ -8,8 +8,10 @@ your cloud bill back afterwards, the last step deletes the cluster again.
 Every change goes the same way: you write a file, commit it and push, and Flux on the management cluster applies it.
 Think of the repository as a planting plan and Flux as the gardener. Every few minutes it walks round, plants whatever
 is in the plan but not yet in the ground, and, because the `Kustomization`s here set `prune: true`, pulls up whatever
-you've taken out of the plan. That last part is why a few objects in this tutorial carry a label that tells Flux to
-leave them alone: some things you don't want gone just because a file went missing. For more on the approach, see
+you've taken out of the plan. That last part is why a few objects in this tutorial carry the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, which tells Flux to leave them alone, and the
+`giantswarm.io/prevent-deletion` label, which stops anyone at all from deleting them: some things you don't want gone
+just because a file went missing. For more on the approach, see
 [GitOps at Giant Swarm](https://docs.giantswarm.io/tutorials/continuous-deployment/gitops-at-giantswarm/).
 
 A cluster and its apps need secrets, and this repository supports two ways to keep them:
@@ -24,12 +26,16 @@ You can use SOPS on its own, ESO on its own, or both. This tutorial uses both, e
 the two secrets Flux needs before it can read anything at all: the key that decrypts the repository, and the token
 that reads it. ESO gives the app its secret values. If you only want one of them:
 
-- **SOPS only:** follow the tutorial, but leave out the secret store in step 2 and the `ExternalSecret` in step 4.
-  Encrypt the app's secret values with a key of the cluster's own instead: see
+- **SOPS only:** in step 2, skip the secret store, and leave `../multicluster/secret-stores` out of
+  `${ORG_DIR}/namespace/kustomization.yaml`. In step 4, skip the `ExternalSecret`, and leave `externalsecret.yaml` out
+  of `${APP_DIR}/kustomization.yaml`. Skip the checks of the store and the `ExternalSecret` too. To give the app secret
+  values, encrypt them in the repository instead, in the `${cluster_name}-hello-world-user-secrets` Secret the
+  `HelmRelease` already reads, with a key of the cluster's own: see
   [Add a workload cluster key (age)](../../how-to/sops.md#add-a-workload-cluster-key-age) and
   [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values).
-- **ESO only:** leave out the master key, the `.sops.yaml` rules, the `secrets` directory and the `decryption` fields
-  in step 1 and step 2, and take Flux's token from your secret manager:
+- **ESO only:** in step 1, skip the master key, the `.sops.yaml` rules and the `${MC_DIR}/secrets` directory, and
+  leave the `decryption` field out of `${MC_DIR}/${MC_NAME}.yaml`. In step 2, leave it out of `${ORG_DIR}/namespace.yaml`
+  too. Flux's token then comes from your secret manager:
   [Keep the repository token in your secret manager](../../how-to/external-secrets.md#keep-the-repository-token-in-your-secret-manager).
 
 Which secret belongs where, and what each way costs you, is in [Secrets](../../explanation/secrets.md).
@@ -81,7 +87,7 @@ You need:
 - a fork of this repository, cloned locally. Run every command from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
-them where they are: they're the worked answers at the back of the book, and you'll find yourself checking them.
+them where they are, as complete examples to check your own files against.
 
 `kubectl gs gitops` can write most of the files in this tutorial for you, and each step names the command that does.
 You write them by hand here, so that you know what each one is for when you come to change it.
@@ -94,13 +100,18 @@ export ORG_NAME=ORGANISATION         # organisation name, without the `org-` pre
 export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits, at most 20 characters
 export GITOPS_REPO=REPO_NAME         # name for the Flux GitRepository, for example `gitops`
 export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
+export GIT_SECRET=github-https-credentials  # the Secret Flux reads the repository with, see step 1
+export SECRET_STORE=gitops-test             # the organisation's SecretStore, see step 2
 
 export MC_DIR=management-clusters/${MC_NAME}
 export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
+export APP_DIR=${WC_DIR}/apps/hello-world
+export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert  # the context `kubectl gs login` creates in step 3
 ```
 
-The variables live only in your current shell. If you open a new one, run the exports again.
+The variables live only in your current shell. If you open a new one, run the exports again, with any you changed
+along the way.
 
 ## 1. Connect the management cluster
 
@@ -112,12 +123,14 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 
 > **Shortcut:** [`kubectl gs gitops add management-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-mc/)
 > writes the management cluster's directory and its `Kustomization`. With `--gen-master-key`, it also writes a new
-> master key in `secrets`, its public key in `.sops.keys` and the first `.sops.yaml` rule. It doesn't write the
+> master key in `${MC_DIR}/secrets`, its public key in `${MC_DIR}/.sops.keys` and the first `.sops.yaml` rule. It
+> doesn't write the
 > repository token or the second rule, and its `Kustomization` doesn't prune. See
-> [Management cluster](../../how-to/kubectl-gs.md#management-cluster) for the command and what to change afterwards.
+> [Management cluster](../../how-to/kubectl-gs.md#management-cluster) for the command and what to change
+> afterwards.
 
-1. Create the management cluster's directory. `.sops.keys` holds public keys, `secrets` the encrypted secrets Flux
-   needs, and `organizations` the organisations you add in the next step:
+1. Create the management cluster's directory. `${MC_DIR}/.sops.keys` holds public keys, `${MC_DIR}/secrets` the
+   encrypted secrets Flux needs, and `${MC_DIR}/organizations` the organisations you add in the next step:
 
     ```sh
     mkdir -p ${MC_DIR}/.sops.keys ${MC_DIR}/secrets ${MC_DIR}/organizations
@@ -150,9 +163,26 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     EOF
     ```
 
-1. Create the master key, a GPG key without a passphrase, as Flux has nobody to type one in. If you already have a
-   master key for this management cluster, skip this and import yours from your password manager instead, with
-   `gpg --import FILE`:
+1. Check whether the management cluster already has a master key:
+
+    ```sh
+    kubectl get secret sops-gpg-master -n default
+    ```
+
+    If it does, whatever is already encrypted for this management cluster needs that key, so you import it rather
+    than create a new one. Import it from your password manager with `gpg --import FILE`, or straight from the
+    Secret:
+
+    ```sh
+    kubectl get secret sops-gpg-master -n default -o yaml | yq '.data[]' | base64 -d | gpg --import
+    ```
+
+    > [!Caution]
+    > Never replace an existing `sops-gpg-master` with a new key: Flux could no longer decrypt anything encrypted for
+    > the old one.
+
+1. If you didn't import a key, create the master key, a GPG key without a passphrase, as Flux has nobody to type one
+   in:
 
     ```sh
     gpg --batch --full-generate-key <<EOF
@@ -175,7 +205,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
     ```
 
-    If you imported a key with another name, set `KEY_FP` to the fingerprint that `gpg --list-secret-keys` shows.
+    If you imported a key, set `KEY_FP` to its fingerprint, which `gpg --list-secret-keys` shows.
 
 1. Write the private key into the `sops-gpg-master` Secret:
 
@@ -196,9 +226,10 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
     ```
 
-    Then add two rules to `.sops.yaml`, which tells `sops` which key encrypts which file. The first covers the
-    `secrets` directory. The second covers the SOPS keys you may give your workload clusters later, which go in their
-    organisation's `namespace/secrets`, see [Encryption rules](../../reference/sops-keys.md#encryption-rules):
+    Then add two rules to `.sops.yaml`, which tells `sops` which key encrypts which file. The first covers
+    `${MC_DIR}/secrets`. The second covers the SOPS keys you may give your workload clusters later, which go in each
+    organisation's `namespace/secrets` directory, such as `${ORG_DIR}/namespace/secrets`, see
+    [Encryption rules](../../reference/sops-keys.md#encryption-rules):
 
     ```sh
     yq -i '.creation_rules += [{
@@ -212,32 +243,35 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     }]' .sops.yaml
     ```
 
-1. Write Flux's token for the repository into the `github-https-credentials` Secret. Create a GitHub token with read
-   access to the repository's contents, for example a [fine-grained personal access token][github-token]. First,
-   check that nobody got there before you:
+1. Write Flux's token for the repository into the Secret named in `GIT_SECRET`, `github-https-credentials` unless
+   you changed it. Create a GitHub token with read access to the repository's contents, for example a
+   [fine-grained personal access token][github-token]. First, check that nobody got there before you:
 
     ```sh
-    kubectl get secret github-https-credentials -n default
+    kubectl get secret ${GIT_SECRET} -n default
     ```
 
     > [!Caution]
     > If the Secret already exists, another `GitRepository` may read it, and replacing it would cut that one off.
-    > If it can read your repository too, skip the rest of this step, and leave
-    > `github-https-credentials.enc.yaml` out of the `secrets` list below.
+    > Give yours another name instead, here and in your exports, and the rest of the tutorial uses it:
+    >
+    > ```sh
+    > export GIT_SECRET=${GITOPS_REPO}-https-credentials
+    > ```
 
     Read the token without it landing in your shell history, and write the Secret:
 
     ```sh
     read -rs GITHUB_TOKEN
-    kubectl create secret generic github-https-credentials --namespace=default \
+    kubectl create secret generic ${GIT_SECRET} --namespace=default \
     --from-literal=username=git --from-literal=password="${GITHUB_TOKEN}" --dry-run=client -o yaml \
-    > ${MC_DIR}/secrets/github-https-credentials.enc.yaml
+    > ${MC_DIR}/secrets/${GIT_SECRET}.enc.yaml
     unset GITHUB_TOKEN
     ```
 
     The same caution applies: the token is in plain text until the next step but one.
 
-1. Apply both Secrets, so that Flux has them before it needs them. If the management cluster already has this master
+1. Apply both Secrets, so that Flux has them before it needs them. If you imported the management cluster's master
    key, applying it again changes nothing:
 
     ```sh
@@ -250,7 +284,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     for f in ${MC_DIR}/secrets/*.enc.yaml; do sops --encrypt --in-place "${f}"; done
     ```
 
-    List them in the `secrets` directory's `kustomization.yaml`. Without these two Secrets, Flux can neither read nor
+    List them in `${MC_DIR}/secrets/kustomization.yaml`. Without these two Secrets, Flux can neither read nor
     decrypt the repository, so the annotation keeps Flux from deleting them when their files go, and the label keeps
     anyone else from deleting them by accident:
 
@@ -268,7 +302,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
           giantswarm.io/prevent-deletion: "true"
     resources:
       - ${MC_NAME}.gpgkey.enc.yaml
-      - github-https-credentials.enc.yaml
+      - ${GIT_SECRET}.enc.yaml
     EOF
     ```
 
@@ -306,7 +340,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
       interval: 1m
       url: ${GITOPS_REPO_URL}
       secretRef:
-        name: github-https-credentials
+        name: ${GIT_SECRET}
       ref:
         branch: main
       ignore: |
@@ -349,8 +383,8 @@ organisation reads its secrets through the organisation's namespace.
 > doesn't write the organisation's `kustomization.yaml`, the namespace `Kustomization` or the secret store. See
 > [Organisation](../../how-to/kubectl-gs.md#organisation) for the command and what to add afterwards.
 
-1. Create the organisation's directory. `namespace` holds what the organisation keeps in its namespace,
-   `workload-clusters` its clusters, and `multicluster` what all of its clusters share:
+1. Create the organisation's directory. `${ORG_DIR}/namespace` holds what the organisation keeps in its namespace,
+   `${ORG_DIR}/workload-clusters` its clusters, and `${ORG_DIR}/multicluster` what all of its clusters share:
 
     ```sh
     mkdir -p ${ORG_DIR}/namespace ${ORG_DIR}/workload-clusters ${ORG_DIR}/multicluster/secret-stores
@@ -376,10 +410,10 @@ organisation reads its secrets through the organisation's namespace.
 
 1. Create the organisation's namespace `Kustomization`. Your management cluster's `Kustomization` applies only the
    `Organization` and objects in `default`, so it works before the namespace exists. This one, in `default`, applies
-   the organisation's `namespace` directory into `org-${ORG_NAME}`. It fails until organization-operator has created
+   the directory `${ORG_DIR}/namespace` into `org-${ORG_NAME}`. It fails until organization-operator has created
    the namespace, and succeeds on its next retry. Its `dependsOn` names your management cluster's `Kustomization`, so
    that one always applies a commit first. Its `decryption` field is there for the SOPS keys you may give your
-   clusters later, which go in `namespace/secrets`. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
+   clusters later, which go in `${ORG_DIR}/namespace/secrets`. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
    organisation's `kustomization.yaml` fills in, see
    [Flux Kustomizations](../../reference/repo-structure.md#flux-kustomizations):
 
@@ -415,8 +449,9 @@ organisation reads its secrets through the organisation's namespace.
     EOF
     ```
 
-    The `namespace` directory lists what goes into the namespace. Two of its entries live outside it, next to what
-    they belong with: the organisation's list of clusters, empty for now, and its secret stores:
+    `${ORG_DIR}/namespace/kustomization.yaml` lists what goes into the namespace. Both of its entries live outside
+    `${ORG_DIR}/namespace`, next to what they belong with: the organisation's secret stores, and its list of
+    clusters, empty for now:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/namespace/kustomization.yaml
@@ -436,10 +471,10 @@ organisation reads its secrets through the organisation's namespace.
 1. Create the organisation's secret store. The app in step 4 reads its secret values through it. Here you use a
    stand-in: the [fake provider](https://external-secrets.io/latest/provider/fake/) of ESO keeps the values in the
    store itself, so you need no secret manager and no credentials to try the whole tutorial. Anyone who can read the
-   repository can read what's in it, so never put a real secret in it.
+   repository can read what's in it, so never put a real secret in it. Its name is `SECRET_STORE` from your
+   exports:
 
     ```sh
-    export SECRET_STORE=gitops-test
     cat <<EOF > ${ORG_DIR}/multicluster/secret-stores/secret-store.yaml
     apiVersion: external-secrets.io/v1
     kind: SecretStore
@@ -462,12 +497,12 @@ organisation reads its secrets through the organisation's namespace.
     EOF
     ```
 
-    For the real thing, replace `secret-store.yaml` with a store for your secret manager, and set `SECRET_STORE` to
-    its name. The bases in [bases/secret_stores](../../../bases/secret_stores) read AWS Secrets Manager or Azure Key
-    Vault with workload identity, so no credential is stored anywhere, see
+    For the real thing, replace `secret-store.yaml` with a store for your secret manager, and set `SECRET_STORE` in
+    your exports to its name. The bases in [bases/secret_stores](../../../bases/secret_stores) read AWS Secrets
+    Manager or Azure Key Vault with workload identity, so no credential is stored anywhere, see
     [Create a SecretStore for your secret manager](../../how-to/external-secrets.md#create-a-secretstore-for-your-secret-manager).
     If your secret manager can't use workload identity, its store needs a credential, such as an access key: keep it
-    in a Secret encrypted with SOPS in `namespace/secrets`, with an
+    in a Secret encrypted with SOPS in `${ORG_DIR}/namespace/secrets`, with an
     [organisation key](../../how-to/sops.md#add-an-organisation-key).
 
 1. Create the organisation's `kustomization.yaml`. The management cluster's `Kustomization` applies what it lists,
@@ -547,8 +582,8 @@ A cluster gets two `Kustomization`s, which fill in variables such as `${cluster_
 the rest of `${WC_DIR}`, but only after that, so the apps never try to install into a cluster that isn't there yet.
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> writes the cluster's directory from a base, and its `Kustomization`, which it lists in the organisation's
-> `workload-clusters`. It still writes a `mapi` directory, no region, and one `Kustomization` for the whole cluster,
+> writes the cluster's directory from a base, and its `Kustomization`, which it lists in
+> `${ORG_DIR}/workload-clusters`. It still writes a `mapi` directory, no region, and one `Kustomization` for the whole cluster,
 > in `default`, instead of the two below. See [Workload cluster](../../how-to/kubectl-gs.md#workload-cluster) for
 > the command and how to bring its files in line with the ones below.
 
@@ -629,11 +664,15 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     EOF
     ```
 
-1. Create the cluster's `Kustomization`. It goes in the organisation's `workload-clusters`, next to the cluster's
+1. Create the cluster's `Kustomization`. It goes in `${ORG_DIR}/workload-clusters`, next to the cluster's
    directory. The organisation's namespace `Kustomization` applies it into `org-${ORG_NAME}`, where it runs as that
    namespace's `automation` ServiceAccount and reads your `GitRepository` in `default`. Its `dependsOn` names the
    organisation's namespace `Kustomization`, so that one always applies a commit first. Its health check waits until
    Cluster API reports the cluster `Available`, which can take up to its `timeout` of 30 minutes.
+
+    It doesn't name the organisation: it writes `${organization}`, and the organisation's namespace `Kustomization`
+    fills that in from the `Organization` when it applies the file, so the name stays set in one place. The
+    backslashes keep the shell from filling it in first.
 
     With `prune: true`, Flux deletes whatever you delete from the cluster's files, except the cluster itself: the
     cluster's `HelmRelease`, from the CAPA cluster base, has the `kustomize.toolkit.fluxcd.io/prune: disabled`
@@ -658,14 +697,14 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
           name: ${WC_NAME}
-          namespace: org-${ORG_NAME}
+          namespace: org-\${organization}
       interval: 10m
       path: ./${WC_DIR}/cluster
       postBuild:
         substitute:
           cluster_description: "${WC_NAME} managed by GitOps"
           cluster_name: "${WC_NAME}"
-          organization: "${ORG_NAME}"
+          organization: "\${organization}"
           # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
           release: "${RELEASE_VERSION}"
       prune: true
@@ -680,7 +719,7 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     ```
 
 1. Create the apps' `Kustomization`. It names the cluster's `Kustomization` in `dependsOn`, so Flux applies none of it
-   until the cluster's is `Ready`:
+   until the cluster's is `Ready`. It takes the organisation's name the same way:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml
@@ -697,7 +736,7 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
         substitute:
           cluster_description: "${WC_NAME} managed by GitOps"
           cluster_name: "${WC_NAME}"
-          organization: "${ORG_NAME}"
+          organization: "\${organization}"
           # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
           release: "${RELEASE_VERSION}"
       prune: true
@@ -742,13 +781,15 @@ Log in to the cluster:
 kubectl gs login ${MC_NAME} --workload-cluster ${WC_NAME} --organization ${ORG_NAME}
 ```
 
-Save its context for the checks below:
+It switches to the cluster's context, which the checks below use as `WC_CONTEXT`. Check that its name matches your
+export:
 
 ```sh
-export WC_CONTEXT=$(kubectl config current-context)
+kubectl config current-context
 ```
 
-Then switch back to the management cluster:
+If the cluster logs you in with OIDC, the name ends in `-oidc` instead of `-clientcert`: change `WC_CONTEXT` in your
+exports to match, and export it again. Then switch back to the management cluster:
 
 ```sh
 kubectl config use-context gs-${MC_NAME}
@@ -769,10 +810,9 @@ Git and one secret value from the organisation's store.
 > command. Never run it without `--dry-run` here: it would apply them to the management cluster directly, behind
 > Git's back.
 
-1. Save the app's directory for the next commands, and create it:
+1. Create the app's directory, `APP_DIR` from your exports:
 
     ```sh
-    export APP_DIR=${WC_DIR}/apps/hello-world
     mkdir -p ${APP_DIR}
     ```
 
@@ -971,9 +1011,9 @@ kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
 
 Secret values don't change in the app's files, so you change them in your secret manager. With the stand-in store
-from step 2, that's its file in `multicluster/secret-stores`, which you commit and push. ESO copies a change within the
-`ExternalSecret`'s `refreshInterval`, and Flux upgrades the release as soon as the Secret changes. To have ESO copy it
-straight away:
+from step 2, that's `${ORG_DIR}/multicluster/secret-stores/secret-store.yaml`, which you commit and push. ESO copies
+a change within the `ExternalSecret`'s `refreshInterval`, and Flux upgrades the release as soon as the Secret changes.
+To have ESO copy it straight away:
 
 ```sh
 kubectl annotate externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME} \
@@ -997,7 +1037,7 @@ protects first: kubectl-gs 7.0.0 and newer label the cluster's `HelmRelease` and
 writes the annotation or protects the `Organization`, see
 [What kubectl-gs writes](../../explanation/deletion-protection.md#what-kubectl-gs-writes).
 
-These steps delete the cluster this tutorial created. A cluster with its own SOPS key in `namespace/secrets`,
+These steps delete the cluster this tutorial created. A cluster with its own SOPS key in `${ORG_DIR}/namespace/secrets`,
 out-of-band resources or an application team needs more, see
 [Delete a workload cluster](../../how-to/delete-cluster.md).
 
