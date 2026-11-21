@@ -79,12 +79,13 @@ EOF
 
 ##
 # Discover all fluxcd kustomizations and store filename, name, namespace, path, kind and source,
-# `<kind>/<namespace>/<name>`, for each found
+# `<kind>/<namespace>/<name>`, for each found. tests/ holds assertions of the repository's
+# Kustomizations, not Kustomizations to build, as in test-all-ff.
 # $ns is a yq variable
 # shellcheck disable=SC2016
 export KUSTOMIZATIONS=(
 	$(
-		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
+		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -not -path './tests/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
 			yq --no-doc '(.metadata.namespace // "default") as $ns |
 				[filename,.metadata.name,.metadata.namespace,.spec.path,.kind,
 					.spec.sourceRef.kind + "/" + (.spec.sourceRef.namespace // $ns) + "/" + .spec.sourceRef.name] |
