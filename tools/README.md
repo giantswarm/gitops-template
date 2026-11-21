@@ -20,6 +20,7 @@ This directory provides the following tools
 - [test-all-ff](https://github.com/giantswarm/gitops-template/blob/main/tools/test-all-ff)
 - [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
 - [validate-helm-values](https://github.com/giantswarm/gitops-template/blob/main/tools/validate-helm-values)
+- [check-directory-readmes](https://github.com/giantswarm/gitops-template/blob/main/tools/check-directory-readmes)
 
 ## `test-all-ff`
 
@@ -60,6 +61,29 @@ add a `-schema-location` for it to the script.
   - It also builds each base in `bases/secret_stores` with `kubectl kustomize` and checks it with `kubeconform`. They
     read cloud secret managers, so no cluster in the repository uses them and no Kustomization builds them.
 - `template` Prints the entire repo manifest
+
+## `check-directory-readmes`
+
+Every directory a customer reads, copies or edits explains itself with a README. `check-directory-readmes` makes sure
+of it: it walks the directories of the files git tracks in `bases/` and `management-clusters/`, staged files included,
+and fails for a directory without a tracked `README.md` (or `readme.md`). `tests/`, `tools/`, `.github/` and `docs/`
+are left out, and so is a directory git doesn't know about yet, until you stage a file in it. pre-commit runs it, so CI
+does too, also on a pull request that changes only Markdown. It runs with bash 3.2, as on macOS.
+
+Some leaves are copies of one shape, such as the stages, the regions or an example cluster's `cluster/` and `apps/`.
+One README in the parent covers them, and the `COVERED` list at the top of the script names each one with its parent.
+The check fails for an entry whose directory is gone, and for a parent README that doesn't name a leaf it covers in
+backticks, as its path relative to the parent followed by a slash, such as `` `dev/` ``. A longer path doesn't count:
+`` `apps/cert-manager/` `` doesn't name `apps/`.
+
+When you add a directory, give it a README. If it's another copy of a shape a parent README already describes, list it
+in `COVERED` and name it in that README instead.
+
+`test-all-ff validate` checks that the script fails in each of those cases.
+
+### check-directory-readmes usage
+
+Run it from the root of a git repository, or pass the root as the only argument: `tools/check-directory-readmes [dir]`.
 
 ## `validate-helm-values`
 
@@ -127,7 +151,7 @@ errors, but they don't fail the check. An entry that renders without errors fail
 
 Fake flux is a script that can emulate the behaviour of flux locally before committing your changes to your repository.
 
-It's purpose is to support you in the detection of issues which may arise from syntax errors, failing patches or other
+Its purpose is to support you in the detection of issues which may arise from syntax errors, failing patches or other
 issues caused by incompatibilities with the flux ecosystem.
 
 It builds a Flux `Kustomization` as Flux applies it, not as its file is written. It finds them in the repository's
@@ -180,16 +204,16 @@ examples.
 
 - `--use-kustomize` Use kustomize to build the kustomization and not 'flux build'
 
-- `yqflags` Optional flags to pass to 'yq'. Use -M to turn off output coloring. See `yq --help` for available flags.
+- `yqflags` Optional flags to pass to 'yq'. Use -M to turn off output colouring. See `yq --help` for available flags.
   Does not work with multi-parameter arguments.
 
 - `query` This must be a valid 'yq' query and can be used to filter for specific resources.
-           output coloring can be turned off using -M before the query
+           output colouring can be turned off using -M before the query
 
 - `<kustomization>` May be:
   - A number from the list given with `fake-flux list`
   - A name matching a unique kustomization in the set
-  - `name:namespace` targetting a specific kustomization in a given namespace
+  - `name:namespace` targeting a specific kustomization in a given namespace
 
 ### Examples
 

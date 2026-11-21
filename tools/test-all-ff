@@ -619,6 +619,44 @@ function test() {
 		fi
 	fi
 
+	if [ "${mode}" == "validate" ]; then
+		# check-directory-readmes, in a copy of the repository that's a git repository of its own:
+		#  it must fail for a directory without a README, also a new one once it's staged, for a
+		#  covered leaf that's gone, and for a covered leaf its parent's README doesn't name as
+		#  `<leaf>/`, even where a longer path starts with it. It must pass with a directory that
+		#  git doesn't track. An empty message means the check must pass.
+		readmes_path=$(realpath "$(dirname $0)/check-directory-readmes")
+		fixture_dir="${tmp_dir}/readmes"
+		wc_readme=management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/README.md
+		readmes_cases=(
+			"a directory without a README|rm bases/apps/README.md && git add -A|bases/apps has no README.md"
+			"a staged new directory without a README|mkdir bases/new && touch bases/new/a.yaml && git add bases/new|bases/new has no README.md"
+			"a directory git doesn't track|mkdir bases/untracked && touch bases/untracked/a.yaml|"
+			"a covered leaf that's gone|rm -r bases/environments/stages/dev && git add -A|bases/environments/stages/dev is listed in COVERED"
+			"a covered leaf its parent's README doesn't name|sed -i s@prod/@production@g bases/environments/stages/README.md|bases/environments/stages/README.md covers bases/environments/stages/prod, but doesn't name it"
+			"a covered leaf named only in a longer path|sed -i s@\\\`apps/\\\`@\\\`applications/\\\`@g ${wc_readme}|${wc_readme} covers ${wc_readme%/README.md}/apps, but doesn't name it"
+		)
+		for c in "${readmes_cases[@]}"; do
+			IFS='|' read -r description change message <<<"${c}"
+			echo -n "check-directory-readmes, ${description}: "
+			rm -rf "${fixture_dir}"
+			mkdir -p "${fixture_dir}"
+			cp -r bases management-clusters "${fixture_dir}"
+			status=0
+			output=$(cd "${fixture_dir}" && git init -q && git add -A && bash -c "${change}" &&
+				"${readmes_path}" 2>&1) || status=$?
+			if [ -z "${message}" ] && [ "${status}" -eq 0 ]; then
+				echo "OK, passed"
+			elif [ -n "${message}" ] && [ "${status}" -ne 0 ] && grep -qF "${message}" <<<"${output}"; then
+				echo "OK, reported"
+			else
+				echo "not as expected:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
+	fi
+
 	if [[ ${has_validation_errors} -ne 0 ]]; then
 		echo "There are validation errors, please check the above output!"
 		exit 2

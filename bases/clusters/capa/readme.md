@@ -1,8 +1,38 @@
-# Input Variables
+# capa
 
-This base deploys a cluster with the `release-aws` chart, as a Flux `OCIRepository` and `HelmRelease`. The chart
-version is the Giant Swarm release version, so the release lives in git and you upgrade the cluster by changing
-`release`.
+`bases/clusters/capa`
+
+The cluster base for AWS. It deploys a cluster with the `release-aws` chart, as a Flux `OCIRepository` and
+`HelmRelease`. The chart version is the Giant Swarm release version, so the release lives in git and you upgrade the
+cluster by changing `release`.
+
+Nothing applies this directory directly. A cluster's `cluster/kustomization.yaml` lists it under `resources:`, and the
+cluster's Flux Kustomization, in the organisation's `workload-clusters/`, applies it into the organisation's namespace,
+`org-<name>`, filling in the variables below.
+
+Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
+v32.3.0 and v33.3.0.
+
+## What's here
+
+- `kustomization.yaml`: lists `cluster.yaml` and turns `cluster_config.yaml` into the `${cluster_name}-config`
+  ConfigMap.
+- `cluster.yaml`: the `OCIRepository` and the `HelmRelease`. Both have the `kustomize.toolkit.fluxcd.io/prune: disabled`
+  annotation and the `giantswarm.io/prevent-deletion` label, as deleting the `HelmRelease` deletes the cluster.
+- `cluster_config.yaml`: the values every cluster from this base gets.
+
+## Input variables
+
+The cluster's Flux Kustomization sets these in `spec.postBuild.substitute`:
+
+| Variable | Expected value |
+| :--: | :--: |
+| `cluster_description` | A human-friendly description of the cluster |
+| `cluster_name` | The workload cluster's unique name, a valid [Kubernetes name](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
+| `organization` | The organisation's name, without the `org-` prefix, a valid [Kubernetes name](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
+| `release` | The Giant Swarm release version without the `v` prefix, for example `36.2.0` |
+
+## The order of the values
 
 The `HelmRelease` reads its values from these ConfigMaps, in this order. Flux merges them, and later entries win:
 
@@ -26,19 +56,6 @@ a kustomization's components before its own patches, so the region comes before 
 the order you list them. `kubectl gs gitops add workload-cluster` writes this kustomization, with the patch when you
 pass `--cluster-user-config`, but without a region; add the `components:` list to it.
 
-Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
-v32.3.0 and v33.3.0. Other releases, and Release CRs created by hand, need the `cluster-aws` chart as an App CR, which
-this repository no longer supports.
-
-Expected variables are in the table below.
-
-| Variable | Expected Value |
-| :--: | :--: |
-| `cluster_description` | User Friendly name for the cluster |
-| `cluster_name` | Unique name of the Workload Cluster, MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-| `organization` | Organization name, the `org-` prefix MUST not be part of it and MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-| `release` | Giant Swarm release version without the `v` prefix, for example `36.2.0` |
-
 ## Values from the management cluster
 
 The `release-aws` chart needs values that only the management cluster knows, such as `global.managementCluster` and
@@ -58,8 +75,7 @@ ConfigMap, which every Giant Swarm management cluster has:
   'values.yaml': configmaps "cluster-app-installation-values" not found`. The entry is required on purpose: a cluster
   without the management cluster's values must not be installed.
 
-The ConfigMap isn't in this repository, and you don't create it. Clusters created as App CRs get the same ConfigMap
-through the App's `extraConfigs`.
+The ConfigMap isn't in this repository, and you don't create it.
 
 Values in the repository go after it in `valuesFrom`, so a cluster can still override any of them.
 
@@ -92,4 +108,17 @@ before it, with the [values from the management cluster](#values-from-the-manage
 in the base: each cluster adds it with a component.
 
 If you create a base with `kubectl gs gitops add base`, add the entry to its `HelmRelease`, see
-[Create a base for another provider](/docs/guides/clusters.md#create-a-base-for-another-provider-optional).
+[Create a cluster base for another provider](/docs/how-to/cluster-base-provider.md#write-the-base).
+
+## When you copy it
+
+You don't need to copy this base: point your clusters at it. To change what all your AWS clusters get, edit
+`cluster_config.yaml`. To change one cluster, give it its own values instead. For a base of your own, copy the
+directory and keep the deletion protection in `cluster.yaml` and `cluster-app-installation-values` first in
+`valuesFrom`.
+
+## Read more
+
+- [Cluster bases tutorial](/docs/tutorials/intermediate/cluster-bases.md)
+- [Give a cluster its own values](/docs/how-to/cluster-values.md#give-a-cluster-its-own-values)
+- [Cluster values](/docs/reference/values.md#cluster-values)
