@@ -7,7 +7,6 @@ import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
 import time
 import urllib.request
-from collections.abc import Callable
 from typing import Iterable, Any, NamedTuple
 
 import pykube
@@ -309,14 +308,6 @@ def init_namespaces(
         namespace.delete()
 
 
-def installation_values(
-    api: pykube.HTTPClient, namespace: str
-) -> list[pykube.objects.APIObject]:
-    """Create the stand-in `cluster-app-installation-values` in the organisation's `namespace`,
-    as the management cluster's Kyverno policy copies it there."""
-    return [apply(installation_values_config_map(api, namespace))]
-
-
 @pytest.fixture(scope="module")
 def gpg_master_key(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
@@ -495,42 +486,6 @@ def workload_cluster(vcluster: VCluster) -> pykube.HTTPClient:
     return vcluster.api
 
 
-def workload_cluster_objects(
-    api: pykube.HTTPClient, namespace: str, kubeconfig: dict
-) -> list[pykube.objects.APIObject]:
-    """Create in the organisation's `namespace` what the management cluster has there for the
-    workload cluster: its kubeconfig Secret, as Cluster API writes it, and its cluster values,
-    as cluster-apps-operator writes them."""
-    with open(CLUSTER_VALUES_STUB) as f:
-        cluster_values = pykube.ConfigMap(
-            api,
-            {
-                "metadata": {
-                    "name": WORKLOAD_CLUSTER_VALUES_NAME,
-                    "namespace": namespace,
-                },
-                "data": {"values": f.read()},
-            },
-        )
-    kubeconfig_secret = pykube.Secret(
-        api,
-        {
-            # labelled and typed as Cluster API writes it, which the Kyverno policy
-            # `generate-eso-cluster-auth-from-kubeconfig` matches
-            "metadata": {
-                "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
-                "namespace": namespace,
-                "labels": {
-                    "cluster.x-k8s.io/cluster-name": WORKLOAD_CLUSTER_VCLUSTER_NAME
-                },
-            },
-            "type": "cluster.x-k8s.io/secret",
-            "stringData": {"value": yaml.safe_dump(kubeconfig)},
-        },
-    )
-    return [apply(cluster_values), apply(kubeconfig_secret)]
-
-
 def vcluster_kubeconfig_secret(
     api: pykube.HTTPClient, timeout_polls: int
 ) -> pykube.Secret:
@@ -635,51 +590,6 @@ def install_crds(api: pykube.HTTPClient, directory: str) -> None:
 
 
 @pytest.fixture(scope="module")
-def organization_objects(
-    kube_cluster: Cluster,
-    external_secrets: None,
-    workload_cluster: pykube.HTTPClient,
-    automation_rbac: None,
-) -> Iterable[list[pykube.objects.APIObject]]:
-    """What organization_operator creates in the organisation's namespace, and the namespace
-    itself. They're deleted, the namespace last, once the repository's Kustomizations are gone,
-    and before the fixtures this one depends on remove what they installed."""
-    created: list[pykube.objects.APIObject] = []
-
-    yield created
-
-    for obj in reversed(created):
-        if obj.exists():
-            obj.delete()
-
-
-@pytest.fixture(scope="module")
-def organization_namespace_setups(
-    kube_cluster: Cluster,
-    vcluster: VCluster,
-) -> list[Callable[[pykube.HTTPClient, str], list[pykube.objects.APIObject]]]:
-    """What organization_operator creates in the organisation's namespace once it exists, in
-    order, as the management cluster's operators do: the organisation's Alert, suspended before
-    Flux applies it; `automation` and its rights (rbac-operator); the installation values
-    (Kyverno); the test's secret store; the workload cluster's kubeconfig Secret and cluster
-    values (Cluster API and cluster-apps-operator)."""
-    # imported here: these modules import conftest
-    from automation_rbac import organization_rbac
-    from external_secrets import organization_store
-    from notification_objects import organization_alert
-
-    return [
-        lambda api, namespace: organization_alert(kube_cluster, namespace),
-        organization_rbac,
-        installation_values,
-        organization_store,
-        lambda api, namespace: workload_cluster_objects(
-            api, namespace, vcluster.kubeconfig
-        ),
-    ]
-
-
-@pytest.fixture(scope="module")
 def gitops_environment(
     gs_crds: None,
     capi_crds: None,
@@ -693,14 +603,6 @@ def gitops_environment(
     automation_rbac: None,
     organization_objects: list[pykube.objects.APIObject],
 ) -> None:
-    return None
-
-
-@pytest.fixture(scope="module")
-def gitops_deployment(organization_operator: None) -> None:
-    """The repository bootstrapped as on a new management cluster: Flux has applied the root
-    Kustomization, and the organisation's namespace Kustomization is ready, once
-    organization_operator has created the namespace."""
     return None
 
 
