@@ -408,8 +408,9 @@ For an age key, name `sops-age-${WC_NAME}` instead. The
 [WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) example has it.
 
 A `Kustomization` reads the Secret in its own namespace, so the key has to be in the organisation's namespace with
-them, in `namespace/secrets`. A `-direct` `Kustomization`, which applies `out-of-band` to the workload cluster, decrypts
-with a key of its own, `WC_NAME-direct.gpgkey.enc.yaml` in the same directory, made the same way, see
+them, in `namespace/secrets`. A `Kustomization` on the management cluster that applies `out-of-band` to the workload
+cluster through its kubeconfig, such as the template's `-direct` one, decrypts with a key of its own, such as
+`WC_NAME-direct.gpgkey.enc.yaml` in the same directory, made the same way, see
 [Add the -direct Kustomization](../tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
 
 ## Encrypt an app's values

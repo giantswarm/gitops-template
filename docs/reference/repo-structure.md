@@ -188,7 +188,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognise
 | Workload cluster Flux `Kustomization` | `MC_NAME-clusters-WC_NAME`, in `WC_NAME.yaml` |
 | Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME-apps.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux Kustomizations](#flux-kustomizations) |
 | An app's `HelmRelease` and `OCIRepository` when it's a base app, installed with the cluster | the same files, in `cluster/apps/APP_NAME` |
-| Out-of-band Flux `Kustomization` | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml` |
+| Out-of-band Flux `Kustomization` on the management cluster, which applies `out-of-band` through the workload cluster's kubeconfig | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml`. `kubectl gs gitops` doesn't generate it |
 | Flux `Kustomization` of an organisation's namespace | `MC_NAME-organization-ORG_NAME`, in `namespace.yaml`. `kubectl gs gitops` doesn't generate it |
 | Flux `Kustomization` of an organisation's apps on several clusters | `MC_NAME-multicluster-apps-ORG_NAME`, in `multicluster/apps.yaml`. `kubectl gs gitops` doesn't generate it |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `apps/APP_NAME` |
@@ -200,6 +200,14 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognise
 | A provider's cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER` |
 | A cluster base built on a provider's base | `kustomization.yaml` and its own files, in `bases/clusters/BASE_NAME`, next to the provider's base and never inside it, see [Cluster bases](../tutorials/intermediate/cluster-bases.md) |
 | A stack, several apps deployed together | `kustomization.yaml` and a values file per app, in `bases/stacks/STACK_NAME`, see [Stacks](../tutorials/intermediate/stacks.md). `kubectl gs gitops` doesn't generate it |
+
+The suffixes the template adds to file and object names that `kubectl gs gitops` doesn't generate, such as `-apps`,
+`-direct` and the `-from-template` of the example apps, are only the template's labels for telling its techniques apart.
+They aren't a convention, and nothing relies on them: name your own files and objects however you like. The same goes
+for out-of-band delivery, which has two forms, and the template shows both: a `Kustomization` on the management cluster
+that applies `out-of-band` through the workload cluster's kubeconfig, the template's `-direct` one, and Flux in the
+workload cluster pulling the same content itself, see
+[Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md).
 
 Repositories forked before the template used these names can move to them with
 [Move to the kubectl-gs names](../how-to/upgrade-fork.md#move-to-the-kubectl-gs-names).
@@ -337,10 +345,7 @@ ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are tw
   `workload-clusters`, and its key Secret, which has to be in the same namespace, goes in `namespace/secrets`.
   `namespace/secrets/kustomization.yaml` gives its Secrets the `kustomize.toolkit.fluxcd.io/prune: disabled`
   annotation and the `giantswarm.io/prevent-deletion` label, as the management cluster's `secrets/kustomization.yaml`
-  does, see [Add a workload cluster key (GPG)](../how-to/sops.md#add-a-workload-cluster-key-gpg). A legacy cluster's
-  kubeconfig Secret is in `default`: its `-direct.yaml` goes in the organisation's directory, with
-  `namespace: default` and no `dependsOn`, listed in the organisation's `kustomization.yaml`, and its key Secret in the
-  management cluster's `secrets`.
+  does, see [Add a workload cluster key (GPG)](../how-to/sops.md#add-a-workload-cluster-key-gpg).
 
   `sops` encrypts the key Secret with the first rule in `.sops.yaml` whose `path_regex` matches its file. The
   management cluster's rule for the workload clusters' keys in `namespace/secrets`, from

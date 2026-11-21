@@ -204,12 +204,13 @@ so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py
 1. Without asking Flux to reconcile, it waits up to 150 seconds, two `retryInterval`s and a margin, for the
    organisation's `Kustomization` to get `Ready` on its own retry.
 
-The other checks run after it. The cluster `Kustomization`s are in the organisation's `namespace` directory, so they
-appear only once the organisation's `Kustomization` is `Ready`, and run as `org-org-name/automation`.
-`tests/ats/test_root_build.py` checks, without a cluster, that the build of `MC_NAME.yaml` holds only `Organization`s
-and objects in `default`, and that each organisation's namespace `Kustomization` applies into the organisation's
-namespace. The `Kustomization`s it applies have to read the repository's `GitRepository` in `default`, depend on it,
-directly or through another of them, and decrypt with a key Secret it applies too.
+The other checks run after it. The cluster `Kustomization`s are in the organisation's `workload-clusters` directory,
+which its `namespace/kustomization.yaml` lists, so they appear only once the organisation's `Kustomization` is `Ready`,
+and run as `org-org-name/automation`. `tests/ats/test_root_build.py` checks, without a cluster, that the build of
+`MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each organisation's namespace
+`Kustomization` applies into the organisation's namespace. `tests/ats/test_namespace_build.py` checks that the
+`Kustomization`s it applies read the repository's `GitRepository` in `default`, depend on it, directly or through
+another of them, and decrypt with a key Secret it applies too.
 
 ## The rights of the `automation` ServiceAccounts
 

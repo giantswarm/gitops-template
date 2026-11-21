@@ -185,6 +185,8 @@ Then change:
    namespace `Kustomization` puts them in the organisation's; `sourceRef.namespace: default`;
    `organization: "${organization}"`; the organisation's namespace `Kustomization` in `dependsOn`; `prune: true`; and
    the `Cluster` health check. See [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) for why.
+   The `-apps` suffix is only the template's label for the second one, not a convention: name it however you like, see
+   [Naming](../reference/repo-structure.md#naming).
 
 1. If the cluster needs SOPS-encrypted files, add its key as
    [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg) describes. Don't use

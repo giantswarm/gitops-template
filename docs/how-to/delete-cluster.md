@@ -76,13 +76,18 @@ deleting them with the files later.
 
 ## Remove out-of-band resources
 
-Skip this if the cluster has no `-direct` `Kustomization`, `${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml`.
+Out-of-band resources reach a workload cluster in one of two ways, see
+[Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md):
 
-A `-direct` `Kustomization` applies the cluster's `out-of-band` directory straight to the workload cluster, see
-[Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md). It reaches the cluster through
-the cluster's kubeconfig Secret, which goes with the cluster. So it has to be gone before you delete the cluster: once
-the cluster is gone, so is its kubeconfig Secret, Flux can't reach the cluster any more, and the `-direct`
-`Kustomization` stays `Terminating` for good.
+- Flux in the workload cluster pulls them itself. They go with the cluster, and there's nothing to remove on the
+  management cluster for them. Skip this section.
+- A `Kustomization` on the management cluster applies them through the cluster's kubeconfig Secret: the template's
+  `WC_NAME-direct.yaml`, `${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml` in the steps below. If you named yours
+  differently, use its name. Skip this section if the cluster has none.
+
+That `Kustomization` reaches the cluster through the cluster's kubeconfig Secret, which goes with the cluster. So it
+has to be gone before you delete the cluster: once the cluster is gone, so is its kubeconfig Secret, Flux can't reach
+the cluster any more, and the `Kustomization` stays `Terminating` for good.
 
 1. Save the name of the key it decrypts with, if any, for the next section. Then take it out of the organisation's
    list of clusters, and remove its file:
