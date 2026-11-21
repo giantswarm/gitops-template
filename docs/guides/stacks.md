@@ -44,9 +44,10 @@ Put apps into a stack when they are deployed together and some of these apply:
   `listeners.https.subdomains` lists `hello`, and hello-world's `route.hostnames` is `hello.{{ .Values.baseDomain }}`
   on the Gateway in `route.parentRefs`. Both files are in the same directory, so a change to one is seen next to the
   other.
-- **Versions known to work together.** The stack pins the chart version of each app in its `kustomization.yaml`, with
-  a `# renovate:` comment, so the versions that are tested together are in one place and Renovate updates them in one
-  pull request.
+- **Versions known to work together.** The stack pins the chart version of each app in its `kustomization.yaml`, so
+  the versions that are tested together are in one place, easy to read and review. Each pin has a `# renovate:`
+  comment, and Renovate opens a pull request per chart, so check an update against the other pins before you merge
+  it.
 - **One line per cluster.** Adding `hello-web` to a cluster's apps adds the whole stack, and removing it removes the
   whole stack.
 
@@ -103,9 +104,10 @@ If the apps are independent, don't make a stack: list each App Template in the c
       - ../../apps/hello-world
     ```
 
-    The `name` of each generated ConfigMap has to be the name the listed base uses, and `namespace` the
-    organisation's namespace, or `behavior: replace` finds nothing to replace. The `$` of a target name is escaped,
-    as `kustomize` reads the name as a regular expression. A label under `labels:` marks every object the stack
+    The `name` of each generated ConfigMap has to be the name the listed base uses, or `behavior: replace` finds nothing
+    to replace. `namespace` is the organisation's namespace, as the `HelmRelease`s look up the ConfigMaps and Secrets in
+    `valuesFrom`, the `OCIRepository` in `chartRef` and the kubeconfig Secret there. The `$` of a target name is
+    escaped, as `kustomize` reads the name as a regular expression. A label under `labels:` marks every object the stack
     builds, if you want to find them on the management cluster later; it is a plain label that nothing acts on.
 
 ## Using a stack in a cluster
