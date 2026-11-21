@@ -86,7 +86,10 @@ CI is the usual place for the kind test, but a local run is quicker when you're 
     cd tests/ats
     pipenv install --deploy
     pipenv run pytest .
+    cd ../..
     ```
+
+    The last line takes you back to the root of your clone, where the rest of this page runs.
 
     To run some tests only, pass pytest's `-k` with part of their names, but bear in mind that the last one,
     `test_prune`, deletes what the others check, and fails if they didn't run first.

@@ -40,14 +40,14 @@ to several clusters from one list, see [Multicluster apps](./multicluster-apps.m
 
 ## Schedule an app's upgrades
 
-The app is a second copy of hello-world, `hello-world-scheduled`, in its own namespace, which upgrades only from Monday
+The app is a second copy of hello-world, `hello-world-window`, in its own namespace, which upgrades only from Monday
 to Thursday, 09:00 to 17:00 in Berlin. It waits for the Gateway API CRDs of the cluster's envoy-gateway, so it needs
 the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the cluster.
 
 1. Create the app's directory:
 
     ```sh
-    export APP_DIR=${WC_DIR}/apps/hello-world-scheduled
+    export APP_DIR=${WC_DIR}/apps/hello-world-window
     mkdir -p ${APP_DIR}
     ```
 
@@ -58,7 +58,7 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
     apiVersion: fluxcd.controlplane.io/v1
     kind: ResourceSetInputProvider
     metadata:
-      name: ${cluster_name}-hello-world-scheduled-version
+      name: ${cluster_name}-hello-world-window-version
       namespace: org-${organization}
     spec:
       type: OCIArtifactTag
@@ -84,13 +84,13 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
     apiVersion: fluxcd.controlplane.io/v1
     kind: ResourceSet
     metadata:
-      name: ${cluster_name}-hello-world-scheduled
+      name: ${cluster_name}-hello-world-window
       namespace: org-${organization}
     spec:
       dependsOn:
         - apiVersion: fluxcd.controlplane.io/v1
           kind: ResourceSetInputProvider
-          name: ${cluster_name}-hello-world-scheduled-version
+          name: ${cluster_name}-hello-world-window-version
           namespace: org-${organization}
           ready: true
           readyExpr: >-
@@ -99,7 +99,7 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
       inputsFrom:
         - apiVersion: fluxcd.controlplane.io/v1
           kind: ResourceSetInputProvider
-          name: ${cluster_name}-hello-world-scheduled-version
+          name: ${cluster_name}-hello-world-window-version
       serviceAccountName: automation
       resources:
         - apiVersion: source.toolkit.fluxcd.io/v1
@@ -107,7 +107,7 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
           metadata:
             labels:
               giantswarm.io/cluster: ${cluster_name}
-            name: ${cluster_name}-hello-world-scheduled
+            name: ${cluster_name}-hello-world-window
             namespace: << inputs.provider.namespace >>
           spec:
             interval: 10m
@@ -120,12 +120,12 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
           metadata:
             labels:
               giantswarm.io/cluster: ${cluster_name}
-            name: ${cluster_name}-hello-world-scheduled
+            name: ${cluster_name}-hello-world-window
             namespace: << inputs.provider.namespace >>
           spec:
             chartRef:
               kind: OCIRepository
-              name: ${cluster_name}-hello-world-scheduled
+              name: ${cluster_name}-hello-world-window
             dependsOn:
               - name: ${cluster_name}-gateway-api-crds
             install:
@@ -137,9 +137,9 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
             kubeConfig:
               secretRef:
                 name: ${cluster_name}-kubeconfig
-            releaseName: hello-world-scheduled
-            storageNamespace: hello-world-scheduled
-            targetNamespace: hello-world-scheduled
+            releaseName: hello-world-window
+            storageNamespace: hello-world-window
+            targetNamespace: hello-world-window
             timeout: 10m
             upgrade:
               remediation:
@@ -169,7 +169,7 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
 1. List the two files in the cluster's apps, then commit and push:
 
     ```sh
-    yq -i '.resources += ["hello-world-scheduled/input-provider.yaml", "hello-world-scheduled/resource-set.yaml"]' \
+    yq -i '.resources += ["hello-world-window/input-provider.yaml", "hello-world-window/resource-set.yaml"]' \
       ${WC_DIR}/apps/kustomization.yaml
     git add ${WC_DIR}/apps && git commit -m "Schedule hello-world upgrades on ${WC_NAME}" && git push
     ```
@@ -412,7 +412,7 @@ once, after Flux has applied it. It then reads the registry outside its schedule
 
 ```sh
 # the app
-flux-operator reconcile inputprovider ${WC_NAME}-hello-world-scheduled-version -n org-${ORG_NAME} --force
+flux-operator reconcile inputprovider ${WC_NAME}-hello-world-window-version -n org-${ORG_NAME} --force
 # the cluster: its provider is named after it
 flux-operator reconcile inputprovider ${SU_NAME}-release -n org-${ORG_NAME} --force
 ```

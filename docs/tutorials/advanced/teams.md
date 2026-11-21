@@ -28,7 +28,7 @@ nowhere else. Which Flux does it depends on where Flux runs:
    in the organisation's namespace, and the `Kustomization` reaches the workload cluster through its kubeconfig. In the
    workload cluster, the platform team gives the organisation's `automation` ServiceAccount the `admin` role in the
    team's namespace, with a `RoleBinding`. The `Kustomization` has `serviceAccountName: automation`, so Flux
-   impersonates `system:serviceaccount:org-<organisation>:automation` in the workload cluster, which can write only the
+   impersonates `system:serviceaccount:org-<name>:automation` in the workload cluster, which can write only the
    namespaces that have such a `RoleBinding`. The workload cluster runs no Flux.
 1. **Flux in the workload cluster.** The workload cluster runs Flux, as in
    [Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster). The platform team puts the
@@ -208,13 +208,17 @@ the next `interval`. It deletes what the team deletes, as the `Kustomization` ha
 
 ## Add a team with Flux in the workload cluster
 
-The cluster needs Flux, and its `-direct` `Kustomization`, which delivers the team's objects. Flux in the workload
-cluster needs Flux's CRDs before the `-direct` `Kustomization` can apply a `GitRepository` or a `Kustomization`, and it
-installs them with itself. Install flux-app as in
-[Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster), but keep the `-direct`
-`Kustomization`, and don't give Flux in the workload cluster a `Kustomization` of its own for `out-of-band`: here the
-`-direct` `Kustomization` delivers that directory, and Flux in the workload cluster reconciles the team's objects in
-it.
+The cluster needs its `-direct` `Kustomization`, which delivers the team's objects, and Flux, which reconciles them,
+installed as in [Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster). Flux brings
+its CRDs with it, which the `-direct` `Kustomization` needs before it can apply a `GitRepository` or a
+`Kustomization`.
+
+1. If you added a team with Flux on the management cluster above, give this one another name, so that the two don't
+   share a namespace:
+
+    ```sh
+    export TEAM_NAME=hello-team-wc
+    ```
 
 1. Create the team's namespace, ServiceAccount, `RoleBinding`, `GitRepository` and `Kustomization`, in one file:
 

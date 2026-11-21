@@ -25,12 +25,61 @@ The fork has a finished example in
 
 ## Set a version range
 
-This is for an app with an `oci-repository.yaml` of its own, such as hello-world as the basic tutorial deployed it.
+A range goes on an app with an `oci-repository.yaml` of its own. If you followed [App Templates](./app-templates.md)
+and [Stacks](./stacks.md), your cluster's hello-world gets its `OCIRepository` from the stack now, so add a small app
+of its own to try the range on: hello-world once more, as `hello-world-auto`, in a namespace of its own.
 
-1. Export the app's directory:
+1. Create the app with a fixed version, as in the basic tutorial. `3.2.2` is a version the repository's examples pin;
+   any published version from `3.0.0` on works:
 
     ```sh
-    export APP_DIR=${WC_DIR}/apps/hello-world
+    export APP_DIR=${WC_DIR}/apps/hello-world-auto
+    mkdir -p ${APP_DIR}
+    cat <<'EOF' > ${APP_DIR}/oci-repository.yaml
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: OCIRepository
+    metadata:
+      name: ${cluster_name}-hello-world-auto
+      namespace: org-${organization}
+    spec:
+      interval: 10m
+      ref:
+        tag: 3.2.2
+      url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+    EOF
+    cat <<'EOF' > ${APP_DIR}/helm-release.yaml
+    apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
+    metadata:
+      name: ${cluster_name}-hello-world-auto
+      namespace: org-${organization}
+    spec:
+      chartRef:
+        kind: OCIRepository
+        name: ${cluster_name}-hello-world-auto
+      install:
+        createNamespace: true
+      interval: 5m
+      kubeConfig:
+        secretRef:
+          name: ${cluster_name}-kubeconfig
+      releaseName: hello-world-auto
+      storageNamespace: hello-world-auto
+      targetNamespace: hello-world-auto
+      valuesFrom:
+        - kind: ConfigMap
+          name: ${cluster_name}-cluster-values
+          valuesKey: values
+    EOF
+    cat <<'EOF' > ${APP_DIR}/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    namespace: org-${organization}
+    resources:
+      - oci-repository.yaml
+      - helm-release.yaml
+    EOF
+    yq -i '.resources += ["hello-world-auto"]' ${WC_DIR}/apps/kustomization.yaml
     ```
 
 1. Replace the fixed version with a range: here, every release from `3.0.0` on, but below the next major version,
@@ -48,7 +97,7 @@ This is for an app with an `oci-repository.yaml` of its own, such as hello-world
     >
     > ```sh
     > kubectl gs gitops add automatic-update --management-cluster ${MC_NAME} --organization ${ORG_NAME} \
-    >   --workload-cluster ${WC_NAME} --app hello-world --version-range '>=3.0.0 <4.0.0' --skip-mapi
+    >   --workload-cluster ${WC_NAME} --app hello-world-auto --version-range '>=3.0.0 <4.0.0' --skip-mapi
     > ```
     >
     > The `--workload-cluster` is the name of the cluster's directory, and `--app` the name of the app's. Nothing
@@ -61,7 +110,7 @@ This is for an app with an `oci-repository.yaml` of its own, such as hello-world
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: OCIRepository
     metadata:
-      name: ${cluster_name}-hello-world
+      name: ${cluster_name}-hello-world-auto
       namespace: org-${organization}
     spec:
       interval: 10m
@@ -73,7 +122,7 @@ This is for an app with an `oci-repository.yaml` of its own, such as hello-world
 1. Commit and push:
 
     ```sh
-    git add ${APP_DIR} && git commit -m "Update hello-world on ${WC_NAME} automatically" && git push
+    git add ${WC_DIR}/apps && git commit -m "Update hello-world-auto on ${WC_NAME} automatically" && git push
     ```
 
 A range only matches pre-release tags, such as `3.1.0-rc.1`, if it has a pre-release comparator itself: `>=3.0.0-0`
@@ -85,7 +134,9 @@ options.
 ## Apps from an App Template or a stack
 
 The `OCIRepository` of an app made from an [App Template](./app-templates.md) is part of the template, so there's no
-file of the cluster's to change. Patch it in the app's `kustomization.yaml` instead, for this cluster only:
+file of the cluster's to change. Patch it in the app's `kustomization.yaml` instead, for this cluster only. After
+[Stacks](./stacks.md), that's `${WC_DIR}/apps/hello-web/kustomization.yaml`; if it already has a version patch for
+hello-world from App Templates, replace that one with this:
 
 ```yaml
 patches:

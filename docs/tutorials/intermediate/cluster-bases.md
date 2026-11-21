@@ -78,8 +78,9 @@ never inside the provider's directory, which holds that one base and nothing els
       --release ${RELEASE_VERSION}
     ```
 
-    Copy values, not the whole ConfigMap: it also has the cluster's name, its organisation and
-    `global.metadata.preventDeletion: false`, which the base already sets the right way.
+    Copy values, not the whole ConfigMap: it also has the cluster's name and organisation, which the base fills in
+    from variables, and, depending on the kubectl-gs version, its own `global.metadata.preventDeletion`. Keep the
+    base's `preventDeletion: true`.
 
 1. Create the `kustomization.yaml`. It lists the provider's base and replaces its ConfigMap with one generated from
    your `cluster_config.yaml`. The quoted `'EOF'` keeps the variables in the file, and `sed` fills in the provider:
@@ -175,6 +176,7 @@ gets no apps, so it needs only the cluster's `Kustomization`.
           cluster_description: "${WC2_NAME} from ${BASE_NAME}"
           cluster_name: "${WC2_NAME}"
           organization: "\${organization}"
+          # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
           release: "${RELEASE_VERSION}"
       prune: true
       retryInterval: 1m

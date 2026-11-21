@@ -184,8 +184,6 @@ bases/stacks/hello-web
     - `namespace` is the organisation's namespace, as the `HelmRelease`s look up their values, their `OCIRepository`
       and the kubeconfig Secret there.
     - The `$` of a target name is escaped, as kustomize reads the name as a regular expression.
-    - A label under `labels:` marks every object the stack builds, if you want to find them on the management cluster
-      later. Nothing acts on it.
 
 ## Use it in a cluster
 
@@ -217,7 +215,8 @@ envoy-gateway releases are new.
 1. Commit and push:
 
     ```sh
-    git add ${WC_DIR}/apps && git commit -m "Deploy the hello-web stack to ${WC_NAME}" && git push
+    git add bases/stacks/hello-web ${WC_DIR}/apps
+    git commit -m "Deploy the hello-web stack to ${WC_NAME}" && git push
     ```
 
 **Check:** four releases are `Ready`: the three of Envoy Gateway, then hello-world, which waits for the Gateway API

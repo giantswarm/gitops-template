@@ -268,9 +268,9 @@ kubectl get resourceset hello-world-scheduled -n org-${ORG_NAME}
 flux get helmreleases -n org-${ORG_NAME} | grep hello-world-scheduled
 ```
 
-If you followed [Scheduled upgrades](./scheduled-upgrades.md) on the same cluster, it now has hello-world-scheduled
-twice over, once from its own `apps` and once from here: both install the release `hello-world-scheduled` into the
-same namespace, and fight. Remove the one in the cluster's `apps` in the same commit.
+If you followed [Scheduled upgrades](./scheduled-upgrades.md) on the same cluster, it keeps its `hello-world-window`
+from there. That one has names, a release and a namespace of its own, so the two `ResourceSet`s never render the same
+object, and neither deletes what the other installed.
 
 ## Clusters that aren't ready yet
 

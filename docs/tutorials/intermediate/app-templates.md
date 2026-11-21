@@ -233,7 +233,8 @@ one, applies both. So Flux updates the release in place, rather than uninstallin
 1. Commit and push:
 
     ```sh
-    git add ${APP_DIR} && git commit -m "Deploy hello-world to ${WC_NAME} from its App Template" && git push
+    git add bases/apps/hello-world ${APP_DIR}
+    git commit -m "Deploy hello-world to ${WC_NAME} from its App Template" && git push
     ```
 
 **Check:** the release is `Ready`, with the template's chart version:
