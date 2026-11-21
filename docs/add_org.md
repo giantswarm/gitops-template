@@ -88,14 +88,67 @@ export ORG_NAME=ORGANIZATION
       .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' ${ORG_NAME}.yaml
     ```
 
-1. Create the organisation's `kustomization.yaml`. It lists the `Organization` and `workload-clusters`, and copies
-   the `Organization`'s name into the workload clusters' Flux `Kustomization`s: into `organization` in their
-   `spec.postBuild.substitute`, which every one of them writes and which fails the build where it's missing, and
-   wherever they name the organisation's namespace as `org-ORG_NAME`. The replacements win over what the files say.
-   `org-ORG_NAME` is a fixed placeholder: the quoted `'EOF'` keeps it, and everything else in the file, as it is, so
-   don't replace it with your organisation's name. The health check replacement applies only to a `Kustomization`
-   with the label `giantswarm.io/health-check-cluster: "true"`, whose health check keeps the placeholder namespace, as
-   kustomize fails on one without a health check. See
+1. Create the `namespace` directory, for everything the organisation keeps in its namespace, `org-${ORG_NAME}`, with
+   a `kustomization.yaml` that lists nothing yet. The files in it name no namespace: the `Kustomization` of the next
+   step puts them in the organisation's.
+
+    ```sh
+    mkdir namespace
+    cat <<EOF > namespace/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    resources: []
+    EOF
+    ```
+
+1. Create `namespace.yaml`, the organisation's namespace `Kustomization`. The management cluster's `Kustomization`
+   applies only the `Organization` and objects in `default`, so it works before organization-operator has created the
+   namespace. This `Kustomization`, in `default`, applies `namespace` with `targetNamespace`: it fails until the
+   namespace exists and succeeds on its next retry. Change `mc-name`, `org-name` and `your-repo`, but leave
+   `ORG_NAME` and `org-ORG_NAME`, which the organisation's `kustomization.yaml` completes. The label tells it which
+   `Kustomization` to complete the `targetNamespace` of. See
+   [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations):
+
+    ```sh
+    cat <<'EOF' > namespace.yaml
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      labels:
+        giantswarm.io/organization-namespace: "true"
+      name: mc-name-organization-org-name
+      namespace: default
+    spec:
+      decryption:
+        provider: sops
+        secretRef:
+          name: sops-gpg-master
+      interval: 10m
+      path: "./management-clusters/MC_NAME/organizations/ORG_NAME/namespace"
+      postBuild:
+        substitute:
+          organization: "ORG_NAME"
+      prune: true
+      retryInterval: 1m
+      serviceAccountName: automation
+      sourceRef:
+        kind: GitRepository
+        name: your-repo
+      targetNamespace: org-ORG_NAME
+      timeout: 2m
+    EOF
+    yq -i '.spec.path = "./management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/namespace"' namespace.yaml
+    ```
+
+1. Create the organisation's `kustomization.yaml`. It lists the `Organization`, `namespace.yaml` and
+   `workload-clusters`, and copies the `Organization`'s name into the Flux `Kustomization`s: into `organization` in
+   their `spec.postBuild.substitute`, which every one of them writes and which fails the build where it's missing,
+   into the namespace of a cluster's health check, and into the `targetNamespace` of `namespace.yaml`. The
+   replacements win over what the files say. `org-ORG_NAME` is a fixed placeholder: the quoted `'EOF'` keeps it, and
+   everything else in the file, as it is, so don't replace it with your organisation's name. The health check
+   replacement applies only to a `Kustomization` with the label `giantswarm.io/health-check-cluster: "true"`, whose
+   health check keeps the placeholder namespace, and the last one only to the one with the label
+   `giantswarm.io/organization-namespace: "true"`, as kustomize fails on one without the field. See
    [The organisation's name](./reference/repo-structure.md#the-organisations-name), which also says how to do without
    the replacements:
 
@@ -105,6 +158,7 @@ export ORG_NAME=ORGANIZATION
     kind: Kustomization
     resources:
       - ORGANIZATION_FILE
+      - namespace.yaml
       - workload-clusters
     replacements:
       - source:
@@ -137,9 +191,11 @@ export ORG_NAME=ORGANIZATION
           fieldPath: metadata.name
         targets:
           - select:
-              namespace: org-ORG_NAME
+              group: kustomize.toolkit.fluxcd.io
+              kind: Kustomization
+              labelSelector: giantswarm.io/organization-namespace=true
             fieldPaths:
-              - metadata.namespace
+              - spec.targetNamespace
             options:
               delimiter: "-"
               index: 1
@@ -147,9 +203,11 @@ export ORG_NAME=ORGANIZATION
     yq -i '.resources[0] = "'"${ORG_NAME}"'.yaml"' kustomization.yaml
     ```
 
-    Flux applies the organisation's directory as this file builds it, so list here anything else you add to the
-    directory, such as `secrets` below. To see what Flux applies, build the directory, not `workload-clusters` on its
-    own, which leaves the placeholders:
+    The management cluster's `Kustomization` applies the organisation's directory as this file builds it, so list
+    here anything else you add to the directory that goes in `default`. What goes in the organisation's namespace,
+    such as `secrets` below, goes in `namespace` and `namespace/kustomization.yaml`. To see what the management
+    cluster's `Kustomization` applies, build the directory, not `workload-clusters` on its own, which leaves the
+    placeholders:
 
     ```sh
     kubectl kustomize .
@@ -225,7 +283,7 @@ new GPG key-pair dedicated for an organization.
     touch .sops.yaml
     yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
-      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/secrets/.*\\.enc\\.yaml",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/namespace/secrets/.*\\.enc\\.yaml",
       "pgp": "'"${KEY_FP}"'"
     }]' .sops.yaml
     ```
@@ -293,10 +351,11 @@ going to use 1Password (`op` CLI tool) for that:
 1. Push changes to the repository and wait for `Flux` to reconcile the secret. After that,
 `Flux` should be ready to decrypt and reconcile the organization's secrets.
 
-1. Go to the organization's directory:
+1. Go to the organization's `namespace` directory, which the organisation's namespace `Kustomization` applies into
+   its namespace:
 
     ```sh
-    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace
     ```
 
 1. Create the `secrets` directory for storing your secret data, and enter it:
@@ -306,8 +365,8 @@ going to use 1Password (`op` CLI tool) for that:
     cd secrets
     ```
 
-1. List the directory in the organisation's `kustomization.yaml`, which Flux builds the organisation's directory
-   from, and give it a `kustomization.yaml` of its own that lists the Secret:
+1. List the directory in `namespace/kustomization.yaml`, and give it a `kustomization.yaml` of its own that lists the
+   Secret:
 
     ```sh
     yq -i '.resources += ["secrets"]' ../kustomization.yaml
@@ -330,8 +389,9 @@ going to use 1Password (`op` CLI tool) for that:
     ```
 
 1. Encrypt it with SOPS. The SOPS encryption rule configured earlier ensures it will get encrypted with the
-Organization's key. It names the real namespace, `org-${ORG_NAME}`, not the placeholder `org-ORG_NAME`: the
-replacement would change the encrypted file, which breaks its MAC, so Flux couldn't decrypt it:
+Organization's key. It names the real namespace, `org-${ORG_NAME}`, the same one the namespace `Kustomization`'s
+`targetNamespace` sets, so Flux leaves the encrypted file as it is and can decrypt it. The organisation's
+namespace `Kustomization` decrypts it with `sops-gpg-master`, as the management cluster's does:
 
     ```sh
     sops --encrypt --in-place secret.enc.yaml
@@ -345,7 +405,7 @@ External Secrets Operator (ESO) on the management cluster can read Secrets from 
 it, through a `SecretStore` that reaches the cluster's API server. Rather than adding that store and its credentials to
 Git for each new cluster, let a Kyverno `Policy`, managed with GitOps like everything else here, react to every new
 cluster and generate them from the kubeconfig Secret Cluster API writes for it. The example in
-[organizations/ORG_NAME/workload-cluster-secret-stores](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-cluster-secret-stores/)
+[organizations/ORG_NAME/namespace/workload-cluster-secret-stores](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-cluster-secret-stores/)
 has two files, both in the organisation's namespace, since customers on a Giant Swarm management cluster can't create
 cluster-scoped objects:
 
@@ -361,14 +421,14 @@ cluster-scoped objects:
        `org-*` namespaces exist only on the management cluster. Change `remoteNamespace` to use another one that exists
        on every cluster.
 
-    The rules name the namespace they generate in, `org-ORG_NAME`, rather than templating it: for a templated namespace
-    Kyverno checks the rights of the policy's author and of its own controllers across the whole cluster, which a
-    customer can't grant. `generateExisting: true` covers the clusters that exist already, and `synchronize: true`
-    deletes the generated objects again when the cluster's kubeconfig Secret goes. Deleting the policy, or its file from
-    Git, which Flux then prunes, deletes every store and `ExternalSecret` it generated at once, and ESO deletes each
-    `<cluster>-eso-cluster-auth` Secret with the `ExternalSecret` that owns it (`creationPolicy: Owner`): the apps'
-    `ExternalSecret`s and `PushSecret`s that use the stores stop syncing until the policy is back, though the Secrets
-    they already wrote stay.
+    The rules name the namespace they generate in, `org-${organization}`, which Flux fills in, rather than templating it
+    in Kyverno: for a templated namespace Kyverno checks the rights of the policy's author and of its own controllers
+    across the whole cluster, which a customer can't grant. `generateExisting: true` covers the clusters that exist
+    already, and `synchronize: true` deletes the generated objects again when the cluster's kubeconfig Secret goes.
+    Deleting the policy, or its file from Git, which Flux then prunes, deletes every store and `ExternalSecret` it
+    generated at once, and ESO deletes each `<cluster>-eso-cluster-auth` Secret with the `ExternalSecret` that owns it
+    (`creationPolicy: Owner`): the apps' `ExternalSecret`s and `PushSecret`s that use the stores stop syncing until the
+    policy is back, though the Secrets they already wrote stay.
 - `secret-store.yaml`: the `SecretStore` `default` that the generated `ExternalSecret`s read the kubeconfig Secrets
   through. It reads the organisation's namespace as the `automation` ServiceAccount Giant Swarm's rbac-operator creates
   there.
@@ -378,11 +438,13 @@ organisation's namespace to manage the `ExternalSecret`s and `SecretStore`s the 
 kubeconfig Secrets that trigger it. Giant Swarm's rbac-operator grants them in every organisation's namespace, with the
 ClusterRole `write-kyverno-generated-externalsecrets`, so the example doesn't. Without them, Kyverno rejects the policy.
 
-The organisation's `kustomization.yaml` lists the directory, and its replacements complete `org-ORG_NAME` in the
-objects' namespace, in the namespace the policy generates in and in the one the `default` store reads, see
+The organisation's `namespace/kustomization.yaml` lists the directory. The organisation's namespace `Kustomization`
+puts the objects in the organisation's namespace and fills in `${organization}`, in the namespace the policy generates
+in and in the one the `default` store reads, see
 [The organisation's name](reference/repo-structure.md#the-organisations-name). A cluster's apps then read from or push
 to the cluster with `secretStoreRef: {kind: SecretStore, name: <cluster>-eso-cluster-store}` in the organisation's
-namespace. For another organisation, copy the directory into its own and list it in its `kustomization.yaml`.
+namespace. For another organisation, copy the directory into its own `namespace` and list it in its
+`namespace/kustomization.yaml`.
 
 ### Push a Secret into a workload cluster
 
