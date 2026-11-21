@@ -58,7 +58,7 @@ repos:
             language: script
             pass_filenames: false
             always_run: true
-          # every directory in bases/ and management-clusters/ has a README, see tools/README.md
+          # every directory of the template's examples has a README, see tools/README.md
           - id: check-directory-readmes
             name: Directories explain themselves with a README
             entry: tools/check-directory-readmes

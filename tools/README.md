@@ -64,11 +64,19 @@ add a `-schema-location` for it to the script.
 
 ## `check-directory-readmes`
 
-Every directory a customer reads, copies or edits explains itself with a README. `check-directory-readmes` makes sure
-of it: it walks the directories of the files git tracks in `bases/` and `management-clusters/`, staged files included,
-and fails for a directory without a tracked `README.md` (or `readme.md`). `tests/`, `tools/`, `.github/` and `docs/`
-are left out, and so is a directory git doesn't know about yet, until you stage a file in it. pre-commit runs it, so CI
-does too, also on a pull request that changes only Markdown. It runs with bash 3.2, as on macOS.
+Every directory of the template's examples, which a customer reads, copies or edits, explains itself with a README.
+`check-directory-readmes` makes sure of it: it walks the directories of the files git tracks, staged files included,
+and fails for a directory without a tracked `README.md` (or `readme.md`). It checks only the template's own examples:
+
+- the bases the template ships, listed in `SHIPPED` at the top of the script;
+- `management-clusters/` itself, and the placeholder management cluster `management-clusters/MC_NAME/` and everything
+  below it, which holds the example organisation `ORG_NAME/` and the example clusters.
+
+A customer's own directories aren't checked: a fork's management cluster, its organisations and clusters, and a base
+it adds, such as `bases/clusters/my-defaults/`, need no README, so a fork that follows the tutorials passes. `tests/`,
+`tools/`, `.github/` and `docs/` are left out, and so is a directory git doesn't know about yet, until you stage a file
+in it. pre-commit runs it, so CI does too, also on a pull request that changes only Markdown. It runs with bash 3.2, as
+on macOS.
 
 Some leaves are copies of one shape, such as the stages, the regions or an example cluster's `cluster/` and `apps/`.
 One README in the parent covers them, and the `COVERED` list at the top of the script names each one with its parent.
@@ -76,10 +84,11 @@ The check fails for an entry whose directory is gone, and for a parent README th
 backticks, as its path relative to the parent followed by a slash, such as `` `dev/` ``. A longer path doesn't count:
 `` `apps/cert-manager/` `` doesn't name `apps/`.
 
-When you add a directory, give it a README. If it's another copy of a shape a parent README already describes, list it
-in `COVERED` and name it in that README instead.
+When you add a directory to the template's examples, give it a README. If it's a base, also list it in `SHIPPED`, or the
+check skips it. If it's another copy of a shape a parent README already describes, list it in `COVERED` and name it in
+that README instead.
 
-`test-all-ff validate` checks that the script fails in each of those cases.
+`test-all-ff validate` checks that the script fails in each of those cases, and passes for a customer's own directories.
 
 ### check-directory-readmes usage
 

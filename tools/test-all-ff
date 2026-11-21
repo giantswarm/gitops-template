@@ -621,17 +621,23 @@ function test() {
 
 	if [ "${mode}" == "validate" ]; then
 		# check-directory-readmes, in a copy of the repository that's a git repository of its own:
-		#  it must fail for a directory without a README, also a new one once it's staged, for a
-		#  covered leaf that's gone, and for a covered leaf its parent's README doesn't name as
+		#  it must fail for a template directory without a README, also a new one once it's staged,
+		#  for a covered leaf that's gone, and for a covered leaf its parent's README doesn't name as
 		#  `<leaf>/`, even where a longer path starts with it. It must pass with a directory that
-		#  git doesn't track. An empty message means the check must pass.
+		#  git doesn't track, and with a customer's own directories, as a fork that follows the
+		#  tutorials has them. An empty message means the check must pass.
 		readmes_path=$(realpath "$(dirname $0)/check-directory-readmes")
 		fixture_dir="${tmp_dir}/readmes"
 		wc_readme=management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/README.md
+		new_dir=management-clusters/MC_NAME/organizations/ORG_NAME/new
+		fork_wc=management-clusters/mymc/organizations/acme/workload-clusters/wc1
 		readmes_cases=(
 			"a directory without a README|rm bases/apps/README.md && git add -A|bases/apps has no README.md"
-			"a staged new directory without a README|mkdir bases/new && touch bases/new/a.yaml && git add bases/new|bases/new has no README.md"
-			"a directory git doesn't track|mkdir bases/untracked && touch bases/untracked/a.yaml|"
+			"an example directory without a README|rm management-clusters/MC_NAME/secrets/README.md && git add -A|management-clusters/MC_NAME/secrets has no README.md"
+			"a staged new directory without a README|mkdir ${new_dir} && touch ${new_dir}/a.yaml && git add ${new_dir}|${new_dir} has no README.md"
+			"a directory git doesn't track|mkdir ${new_dir} && touch ${new_dir}/a.yaml|"
+			"a customer's management cluster without READMEs|mkdir -p ${fork_wc}/cluster ${fork_wc}/apps && touch ${fork_wc}/cluster/a.yaml ${fork_wc}/apps/a.yaml && git add -A|"
+			"a customer's own base without a README|mkdir -p bases/clusters/my-defaults && touch bases/clusters/my-defaults/a.yaml && git add -A|"
 			"a covered leaf that's gone|rm -r bases/environments/stages/dev && git add -A|bases/environments/stages/dev is listed in COVERED"
 			"a covered leaf its parent's README doesn't name|sed -i s@prod/@production@g bases/environments/stages/README.md|bases/environments/stages/README.md covers bases/environments/stages/prod, but doesn't name it"
 			"a covered leaf named only in a longer path|sed -i s@\\\`apps/\\\`@\\\`applications/\\\`@g ${wc_readme}|${wc_readme} covers ${wc_readme%/README.md}/apps, but doesn't name it"

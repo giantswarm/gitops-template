@@ -8,15 +8,36 @@ Must be run from the repository root, or from the directory given as the only ar
 
 Usage: $0 [dir]
 
-It walks the directories of the files git tracks, staged ones included, in bases/ and
-management-clusters/, so tests/, tools/, .github/ and docs/ are left out, and so is a directory
-git doesn't know about yet. Every directory there needs a tracked README.md (or readme.md),
-unless it's listed in COVERED below: a leaf that's a copy of its siblings' shape, such as a stage
-or a region, which the README of a parent directory covers. That README must name the leaf in
+It walks the directories of the files git tracks, staged ones included, in the template's own
+examples: the bases listed in SHIPPED below, management-clusters/ itself, and management-clusters/MC_NAME/
+and everything below it. A customer's own directories, such as their management cluster or a base
+of their own, aren't checked, and neither are tests/, tools/, .github/ and docs/, or a directory git
+doesn't know about yet. Every directory checked needs a tracked README.md (or readme.md), unless
+it's listed in COVERED below: a leaf that's a copy of its siblings' shape, such as a stage or a
+region, which the README of a parent directory covers. That README must name the leaf in
 backticks, as its path relative to the parent followed by a slash, such as \`dev/\`.
 "
 	exit 1
 }
+
+# The directories the template ships in bases/, other than the leaves in COVERED. A base a customer
+#  adds, such as bases/clusters/my-defaults, isn't listed, so it isn't checked.
+SHIPPED=(
+	bases
+	bases/apps
+	bases/clusters
+	bases/clusters/capa
+	bases/environments
+	bases/environments/regions
+	bases/environments/stages
+	bases/secret_stores
+	bases/secret_stores/aws-secrets-manager
+	bases/secret_stores/azure-key-vault
+	bases/shared_objects
+	bases/stacks
+	bases/stacks/envoy-gateway
+	bases/stacks/hello-web
+)
 
 # The leaves a parent README covers, one per line: the parent directory, then the leaf's path
 #  relative to it.
@@ -82,6 +103,17 @@ function readme() {
 	done
 }
 
+##
+# Whether directory $1 is one of the template's own examples: a shipped base, or the placeholder
+#  management cluster MC_NAME, which holds the example organisation and clusters.
+function template_dir() {
+	case "$1" in
+	management-clusters | management-clusters/MC_NAME | management-clusters/MC_NAME/*) return 0 ;;
+	esac
+	grep -qxF "$1" <<<"${shipped}"
+}
+
+shipped=$(printf '%s\n' "${SHIPPED[@]}")
 failed=0
 covered=""
 for entry in "${COVERED[@]}"; do
@@ -100,7 +132,7 @@ for entry in "${COVERED[@]}"; do
 done
 
 while IFS= read -r dir; do
-	if [ -z "$(readme "${dir}")" ] && ! grep -qxF "${dir}" <<<"${covered}"; then
+	if template_dir "${dir}" && [ -z "$(readme "${dir}")" ] && ! grep -qxF "${dir}" <<<"${covered}"; then
 		echo "${dir} has no README.md: write one and add it to git, or, if a parent's README covers it, list it" \
 			"in COVERED in $0."
 		failed=1
