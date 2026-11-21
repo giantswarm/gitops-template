@@ -15,7 +15,7 @@ Usage: $0 [validate|template]
 
 ##
 # We want to be running this script from git root to have widest possible discovery
-if [ ! -e .git ]; then
+if [ "$(git rev-parse --show-toplevel 2>/dev/null)" != "$(pwd -P)" ]; then
 	echo "Not a valid git repository or not run from git root."
 	help
 fi
@@ -127,6 +127,20 @@ function kubeconform_check() {
 		-schema-location "${CRDS_CATALOG_REPOSITORY}/{{ .Group }}/{{ .ResourceKind }}_{{ .ResourceAPIVersion }}.json" \
 		-cache "${SCHEMA_CACHE}/http" \
 		"$@"
+}
+
+# Makes the directory $1 the top level of a new git repository or, with "worktree" as $2,
+# of a new worktree of one, as the scripts only run there.
+function git_fixture() {
+	local dir="$1"
+	if [ "${2:-}" == "worktree" ]; then
+		git init -q "${dir}.repository"
+		git -C "${dir}.repository" -c user.name=test -c user.email=test@example.invalid \
+			-c commit.gpgsign=false commit -q --allow-empty -m "Initial commit"
+		git -C "${dir}.repository" worktree add -q --detach "${dir}"
+	else
+		git init -q "${dir}"
+	fi
 }
 
 function test() {
@@ -344,9 +358,8 @@ function test() {
 		# finds below the current directory, and the ones in tools/testdata are left out.
 		echo -n "fake-flux, cluster with an unset variable: "
 		fixture_dir="${tmp_dir}/unset-variable"
-		# A .git file, as in a git worktree, rather than a directory.
-		mkdir -p "${fixture_dir}"
-		echo "gitdir: ${tmp_dir}/unset-variable.git" >"${fixture_dir}/.git"
+		# A git worktree, whose .git is a file rather than a directory.
+		git_fixture "${fixture_dir}" worktree
 		cp -r "$(dirname $0)/testdata/unset-variable/." "${fixture_dir}"
 		fakeflux_path=$(realpath "${fakeflux}")
 		status=0
@@ -365,7 +378,7 @@ function test() {
 		# Kustomizations. The fixture has two Kustomizations of the same name: fake-flux tells
 		# them apart by namespace, the one Flux applies them in or the one their file names.
 		fixture_dir="${tmp_dir}/ancestor-replacement"
-		mkdir -p "${fixture_dir}/.git"
+		git_fixture "${fixture_dir}"
 		cp -r "$(dirname $0)/testdata/ancestor-replacement/." "${fixture_dir}"
 		for check in "default:name: ancestor-replacement$" \
 			"org-from-the-ancestor:name: ancestor-replacement-direct$" \
@@ -423,9 +436,8 @@ function test() {
 		# builds the Kustomizations it finds below the current directory.
 		echo -n "test-all-ff, a team's Kustomization: "
 		fixture_dir="${tmp_dir}/team-source"
-		# A .git file, as in a git worktree, rather than a directory.
-		mkdir -p "${fixture_dir}"
-		echo "gitdir: ${tmp_dir}/team-source.git" >"${fixture_dir}/.git"
+		# A git worktree, whose .git is a file rather than a directory.
+		git_fixture "${fixture_dir}" worktree
 		cp -r "$(dirname $0)/testdata/team-source/." "${fixture_dir}"
 		script_path=$(realpath "$0")
 		status=0
@@ -441,7 +453,7 @@ function test() {
 		# It must build, and fail on, a Kustomization of this repository whose path is mistyped.
 		echo -n "test-all-ff, a mistyped path: "
 		fixture_dir="${tmp_dir}/mistyped-path"
-		mkdir -p "${fixture_dir}/.git"
+		git_fixture "${fixture_dir}"
 		cp -r "$(dirname $0)/testdata/mistyped-path/." "${fixture_dir}"
 		status=0
 		output=$(cd "${fixture_dir}" && "${script_path}" template 2>&1) || status=$?
@@ -452,6 +464,25 @@ function test() {
 			echo "${output}"
 			has_validation_errors=1
 		fi
+
+		# Both scripts must refuse to run outside a git repository's top level, also where a
+		# .git file names no repository, as in a broken checkout.
+		fixture_dir="${tmp_dir}/broken-checkout"
+		mkdir -p "${fixture_dir}"
+		echo "gitdir: ${tmp_dir}/gone.git" >"${fixture_dir}/.git"
+		cp -r "$(dirname $0)/testdata/team-source/." "${fixture_dir}"
+		for command in "${script_path} template" "${fakeflux_path} build team:default"; do
+			echo -n "$(basename "${command%% *}"), a .git file that names no repository: "
+			status=0
+			output=$(cd "${fixture_dir}" && ${command} 2>&1) || status=$?
+			if [ "${status}" -ne 0 ] && grep -q "Not a valid git repository or not run from git root." <<<"${output}"; then
+				echo "OK, refused"
+			else
+				echo "not refused:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
 	fi
 
 	if [ "${mode}" == "validate" ]; then
