@@ -1,9 +1,12 @@
-# In namespace/, but namespace/kustomization.yaml doesn't list it: parent-namespace's path holds
-# it, but its build doesn't apply it, so it isn't this Kustomization's parent.
+# In namespace/, but kustomization.yaml doesn't list it: parent-namespace's path holds it, but its
+# build doesn't apply it, so it isn't this Kustomization's parent. That build applies the
+# Kustomization in namesake.yaml under the same name, in the namespace this file names:
+# fake-flux has to build this file as it is, not take that one for it.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: parent-unlisted
+  name: parent-namesake
+  namespace: org-from-the-parent
 spec:
   interval: 1m
   path: ./root/organization/direct

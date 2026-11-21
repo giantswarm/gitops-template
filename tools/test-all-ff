@@ -491,15 +491,18 @@ function test() {
 		fi
 
 		# The parent is the Kustomization whose build applies the file, not one whose path holds
-		# it: namespace/unlisted.yaml is in parent-namespace's path, but its build doesn't list it,
-		# so nothing puts parent-unlisted in org-from-the-parent.
+		# it: namespace/unlisted.yaml is in parent-namespace's path, but its build doesn't list it.
+		# That build applies another parent-namesake, from namesake.yaml, in org-from-the-parent,
+		# the namespace unlisted.yaml names: fake-flux must build unlisted.yaml as it is, not take
+		# that one for it.
 		echo -n "fake-flux, a Kustomization its parent's path holds but its build leaves out: "
 		status=0
-		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build parent-unlisted:org-from-the-parent -M 2>&1) || status=$?
-		if [ "${status}" -ne 0 ] && grep -q "No kustomization found" <<<"${output}"; then
-			echo "OK, not found"
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build parent-namesake:org-from-the-parent -M 2>&1) || status=$?
+		if [ "${status}" -eq 0 ] && grep -q "^  name: parent-unlisted$" <<<"${output}" &&
+			! grep -q "^  name: parent-namesake$" <<<"${output}"; then
+			echo "OK, as it is"
 		else
-			echo "found:"
+			echo "taken from parent-namespace:"
 			echo "${output}"
 			has_validation_errors=1
 		fi
