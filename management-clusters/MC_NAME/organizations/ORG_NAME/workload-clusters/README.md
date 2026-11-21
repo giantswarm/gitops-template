@@ -17,13 +17,21 @@ the cluster keys in `../namespace/secrets/`.
 - `<cluster>-apps.yaml`: the cluster's apps Kustomization. It applies the secondary apps, in `<cluster>/apps/`, once
   the cluster's Kustomization is Ready. Only a cluster with secondary apps has one.
 - `<cluster>-direct.yaml`: applies `<cluster>/out-of-band/` straight to the workload cluster, through its kubeconfig.
+  Only a cluster whose `out-of-band/` the management cluster pushes has one.
+
+A cluster's `out-of-band/` holds what goes straight into the workload cluster rather than onto the management cluster,
+and it gets there one of two ways. The management cluster pushes it, with a Flux Kustomization whose `kubeConfig`
+reaches the workload cluster, as in `WC_NAME_OUT_OF_BAND_NO_FLUX_APP`. Or the workload cluster's own Flux pulls it from
+the repository, as in `WC_NAME_OUT_OF_BAND_FLUX_APP`. `-direct` is only the name this template gives the pushing
+Kustomization, not a kind of Flux object.
 
 The examples:
 
 - [`WC_NAME/`](WC_NAME/): a plain cluster with an app whose values are encrypted with an age key.
-- [`WC_NAME_OUT_OF_BAND_FLUX_APP/`](WC_NAME_OUT_OF_BAND_FLUX_APP/): Flux installed in the workload cluster.
-- [`WC_NAME_OUT_OF_BAND_NO_FLUX_APP/`](WC_NAME_OUT_OF_BAND_NO_FLUX_APP/): out-of-band delivery from the management
-  cluster, with ESO and SOPS side by side, and application teams.
+- [`WC_NAME_OUT_OF_BAND_FLUX_APP/`](WC_NAME_OUT_OF_BAND_FLUX_APP/): out-of-band delivery pulled by Flux in the
+  workload cluster.
+- [`WC_NAME_OUT_OF_BAND_NO_FLUX_APP/`](WC_NAME_OUT_OF_BAND_NO_FLUX_APP/): out-of-band delivery pushed by the
+  management cluster, with ESO and SOPS side by side, and application teams.
 - [`WC_NAME_SCHEDULED_UPGRADES/`](WC_NAME_SCHEDULED_UPGRADES/): a cluster whose release upgrades only in a window.
 - [`HELLO_APP_DEV_CLUSTER_1/`](HELLO_APP_DEV_CLUSTER_1/),
   [`HELLO_APP_STAGING_CLUSTER_1/`](HELLO_APP_STAGING_CLUSTER_1/),
