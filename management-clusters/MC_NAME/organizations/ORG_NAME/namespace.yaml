@@ -1,0 +1,34 @@
+# Applies namespace/: everything the organisation keeps in its namespace, `org-<name>`. The
+# management cluster's Kustomization applies only this Kustomization, in `default`, so it never
+# waits for the namespace. This one fails until organization-operator has created the namespace
+# for the Organization in ORG_NAME.yaml, then succeeds on its next retry. The label tells
+# ./kustomization.yaml to complete `targetNamespace` with the Organization's name.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    giantswarm.io/organization-namespace: "true"
+  name: mc-name-organization-org-name  # TODO: change 'mc-name' to your Management Cluster name and 'org-name' to your organization name; must be a correct k8s resource name (DNS-like)
+  namespace: default
+spec:
+  # for the organisation's SOPS-encrypted Secrets, if you keep any in namespace/
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-gpg-master
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/namespace"
+  postBuild:
+    substitute:
+      organization: "ORG_NAME"  # ./kustomization.yaml sets it from the Organization's name
+  prune: true
+  retryInterval: 1m
+  # `default/automation` may do anything in the organisation's namespace
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+  # Every object in namespace/ goes into the organisation's namespace. `org-ORG_NAME` is a fixed
+  # placeholder that ./kustomization.yaml completes with the Organization's name.
+  targetNamespace: org-ORG_NAME
+  timeout: 2m

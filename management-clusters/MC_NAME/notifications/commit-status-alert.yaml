@@ -2,7 +2,7 @@
 # the management cluster's in MC_NAME.yaml and the workload clusters'. An event source without
 # `namespace` matches only the Alert's own namespace, so the Alert never sees Giant Swarm's own
 # Kustomizations in `flux-giantswarm`. Each organisation has its own Alert for the
-# Kustomizations in its namespace, in organizations/ORG_NAME/notifications.
+# Kustomizations in its namespace, in organizations/ORG_NAME/namespace/notifications.
 # `info` forwards successes as well as failures, so a commit shows when Flux applied it. If
 # Kustomizations of another repository live in this namespace, list this repository's by name.
 apiVersion: notification.toolkit.fluxcd.io/v1beta3

@@ -1,0 +1,124 @@
+"""What the management cluster's root Kustomization, `mc-name-gitops`, applies, and what each
+organisation's namespace Kustomization applies, built as Flux builds them, without a cluster.
+
+The root applies only Organizations and objects in `default`, so its first reconcile on a new
+management cluster passes Flux's dry-run and creates the Organizations. Everything in an
+organisation's namespace is applied by the organisation's own Kustomization, the one with the
+label ORGANIZATION_NAMESPACE_LABEL, which fails until organization-operator has created the
+namespace and then succeeds on its next retry.
+"""
+
+from pathlib import Path
+
+import yaml
+from conftest import run_tool
+
+REPO_DIR = Path(__file__).resolve().parents[2]
+MC_DIR = REPO_DIR / "management-clusters" / "MC_NAME"
+ORGANIZATION_NAMESPACE_LABEL = "giantswarm.io/organization-namespace"
+DEFAULT_NAMESPACE = "default"
+# the cluster-scoped kinds a customer may create on a management cluster
+CLUSTER_SCOPED_KINDS = {"Organization"}
+KUBECTL_URL = "https://kubernetes.io/docs/tasks/tools/"
+KUSTOMIZATION_FILE = "kustomization.yaml"
+
+
+def generated_resources(directory: Path) -> list[Path]:
+    """What Flux builds from `directory` when it has no kustomization.yaml: its YAML files, and
+    below it every directory with a kustomization.yaml, built whole, or, failing that, its YAML
+    files."""
+    if (directory / KUSTOMIZATION_FILE).is_file():
+        return [directory]
+    files = sorted(
+        p for p in directory.iterdir() if p.is_file() and p.suffix == ".yaml"
+    )
+    for sub in sorted(p for p in directory.iterdir() if p.is_dir()):
+        files += generated_resources(sub)
+    return files
+
+
+def build(directory: Path) -> list[dict]:
+    """The objects Flux builds from `directory`, before `postBuild` and `targetNamespace`."""
+    objects: list[dict] = []
+    for resource in generated_resources(directory):
+        if resource.is_dir():
+            text = run_tool(
+                "kubectl",
+                KUBECTL_URL,
+                "kustomize",
+                "--load-restrictor=LoadRestrictionsNone",
+                str(resource),
+            )
+        else:
+            text = resource.read_text()
+        objects += [doc for doc in yaml.safe_load_all(text) if doc]
+    return objects
+
+
+def describe(obj: dict) -> str:
+    metadata = obj.get("metadata") or {}
+    namespace = metadata.get("namespace")
+    where = f"{namespace}/" if namespace else ""
+    return f"{obj.get('kind')} '{where}{metadata.get('name')}'"
+
+
+def misplaced_objects(objects: list[dict]) -> list[str]:
+    """The objects that are neither in `default` nor of a cluster-scoped kind a customer may
+    create."""
+    misplaced = []
+    for obj in objects:
+        namespace = (obj.get("metadata") or {}).get("namespace")
+        if namespace == DEFAULT_NAMESPACE:
+            continue
+        if namespace is None and obj.get("kind") in CLUSTER_SCOPED_KINDS:
+            continue
+        misplaced.append(describe(obj))
+    return misplaced
+
+
+def _labelled(obj: dict) -> bool:
+    labels = (obj.get("metadata") or {}).get("labels") or {}
+    return (
+        obj.get("kind") == "Kustomization"
+        and labels.get(ORGANIZATION_NAMESPACE_LABEL) == "true"
+    )
+
+
+def organization_namespace_problems(objects: list[dict]) -> list[str]:
+    """Why the namespace Kustomizations in `objects` don't apply into `org-<organization>` of an
+    Organization of the build, if they don't."""
+    organizations = {
+        o["metadata"]["name"] for o in objects if o.get("kind") == "Organization"
+    }
+    kustomizations = [o for o in objects if _labelled(o)]
+    if not kustomizations:
+        return [
+            f"No Kustomization with the label '{ORGANIZATION_NAMESPACE_LABEL}' in the build"
+        ]
+    problems = []
+    for k in kustomizations:
+        key = describe(k).removeprefix("Kustomization ")
+        organization = k["spec"]["postBuild"]["substitute"]["organization"]
+        expected = f"org-{organization}"
+        target = k["spec"].get("targetNamespace")
+        if organization not in organizations:
+            problems.append(
+                f"Kustomization {key} applies the namespace of '{organization}', "
+                "which has no Organization in the build"
+            )
+        elif target != expected:
+            problems.append(
+                f"Kustomization {key} applies into '{target}', not into '{expected}'"
+            )
+    return problems
+
+
+def namespace_build_problems(objects: list[dict], namespace: str) -> list[str]:
+    """The objects of an organisation's namespace/ build that name a namespace other than its
+    own, `namespace`. `targetNamespace` puts the others there; an encrypted Secret names it.
+    """
+    return [
+        describe(obj)
+        for obj in objects
+        if (obj.get("metadata") or {}).get("namespace") not in (None, namespace)
+    ]

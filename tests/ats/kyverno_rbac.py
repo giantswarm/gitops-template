@@ -1,7 +1,7 @@
 """The rights rbac-operator gives Kyverno's background controller in every organisation
 namespace of a Giant Swarm management cluster, so that a Kyverno policy there can generate
 ExternalSecrets and SecretStores from the Secrets that trigger it, such as the example in
-organizations/ORG_NAME/workload-cluster-secret-stores.
+organizations/ORG_NAME/namespace/workload-cluster-secret-stores.
 
 Copied from giantswarm/rbac-operator at 80aed29e11e49eac3a7f77b601c6df124e66cfe4 (SOURCE), not
 released yet: service/controller/defaultnamespace/resource/clusterroles/create.go

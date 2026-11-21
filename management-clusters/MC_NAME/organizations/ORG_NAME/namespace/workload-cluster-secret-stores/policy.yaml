@@ -12,8 +12,8 @@
 # rbac-operator grants them in every organisation's namespace. Without them, Kyverno rejects the
 # policy.
 # `generate.namespace` names the namespace rather than templating it: Kyverno checks the
-# rights for a templated namespace across the whole cluster. `org-ORG_NAME` is a fixed
-# placeholder: ../kustomization.yaml completes it with the Organization's name.
+# rights for a templated namespace across the whole cluster. `${organization}` is the
+# organisation's name, which the organisation's namespace Kustomization fills in.
 apiVersion: kyverno.io/v1
 kind: Policy
 metadata:
@@ -51,7 +51,7 @@ spec:
         apiVersion: external-secrets.io/v1
         kind: ExternalSecret
         name: "{{ regex_replace_all('-kubeconfig$', request.object.metadata.name, '-eso-cluster-auth') }}"
-        namespace: org-ORG_NAME
+        namespace: org-${organization}
         synchronize: true
         generateExisting: true
         data:
@@ -102,7 +102,7 @@ spec:
         kind: SecretStore
         # <cluster>-eso-cluster-auth -> <cluster>-k8s-store
         name: "{{ regex_replace_all('-eso-cluster-auth$', request.object.metadata.name, '-eso-cluster-store') }}"
-        namespace: org-ORG_NAME
+        namespace: org-${organization}
         # keep SecretStore in sync with the auth Secret and delete it when the Secret disappears
         synchronize: true
         generateExisting: true

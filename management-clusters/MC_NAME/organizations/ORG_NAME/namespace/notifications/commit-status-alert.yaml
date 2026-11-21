@@ -9,7 +9,6 @@ apiVersion: notification.toolkit.fluxcd.io/v1beta3
 kind: Alert
 metadata:
   name: github-commit-status
-  namespace: org-ORG_NAME
 spec:
   providerRef:
     name: github-commit-status
