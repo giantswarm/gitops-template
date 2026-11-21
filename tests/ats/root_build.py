@@ -122,3 +122,24 @@ def namespace_build_problems(objects: list[dict], namespace: str) -> list[str]:
         for obj in objects
         if (obj.get("metadata") or {}).get("namespace") not in (None, namespace)
     ]
+
+
+def root_kustomization_name() -> str:
+    """The name of the management cluster's root Kustomization, in MC_NAME.yaml."""
+    with (MC_DIR / f"{MC_DIR.name}.yaml").open() as f:
+        return yaml.safe_load(f)["metadata"]["name"]
+
+
+def root_dependency_problems(objects: list[dict], root: str) -> list[str]:
+    """The namespace Kustomizations in `objects` that don't depend on the root Kustomization
+    `root`, in their own namespace. With it, the root applies every commit first."""
+    problems = []
+    for k in (o for o in objects if _labelled(o)):
+        namespace = k["metadata"].get("namespace", DEFAULT_NAMESPACE)
+        depends_on = k["spec"].get("dependsOn") or []
+        if not any(
+            d.get("name") == root and d.get("namespace", namespace) == namespace
+            for d in depends_on
+        ):
+            problems.append(f"{describe(k)} doesn't depend on '{root}'")
+    return problems

@@ -168,7 +168,8 @@ If yours is older, update it with `kubectl gs selfupdate`.
 
 On a management cluster that already runs the repository, moving objects from what `MC_NAME.yaml` applies into the
 organisation's `namespace` directory deletes them once. Flux deletes what leaves a `Kustomization`'s inventory in the
-same reconciliation, before the organisation's namespace `Kustomization` creates the objects again. Deleting the
+same reconciliation, and `MC_NAME.yaml` always applies a commit before the organisation's namespace `Kustomization`,
+whose `dependsOn` names it, creates the objects again. Deleting the
 `-direct` `Kustomization` deletes what it applied in the workload cluster, and deleting an `ExternalSecret` deletes the
 Secret it wrote.
 
@@ -177,8 +178,9 @@ To move them without a deletion, use three commits, and let Flux apply each one 
 1. Annotate every object that moves with `kustomize.toolkit.fluxcd.io/prune: disabled`. `MC_NAME.yaml` applies the
    annotation, so Flux leaves the objects when they leave its inventory.
 1. Move the objects into `namespace`, add `namespace.yaml`, and take them out of the organisation's
-   `kustomization.yaml`, as in [Add an organization](../add_org.md). The organisation's namespace `Kustomization`
-   takes the objects over.
+   `kustomization.yaml`, as in [Add an organization](../add_org.md). `MC_NAME.yaml` applies the commit first: it
+   leaves the annotated objects where they are and creates `namespace.yaml`'s `Kustomization`, which then takes the
+   objects over.
 1. Remove the annotation, so Flux deletes the objects again when you delete them from Git. Leave it on SOPS key
    Secrets, such as a `-direct` `Kustomization`'s key in `namespace/secrets`: like the ones in `MC_NAME/secrets`,
    they keep `kustomize.toolkit.fluxcd.io/prune: disabled` for good, from `namespace/secrets/kustomization.yaml`.
@@ -387,9 +389,15 @@ management cluster, no organisation's namespace exists until organization-operat
 Flux dry-runs every object of a `Kustomization` before it applies any, so one object in a missing namespace would stop
 the `Organization` from being applied at all. Everything the organisation keeps in its namespace is in its `namespace`
 directory instead, which the organisation's own `Kustomization`, `namespace.yaml`, applies with
-`targetNamespace: org-ORG_NAME`. It fails until the namespace exists, then succeeds on its next retry, a minute later.
-Nothing orders them: no `dependsOn`, no health check. A broken file in one organisation's `namespace` stops only that
-organisation's `Kustomization`, not `MC_NAME.yaml` or the other organisations. On the first bootstrap, the cluster
+`targetNamespace: org-ORG_NAME`. It fails until the namespace exists, then succeeds on its next retry, a minute later:
+nothing else waits for the namespace, and there's no health check. Its `dependsOn` names `MC_NAME.yaml`'s
+`Kustomization`. Both read the same `GitRepository`, so Flux applies a commit to the organisation's namespace only once
+`MC_NAME.yaml` is `Ready` at the same revision: `MC_NAME.yaml` always applies a commit first. The namespace
+`Kustomization`'s own spec, such as its `path` or `targetNamespace`, is up to date before it applies the commit, and an
+object that moves between the two in one commit moves in that order. `MC_NAME.yaml` has no `wait` and no health
+checks, so it never waits for the organisations. A broken file in one organisation's `namespace` stops only that
+organisation's `Kustomization`, not `MC_NAME.yaml` or the other organisations; while `MC_NAME.yaml` fails, the
+organisations' `Kustomization`s report `DependencyNotReady` and apply nothing new. On the first bootstrap, the cluster
 `Kustomization`s fail the same way until the namespace exists, and the commit statuses show those failures until the
 retries succeed.
 

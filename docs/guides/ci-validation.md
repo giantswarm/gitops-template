@@ -234,8 +234,9 @@ so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py
    `org-org-name` exists.
 1. It waits for `mc-name-gitops` to get `Ready` and apply the `Organization`, which carries the
    `kustomize.toolkit.fluxcd.io/name: mc-name-gitops` label, and for the organisation's namespace `Kustomization`,
-   `mc-name-organization-org-name`, to fail for want of the namespace. Its error names `org-org-name`: the namespace
-   doesn't exist, or `default/automation` may not write there, as it gets its rights in the namespace only with it.
+   `mc-name-organization-org-name`, to fail for want of the namespace. Its `dependsOn` holds it back until
+   `mc-name-gitops` is `Ready`, and then its error names `org-org-name`: the namespace doesn't exist, or
+   `default/automation` may not write there, as it gets its rights in the namespace only with it.
 1. It creates `org-org-name`, and in it what the management cluster's operators create there: the organisation's
    commit-status `Alert`, suspended, before Flux can apply it; `automation` and the rights rbac-operator gives in a
    new organisation namespace, see [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts);

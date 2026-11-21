@@ -104,9 +104,10 @@ export ORG_NAME=ORGANIZATION
 1. Create `namespace.yaml`, the organisation's namespace `Kustomization`. The management cluster's `Kustomization`
    applies only the `Organization` and objects in `default`, so it works before organization-operator has created the
    namespace. This `Kustomization`, in `default`, applies `namespace` with `targetNamespace`: it fails until the
-   namespace exists and succeeds on its next retry. Change `mc-name`, `org-name` and `your-repo`, but leave
-   `ORG_NAME` and `org-ORG_NAME`, which the organisation's `kustomization.yaml` completes. The label tells it which
-   `Kustomization` to complete the `targetNamespace` of. See
+   namespace exists and succeeds on its next retry. Its `dependsOn` names the management cluster's `Kustomization`, so
+   Flux applies a commit here only after that one has applied it. Change `mc-name`, `org-name` and `your-repo`, but
+   leave `ORG_NAME` and `org-ORG_NAME`, which the organisation's `kustomization.yaml` completes. The label tells it
+   which `Kustomization` to complete the `targetNamespace` of. See
    [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations):
 
     ```sh
@@ -119,6 +120,8 @@ export ORG_NAME=ORGANIZATION
       name: mc-name-organization-org-name
       namespace: default
     spec:
+      dependsOn:
+        - name: mc-name-gitops
       decryption:
         provider: sops
         secretRef:

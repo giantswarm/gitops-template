@@ -263,7 +263,8 @@ EOF
 Create the organisation's namespace `Kustomization`. Your management cluster's `Kustomization` applies only the
 `Organization` and objects in `default`, so it works before organization-operator has created the namespace. This
 `Kustomization`, in `default`, applies the organisation's `namespace` directory into `org-${ORG_NAME}`: it fails until
-the namespace exists and succeeds on its next retry. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
+the namespace exists and succeeds on its next retry. Its `dependsOn` names your management cluster's `Kustomization`,
+so that one always applies a commit first. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
 organisation's `kustomization.yaml` completes, see
 [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). The `namespace` directory lists nothing yet:
 
@@ -277,6 +278,8 @@ metadata:
   name: ${MC_NAME}-organization-${ORG_NAME}
   namespace: default
 spec:
+  dependsOn:
+    - name: ${MC_NAME}-gitops
   interval: 10m
   path: ./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace
   postBuild:
