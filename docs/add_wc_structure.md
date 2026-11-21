@@ -466,7 +466,6 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
      interval: 10m
      kubeConfig:
        secretRef:
-         # key: kubeConfig
          name: ${WC_NAME}-kubeconfig
      path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/out-of-band"
      postBuild:
@@ -482,12 +481,6 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
      timeout: 2m
    EOF
    ```
-
-   **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
-   in the above command to tell Flux where to look for the `kubeconfig`. A legacy cluster's `kubeconfig` Secret
-   lives in `default`: write the file in the organisation's directory instead, with `namespace: default`,
-   `organization: "ORG_NAME"` and no `dependsOn`, and list it in the organisation's `kustomization.yaml`, so the
-   management cluster's `Kustomization` applies it.
 
 ### Configuring default apps
 
