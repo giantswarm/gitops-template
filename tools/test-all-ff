@@ -492,9 +492,9 @@ function test() {
 
 		# The parent is the Kustomization whose build applies the file, not one whose path holds
 		# it: namespace/unlisted.yaml is in parent-namespace's path, but its build doesn't list it.
-		# That build applies another parent-namesake, from namesake.yaml, in org-from-the-parent,
-		# the namespace unlisted.yaml names: fake-flux must build unlisted.yaml as it is, not take
-		# that one for it.
+		# That build applies another parent-namesake, which namespace/namesake/kustomization.yaml
+		# names, in org-from-the-parent, the namespace unlisted.yaml names: fake-flux must build
+		# unlisted.yaml as it is, not take that one for it.
 		echo -n "fake-flux, a Kustomization its parent's path holds but its build leaves out: "
 		status=0
 		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build parent-namesake:org-from-the-parent -M 2>&1) || status=$?

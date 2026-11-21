@@ -208,14 +208,9 @@ the organisation's namespace. On a management cluster that already runs them, mo
 Flux apply each one before you push the next. Before you start:
 
 - The organisation's `namespace.yaml` runs, see [Move an organisation's namespace objects](#move-an-organisations-namespace-objects).
-- `MC_NAME.yaml` has `prune: true`, so that Flux deletes the old `Kustomization`s in `default` in the second commit.
-  With `prune: false`, as in `main` and in what `kubectl gs gitops add management-cluster` writes, they stay, and the
-  old and the new `Kustomization`s both reconcile the same clusters. Check that
-  `yq '.spec.prune' management-clusters/MC_NAME/MC_NAME.yaml` prints `true`. If it prints `false`, first give the
-  objects it applies that have to stay, the `Organization`s and the SOPS key Secrets in `MC_NAME/secrets`, the
-  `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as
-  [How it works](../how-it-works.md#from-a-commit-to-a-cluster) lists. Then set `prune: true` in a commit that
-  takes nothing else out of its build: Flux deletes only what leaves the build once `prune` is on.
+- `MC_NAME.yaml` needs `prune: true` by the second commit, so that Flux deletes the old `Kustomization`s in
+  `default`. With `prune: false`, as in `main` and in what `kubectl gs gitops add management-cluster` writes, they
+  stay, and the old and the new `Kustomization`s both reconcile the same clusters. The first commit sets it.
 - kustomize-controller supports `spec.deletionPolicy`: `kubectl explain kustomization.spec.deletionPolicy` describes
   it. The Flux of Giant Swarm management clusters does.
 - Move each cluster's Kustomizations together: the apps Kustomization names its cluster's in `dependsOn`, in its own
@@ -236,9 +231,30 @@ Export the names the commands below use:
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
+# the commit you start from: the third commit reads the files as they were there
+export BEFORE=$(git rev-parse HEAD)
 ```
 
 1. The first commit moves nothing:
+
+    - Protect what `MC_NAME.yaml` applies and has to keep, whatever its `prune` is now, as
+      [How it works](../how-it-works.md#from-a-commit-to-a-cluster) lists: the SOPS key Secrets in `MC_NAME/secrets`,
+      which the second commit takes out of its build, and the `Organization`s. Give them the
+      `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, and
+      give `MC_NAME.yaml` `prune: true`. This commit takes nothing out of its build, so turning `prune` on deletes
+      nothing: Flux deletes only what leaves the build once it's on. The commands leave what's there already:
+
+      ```sh
+      yq -i '.commonAnnotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
+        with(select([.labels[]?.pairs["giantswarm.io/prevent-deletion"]] | all_c(. != "true"));
+          .labels += [{"pairs": {"giantswarm.io/prevent-deletion": "true"}}])' \
+        management-clusters/${MC_NAME}/secrets/kustomization.yaml
+      for d in management-clusters/${MC_NAME}/organizations/*/; do
+        yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
+          .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' ${d}$(basename ${d}).yaml
+      done
+      yq -i '.spec.prune = true' management-clusters/${MC_NAME}/${MC_NAME}.yaml
+      ```
 
     - Protect every `Kustomization` in the organisation's `workload-clusters`, by the namespace it's in. One in
       `default` moves to the organisation's namespace, so Flux deletes it and creates a new one: add
@@ -287,11 +303,15 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
       ```
 
    Push, and wait until `MC_NAME-gitops` and `MC_NAME-organization-ORG_NAME` are `Ready` at this revision. Check
-   that every old `Kustomization` in `default` prints `Orphan`, that every `-direct` one prints `disabled`, and that
-   the keys are in the organisation's namespace:
+   that `MC_NAME-gitops` prints `true`, that every old `Kustomization` in `default` prints `Orphan`, that every
+   `-direct` one prints `disabled`, that the keys in `default` print `disabled`, and that the keys are in the
+   organisation's namespace:
 
     ```sh
-    kubectl get kustomization -n default -o custom-columns=NAME:.metadata.name,DELETION:.spec.deletionPolicy
+    kubectl get kustomization -n default \
+      -o custom-columns=NAME:.metadata.name,PRUNE:.spec.prune,DELETION:.spec.deletionPolicy
+    kubectl get secret -n default -l giantswarm.io/prevent-deletion=true \
+      -o custom-columns='NAME:.metadata.name,PRUNE:.metadata.annotations.kustomize\.toolkit\.fluxcd\.io/prune'
     kubectl get kustomization -n org-${ORG_NAME} \
       -o custom-columns='NAME:.metadata.name,PRUNE:.metadata.annotations.kustomize\.toolkit\.fluxcd\.io/prune'
     kubectl get secret -n org-${ORG_NAME} -l giantswarm.io/prevent-deletion=true
@@ -302,15 +322,16 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
     - Take `workload-clusters` and the replacement with `labelSelector: giantswarm.io/health-check-cluster=true` out
       of the organisation's `kustomization.yaml`, and list `../workload-clusters` in `namespace/kustomization.yaml`
       instead. `workload-clusters/kustomization.yaml` keeps listing the `Kustomization` files.
-    - Move a `-direct` `Kustomization` in `namespace/workload-clusters`, from
+    - Move what `namespace/workload-clusters/kustomization.yaml` lists, such as a `-direct` `Kustomization` from
       [Move an organisation's namespace objects](#move-an-organisations-namespace-objects), into `workload-clusters`
       and its list, and take `workload-clusters` out of `namespace/kustomization.yaml`, which lists
-      `../workload-clusters` now: `namespace.yaml` applies the `-direct` one from both, so it keeps its owner.
+      `../workload-clusters` now: `namespace.yaml` applies them from both, so they keep their owner.
     - Change each file as [Flux Kustomizations](#flux-kustomizations) describes: no `metadata.namespace` and no
-      `giantswarm.io/health-check-cluster` label, `sourceRef.namespace: default`, `organization: "${organization}"`,
+      `giantswarm.io/health-check-cluster` label, `sourceRef.namespace`, `organization: "${organization}"`,
       `org-${organization}` as the namespace of a `Cluster` health check, the organisation's namespace
-      `Kustomization` in `dependsOn` where there's no `dependsOn` yet, and no `deletionPolicy`. The `-direct` ones keep
-      the annotation until the third commit:
+      `Kustomization` in `dependsOn` where there's no `dependsOn` yet, and no `deletionPolicy`. `sourceRef.namespace`
+      keeps the namespace of the `GitRepository` each one reads now: one without it reads the one in its own
+      namespace. The `-direct` ones keep the annotation until the third commit:
 
       ```sh
       export ORG_KUSTOMIZATION=$(yq '.metadata.name' ${ORG_DIR}/namespace.yaml)
@@ -318,25 +339,31 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
       yq -i 'del(.resources[] | select(. == "workload-clusters")) |
         del(.replacements[] | select(.targets[].select.labelSelector == "giantswarm.io/health-check-cluster=true"))' \
         ${ORG_DIR}/kustomization.yaml
-      if [ -d ${ORG_DIR}/namespace/workload-clusters ]; then
-        for f in ${ORG_DIR}/namespace/workload-clusters/*-direct.yaml; do
-          git mv ${f} ${ORG_DIR}/workload-clusters/
-          F="$(basename ${f})" yq -i '.resources += [strenv(F)]' ${ORG_DIR}/workload-clusters/kustomization.yaml
+      if [ -e ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml ]; then
+        for F in $(yq '(.resources // [])[]' ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml); do
+          git mv ${ORG_DIR}/namespace/workload-clusters/${F} ${ORG_DIR}/workload-clusters/
+          F=${F} yq -i '.resources += [strenv(F)]' ${ORG_DIR}/workload-clusters/kustomization.yaml
         done
         git rm -q ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
         yq -i 'del(.resources[] | select(. == "workload-clusters"))' ${ORG_DIR}/namespace/kustomization.yaml
       fi
       for f in ${ORG_DIR}/workload-clusters/*.yaml; do
         [ "$(basename ${f})" = kustomization.yaml ] && continue
-        yq -i 'del(.metadata.namespace, .metadata.labels["giantswarm.io/health-check-cluster"], .spec.deletionPolicy) |
+        yq -i '.spec.sourceRef.namespace = (.spec.sourceRef.namespace // .metadata.namespace // "default") |
+          del(.metadata.namespace, .metadata.labels["giantswarm.io/health-check-cluster"], .spec.deletionPolicy) |
           del(.metadata.labels | select(length == 0)) |
-          .spec.sourceRef.namespace = "default" | .spec.postBuild.substitute.organization = "${organization}" |
+          .spec.postBuild.substitute.organization = "${organization}" |
           with(.spec | select(has("healthChecks")) | .healthChecks[] | select(.kind == "Cluster");
             .namespace = "org-${organization}") |
           with(.spec | select(has("dependsOn") | not);
             .dependsOn = [{"name": strenv(ORG_KUSTOMIZATION), "namespace": "default"}])' ${f}
       done
       ```
+
+      The template's `Kustomization`s read the repository's `GitRepository` in `default`. If one now names another
+      namespace, such as a `-direct` one from `main`, which named none, check that it reads this repository:
+      `kubectl get gitrepository -n org-${ORG_NAME}`. If it does, set its `sourceRef.namespace` to `default`, as the
+      template does. Otherwise keep it.
 
     - List the `Kustomization`s by name in the organisation's commit-status `Alert`, if it has one, as the template
       does: the management cluster's `Alert` sees only `default`, see [Commit statuses](../guides/commit-statuses.md):
@@ -350,7 +377,9 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
       done
       ```
 
-    - Take the keys you copied out of `MC_NAME/secrets/kustomization.yaml`, and `git rm` their files there.
+    - Take the keys you copied out of `MC_NAME/secrets/kustomization.yaml`, and `git rm` their files there. Keep a
+      key that another organisation's `Kustomization`s in `default` still name: `MC_NAME/secrets` serves the whole
+      management cluster.
 
    Push. `MC_NAME.yaml` deletes the old `Kustomization`s in `default`, which leave what they applied, leaves the
    `-direct` ones, which have the annotation, and leaves the old keys in `default`, as they have
@@ -375,20 +404,28 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
     ```
 
 1. The third commit removes the annotation from the `-direct` `Kustomization`s, once `namespace.yaml` owns them, so
-   that Flux deletes them again when you delete their files from Git:
+   that Flux deletes them again when you delete their files from Git. It takes it only from the ones the first commit
+   gave it, chosen as it chose them, from the files at `BEFORE`: one that had it already keeps it:
 
     ```sh
     for f in ${ORG_DIR}/workload-clusters/*.yaml; do
       [ "$(basename ${f})" = kustomization.yaml ] && continue
-      yq -i 'del(.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"]) |
-        del(.metadata.annotations | select(length == 0))' ${f}
+      before=$(git show ${BEFORE}:${f} 2>/dev/null) || continue
+      case "$(yq '.metadata.namespace' <<<"${before}"):$(
+        yq '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"]' <<<"${before}")" in
+        default:* | null:* | *:disabled) ;;
+        *) yq -i 'del(.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"]) |
+          del(.metadata.annotations | select(length == 0))' ${f} ;;
+      esac
     done
     ```
 
-1. Once nothing in `default` uses them, delete the old keys from `default` by hand. For each one, remove its label
-   first:
+1. Once no `Kustomization` in `default`, of any organisation, names them, delete the old keys from `default` by hand.
+   For each one, check that this prints nothing, then remove its label and delete it:
 
     ```sh
+    kubectl get kustomization -n default --no-headers \
+      -o custom-columns=NAME:.metadata.name,KEY:.spec.decryption.secretRef.name | awk '$2 == "KEY_SECRET"'
     kubectl label secret -n default KEY_SECRET giantswarm.io/prevent-deletion-
     kubectl delete secret -n default KEY_SECRET
     ```

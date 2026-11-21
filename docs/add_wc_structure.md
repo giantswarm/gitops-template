@@ -448,8 +448,8 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    fills in too.
 
 1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
-   directory and referencing the right `kubeconfig` Secret. It lives in the namespace of that Secret, which is the
-   organization namespace for CAPI clusters, where the organisation's namespace `Kustomization` puts it from
+   directory and referencing the right `kubeconfig` Secret. It lives in the namespace of that Secret, the
+   organisation's namespace, where the organisation's namespace `Kustomization` puts it from
    `workload-clusters`, as it does the cluster's, and fills in `${organization}`. It names
    no namespace, and depends on the organisation's namespace `Kustomization`, as the cluster's does:
 

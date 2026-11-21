@@ -1,11 +1,10 @@
-# Listed in kustomization.yaml, so parent-namespace applies it, in org-from-the-parent: its
-# `targetNamespace` overrides the namespace this file names. unlisted.yaml has the same name, in
-# org-from-the-parent, but parent-namespace's build doesn't read it.
+# Named namesake here: kustomization.yaml prefixes it, so parent-namespace's build applies it as
+# parent-namesake, in org-from-the-parent. ../unlisted.yaml is the only file that names
+# parent-namesake.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: parent-namesake
-  namespace: default
+  name: namesake
 spec:
   interval: 1m
   path: ./root/organization/direct
