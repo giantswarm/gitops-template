@@ -15,7 +15,7 @@ Usage: $0 [validate|template]
 
 ##
 # We want to be running this script from git root to have widest possible discovery
-if [ ! -d .git ]; then
+if [ ! -e .git ]; then
 	echo "Not a valid git repository or not run from git root."
 	help
 fi
@@ -344,7 +344,9 @@ function test() {
 		# finds below the current directory, and the ones in tools/testdata are left out.
 		echo -n "fake-flux, cluster with an unset variable: "
 		fixture_dir="${tmp_dir}/unset-variable"
-		mkdir -p "${fixture_dir}/.git"
+		# A .git file, as in a git worktree, rather than a directory.
+		mkdir -p "${fixture_dir}"
+		echo "gitdir: ${tmp_dir}/unset-variable.git" >"${fixture_dir}/.git"
 		cp -r "$(dirname $0)/testdata/unset-variable/." "${fixture_dir}"
 		fakeflux_path=$(realpath "${fakeflux}")
 		status=0
@@ -421,7 +423,9 @@ function test() {
 		# builds the Kustomizations it finds below the current directory.
 		echo -n "test-all-ff, a team's Kustomization: "
 		fixture_dir="${tmp_dir}/team-source"
-		mkdir -p "${fixture_dir}/.git"
+		# A .git file, as in a git worktree, rather than a directory.
+		mkdir -p "${fixture_dir}"
+		echo "gitdir: ${tmp_dir}/team-source.git" >"${fixture_dir}/.git"
 		cp -r "$(dirname $0)/testdata/team-source/." "${fixture_dir}"
 		script_path=$(realpath "$0")
 		status=0
