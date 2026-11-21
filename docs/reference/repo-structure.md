@@ -351,9 +351,25 @@ ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are tw
   be in the same namespace, in `namespace/secrets`. The organisation's namespace `Kustomization` applies both.
   `namespace/secrets/kustomization.yaml` gives its Secrets the `kustomize.toolkit.fluxcd.io/prune: disabled`
   annotation and the `giantswarm.io/prevent-deletion` label, as the management cluster's `secrets/kustomization.yaml`
-  does, see [Add an organization](../add_org.md). A
-  legacy cluster's kubeconfig Secret is in `default`: its `-direct.yaml` goes in `workload-clusters`, with
-  `namespace: default`, and its key Secret in the management cluster's `secrets`.
+  does, see [Add an organization](../add_org.md). A legacy cluster's kubeconfig Secret is in `default`: its
+  `-direct.yaml` goes in `workload-clusters`, with `namespace: default`, and its key Secret in the management
+  cluster's `secrets`.
+
+  `sops` encrypts the key Secret with the first rule in `.sops.yaml` whose `path_regex` matches its file. The
+  management cluster's rule covers only `MC_NAME/secrets`, so `namespace/secrets` needs a rule of its own, or
+  `sops --encrypt` fails with "no matching creation rules found". Encrypt with a key whose private key is in
+  `sops-gpg-master`, which the organisation's namespace `Kustomization` decrypts with: the management cluster's master
+  key, or the organisation's key from [Add an organization](../add_org.md). With the master key, `KEY_FP` being its
+  fingerprint:
+
+    ```yaml
+    creation_rules:
+      - encrypted_regex: ^(data|stringData)$
+        path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secrets/.*\.enc\.yaml
+        pgp: KEY_FP
+    ```
+
+  See [SOPS keys](./sops-keys.md#encryption-rules).
 
 ## Flux Kustomizations
 
