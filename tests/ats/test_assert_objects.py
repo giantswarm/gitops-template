@@ -21,7 +21,11 @@ from checks.helm_release_classes import (
 from checks.helm_release_references import reference_problems
 from checks.helm_release_sources import Lookup
 from checks.workloads import deployment_available, releases_without_assertion
-from conftest import installation_values_config_map, parse_ignored_objects
+from conftest import (
+    installation_values_config_map,
+    organization_init_namespaces,
+    parse_ignored_objects,
+)
 from pytest_helm_charts.flux.utils import flux_cr_ready
 
 
@@ -122,6 +126,13 @@ def test_other_lists_ignore_order() -> None:
 )
 def test_parse_ignored_objects(value: str, expected: list[str]) -> None:
     assert parse_ignored_objects(value) == expected
+
+
+def test_organization_init_namespaces() -> None:
+    # Flux has to bootstrap the organisation's namespace as on a new management cluster, where
+    #  only organization-operator creates it
+    assert organization_init_namespaces(["default"]) == []
+    assert organization_init_namespaces(["default", "org-a", "other"]) == ["org-a"]
 
 
 def test_installation_values_stand_in() -> None:
@@ -748,7 +759,7 @@ def test_remove_workload_cluster_removes_the_values_file_when_the_uninstall_fail
 
     monkeypatch.setattr(conftest, "run_tool", failing_helm)
     with pytest.raises(Exception, match="`helm uninstall` failed"):
-        conftest.remove_workload_cluster([], "kubeconfig", str(values_file))
+        conftest.remove_workload_cluster("kubeconfig", str(values_file))
     assert not values_file.exists()
 
 

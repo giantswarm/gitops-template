@@ -5,6 +5,8 @@ of the same name for trying the guides by hand: it lists `gitops/hello-world-val
 GitHub token of the reader's own, and names the notification guide's two keys in its text.
 """
 
+from collections.abc import Iterable
+
 from workload_cluster_secrets import COMMON
 
 FAKE_STORE_DATA = [
@@ -19,8 +21,10 @@ FAKE_STORE_DATA = [
 
 STORE_NAME = "gitops-test"
 # the namespaces whose ExternalSecrets read the store: the management cluster's notifications in
-#  `default`, and the organisation's notifications and the clusters' in the organisation's
-STORE_NAMESPACES = ["default", "org-org-name"]
+#  `default`, and the organisation's notifications and the clusters' in the organisation's,
+#  where organization_operator creates it once the namespace exists
+DEFAULT_STORE_NAMESPACE = "default"
+STORE_NAMESPACES = (DEFAULT_STORE_NAMESPACE, "org-org-name")
 STORE_SPEC = {
     "provider": {
         "fake": {
@@ -33,8 +37,8 @@ STORE_SPEC = {
 }
 
 
-def secret_stores() -> list[dict]:
-    """The same store in each of STORE_NAMESPACES."""
+def secret_stores(namespaces: Iterable[str] = STORE_NAMESPACES) -> list[dict]:
+    """The same store in each of `namespaces`."""
     return [
         {
             "apiVersion": "external-secrets.io/v1",
@@ -42,5 +46,5 @@ def secret_stores() -> list[dict]:
             "metadata": {"name": STORE_NAME, "namespace": namespace},
             "spec": STORE_SPEC,
         }
-        for namespace in STORE_NAMESPACES
+        for namespace in namespaces
     ]

@@ -73,6 +73,11 @@ jobs:
       # targets a workload cluster; tests/ats creates a vCluster in the kind
       # cluster for it. Set explicitly, as the shared workflow's default names an object.
       gitops_ignored_objects: ""
+      # Only `default` exists before Flux applies the repository, as on a new
+      # management cluster: tests/ats/organization_operator.py creates the
+      # organisation's namespace once Flux has applied its Organization. The
+      # shared workflow's default also lists `org-org-name`.
+      gitops_init_namespaces: "default"
     secrets:
       # Empty on a pull request from a fork, where tests/ats skips the tests
       # that need the kind cluster.
