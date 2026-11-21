@@ -6,10 +6,10 @@ covers most things, but not all. Sometimes you want a plain object inside the wo
 `RoleBinding` for a team, a ConfigMap an app reads, a policy. Wrapping each of those in a chart of its own is a lot of
 packaging for a two-line object.
 
-Those go into the cluster's `out-of-band` directory, and get applied straight to the workload cluster by a third Flux
-`Kustomization` on the management cluster, the cluster's `-direct` one. This tutorial adds both to the cluster from the
-[basic tutorial](../basic/getting-started.md), then installs Flux in the workload cluster as well, for the Flux objects
-that `out-of-band` can deliver there.
+Those go into the cluster's `out-of-band` directory, and get applied straight to the workload cluster. This tutorial
+adds one to the cluster from the [basic tutorial](../basic/getting-started.md), and has Flux on the management cluster
+push it there. Then it shows the other way round, where the workload cluster's own Flux pulls its `out-of-band`
+directory, on a cluster of its own.
 
 - [When to apply directly](#when-to-apply-directly)
 - [Add the out-of-band directory](#add-the-out-of-band-directory)
@@ -29,12 +29,20 @@ tracks its objects and its version, and the cluster's apps wait for the cluster 
 
 Everything in `cluster` and `apps` is applied to the management cluster. `out-of-band` never is: the cluster
 directory's `kustomization.yaml` lists `cluster/` or `apps/`, never `out-of-band/`, so the cluster's `Kustomization`s
-leave it out. The cluster's `-direct` `Kustomization` applies it to the workload cluster instead, through the cluster's
-kubeconfig Secret, as in the
-[out-of-band-no-flux](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/)
-example. The `-direct` `Kustomization` is the only thing that applies `out-of-band`. If the workload cluster runs Flux
-too, don't point a `Kustomization` of that Flux at the same directory: two Flux installations would fight over the same
-objects.
+leave it out. Something has to apply it to the workload cluster instead, and the procedure has two facets:
+
+- **Push.** A Flux `Kustomization` on the management cluster applies `out-of-band` through the workload cluster's
+  kubeconfig Secret, as in the
+  [out-of-band-no-flux](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/)
+  example. The workload cluster needs nothing installed for it, and the management cluster shows the result next to
+  the cluster's other `Kustomization`s.
+- **Pull.** The workload cluster's own Flux reconciles `out-of-band` from Git, as in the
+  [out-of-band-flux-app](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/)
+  example. Delivery goes on while the management cluster is unavailable, and the cluster's users see the state where
+  they work, at the cost of a Flux installation in the cluster to keep up to date.
+
+Use one of them for a cluster's `out-of-band` directory, never both: two Flux installations applying the same
+directory to the same cluster fight over the same objects.
 
 ## Add the out-of-band directory
 
@@ -69,7 +77,12 @@ one if you want to list the files, or patch them.
 
 ## Add the -direct Kustomization
 
-The `-direct` `Kustomization` applies `out-of-band` with the cluster's kubeconfig Secret, `${WC_NAME}-kubeconfig`,
+This is the push facet: the `Kustomization` that applies `out-of-band` through the cluster's kubeconfig, which the
+template names `*-direct`. The template's suffixes, such as `-direct`, `-apps` and `-from-template`, are only labels to
+tell the techniques apart, so name yours however you like. This tutorial keeps `-direct`, so that its commands match
+the examples.
+
+It applies `out-of-band` with the cluster's kubeconfig Secret, `${WC_NAME}-kubeconfig`,
 which the management cluster creates in `org-${ORG_NAME}` once the cluster is up. A `Kustomization` reads its
 kubeconfig Secret from its own namespace, so it goes in the organisation's `workload-clusters`, next to the cluster's
 other two: the organisation's namespace `Kustomization` applies it into `org-${ORG_NAME}`.
@@ -137,27 +150,29 @@ Before you delete the cluster, take its out-of-band objects away first, while Fl
 
 ## Run Flux in the workload cluster
 
-Some of what you deliver through `out-of-band` is itself for Flux: a [team](./teams.md) whose Flux runs in the
-workload cluster gets its `GitRepository` and `Kustomization` there, and something in the workload cluster has to
-reconcile them. That's Flux in the workload cluster. The `-direct` `Kustomization` still delivers `out-of-band`, and
-Flux in the workload cluster reconciles the Flux objects in it. It gets no `Kustomization` of its own for
-`out-of-band`.
+This is the pull facet: the workload cluster runs Flux, and that Flux reconciles the cluster's `out-of-band` directory
+itself. Set it up on a cluster of its own, one with no `-direct` `Kustomization`, not on the cluster you've just given
+one. The [out-of-band-flux-app](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/)
+example is such a cluster: flux-app in its `apps`, and its `out-of-band` directory, with no `-direct` `Kustomization`.
 
-Giant Swarm ships Flux as the `flux-app` chart, and you install it like any other app, from the cluster's `apps`, as
-the [out-of-band-flux-app](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/flux/helm-release.yaml)
-example does. The cost is a Flux installation in every such cluster to keep up to date.
+Giant Swarm ships Flux as the `flux-app` chart, and you install it like any other app, from the cluster's `apps`.
+Flux in a workload cluster is also what reconciles the Flux objects that a push delivers, such as the `GitRepository`
+and `Kustomization` of a [team](./teams.md#add-a-team-with-flux-in-the-workload-cluster): that needs the first two
+steps below, without the third.
 
-1. Export the chart version, from the [flux-app releases](https://github.com/giantswarm/flux-app/releases), and the
-   app's directory:
+1. Export the cluster's directory, a cluster set up as in the basic tutorial, with an `apps` directory and its apps
+   `Kustomization`, the chart version, from the [flux-app releases](https://github.com/giantswarm/flux-app/releases),
+   and the app's directory:
 
     ```sh
+    export FLUX_WC_DIR=${ORG_DIR}/workload-clusters/CLUSTER_NAME
     export FLUX_APP_VERSION=FLUX_APP_VERSION
-    export FLUX_DIR=${WC_DIR}/apps/flux
+    export FLUX_DIR=${FLUX_WC_DIR}/apps/flux
     mkdir -p ${FLUX_DIR}
     ```
 
-1. Create the app's `OCIRepository` and `HelmRelease`. flux-app installs into the `flux-app` namespace of the workload
-   cluster, and brings Flux's CRDs with it:
+1. Create the app's `OCIRepository` and `HelmRelease`, and list them in the cluster's apps. flux-app installs into the
+   `flux-app` namespace of the workload cluster, and brings Flux's CRDs with it:
 
     ```sh
     cat <<EOF > ${FLUX_DIR}/oci-repository.yaml
@@ -219,29 +234,80 @@ example does. The cost is a Flux installation in every such cluster to keep up t
           optional: true
           valuesKey: values
     EOF
+    yq -i '.resources += ["flux/oci-repository.yaml", "flux/helm-release.yaml"]' ${FLUX_WC_DIR}/apps/kustomization.yaml
     ```
 
-    Both of the cluster's own layers are optional: Flux in the workload cluster needs no values to reconcile what
-    `-direct` delivers. flux-app can also pull a repository of its own, with `sources` and `kustomizations` in its
-    values. Their credentials belong in the `${cluster_name}-flux-app-user-secrets` Secret, written from your own
-    secret manager or encrypted with SOPS, see [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values):
-    the basic tutorial's stand-in store keeps its data in plain text in Git, so it can't hold a real token.
+    Both of the cluster's own values layers are optional, so Flux installs without them, and reconciles nothing of its
+    own yet.
 
-1. List the files in the cluster's apps, then commit and push:
+1. Point it at the cluster's `out-of-band` directory, which holds what the cluster should get, as in
+   [Add the out-of-band directory](#add-the-out-of-band-directory). flux-app takes a list of `sources`, your
+   repository, and of `kustomizations`, what to apply from them. The `Kustomization` goes into a ConfigMap. The
+   cluster's apps `Kustomization` fills in `${cluster_name}` and `${organization}` in it, and `postBuild` passes them
+   on to Flux in the workload cluster, so `out-of-band` gets the same variables as with a push:
 
     ```sh
-    yq -i '.resources += ["flux/oci-repository.yaml", "flux/helm-release.yaml"]' ${WC_DIR}/apps/kustomization.yaml
-    git add ${WC_DIR}/apps && git commit -m "Run Flux in ${WC_NAME}" && git push
+    cat <<EOF > ${FLUX_DIR}/configmap.yaml
+    apiVersion: v1
+    data:
+      values: |-
+        kustomizations:
+        - name: out-of-band
+          interval: 10m
+          path: "./${FLUX_WC_DIR}/out-of-band"
+          postBuild:
+            substitute:
+              cluster_name: "\${cluster_name}"
+              organization: "\${organization}"
+          prune: true
+          source_name: gitops
+    kind: ConfigMap
+    metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+      name: \${cluster_name}-flux-app-user-values
+      namespace: org-\${organization}
+    EOF
+    yq -i '.resources += ["flux/configmap.yaml"]' ${FLUX_WC_DIR}/apps/kustomization.yaml
     ```
 
-**Check:** the release is `Ready` on the management cluster, and Flux runs in the workload cluster:
+    The source needs credentials that can read your repository, which flux-app writes into a Secret next to its
+    `GitRepository`. They belong in the `${cluster_name}-flux-app-user-secrets` Secret, which the `HelmRelease` reads
+    last, with these values:
+
+    ```yaml
+    sources:
+      - name: gitops
+        interval: 1m
+        branch: main
+        url: https://github.com/YOUR_ORG/YOUR_REPO
+        provider: github
+        credentials:
+          username: git
+          password: YOUR_TOKEN
+    ```
+
+    Write that Secret from your own secret manager with an `ExternalSecret`, as the basic tutorial's app does, or
+    encrypt it with SOPS, see [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values), and list it in
+    the cluster's apps. The basic tutorial's stand-in store keeps its data in plain text in Git, so it can't hold a
+    real token. The example keeps a made-up source in its ConfigMap instead, which is fine for an example and nothing
+    else. Until the Secret exists, flux-app has no source, and its `Kustomization` waits for one.
+
+1. Commit and push:
+
+    ```sh
+    git add ${FLUX_WC_DIR}/apps && git commit -m "Pull out-of-band resources with Flux in the workload cluster" && git push
+    ```
+
+**Check:** the release is `Ready` on the management cluster, and Flux in the workload cluster reconciles `out-of-band`:
 
 ```sh
-flux get helmreleases ${WC_NAME}-flux -n org-${ORG_NAME}
-flux --context ${WC_CONTEXT} check
+flux get helmreleases -n org-${ORG_NAME} | grep -- -flux
+flux --context FLUX_WC_CONTEXT check -n flux-app
+flux --context FLUX_WC_CONTEXT get kustomizations -n flux-app
 ```
 
-The `-direct` `Kustomization` stays as it is, and keeps delivering `out-of-band`.
+`FLUX_WC_CONTEXT` is that cluster's context, from `kubectl gs login`, as in the basic tutorial.
 
 ## Next steps
 

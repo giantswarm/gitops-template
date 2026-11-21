@@ -174,8 +174,7 @@ bases/stacks/hello-web
     EOF
     ```
 
-    The versions are the ones the fork pinned when this was written; Renovate keeps the fork's copy up to date, so
-    compare with [bases/stacks/hello-web](/bases/stacks/hello-web/kustomization.yaml) before you overwrite it.
+    The versions are the ones the fork pinned when this was written. Renovate keeps the fork's copy up to date.
 
     A few details carry the weight here:
 
@@ -184,6 +183,13 @@ bases/stacks/hello-web
     - `namespace` is the organisation's namespace, as the `HelmRelease`s look up their values, their `OCIRepository`
       and the kubeconfig Secret there.
     - The `$` of a target name is escaped, as kustomize reads the name as a regular expression.
+
+1. The fork's copy has comments on each part, and pins that Renovate may have moved since. Once you've compared the
+   two, put the fork's back:
+
+    ```sh
+    git checkout -- bases/stacks/hello-web
+    ```
 
 ## Use it in a cluster
 
@@ -215,7 +221,7 @@ envoy-gateway releases are new.
 1. Commit and push:
 
     ```sh
-    git add bases/stacks/hello-web ${WC_DIR}/apps
+    git add ${WC_DIR}/apps
     git commit -m "Deploy the hello-web stack to ${WC_NAME}" && git push
     ```
 

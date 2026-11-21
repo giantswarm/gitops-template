@@ -208,10 +208,12 @@ the next `interval`. It deletes what the team deletes, as the `Kustomization` ha
 
 ## Add a team with Flux in the workload cluster
 
-The cluster needs its `-direct` `Kustomization`, which delivers the team's objects, and Flux, which reconciles them,
-installed as in [Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster). Flux brings
-its CRDs with it, which the `-direct` `Kustomization` needs before it can apply a `GitRepository` or a
-`Kustomization`.
+The cluster needs its `-direct` `Kustomization`, which pushes the team's objects, and Flux, which reconciles them.
+Install flux-app with the first two steps of
+[Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster), with
+`FLUX_WC_DIR=${WC_DIR}`, and leave out the third: the `-direct` `Kustomization` already applies `out-of-band` to this
+cluster, and Flux in the workload cluster mustn't apply it as well. Flux brings its CRDs with it, which the `-direct`
+`Kustomization` needs before it can apply a `GitRepository` or a `Kustomization`.
 
 1. If you added a team with Flux on the management cluster above, give this one another name, so that the two don't
    share a namespace:
@@ -307,9 +309,17 @@ kubectl --context ${WC_CONTEXT} get all -n ${TEAM_NAME}
 
 ## Remove a team
 
-How you remove a team depends on its mode, and the order matters with Flux on the management cluster.
+How you remove a team depends on its mode, and the order matters with Flux on the management cluster. Set
+`TEAM_NAME` to the team you're removing first: `hello-team` for the one with Flux on the management cluster above,
+`hello-team-wc` for the one with Flux in the workload cluster.
 
 **Flux on the management cluster** takes two pushes, in this order:
+
+1. Set the team's name:
+
+    ```sh
+    export TEAM_NAME=hello-team
+    ```
 
 1. Delete the team's directory in the cluster's `teams`, and its entry in `teams/kustomization.yaml`, and push. Flux
    deletes the team's `Kustomization`, which deletes the team's workloads from the workload cluster. Wait until the

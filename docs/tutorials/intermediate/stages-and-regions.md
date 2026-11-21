@@ -152,6 +152,12 @@ A region creates the `${cluster_name}-region-config` ConfigMap with the region, 
 The pool is called `large`, so it doesn't share a key with a cluster's own `nodepool0`: a prod cluster gets both, its
 own and the region's.
 
+The fork's regions are the same, with comments that explain each part. Once you've compared them, put the fork's back:
+
+```sh
+git checkout -- bases/environments/regions
+```
+
 ## Stages
 
 A stage holds the versions its clusters run, and nothing else. It patches the tag of the cluster's `OCIRepository`,
@@ -253,6 +259,9 @@ file: the target name escaped for kustomize, which reads it as a regular express
     ```
 
 A stage holds versions only. The prod clusters' bigger nodes are their own values, below.
+
+The fork's stage files have a comment on each pin, which these commands replace. To keep the comments, change only the
+`value:` of each pin in the fork's files instead.
 
 A cluster whose release comes from a `ResourceSet`, as in [Scheduled upgrades](../advanced/scheduled-upgrades.md),
 ignores the stage's release pin: it has no `OCIRepository` of the base's for the patch to change, and the `ResourceSet`

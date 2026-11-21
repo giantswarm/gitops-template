@@ -94,10 +94,11 @@ CI is the usual place for the kind test, but a local run is quicker when you're 
     To run some tests only, pass pytest's `-k` with part of their names, but bear in mind that the last one,
     `test_prune`, deletes what the others check, and fails if they didn't run first.
 
-1. Delete the cluster when you're done:
+1. Delete the cluster when you're done, and stop pointing `kubectl` at its kubeconfig:
 
     ```sh
     kind delete cluster --name gitops-test
+    unset KUBECONFIG
     ```
 
 ## Test with Chainsaw

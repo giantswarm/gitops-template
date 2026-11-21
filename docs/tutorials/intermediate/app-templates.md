@@ -177,6 +177,16 @@ build one of your own.
 That's the template. On its own it does nothing: no Flux `Kustomization` points at `bases`, so it waits until a cluster
 lists it. That also means you can keep and review an app's configuration before any cluster runs it.
 
+The fork's copy of hello-world's template has comments that explain each part, which these steps don't write. Once
+you've compared the two, put the fork's back, so they stay:
+
+```sh
+git checkout -- bases/apps/hello-world
+```
+
+If you built a template for another chart, it's a new directory, which this leaves as it is: commit it with the
+cluster's change below.
+
 ## Deploy it to a cluster
 
 Now swap your cluster's hand-written hello-world for the template. The template's objects have the same names as the
@@ -233,7 +243,7 @@ one, applies both. So Flux updates the release in place, rather than uninstallin
 1. Commit and push:
 
     ```sh
-    git add bases/apps/hello-world ${APP_DIR}
+    git add ${APP_DIR}
     git commit -m "Deploy hello-world to ${WC_NAME} from its App Template" && git push
     ```
 
