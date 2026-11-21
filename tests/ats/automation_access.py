@@ -17,8 +17,9 @@ from rbac_manifests import AUTOMATION
 
 
 class Access(NamedTuple):
-    """Whether the `automation` ServiceAccount of `account` may `verb` a resource in
-    `namespace`, or cluster-wide when `namespace` is empty."""
+    """Whether the ServiceAccount `name`, `automation` unless it says otherwise, of the
+    namespace `account` may `verb` a resource in `namespace`, or cluster-wide when `namespace`
+    is empty."""
 
     account: str
     verb: str
@@ -26,6 +27,7 @@ class Access(NamedTuple):
     resource: str
     namespace: str
     allowed: bool
+    name: str = AUTOMATION
 
 
 def expected_access(org: str) -> list[Access]:
@@ -69,7 +71,7 @@ def subject_access_review(access: Access) -> dict:
         "apiVersion": "authorization.k8s.io/v1",
         "kind": "SubjectAccessReview",
         "spec": {
-            "user": f"system:serviceaccount:{access.account}:{AUTOMATION}",
+            "user": f"system:serviceaccount:{access.account}:{access.name}",
             "groups": groups,
             "resourceAttributes": attributes,
         },
@@ -82,7 +84,7 @@ def describe(access: Access) -> str:
     where = f"in `{access.namespace}`" if access.namespace else "cluster-wide"
     verdict = "allows" if access.allowed else "refuses"
     return (
-        f"`{access.account}/{AUTOMATION}` {can} {access.verb} {resource} {where}, "
+        f"`{access.account}/{access.name}` {can} {access.verb} {resource} {where}, "
         f"which a management cluster {verdict}"
     )
 

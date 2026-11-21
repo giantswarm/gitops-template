@@ -17,7 +17,9 @@ The example is in the out-of-band-no-flux cluster, in
 - [secret-store.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/workload-cluster-secrets/secret-store.yaml)
   is a `SecretStore` with the `kubernetes` provider that points at the workload cluster. It signs in with the
   `${cluster_name}-kubeconfig` Secret the management cluster has for every cluster, and writes into the `default`
-  namespace, which every new cluster has.
+  namespace, which every new cluster has. To give every cluster such a store without adding one to Git for each, let a
+  Kyverno `Policy` generate it, see
+  [Give every workload cluster a secret store](../add_org.md#give-every-workload-cluster-a-secret-store).
 - [common-secret.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/workload-cluster-secrets/common-secret.yaml)
   has an `ExternalSecret` that reads `workload-clusters-common-token` from your secret manager into the
   `${cluster_name}-common-secret` Secret on the management cluster, and a `PushSecret` that copies it into the
@@ -100,6 +102,9 @@ Azure Key Vault allows only letters, digits and hyphens in names.
 ## How it's tested
 
 The kind test runs the example for real: it creates the test store, and a vCluster stands in for the workload
-cluster. It checks that both Secrets are on the management cluster and in the workload cluster. CI can't reach a
-cloud secret manager, so `tools/test-all-ff validate` only builds each base in `bases/secret_stores` and checks it
-against the schemas of its kinds.
+cluster. It checks that both Secrets are on the management cluster and in the workload cluster. The kind cluster has
+no Cilium, so a `NetworkPolicy` in `tests/ats/workload_cluster_secrets.py` gives ESO the egress the chart's
+`CiliumNetworkPolicy` gives it on a management cluster; the
+[workload cluster secret store test](ci-validation.md#workload-cluster-secret-stores) relies on it as well. CI can't
+reach a cloud secret manager, so `tools/test-all-ff validate` only builds each base in `bases/secret_stores` and checks
+it against the schemas of its kinds.

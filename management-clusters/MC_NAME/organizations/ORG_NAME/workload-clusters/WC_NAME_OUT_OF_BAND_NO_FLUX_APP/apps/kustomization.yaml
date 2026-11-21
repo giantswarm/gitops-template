@@ -14,3 +14,4 @@ resources:
   - workload-cluster-secrets/secret-store.yaml
   - workload-cluster-secrets/common-secret.yaml
   - workload-cluster-secrets/generated-password.yaml
+  - pushed-password/pushed-password.yaml

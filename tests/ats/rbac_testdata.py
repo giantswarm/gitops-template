@@ -6,8 +6,8 @@ from automation_bindings import automation_rbac_objects
 CORE = {"groupVersion": "v1", "resources": [{"name": "pods", "verbs": ["get"]}]}
 
 
-def sa(namespace: str) -> dict:
-    return {"kind": "ServiceAccount", "name": "automation", "namespace": namespace}
+def sa(namespace: str, name: str = "automation") -> dict:
+    return {"kind": "ServiceAccount", "name": name, "namespace": namespace}
 
 
 def ref(kind: str, name: str) -> dict:

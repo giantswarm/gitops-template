@@ -256,7 +256,17 @@ Neither can create namespaces, cluster-scoped objects other than `Organization`s
 RBAC outside the namespaces where it's `cluster-admin`. `org-<organisation>/automation` can't read other namespaces
 beyond those.
 
-The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, and the `RoleBinding`s
+Kyverno's background controller, `kyverno/kyverno-background-controller`, gets the `ClusterRole`
+`write-kyverno-generated-externalsecrets` in every `org-*` namespace, through a `RoleBinding`: all verbs but
+`deletecollection` on `ExternalSecret`s and `SecretStore`s, and `get`, `list` and `watch` on `Secret`s. It lets a
+Kyverno policy in an organisation's namespace generate them, such as the
+[workload cluster secret store example](../add_org.md#give-every-workload-cluster-a-secret-store).
+[tests/ats/kyverno_rbac.py](../../tests/ats/kyverno_rbac.py) holds the role and its bindings, and
+`test_automation_access` checks, with [tests/ats/kyverno_access.py](../../tests/ats/kyverno_access.py), that it may
+create `ExternalSecret`s in the organisation's namespace and not in `default`.
+
+The rules are copied from rbac-operator at commit `4681152f3de2a062788baa7ecd44a2882acbce5d`, Kyverno's from the
+not yet released `80aed29e11e49eac3a7f77b601c6df124e66cfe4`, and the `RoleBinding`s
 of Giant Swarm's Flux from management-cluster-bases at `52aa8ee8a4ddb0c95e693bac67556150e33d956f` and flux-app at
 `02f4e84fa7a585de8e0deb95983ea47a4cbf828c`. [tests/ats/automation_roles.py](../../tests/ats/automation_roles.py) holds the
 rules, [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py) and
@@ -369,6 +379,27 @@ They change the providers with the `Kustomization` that applies them suspended, 
 hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
 `tests/ats/assertions/exists-in-workload-cluster`; `test_prune` leaves it out of the apps it expects to go with the
 cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
+
+### Workload cluster secret stores
+
+`test_workload_cluster_secret_store` checks the
+[workload cluster secret store example](../add_org.md#give-every-workload-cluster-a-secret-store), the organisation's
+Kyverno `Policy`, with the vCluster's kubeconfig Secret, which the test labels and types as Cluster API does. Kyverno's
+background controller needs rights in the organisation's namespace that rbac-operator grants on a management cluster
+and the example doesn't ship; the `automation_rbac` fixture creates them with the others, see
+[The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts). Flux applies the
+`Policy` as `default/automation`, and the `default` store reads the organisation's namespace as its `automation`.
+The test waits for the organisation's `SecretStore` `default`, `out-of-band-no-flux-eso-cluster-auth` and the
+`out-of-band-no-flux-eso-cluster-store` `SecretStore`, then reads a Secret from the vCluster through that store and
+checks its value. It then waits for the
+[`PushSecret` example](../add_org.md#push-a-secret-into-a-workload-cluster) to get Ready and for the `pushed-password`
+Secret it writes into the vCluster's `default` namespace to have a `password` of the generator's 32 characters. On a
+management cluster, the ESO chart's `CiliumNetworkPolicy` lets ESO reach the cluster and the world; the kind cluster
+has no Cilium, so the `NetworkPolicy` in `tests/ats/workload_cluster_secrets.py`, which the
+[workload cluster secrets example](workload-cluster-secrets.md#how-its-tested) needs too, gives ESO the same egress.
+Last, the test writes a kubeconfig Secret for a new cluster, `new-cluster-kubeconfig`, with the vCluster's kubeconfig,
+and waits for the policy to react to it with `new-cluster-eso-cluster-auth` and a Ready `new-cluster-eso-cluster-store`
+in the organisation's namespace, then deletes the Secret.
 
 ## Superseded runs
 

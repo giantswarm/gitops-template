@@ -4,6 +4,8 @@ rbac-operator's RBAC for the `automation` ServiceAccounts, labelled as rbac-oper
 
 AUTOMATION = "automation"
 MANAGED_BY = {"giantswarm.io/managed-by": "rbac-operator"}
+# k8smetadata's annotation.Notes, which rbac-operator sets on some of its objects
+NOTES = "giantswarm.io/notes"
 RBAC_V1 = "rbac.authorization.k8s.io/v1"
 
 
@@ -31,11 +33,14 @@ def role_ref(kind: str, name: str) -> dict:
     return {"apiGroup": "rbac.authorization.k8s.io", "kind": kind, "name": name}
 
 
-def cluster_role(name: str, rules: list[dict]) -> dict:
+def cluster_role(name: str, rules: list[dict], notes: str | None = None) -> dict:
+    meta = metadata(name)
+    if notes is not None:
+        meta["annotations"] = {NOTES: notes}
     return {
         "apiVersion": RBAC_V1,
         "kind": "ClusterRole",
-        "metadata": metadata(name),
+        "metadata": meta,
         "rules": rules,
     }
 

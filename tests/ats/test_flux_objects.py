@@ -23,6 +23,7 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate
 from conftest import GitOpsTestConfig
+from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster
 from notification_objects import check_notifications
 from prune_checks import check_prune
@@ -35,6 +36,7 @@ from resource_set_upgrade import check_scheduled_cluster_upgrade
 from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
+from workload_cluster_secret_stores import check_workload_cluster_secret_store
 from workload_cluster_secrets import check_secrets_pushed
 
 # Kyverno has to run before gitops_deployment installs External Secrets Operator, and Flux
@@ -81,7 +83,8 @@ def test_automation_access(
     org = org_namespace(gitops_test_config.init_namespaces)
     assert org, "GITOPS_INIT_NAMESPACES has no `org-*` namespace"
     review = api_server_review(kube_cluster.kube_client)
-    problems = access_problems(review, expected_access(org))
+    # and Kyverno's background controller has the rights rbac-operator gives it
+    problems = access_problems(review, expected_access(org) + kyverno_access(org))
     assert not problems, "\n".join(problems)
 
 
@@ -211,6 +214,14 @@ def test_commit_status_notifications(
     # N1: ESO wrote the tokens and the Receiver is Ready; assertions/exists/notifications checks
     #  the Provider and the Alert
     check_notifications(kube_cluster.kube_client)
+
+
+def test_workload_cluster_secret_store(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    check_workload_cluster_secret_store(kube_cluster.kube_client, workload_cluster)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
