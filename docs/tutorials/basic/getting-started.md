@@ -172,13 +172,16 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 
     If it doesn't, go on to the next step and create one. If it does, whatever is already encrypted for this
     management cluster needs that key, and whatever created the Secret, such as another repository, still manages it.
-    So you leave the Secret alone, and import its key only to encrypt with it. Import it straight from the Secret, and
-    save its fingerprint for the next commands:
+    So you leave the Secret alone, and import its key only to encrypt with it. The Secret can hold other keys too, such
+    as an organisation's, so take the one whose name has `master` in it, import it, and save its fingerprint for the
+    next commands:
 
     ```sh
-    kubectl get secret sops-gpg-master -n default -o yaml | yq '.data[]' | base64 -d | gpg --import
-    export KEY_FP=$(kubectl get secret sops-gpg-master -n default -o yaml | yq '.data[]' | base64 -d |
-      gpg --show-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+    MASTER_KEY=$(kubectl get secret sops-gpg-master -n default -o yaml |
+      yq '.data | to_entries[] | select(.key | test("master")) | .value' | base64 -d)
+    echo "${MASTER_KEY}" | gpg --import
+    export KEY_FP=$(echo "${MASTER_KEY}" | gpg --show-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+    unset MASTER_KEY
     ```
 
     If the key is in your password manager, save it to a file and use that instead:
