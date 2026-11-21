@@ -28,9 +28,10 @@ that reads it. ESO gives the app its secret values. If you only want one of them
 
 - **SOPS only:** in step 2, skip the secret store, and leave `../multicluster/secret-stores` out of
   `${ORG_DIR}/namespace/kustomization.yaml`. In step 4, skip the `ExternalSecret`, and leave `externalsecret.yaml` out
-  of `${APP_DIR}/kustomization.yaml`. Skip the checks of the store and the `ExternalSecret` too. To give the app secret
-  values, encrypt them in the repository instead, in the `${cluster_name}-hello-world-user-secrets` Secret the
-  `HelmRelease` already reads, with a key of the cluster's own: see
+  of `${APP_DIR}/kustomization.yaml`. Skip the checks of the store and the `ExternalSecret` too, and the
+  `kubectl annotate` that makes ESO copy a change in step 5. To give the app secret values, encrypt them in the
+  repository instead, in the `${cluster_name}-hello-world-user-secrets` Secret the `HelmRelease` already reads, with a
+  key of the cluster's own: see
   [Add a workload cluster key (age)](../../how-to/sops.md#add-a-workload-cluster-key-age) and
   [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values).
 - **ESO only:** in step 1, skip the master key, the `.sops.yaml` rules and the `${MC_DIR}/secrets` directory, and
@@ -169,20 +170,28 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     kubectl get secret sops-gpg-master -n default
     ```
 
-    If it does, whatever is already encrypted for this management cluster needs that key, so you import it rather
-    than create a new one. Import it from your password manager with `gpg --import FILE`, or straight from the
-    Secret:
+    If it doesn't, go on to the next step and create one. If it does, whatever is already encrypted for this
+    management cluster needs that key, and whatever created the Secret, such as another repository, still manages it.
+    So you leave the Secret alone, and import its key only to encrypt with it. Import it straight from the Secret, and
+    save its fingerprint for the next commands:
 
     ```sh
     kubectl get secret sops-gpg-master -n default -o yaml | yq '.data[]' | base64 -d | gpg --import
+    export KEY_FP=$(kubectl get secret sops-gpg-master -n default -o yaml | yq '.data[]' | base64 -d |
+      gpg --show-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
     ```
+
+    If the key is in your password manager, save it to a file and use that instead:
+    `gpg --import FILE`, then `export KEY_FP=$(gpg --show-keys --with-colons FILE | awk -F: '/^fpr/{print $10; exit}')`.
+    Then skip to sharing the public key: with an imported key, you don't write, apply or list `sops-gpg-master`
+    yourself.
 
     > [!Caution]
     > Never replace an existing `sops-gpg-master` with a new key: Flux could no longer decrypt anything encrypted for
     > the old one.
 
-1. If you didn't import a key, create the master key, a GPG key without a passphrase, as Flux has nobody to type one
-   in:
+1. If the management cluster has no master key yet, create one, a GPG key without a passphrase, as Flux has nobody to
+   type one in:
 
     ```sh
     gpg --batch --full-generate-key <<EOF
@@ -205,12 +214,11 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
     ```
 
-    If you imported a key, set `KEY_FP` to its fingerprint, which `gpg --list-secret-keys` shows.
-
-1. Write the private key into the `sops-gpg-master` Secret:
+    Then write the private key into the `sops-gpg-master` Secret. The first part of the command stops it when
+    `KEY_FP` is empty, so it can never write an empty key:
 
     ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}" |
+    : "${KEY_FP:?set KEY_FP first}" && gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-master --namespace=default \
     --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml \
     > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
@@ -223,7 +231,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 1. Share the public key in the repository, so that anyone can encrypt for Flux, but only Flux can decrypt:
 
     ```sh
-    gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
+    : "${KEY_FP:?set KEY_FP first}" && gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
     ```
 
     Then add two rules to `.sops.yaml`, which tells `sops` which key encrypts which file. The first covers
@@ -232,7 +240,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     [Encryption rules](../../reference/sops-keys.md#encryption-rules):
 
     ```sh
-    yq -i '.creation_rules += [{
+    : "${KEY_FP:?set KEY_FP first}" && yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
       "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
       "pgp": "'"${KEY_FP}"'"
@@ -271,22 +279,23 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 
     The same caution applies: the token is in plain text until the next step but one.
 
-1. Apply both Secrets, so that Flux has them before it needs them. If you imported the management cluster's master
-   key, applying it again changes nothing:
+1. Apply what's in `${MC_DIR}/secrets`, so that Flux has it before it needs it: the token, and the master key if you
+   created a new one. An imported master key isn't in the directory, so this leaves its Secret as it is:
 
     ```sh
     kubectl apply -f ${MC_DIR}/secrets/
     ```
 
-1. Encrypt both files in place. From now on the repository keeps only the encrypted copies:
+1. Encrypt the files in place. From now on the repository keeps only the encrypted copies:
 
     ```sh
     for f in ${MC_DIR}/secrets/*.enc.yaml; do sops --encrypt --in-place "${f}"; done
     ```
 
-    List them in `${MC_DIR}/secrets/kustomization.yaml`. Without these two Secrets, Flux can neither read nor
-    decrypt the repository, so the annotation keeps Flux from deleting them when their files go, and the label keeps
-    anyone else from deleting them by accident:
+    List them in `${MC_DIR}/secrets/kustomization.yaml`. Without them, Flux can neither read nor decrypt the
+    repository, so the annotation keeps Flux from deleting them when their files go, and the label keeps anyone else
+    from deleting them by accident. The loop lists the files that are there, so an imported master key, which you
+    didn't write here, stays out of the list, and with it out of this repository's hands:
 
     ```sh
     cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
@@ -300,10 +309,11 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
           giantswarm.io/managed-by: flux
           # nobody can delete them, Flux included, until this label is removed
           giantswarm.io/prevent-deletion: "true"
-    resources:
-      - ${MC_NAME}.gpgkey.enc.yaml
-      - ${GIT_SECRET}.enc.yaml
+    resources: []
     EOF
+    for f in ${MC_DIR}/secrets/*.enc.yaml; do
+      F=$(basename "${f}") yq -i '.resources += [strenv(F)]' ${MC_DIR}/secrets/kustomization.yaml
+    done
     ```
 
 1. (Optional) Print the private key and store it in your password manager, if it isn't there already. You need it
@@ -311,13 +321,13 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
    [Keep a private key in a password manager](../../how-to/sops.md#keep-a-private-key-in-a-password-manager):
 
     ```sh
-    gpg --export-secret-keys --armor "${KEY_FP}"
+    : "${KEY_FP:?set KEY_FP first}" && gpg --export-secret-keys --armor "${KEY_FP}"
     ```
 
     Then remove it from your machine. You can still encrypt with the public key:
 
     ```sh
-    gpg --delete-secret-keys "${KEY_FP}"
+    : "${KEY_FP:?set KEY_FP first}" && gpg --delete-secret-keys "${KEY_FP}"
     ```
 
 1. Commit and push:
