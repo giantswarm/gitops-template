@@ -72,6 +72,21 @@ def test_delete_patches_name_the_objects_before_substitution() -> None:
     ]
 
 
+def test_delete_patches_drop_an_application_team() -> None:
+    # the team's GitRepository and Kustomization, which test_prune removes from the apps
+    #  Kustomization before it deletes the cluster, as the getting-started guides do
+    patches = delete_patches(
+        [
+            ("GitRepository", "org-org-name", "out-of-band-no-flux-hello-team"),
+            ("Kustomization", "org-org-name", "out-of-band-no-flux-hello-team"),
+        ]
+    )
+    assert [yaml.safe_load(p["patch"])["apiVersion"] for p in patches] == [
+        "source.toolkit.fluxcd.io/v1",
+        "kustomize.toolkit.fluxcd.io/v1",
+    ]
+
+
 def test_applied_deployments_leaves_out_releases_other_kustomizations_applied() -> None:
     # a ResourceSet of the organization installs an app into the cluster, too
     ours = {

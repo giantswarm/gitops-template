@@ -1,10 +1,10 @@
-"""P1: dropping objects from what a Flux Kustomization builds, as deleting their files does.
+"""P1, P3: dropping objects from what a Flux Kustomization builds, as deleting their files does.
 
-The App Set test_prune removes is listed in app_sets/kustomization.yaml, so leaving its files out
-of the source would leave the apps Kustomization unable to build. `$patch: delete` patches in its
-`spec.patches` drop the objects instead. Flux applies them before it substitutes the variables,
-so they name the objects as the Kustomization builds them, with `${cluster_name}` and
-`${organization}`.
+The App Set and the application team test_prune removes are listed in kustomization.yaml files,
+so leaving their files out of the source would leave the apps Kustomization unable to build.
+`$patch: delete` patches in its `spec.patches` drop the objects instead. Flux applies them
+before it substitutes the variables, so they name the objects as the Kustomization builds them,
+with `${cluster_name}` and `${organization}`.
 """
 
 import yaml
@@ -13,6 +13,8 @@ API_VERSIONS = {
     "HelmRelease": "helm.toolkit.fluxcd.io/v2",
     "OCIRepository": "source.toolkit.fluxcd.io/v1",
     "ConfigMap": "v1",
+    "GitRepository": "source.toolkit.fluxcd.io/v1",
+    "Kustomization": "kustomize.toolkit.fluxcd.io/v1",
 }
 # what the apps Kustomization of the out-of-band-no-flux cluster substitutes after it builds
 SUBSTITUTED = {"out-of-band-no-flux": "${cluster_name}", "org-name": "${organization}"}
