@@ -1,0 +1,16 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: parent-shared
+spec:
+  interval: 1m
+  path: ./root/organization/direct
+  postBuild:
+    substitute:
+      cluster_name: "parent-shared"
+      organization: "shared"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: parent-kustomization
+    namespace: default

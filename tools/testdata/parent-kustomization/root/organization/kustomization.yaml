@@ -8,6 +8,7 @@ kind: Kustomization
 resources:
   - organization.yaml
   - namespace.yaml
+  - shared
 replacements:
   - source:
       kind: ConfigMap

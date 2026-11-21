@@ -1,0 +1,18 @@
+# In namespace/, but namespace/kustomization.yaml doesn't list it: parent-namespace's path holds
+# it, but its build doesn't apply it, so it isn't this Kustomization's parent.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: parent-unlisted
+spec:
+  interval: 1m
+  path: ./root/organization/direct
+  postBuild:
+    substitute:
+      cluster_name: "parent-unlisted"
+      organization: "unlisted"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: parent-kustomization
+    namespace: default
