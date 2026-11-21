@@ -237,20 +237,14 @@ section replaces the `-direct` `Kustomization` above: one or the other, not both
     EOF
     ```
 
-1. Tell Flux in the workload cluster what to apply: your repository as a source, and a `Kustomization` with the
-   cluster's `out-of-band` directory as its path:
+1. Tell Flux in the workload cluster what to apply: a `Kustomization` with the cluster's `out-of-band` directory as its
+   path, from a source named `gitops`:
 
     ```sh
     cat <<EOF > ${FLUX_DIR}/configmap.yaml
     apiVersion: v1
     data:
       values: |-
-        sources:
-        - name: gitops
-          interval: 1m
-          branch: main
-          url: ${GITOPS_REPO_URL}
-          provider: github
         kustomizations:
         - name: out-of-band
           interval: 10m
@@ -270,18 +264,62 @@ section replaces the `-direct` `Kustomization` above: one or the other, not both
     EOF
     ```
 
-    Flux in the workload cluster needs read access to the repository too. The source's `credentials` hold it, as
-    `username` and `password`, the way the
+1. The source is your repository, and Flux in the workload cluster needs credentials to read it: flux-app writes each
+   source's `credentials`, a `username` and a `password`, into a Secret next to its `GitRepository`. Credentials don't
+   belong in a ConfigMap, so the source goes into the `${cluster_name}-flux-app-user-secrets` Secret, which the
+   `HelmRelease` reads last. Store these values in your secret manager, with a token that can read the repository:
+
+    ```yaml
+    sources:
+      - name: gitops
+        interval: 1m
+        branch: main
+        url: https://github.com/YOUR_ORG/YOUR_REPO
+        provider: github
+        credentials:
+          username: git
+          password: YOUR_TOKEN
+    ```
+
+    Then have ESO write them into the Secret, through the organisation's store from the basic tutorial:
+
+    ```sh
+    cat <<EOF > ${FLUX_DIR}/externalsecret.yaml
+    apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: \${cluster_name}-flux-app-user-secrets
+      namespace: org-\${organization}
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: SecretStore
+        name: ${SECRET_STORE}
+      target:
+        name: \${cluster_name}-flux-app-user-secrets
+        template:
+          metadata:
+            labels:
+              reconcile.fluxcd.io/watch: Enabled
+      data:
+        - secretKey: values
+          remoteRef:
+            key: gitops/flux-app-sources
+    EOF
+    ```
+
+    Put the name of your secret in `key`. If you keep the cluster's secrets in the repository with SOPS instead,
+    write the Secret with the same `values` key and encrypt it, see
+    [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values), and list that file below instead. Until the
+    Secret exists, flux-app installs without a source, and its `Kustomization` waits for one. The
     [example](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/flux/configmap.yaml)
-    shows with made-up ones. Real credentials don't belong in a ConfigMap: put the `sources` with their `credentials`
-    into the `${cluster_name}-flux-app-user-secrets` Secret instead, encrypted with SOPS or written by an
-    `ExternalSecret`, whichever you use for the cluster's other secrets.
+    keeps a made-up source in its ConfigMap instead, which is fine for an example and nothing else.
 
 1. List the files in the cluster's apps, then commit and push:
 
     ```sh
-    yq -i '.resources += ["flux/oci-repository.yaml", "flux/helm-release.yaml", "flux/configmap.yaml"]' \
-      ${WC_DIR}/apps/kustomization.yaml
+    yq -i '.resources += ["flux/oci-repository.yaml", "flux/helm-release.yaml", "flux/configmap.yaml",
+      "flux/externalsecret.yaml"]' ${WC_DIR}/apps/kustomization.yaml
     git add ${WC_DIR}/apps ${ORG_DIR}/workload-clusters
     git commit -m "Run Flux in ${WC_NAME} for its out-of-band resources" && git push
     ```
