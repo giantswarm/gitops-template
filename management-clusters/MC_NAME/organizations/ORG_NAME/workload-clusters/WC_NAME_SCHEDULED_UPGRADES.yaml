@@ -2,8 +2,12 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: mc-name-clusters-scheduled-upgrades  # TODO: change 'mc-name' to your Management Cluster name and 'scheduled-upgrades' to your cluster name; must be a correct k8s resource name (DNS-like)
-  namespace: default
 spec:
+  # Flux applies a commit here only once the organisation's namespace Kustomization, which
+  # applies this one, is Ready at it, so this one's spec is up to date
+  dependsOn:
+    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../namespace.yaml
+      namespace: default
   interval: 10m
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES"
   # No `release` here: the cluster's release comes from cluster/release-input-provider.yaml,
@@ -12,11 +16,12 @@ spec:
     substitute:
       cluster_description: "description"
       cluster_name: "scheduled-upgrades"  # TODO: change 'scheduled-upgrades' to your cluster name; must be a correct k8s resource name (DNS-like)
-      organization: "ORG_NAME"  # ../kustomization.yaml sets it from the Organization's name
+      organization: "${organization}"  # the organisation's namespace Kustomization sets it
   prune: true
   retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
     name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    namespace: default  # the namespace of that GitRepository
   timeout: 2m

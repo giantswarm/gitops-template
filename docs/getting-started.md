@@ -226,11 +226,15 @@ exists, these steps bring it under GitOps.
 > ```sh
 > yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${ORG_DIR}/${ORG_NAME}.yaml
 > ```
+>
+> The CLI also writes `${ORG_DIR}/workload-clusters/kustomization.yaml`, the organisation's list of clusters, as below.
+> Leave it out of the organisation's `kustomization.yaml`: the organisation's namespace `Kustomization` applies it.
 
-First, create the organization's directory, with `namespace` for what the organisation keeps in its namespace:
+First, create the organization's directory, with `namespace` for what the organisation keeps in its namespace, and
+`workload-clusters` for its clusters:
 
 ```sh
-mkdir -p ${ORG_DIR}/workload-clusters ${ORG_DIR}/namespace
+mkdir -p ${ORG_DIR}/namespace ${ORG_DIR}/workload-clusters
 ```
 
 Create the `Organization`. Deleting it deletes the `org-${ORG_NAME}` namespace, with every cluster in it, so the
@@ -250,23 +254,16 @@ spec: {}
 EOF
 ```
 
-Create an empty list of clusters. You add your cluster to it in the next step:
-
-```sh
-cat <<EOF > ${ORG_DIR}/workload-clusters/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources: []
-EOF
-```
-
 Create the organisation's namespace `Kustomization`. Your management cluster's `Kustomization` applies only the
 `Organization` and objects in `default`, so it works before organization-operator has created the namespace. This
 `Kustomization`, in `default`, applies the organisation's `namespace` directory into `org-${ORG_NAME}`: it fails until
 the namespace exists and succeeds on its next retry. Its `dependsOn` names your management cluster's `Kustomization`,
 so that one always applies a commit first. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
 organisation's `kustomization.yaml` completes, see
-[Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). The `namespace` directory lists nothing yet:
+[Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). The `namespace` directory lists only
+`../workload-clusters`, the organisation's list of clusters, which is empty: the clusters' `Kustomization`s live next
+to their directories, and this `Kustomization` applies them into the organisation's namespace. You add your cluster to
+the list in the next step:
 
 ```sh
 cat <<EOF > ${ORG_DIR}/namespace.yaml
@@ -297,14 +294,20 @@ EOF
 cat <<EOF > ${ORG_DIR}/namespace/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+resources:
+  - ../workload-clusters
+EOF
+cat <<EOF > ${ORG_DIR}/workload-clusters/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 resources: []
 EOF
 ```
 
 Create the organisation's `kustomization.yaml`. Its replacements copy the name of the `Organization` into the
-`organization` that every cluster's `Kustomization` writes, and into the `targetNamespace` of the organisation's
-namespace `Kustomization`, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). The
-quoted `'EOF'` keeps the placeholders as they are:
+`organization` and the `targetNamespace` of the organisation's namespace `Kustomization`, see
+[The organisation's name](./reference/repo-structure.md#the-organisations-name). The quoted `'EOF'` keeps the
+placeholders as they are:
 
 ```sh
 cat <<'EOF' > ${ORG_DIR}/kustomization.yaml
@@ -313,7 +316,6 @@ kind: Kustomization
 resources:
   - ORGANIZATION_FILE
   - namespace.yaml
-  - workload-clusters
 replacements:
   - source:
       group: security.giantswarm.io
@@ -325,20 +327,6 @@ replacements:
           kind: Kustomization
         fieldPaths:
           - spec.postBuild.substitute.organization
-  - source:
-      group: security.giantswarm.io
-      kind: Organization
-      fieldPath: metadata.name
-    targets:
-      - select:
-          group: kustomize.toolkit.fluxcd.io
-          kind: Kustomization
-          labelSelector: giantswarm.io/health-check-cluster=true
-        fieldPaths:
-          - spec.healthChecks.[kind=Cluster].namespace
-        options:
-          delimiter: "-"
-          index: 1
   - source:
       group: security.giantswarm.io
       kind: Organization
@@ -415,15 +403,11 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
 >   ${WC_DIR}/cluster/kustomization.yaml
 > ```
 >
-> The cluster's `Kustomization` it writes has `prune: false`. Set `prune: true`, as below:
->
-> ```sh
-> yq -i '.spec.prune = true' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
-> ```
->
 > The CLI still writes a single `Kustomization` that applies all of `${WC_DIR}/mapi`, so the apps don't wait for the
-> cluster. Replace it with the two `Kustomization`s of the last step below, and add `${WC_DIR}/kustomization.yaml`
-> as in the step before it.
+> cluster. It writes it into `${ORG_DIR}/workload-clusters/${WC_NAME}.yaml` and lists it in
+> `${ORG_DIR}/workload-clusters/kustomization.yaml`, as the last steps below do, but in `default` and without the
+> fields the organisation's namespace needs. Replace it with the two `Kustomization`s of the last steps below, and add
+> `${WC_DIR}/kustomization.yaml` as in the step before them.
 >
 > Then commit and push, as in the last step below.
 
@@ -502,10 +486,14 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
     EOF
     ```
 
-1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files.
-   It never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
+1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files. It
+   never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label. Its health
-   check waits until Cluster API reports the cluster `Available`, which takes up to its `timeout` of 30 minutes:
+   check waits until Cluster API reports the cluster `Available`, which takes up to its `timeout` of 30 minutes. It goes
+   in the organisation's `workload-clusters`, next to the cluster's directory. The organisation's namespace
+   `Kustomization` applies it into `org-${ORG_NAME}`, and it runs as that namespace's `automation` ServiceAccount. It
+   names no namespace, and reads your `GitRepository` in `default`. Its `dependsOn` names the organisation's namespace
+   `Kustomization`, so that one always applies a commit first:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
@@ -513,8 +501,10 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
     kind: Kustomization
     metadata:
       name: ${MC_NAME}-clusters-${WC_NAME}
-      namespace: default
     spec:
+      dependsOn:
+        - name: ${MC_NAME}-organization-${ORG_NAME}
+          namespace: default
       healthCheckExprs:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
@@ -538,6 +528,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
       sourceRef:
         kind: GitRepository
         name: ${GITOPS_REPO}
+        namespace: default
       timeout: 30m
     EOF
     ```
@@ -551,7 +542,6 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
     kind: Kustomization
     metadata:
       name: ${MC_NAME}-clusters-${WC_NAME}-apps
-      namespace: default
     spec:
       dependsOn:
         - name: ${MC_NAME}-clusters-${WC_NAME}
@@ -569,6 +559,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
       sourceRef:
         kind: GitRepository
         name: ${GITOPS_REPO}
+        namespace: default
       timeout: 2m
     EOF
     ```
@@ -576,7 +567,8 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
     Add both to the organization's list of clusters:
 
     ```sh
-    yq -i '.resources += ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'-apps.yaml"]' ${ORG_DIR}/workload-clusters/kustomization.yaml
+    yq -i '.resources |= ((. // []) + ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'-apps.yaml"] | unique)' \
+      ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
     Finally, commit and push:
@@ -594,7 +586,7 @@ kubectl gs get clusters -n org-${ORG_NAME}
 Once it's up, the cluster's `Kustomization` is `Ready`, and the apps' `Kustomization` after it:
 
 ```sh
-flux get kustomizations -n default | grep ${MC_NAME}-clusters-${WC_NAME}
+flux get kustomizations -n org-${ORG_NAME} | grep ${MC_NAME}-clusters-${WC_NAME}
 ```
 
 Once the cluster is up, log in to it:
@@ -905,40 +897,37 @@ the team from the cluster first, as that guide describes.
     kubectl get clusters.cluster.x-k8s.io ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
     ```
 
-1. Remove the cluster from the organization's list:
+1. Remove the cluster from the organization's list. The cluster's `Kustomization`s are in
+   `${ORG_DIR}/workload-clusters`, which the organisation's namespace `Kustomization` applies: the
+   cluster's, the apps', and the `-direct` one if the cluster has out-of-band resources, which it applies to the
+   workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree). Take
+   them out of that directory's list, save the names of the SOPS key Secrets they decrypt with, if any, and remove
+   their files:
 
     ```sh
-    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml" or . == "'"${WC_NAME}"'-apps.yaml"))' \
-      ${ORG_DIR}/workload-clusters/kustomization.yaml
+    unset KEYS KEY_FILE
+    for f in ${WC_NAME}.yaml ${WC_NAME}-apps.yaml ${WC_NAME}-direct.yaml; do
+      [ -f ${ORG_DIR}/workload-clusters/${f} ] || continue
+      yq -i 'del(.resources[] | select(. == "'"${f}"'"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
+      KEYS="${KEYS} $(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/workload-clusters/${f})"
+      git rm -q ${ORG_DIR}/workload-clusters/${f}
+    done
+    export KEYS=$(echo ${KEYS} | tr ' ' '\n' | sort -u | tr '\n' ' ')
     ```
 
-    If the cluster has out-of-band resources, its `-direct` `Kustomization` in
-    `${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-direct.yaml` applies them to the workload cluster, see
-    [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree). The organisation's
-    namespace `Kustomization` applies it. Skip to the cluster's files below if the cluster has none. Otherwise, take it
-    out of that directory's list, save the name of its SOPS key Secret, if it has one, and remove its file:
+    If `KEYS` isn't empty, the cluster's `Kustomization`s decrypt with key Secrets in the organisation's namespace,
+    which another cluster's `Kustomization`s may share. Check whether one does:
 
     ```sh
-    unset DIRECT_KEY KEY_FILE
-    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'-direct.yaml"))' \
-      ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
-    export DIRECT_KEY=$(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-direct.yaml)
-    git rm ${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-direct.yaml
+    yq ea 'select(.spec.decryption.secretRef.name as $n | strenv(KEYS) | split(" ") | any_c(. == $n)) |
+      filename + ": " + .spec.decryption.secretRef.name' ${ORG_DIR}/workload-clusters/*.yaml
     ```
 
-    If `DIRECT_KEY` isn't empty, the `-direct` `Kustomization` decrypts with a key Secret in the organisation's
-    namespace, which another cluster's `-direct` `Kustomization` may share. Check whether one does:
-
-    ```sh
-    yq ea 'select(.spec.decryption.secretRef.name == strenv(DIRECT_KEY)) | filename' \
-      ${ORG_DIR}/namespace/workload-clusters/*.yaml
-    ```
-
-    If this prints a file, that cluster uses the key: keep it and run `unset DIRECT_KEY`. Otherwise, find the key's
-    file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, in the organisation's `namespace/secrets`, where everything in
-    the organisation's namespace goes, and remove it and its entry in `namespace/secrets/kustomization.yaml`. That
-    file protects the keys as the management cluster's `secrets/kustomization.yaml` does, see
-    [Add an organization](./add_org.md):
+    If this prints a file, that cluster uses the key it names: keep the key, and take its name out of `KEYS`. Find the
+    file of each key that's left, such as `${WC_NAME}.gpgkey.enc.yaml`, in the organisation's `namespace/secrets`,
+    where everything in the organisation's namespace goes, and remove it and its entry in
+    `namespace/secrets/kustomization.yaml`. That file protects the keys as the management cluster's
+    `secrets/kustomization.yaml` does, see [Add an organization](./add_org.md):
 
     ```yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
@@ -952,21 +941,23 @@ the team from the cluster first, as that guide describes.
           # nobody can delete them, Flux included, until this label is removed
           giantswarm.io/prevent-deletion: "true"
     resources:
-      - ${WC_NAME}-direct.gpgkey.enc.yaml
+      - ${WC_NAME}.gpgkey.enc.yaml
     ```
 
-    Remove it:
+    Remove them:
 
     ```sh
-    export KEY_FILE=$(basename "$(yq ea 'select(.metadata.name == strenv(DIRECT_KEY)) | filename' ${ORG_DIR}/namespace/secrets/*.enc.yaml)")
-    yq -i 'del(.resources[] | select(. == strenv(KEY_FILE)))' ${ORG_DIR}/namespace/secrets/kustomization.yaml
-    git rm ${ORG_DIR}/namespace/secrets/${KEY_FILE}
+    for key in $(echo ${KEYS}); do
+      export KEY_FILE=$(basename "$(KEY=${key} yq ea 'select(.metadata.name == strenv(KEY)) | filename' ${ORG_DIR}/namespace/secrets/*.enc.yaml)")
+      yq -i 'del(.resources[] | select(. == strenv(KEY_FILE)))' ${ORG_DIR}/namespace/secrets/kustomization.yaml
+      git rm ${ORG_DIR}/namespace/secrets/${KEY_FILE}
+    done
     ```
 
-    Remove the cluster's files, then commit and push everything in one go:
+    Remove the cluster's directory, then commit and push everything in one go:
 
     ```sh
-    git rm -r ${WC_DIR} ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml && git commit -am "Delete workload cluster ${WC_NAME}" && git push
+    git rm -r ${WC_DIR} && git commit -am "Delete workload cluster ${WC_NAME}" && git push
     ```
 
 1. Make Flux read the change right away:
@@ -977,14 +968,15 @@ the team from the cluster first, as that guide describes.
     ```
 
     Flux deletes the cluster's `Kustomization`s, which delete the cluster's apps and configuration first, and the
-    `-direct` one deletes the out-of-band resources from the workload cluster. Wait until they're gone:
+    `-direct` one deletes the out-of-band resources from the workload cluster. Wait until they're gone. They're in the
+    organisation's namespace:
 
     ```sh
     kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME} \
-      kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n default --timeout=10m
+      kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n org-${ORG_NAME} --timeout=10m
     ```
 
-    If the cluster has a `-direct` `Kustomization`, wait for it too. It's in the organisation's namespace:
+    If the cluster has a `-direct` `Kustomization`, wait for it too:
 
     ```sh
     kubectl wait --for=delete kustomization/${MC_NAME}-clusters-${WC_NAME}-direct -n org-${ORG_NAME} --timeout=10m
@@ -995,12 +987,14 @@ the team from the cluster first, as that guide describes.
     its kubeconfig Secret, Flux can't reach the cluster any more, and the `-direct` `Kustomization` stays `Terminating`
     for good.
 
-    If `DIRECT_KEY` isn't empty, delete the key Secret now. Flux keeps it on the management cluster, as it does every
-    SOPS key Secret, see [How it works](./how-it-works.md). Remove its label first:
+    If `KEYS` isn't empty, delete the key Secrets now. Flux keeps them on the management cluster, as it does every
+    SOPS key Secret, see [How it works](./how-it-works.md). Remove their label first:
 
     ```sh
-    kubectl label secret ${DIRECT_KEY} -n org-${ORG_NAME} giantswarm.io/prevent-deletion-
-    kubectl delete secret ${DIRECT_KEY} -n org-${ORG_NAME}
+    for key in $(echo ${KEYS}); do
+      kubectl label secret ${key} -n org-${ORG_NAME} giantswarm.io/prevent-deletion-
+      kubectl delete secret ${key} -n org-${ORG_NAME}
+    done
     ```
 
 1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
@@ -1008,7 +1002,7 @@ the team from the cluster first, as that guide describes.
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
-        -l 'kustomize.toolkit.fluxcd.io/name in ('"${MC_NAME}-clusters-${WC_NAME},${MC_NAME}-clusters-${WC_NAME}-apps"'),kustomize.toolkit.fluxcd.io/namespace=default' \
+        -l 'kustomize.toolkit.fluxcd.io/name in ('"${MC_NAME}-clusters-${WC_NAME},${MC_NAME}-clusters-${WC_NAME}-apps"'),kustomize.toolkit.fluxcd.io/namespace=org-'"${ORG_NAME}" \
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 

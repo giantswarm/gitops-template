@@ -1,3 +1,8 @@
+# The workload clusters' Flux Kustomizations, one or more per cluster directory here. The
+# organisation's namespace Kustomization, in ../namespace.yaml, applies them into the
+# organisation's namespace, as ../namespace/kustomization.yaml lists this directory; the management
+# cluster's Kustomization doesn't. They apply the cluster directories as the organisation's
+# `automation` ServiceAccount, and decrypt with the cluster keys in ../namespace/secrets.
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization
@@ -15,4 +20,5 @@ resources:
   - WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
   - WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml
   - WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml
+  - WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
   - WC_NAME_SCHEDULED_UPGRADES.yaml

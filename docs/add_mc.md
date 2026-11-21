@@ -117,14 +117,22 @@ en- and decrypt real user-related data.
     gpg --import
     ```
 
-1. Add the automatic key selection rule to the `creation_rules` list of the
-   [SOPS configuration file](/.sops.yaml). `yq` creates the list if the file is new or empty:
+1. Add the automatic key selection rules to the `creation_rules` list of the
+   [SOPS configuration file](/.sops.yaml): one for the management cluster's `secrets`, and one for the workload
+   clusters' SOPS keys, which go in their organisation's `namespace/secrets`, see
+   [SOPS keys](./reference/sops-keys.md#encryption-rules). `sops` uses the first rule that matches a file, so the second
+   one has to stay ahead of any rule of an organisation's own key for `namespace/secrets`. `yq` creates the list if the
+   file is new or empty:
 
     ```sh
     touch .sops.yaml
     yq -i '.creation_rules += [{
       "encrypted_regex": "^(data|stringData)$",
       "path_regex": "management-clusters/'"${MC_NAME}"'/secrets/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }, {
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/[^/]+/namespace/secrets/.*\\.(gpg|age)key\\.enc\\.yaml",
       "pgp": "'"${KEY_FP}"'"
     }]' .sops.yaml
     ```

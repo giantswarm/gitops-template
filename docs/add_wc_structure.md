@@ -89,29 +89,58 @@ Kubernetes Secret, you MUST not create multiple Secrets.
     export KEY_FP=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
-1. Save the private key as a Kubernetes Secret into the MC `secrets` directory:
+1. The private key goes into a Kubernetes Secret in the organisation's `namespace/secrets` directory, so it is in
+   the organisation's namespace, with the cluster's `Kustomization`s that decrypt with it. If the organisation has
+   no `namespace/secrets` yet, create it as [Add an organization](./add_org.md) does: its `kustomization.yaml` keeps
+   Flux from deleting the keys, and `namespace/kustomization.yaml` lists it:
+
+    ```sh
+    export ORG_SECRETS=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/secrets
+    if [ ! -f ${ORG_SECRETS}/kustomization.yaml ]; then
+      mkdir -p ${ORG_SECRETS}
+      yq -i '.resources += ["secrets"]' ${ORG_SECRETS}/../kustomization.yaml
+      cat <<EOF > ${ORG_SECRETS}/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    # Flux decrypts with the SOPS keys here: deleting one stops GitOps for what uses it
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
+    labels:
+      - pairs:
+          giantswarm.io/managed-by: flux
+          # nobody can delete them, Flux included, until this label is removed
+          giantswarm.io/prevent-deletion: "true"
+    resources: []
+    EOF
+    fi
+    ```
+
+1. Save the private key as a Kubernetes Secret into that directory, in the organisation's namespace:
 
     ```sh
     gpg --export-secret-keys --armor "${KEY_FP}" |
     kubectl create secret generic sops-gpg-${WC_NAME} \
     --dry-run=client \
-    --namespace=default \
+    --namespace=org-${ORG_NAME} \
     --from-file=${WC_NAME}.main.asc=/dev/stdin \
-    -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
+    -o yaml > ${ORG_SECRETS}/${WC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Add the newly created secret to the resources of the `management-clusters/${MC_NAME}/secrets/kustomization.yaml`:
+1. Add the newly created secret to the resources of `${ORG_SECRETS}/kustomization.yaml`:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.gpgkey.enc.yaml\" | .resources style=\"\"" \
-    management-clusters/${MC_NAME}/secrets/kustomization.yaml
+    ${ORG_SECRETS}/kustomization.yaml
     ```
 
-1. Import the master GPG public key and encrypt the Kubernetes Secret with it:
+1. Import the master GPG public key and encrypt the Kubernetes Secret with it. The management cluster's rule for the
+   workload clusters' keys in `namespace/secrets`, from [Add a new Management Cluster](./add_mc.md), picks the master
+   key. If your `.sops.yaml` doesn't have it, add it ahead of any rule of an organisation's own key for
+   `namespace/secrets`, see [SOPS keys](./reference/sops-keys.md#encryption-rules):
 
     ```sh
     gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
-    sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${WC_NAME}.gpgkey.enc.yaml
+    sops --encrypt --in-place ${ORG_SECRETS}/${WC_NAME}.gpgkey.enc.yaml
     ```
 
 1. As a backup, save the private key to an external encrypted storage. As an example, you can add the private key
@@ -150,10 +179,10 @@ Kubernetes Secret, you MUST not create multiple Secrets.
 
 1. Commit the encrypted `${WC_NAME}.gpgkey.enc.yaml` in the same commit as the `secrets/kustomization.yaml` that
    lists it, together with the public key and `.sops.yaml`. If the list reaches the repository without the file,
-   the Management Cluster's Kustomization fails to build and stops reconciling:
+   the organisation's namespace Kustomization fails to build and stops reconciling:
 
     ```sh
-    git add management-clusters/${MC_NAME}/secrets \
+    git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
     management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc \
     .sops.yaml
     git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
@@ -172,25 +201,27 @@ the GPG keys of other clusters. The example `WC_NAME` cluster uses one; see [SOP
     export AGE_PUBLIC_KEY=$(age-keygen -y ${WC_NAME}.agekey)
     ```
 
-1. Save the private key as a Kubernetes Secret into the MC `secrets` directory. kustomize-controller reads age keys
-   from Secret keys that end in `.agekey`:
+1. Save the private key as a Kubernetes Secret into the organisation's `namespace/secrets` directory, in the
+   organisation's namespace. Create the directory first if the organisation doesn't have it, as for the GPG key above.
+   kustomize-controller reads age keys from Secret keys that end in `.agekey`:
 
     ```sh
+    export ORG_SECRETS=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/secrets
     kubectl create secret generic sops-age-${WC_NAME} \
     --dry-run=client \
-    --namespace=default \
+    --namespace=org-${ORG_NAME} \
     --from-file=${WC_NAME}.agekey=${WC_NAME}.agekey \
-    -o yaml > management-clusters/${MC_NAME}/secrets/${WC_NAME}.agekey.enc.yaml
+    -o yaml > ${ORG_SECRETS}/${WC_NAME}.agekey.enc.yaml
     ```
 
-1. Add it to the resources of `management-clusters/${MC_NAME}/secrets/kustomization.yaml`, and encrypt it with the
-   master key:
+1. Add it to the resources of `${ORG_SECRETS}/kustomization.yaml`, and encrypt it with the master key, which the
+   management cluster's rule for the workload clusters' keys picks, as for the GPG key above:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.agekey.enc.yaml\" | .resources style=\"\"" \
-    management-clusters/${MC_NAME}/secrets/kustomization.yaml
+    ${ORG_SECRETS}/kustomization.yaml
     gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
-    sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${WC_NAME}.agekey.enc.yaml
+    sops --encrypt --in-place ${ORG_SECRETS}/${WC_NAME}.agekey.enc.yaml
     ```
 
 1. Save `${WC_NAME}.agekey` to an external encrypted storage, as for the GPG key above, then delete the file:
@@ -214,7 +245,7 @@ the GPG keys of other clusters. The example `WC_NAME` cluster uses one; see [SOP
 1. Commit the encrypted Secret, `secrets/kustomization.yaml`, the public key and `.sops.yaml` together:
 
     ```sh
-    git add management-clusters/${MC_NAME}/secrets \
+    git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
     management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.agekey.pub \
     .sops.yaml
     git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
@@ -332,13 +363,17 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create Kustomization CR for it. With `prune: true`, Flux deletes
-   what you delete from the cluster's files, but not the cluster, if its `HelmRelease` has the
+1. Go back to the `workload-clusters` directory and create the cluster's Flux `Kustomization` there, next to the
+   cluster's directory. The organisation's namespace `Kustomization` applies it into the organisation's namespace, as
+   its `namespace/kustomization.yaml` lists `../workload-clusters`, where it runs as that namespace's `automation`
+   ServiceAccount and decrypts with a key Secret in the organisation's `namespace/secrets`. It names no namespace, reads
+   the `GitRepository` in `default`, and has the organisation's namespace `Kustomization` in `dependsOn`, so that one
+   applies every commit first. Its `organization` is `${organization}`, which the organisation's namespace
+   `Kustomization` fills in: the `\$` keeps it as it is in the file. With `prune: true`, Flux deletes what you delete
+   from the cluster's files, but not the cluster, if its `HelmRelease` has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
-   cluster bases of this repository. See
-   [How it works](./how-it-works.md). Every Flux `Kustomization` in the organisation's build writes `organization`:
-   the organisation's `kustomization.yaml` updates it to the name of the `Organization`, and fails to build without it,
-   see [The organisation's name](./reference/repo-structure.md#the-organisations-name). Use one of the templates:
+   cluster bases of this repository. See [How it works](./how-it-works.md) and
+   [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
@@ -350,20 +385,23 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
-        namespace: default
       spec:
+        dependsOn:
+          - name: ${MC_NAME}-organization-${ORG_NAME}
+            namespace: default
         interval: 10m
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
-            organization: "${ORG_NAME}"
+            organization: "\${organization}"
         prune: true
         retryInterval: 1m
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
           name: ${GIT_REPOSITORY_NAME}
+          namespace: default
         timeout: 2m
       EOF
       ```
@@ -379,51 +417,52 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
       kind: Kustomization
       metadata:
         name: ${MC_NAME}-clusters-${WC_NAME}
-        namespace: default
       spec:
         decryption:
           provider: sops
           secretRef:
             name: sops-gpg-${WC_NAME}
+        dependsOn:
+          - name: ${MC_NAME}-organization-${ORG_NAME}
+            namespace: default
         interval: 10m
         path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}"
         postBuild:
           substitute:
             cluster_name: "${WC_NAME}"
-            organization: "${ORG_NAME}"
+            organization: "\${organization}"
         prune: true
         retryInterval: 1m
         serviceAccountName: automation
         sourceRef:
           kind: GitRepository
           name: ${GIT_REPOSITORY_NAME}
+          namespace: default
         timeout: 2m
       EOF
       ```
 
    If the cluster's `Kustomization` waits for the cluster with a `Cluster` health check, as
-   [WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) does, write the
-   health check's namespace as the fixed placeholder `org-ORG_NAME`, and give the `Kustomization` the label
-   `giantswarm.io/health-check-cluster: "true"`. The organisation's `kustomization.yaml` puts the organisation's name
-   into the placeholder only with the label. Copying `WC_NAME.yaml` carries the label. Without it, the health check
-   keeps the placeholder namespace, and the `Kustomization` never gets `Ready`. With the label, keep the placeholder:
-   the replacement changes the second `-`-separated part of any namespace, so a real `org-acme-corp` would become
-   `org-acme-corp-corp`. A health check that names the real namespace works without the label.
+   [WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) does,
+   write the health check's namespace as `org-${organization}`, which the organisation's namespace `Kustomization`
+   fills in too.
 
 1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
    directory and referencing the right `kubeconfig` Secret. It lives in the namespace of that Secret, which is the
-   organization namespace for CAPI clusters, so it goes in the organisation's `namespace/workload-clusters`
-   directory: the organisation's namespace `Kustomization` applies it there, and fills in `${organization}`. It names
-   no namespace. The `\$` keeps `${organization}` as it is in the file:
+   organization namespace for CAPI clusters, where the organisation's namespace `Kustomization` puts it from
+   `workload-clusters`, as it does the cluster's, and fills in `${organization}`. It names
+   no namespace, and depends on the organisation's namespace `Kustomization`, as the cluster's does:
 
    ```sh
-   mkdir -p ../namespace/workload-clusters
-   cat <<EOF > ../namespace/workload-clusters/${WC_NAME}-direct.yaml
+   cat <<EOF > ${WC_NAME}-direct.yaml
    apiVersion: kustomize.toolkit.fluxcd.io/v1
    kind: Kustomization
    metadata:
      name: ${MC_NAME}-clusters-${WC_NAME}-direct
    spec:
+     dependsOn:
+       - name: ${MC_NAME}-organization-${ORG_NAME}
+         namespace: default
      interval: 10m
      kubeConfig:
        secretRef:
@@ -446,8 +485,9 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
 
    **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
    in the above command to tell Flux where to look for the `kubeconfig`. A legacy cluster's `kubeconfig` Secret
-   lives in `default`: write the file in `workload-clusters` instead, with `namespace: default` and
-   `organization: "ORG_NAME"`, as the cluster's other Kustomizations have, and list it there.
+   lives in `default`: write the file in the organisation's directory instead, with `namespace: default`,
+   `organization: "ORG_NAME"` and no `dependsOn`, and list it in the organisation's `kustomization.yaml`, so the
+   management cluster's `Kustomization` applies it.
 
 ### Configuring default apps
 
@@ -457,11 +497,15 @@ The default apps of a cluster are part of its cluster chart. Configure them in t
 
 ## MC configuration
 
-1. Still in the `workload-clusters` directory, edit the mandatory `kustomization.yaml` adding the WC's Kustomization
-   CR as a resource:
+1. Still in the `workload-clusters` directory, list the cluster's `Kustomization`, and the out-of-band one if you
+   created it, in its `kustomization.yaml`, and list `../workload-clusters` in `namespace/kustomization.yaml` if it
+   isn't there yet:
 
     ```sh
+    touch kustomization.yaml
     yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
+    # yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" kustomization.yaml
+    yq -i eval '.resources |= ((. // []) + ["../workload-clusters"] | unique)' ../namespace/kustomization.yaml
     ```
 
     The resulting file should look like this:
@@ -471,17 +515,6 @@ The default apps of a cluster are part of its cluster chart. Configure them in t
     kind: Kustomization
     resources:
     - ${WC_NAME}.yaml
-    ```
-
-1. If you have created the out-of-band Kustomization CR as well, list it in
-   `namespace/workload-clusters/kustomization.yaml`, and list `workload-clusters` in `namespace/kustomization.yaml`
-   if it isn't there yet:
-
-    ```sh
-    touch ../namespace/workload-clusters/kustomization.yaml
-    yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" \
-      ../namespace/workload-clusters/kustomization.yaml
-    yq -i eval '.resources |= ((. // []) + ["workload-clusters"] | unique)' ../namespace/kustomization.yaml
     ```
 
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should be ready to reconcile

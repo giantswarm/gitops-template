@@ -8,11 +8,11 @@ import pytest
 from root_build import (
     MC_DIR,
     ORGANIZATION_NAMESPACE_LABEL,
-    REPO_DIR,
     build,
     generated_resources,
     misplaced_objects,
     namespace_build_problems,
+    namespace_builds,
     organization_namespace_problems,
     root_dependency_problems,
     root_kustomization_name,
@@ -179,12 +179,8 @@ def test_organisation_namespace_builds_stay_in_the_namespace(
 ) -> None:
     problems = [
         problem
-        for k in root_build
-        if (k.get("metadata", {}).get("labels") or {}).get(ORGANIZATION_NAMESPACE_LABEL)
-        == "true"
-        for problem in namespace_build_problems(
-            build(REPO_DIR / k["spec"]["path"]), k["spec"]["targetNamespace"]
-        )
+        for k, b in namespace_builds(root_build)
+        for problem in namespace_build_problems(b, k["spec"]["targetNamespace"])
     ]
     assert not problems, (
         "Objects in an organisation's namespace/ name another namespace: " f"{problems}"

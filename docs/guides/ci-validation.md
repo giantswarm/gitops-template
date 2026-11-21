@@ -34,12 +34,14 @@ The workflow offers the following jobs:
   `ORG_NAME.yaml` out of the `GitRepository` with `spec.ignore`, and drops an app, `apps/hello-world-from-template`,
   from what the cluster's apps `Kustomization` builds with `$patch: delete` patches in its `spec.patches`, as
   `apps/kustomization.yaml` lists the app and `spec.ignore` can't change that list. The app has to go. The
-  organisation's `kustomization.yaml` takes the organisation's name from the `Organization`, so without
-  `ORG_NAME.yaml` the management cluster's `Kustomization`, `mc-name-gitops`, has to report that its build failed
-  and prune nothing: its inventory keeps the `Organization` and the cluster's `Kustomization`s, and they stay. Then
-  it deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease`
-  and `OCIRepository` have to stay. It deletes what the other tests check, so it runs last and fails if they didn't
-  run before it.
+  organisation's `kustomization.yaml` takes the organisation's name from the `Organization`, so without `ORG_NAME.yaml`
+  the management cluster's `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its
+  inventory keeps the `Organization` and the organisation's namespace `Kustomization`, and they stay. That one, which
+  depends on `mc-name-gitops`, has to report `DependencyNotReady` and prune nothing either: its inventory keeps the
+  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Then it
+  deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
+  `OCIRepository` have to stay. It deletes what the other tests check, so it runs last and fails if they didn't run
+  before it.
 
 You can check a demo PR where this is used in [PR 44](https://github.com/giantswarm/gitops-template/pull/44).
 
@@ -245,10 +247,12 @@ so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py
 1. Without asking Flux to reconcile, it waits up to 150 seconds, two `retryInterval`s and a margin, for the
    organisation's `Kustomization` to get `Ready` on its own retry.
 
-The other checks run after it. The cluster `Kustomization`s, in `default`, apply into `org-org-name` too, so they also
-fail until the namespace exists and recover on their own retries. `tests/ats/test_root_build.py` checks, without a
-cluster, that the build of `MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each
-organisation's namespace `Kustomization` applies into the organisation's namespace.
+The other checks run after it. The cluster `Kustomization`s are in the organisation's `namespace` directory, so they
+appear only once the organisation's `Kustomization` is `Ready`, and run as `org-org-name/automation`.
+`tests/ats/test_root_build.py` checks, without a cluster, that the build of `MC_NAME.yaml` holds only `Organization`s
+and objects in `default`, and that each organisation's namespace `Kustomization` applies into the organisation's
+namespace. The `Kustomization`s it applies have to read the repository's `GitRepository` in `default`, depend on it,
+directly or through another of them, and decrypt with a key Secret it applies too.
 
 ### The rights of the `automation` ServiceAccounts
 

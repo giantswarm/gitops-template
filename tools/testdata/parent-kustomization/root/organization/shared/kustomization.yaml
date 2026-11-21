@@ -1,0 +1,7 @@
+# Listed by two builds: ../kustomization.yaml, which the root applies, and
+# ../namespace/kustomization.yaml, which parent-namespace applies. Two Kustomizations would apply
+# the Kustomization in shared.yaml, so fake-flux has to report it rather than pick one.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - shared.yaml

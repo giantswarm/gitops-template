@@ -433,14 +433,17 @@ function test() {
 		# parent applies it: in the namespace the parent's `targetNamespace` puts it in, with the
 		# values the parent's `postBuild` substitutes, and the parent itself as the replacements
 		# of its own parent's build set it. An organisation's namespace Kustomization applies its
-		# -direct Kustomizations this way. The checks look the Kustomization in namespace/ up by
-		# the namespace Flux applies it in, and by none, as its file names none.
+		# workload clusters' Kustomizations this way, from ../workload-clusters. The checks look the
+		# Kustomizations in namespace/ and ../sibling up by the namespace Flux applies them in, and
+		# by none, as their files name none.
 		fixture_dir="${tmp_dir}/parent-kustomization"
 		git_fixture "${fixture_dir}"
 		cp -r "$(dirname $0)/testdata/parent-kustomization/." "${fixture_dir}"
 		for check in "parent-direct:org-from-the-parent|name: parent-direct$" \
 			"parent-direct:|name: parent-direct$" \
-			"parent-namespace:default|name: parent-direct$"; do
+			"parent-namespace:default|name: parent-direct$" \
+			"parent-sibling:|name: parent-sibling$" \
+			"parent-sibling:org-from-the-parent|name: parent-sibling$"; do
 			lookup="${check%%|*}"
 			echo -n "fake-flux, a Kustomization its parent applies, ${lookup}: "
 			status=0
@@ -483,6 +486,33 @@ function test() {
 			echo "OK, not found"
 		else
 			echo "found:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+
+		# The parent is the Kustomization whose build applies the file, not one whose path holds
+		# it: namespace/unlisted.yaml is in parent-namespace's path, but its build doesn't list it,
+		# so nothing puts parent-unlisted in org-from-the-parent.
+		echo -n "fake-flux, a Kustomization its parent's path holds but its build leaves out: "
+		status=0
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build parent-unlisted:org-from-the-parent -M 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "No kustomization found" <<<"${output}"; then
+			echo "OK, not found"
+		else
+			echo "found:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+
+		# Two builds list shared/: two Kustomizations would apply parent-shared, which fake-flux
+		# reports instead of building it as either applies it.
+		echo -n "fake-flux, a Kustomization two builds apply: "
+		status=0
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build parent-shared: -M 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "is applied by more than one Kustomization" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
 			echo "${output}"
 			has_validation_errors=1
 		fi

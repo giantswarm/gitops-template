@@ -398,7 +398,9 @@ they only get the chart's default node pools.
 
 Just as any other Workload Clusters we define them in
 [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
-/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters).
+/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters), with their Flux `Kustomization`s next to
+them, which the organisation's namespace `Kustomization` applies into the organisation's namespace, see
+[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
 
 Relative to the root of the repository, let's change our working directory to our `workload-clusters` folder.
 
@@ -406,7 +408,9 @@ Relative to the root of the repository, let's change our working directory to ou
 cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
 ```
 
-Then let's tell Flux to manage our cluster instance.
+Then let's tell Flux to manage our cluster instance. The `Kustomization` names no namespace, reads the `GitRepository`
+in `default`, depends on the organisation's namespace `Kustomization`, and gets `${organization}` from it: the `\$`
+keeps it as it is in the file.
 
 ```sh
 cat <<EOF > HELLO_APP_DEV_CLUSTER_1.yaml
@@ -414,21 +418,24 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: ${MC_NAME}-clusters-hello-app-dev-1
-  namespace: default
 spec:
+  dependsOn:
+    - name: ${MC_NAME}-organization-${ORG_NAME}
+      namespace: default
   interval: 10m
   path: "./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/HELLO_APP_DEV_CLUSTER_1"
   postBuild:
     substitute:
       cluster_description: "description"
       cluster_name: "hello-app-dev-1"  # must be a valid Kubernetes name
-      organization: "${ORG_NAME}"
+      organization: "\${organization}"
   prune: true
   retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
     name: ${GIT_REPOSITORY_NAME}
+    namespace: default
   timeout: 2m
 EOF
 ```

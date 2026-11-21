@@ -1,0 +1,9 @@
+# An assertion of the Kustomization in ../../root/organization/namespace/direct.yaml, as the kind
+# test keeps them in tests/ats/assertions: fake-flux must not take it for a Kustomization to build.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: parent-direct
+  namespace: org-from-the-parent
+spec:
+  path: ./root/organization/direct

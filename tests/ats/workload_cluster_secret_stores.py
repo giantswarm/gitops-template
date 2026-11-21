@@ -21,7 +21,7 @@ from eso_ready import wait_ready
 from workload_cluster_secret_push import check_secret_pushed
 from workload_cluster_secret_read import NAMESPACE, read_through_store
 
-# the store, in organizations/ORG_NAME/namespace/workload-cluster-secret-stores, that reads the
+# the store, in organizations/ORG_NAME/multicluster/secret-stores, that reads the
 # organisation namespace's own Secrets
 ORGANIZATION_STORE = "default"
 AUTH_KEYS = {"tls.crt", "tls.key", "ca.crt", "server"}

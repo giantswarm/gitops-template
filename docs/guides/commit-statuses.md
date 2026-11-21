@@ -12,14 +12,14 @@ Flux's notification-controller can tell you on GitHub whether Flux applied a com
 a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`s, this
 repository's Flux `Kustomization`s in the `default` namespace and in the organisation's namespace report on the commit
 they applied: the management cluster's, in `MC_NAME.yaml`, each organisation's namespace `Kustomization`, in
-`namespace.yaml`, the workload clusters', in the `workload-clusters` directories, and the `-direct` ones. Each
+`namespace.yaml`, and the workload clusters', in the organisations' `workload-clusters` directories. Each
 `Kustomization` shows as its own check on the commit, green once it applied the commit and red when it failed. An event
 source without a `namespace` matches only the `Alert`'s own namespace, and an `Alert` reaches only a `Provider` in its
 own namespace. So the management cluster's `Alert` covers `default`, and each organisation has its own `Alert`,
 `Provider` and token in its namespace. Neither covers `flux-giantswarm`, where Giant Swarm's own `Kustomizations` live,
 so keep that namespace out of them. The organisation's `Alert` names this repository's `Kustomization`s in its
-namespace, the `-direct` ones, instead of `name: "*"`: an application team's `Kustomization` lives there too, but reads
-the team's repository, see [Application teams](./app-teams.md). List each `-direct` `Kustomization` you add.
+namespace, the workload clusters', instead of `name: "*"`: an application team's `Kustomization` lives there too, but
+reads the team's repository, see [Application teams](./app-teams.md). List each cluster `Kustomization` you add.
 
 A `Receiver` does the opposite: GitHub calls it on a push, and Flux fetches the repository at once instead of
 waiting for the `GitRepository`'s interval. It's optional.
@@ -79,7 +79,7 @@ yq -i '.resources += ["notifications"]' ${ORG_DIR}/kustomization.yaml
 
 In both `commit-status-externalsecret.yaml`, set `secretStoreRef` to your `SecretStore` in the same namespace,
 `default` or `org-${ORG_NAME}`, and `remoteRef.key` to the name of the token in your secret manager. In the
-organisation's `commit-status-alert.yaml`, name your `-direct` `Kustomization`s. In both `commit-status-provider.yaml`,
+organisation's `commit-status-alert.yaml`, name your cluster `Kustomization`s. In both `commit-status-provider.yaml`,
 set the repository:
 
 ```sh
@@ -91,7 +91,7 @@ done
 ### Token encrypted with SOPS
 
 If you keep secrets in the repository, encrypted, as in [Getting started with SOPS](../getting-started-sops.md),
-copy the `Provider`s and the `Alert`s only, and name your `-direct` `Kustomization`s in the organisation's `Alert`. The
+copy the `Provider`s and the `Alert`s only, and name your cluster `Kustomization`s in the organisation's `Alert`. The
 organisation's `notifications/kustomization.yaml` then lists the encrypted Secret instead of the `ExternalSecret`:
 
 ```sh

@@ -1,0 +1,18 @@
+# No namespace: the parent whose build lists this directory, parent-namespace, sets it with
+# `targetNamespace`, though its path doesn't hold this file. `${organization}` is the parent's.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: parent-sibling
+spec:
+  interval: 1m
+  path: ./root/organization/direct
+  postBuild:
+    substitute:
+      cluster_name: "parent-sibling"
+      organization: "${organization}"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: parent-kustomization
+    namespace: default

@@ -86,7 +86,7 @@ def delete_cluster_kustomizations(
     management cluster, and what the -direct one applied to the workload cluster.
 
     The management cluster's Kustomization, and the organisation's namespace Kustomization, which
-    applies the -direct one, are suspended first, so they don't create them again.
+    applies all three, are suspended first, so they don't create them again.
     """
     suspend(kustomization(api, ROOT_KUSTOMIZATION))
     suspend(kustomization(api, ORGANIZATION_KUSTOMIZATION))

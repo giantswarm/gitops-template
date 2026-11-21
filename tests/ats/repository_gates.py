@@ -5,18 +5,27 @@ from pathlib import Path
 
 import yaml
 
-WORKLOAD_CLUSTERS_DIR = (
+ORG_DIR = (
     Path(__file__).resolve().parent
-    / "../../management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters"
+    / "../../management-clusters/MC_NAME/organizations/ORG_NAME"
 )
+# the workload clusters' Flux Kustomizations, next to the directories they apply, one per cluster.
+#  The organisation's namespace Kustomization applies them into its namespace, through
+#  namespace/kustomization.yaml, which lists ../workload-clusters.
+WORKLOAD_CLUSTERS_DIR = ORG_DIR / "workload-clusters"
+# the organisation's namespace Kustomization, which every cluster Kustomization depends on
+ORGANIZATION_KUSTOMIZATION_FILE = ORG_DIR / "namespace.yaml"
 # for each `Cluster`: the Kustomization that health-checks it, then the ones that depend on
 #  that one, as `(name, path)`
 Gates = dict[str, list[tuple[str, str]]]
 
 
-def gates_of(kustomizations: list[dict]) -> tuple[Gates, list[str]]:
+def gates_of(
+    kustomizations: list[dict], organization_kustomization: str
+) -> tuple[Gates, list[str]]:
     """The gates of `kustomizations`, and the Kustomizations that depend on one without a
-    `Cluster` health check."""
+    `Cluster` health check. A dependency on the organisation's namespace Kustomization,
+    `organization_kustomization`, which applies them, gates no cluster."""
     clusters = {
         k["metadata"]["name"]: check["name"]
         for k in kustomizations
@@ -30,6 +39,8 @@ def gates_of(kustomizations: list[dict]) -> tuple[Gates, list[str]]:
         if name in clusters:
             gates[clusters[name]].insert(0, (name, k["spec"]["path"]))
         for dependency in k["spec"].get("dependsOn") or []:
+            if dependency["name"] == organization_kustomization:
+                continue
             if dependency["name"] not in clusters:
                 problems.append(
                     f"Kustomization '{name}' depends on '{dependency['name']}', which doesn't "
@@ -48,4 +59,6 @@ def gates_in_repository() -> tuple[Gates, list[str]]:
         if file.name != "kustomization.yaml":
             with file.open() as f:
                 kustomizations.append(yaml.safe_load(f))
-    return gates_of(kustomizations)
+    with ORGANIZATION_KUSTOMIZATION_FILE.open() as f:
+        organization_kustomization = yaml.safe_load(f)["metadata"]["name"]
+    return gates_of(kustomizations, organization_kustomization)
