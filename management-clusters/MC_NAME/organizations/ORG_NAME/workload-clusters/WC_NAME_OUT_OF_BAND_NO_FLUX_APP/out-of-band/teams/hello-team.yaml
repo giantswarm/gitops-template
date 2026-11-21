@@ -1,7 +1,7 @@
 # The scope of the hello-team application team in the workload cluster, which the platform team
 # owns: the team's namespace, and the rights there of the organisation's automation
 # ServiceAccount, which the team's Kustomization, in teams/hello-team, runs as. See
-# docs/guides/app-teams.md.
+# docs/tutorials/advanced/teams.md.
 apiVersion: v1
 kind: Namespace
 metadata:

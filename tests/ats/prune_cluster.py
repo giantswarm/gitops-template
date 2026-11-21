@@ -1,15 +1,16 @@
 """P3: deleting a cluster's Kustomizations deletes what they applied, except the cluster.
 
 test_prune deletes the cluster as the getting-started guides do. It removes the cluster's
-application team first, as docs/guides/app-teams.md describes: the team's Kustomization deletes
-its workload from the workload cluster as the organisation's automation ServiceAccount, through
-a RoleBinding the cluster's -direct Kustomization applies, so the team has to go before the
-RoleBinding does. Then it deletes the cluster's three Kustomizations, the cluster's, the one of
-its secondary apps and the -direct one, as deleting their files from Git does, and waits until
-the first two are gone, then the -direct one. Flux deletes everything they applied, except what
-has `kustomize.toolkit.fluxcd.io/prune: disabled`: the cluster's HelmRelease and OCIRepository
-stay. The -direct Kustomization deletes what it applied from the workload cluster, which it
-reaches through the cluster's kubeconfig Secret, so it has to be gone before the cluster is.
+application team first, as docs/tutorials/advanced/teams.md describes: the team's Kustomization
+deletes its workload from the workload cluster as the organisation's automation ServiceAccount,
+through a RoleBinding the cluster's -direct Kustomization applies, so the team has to go before
+the RoleBinding does. Then it deletes the cluster's three Kustomizations, the cluster's, the one
+of its secondary apps and the -direct one, as deleting their files from Git does, and waits
+until the first two are gone, then the -direct one. Flux deletes everything they applied, except
+what has `kustomize.toolkit.fluxcd.io/prune: disabled`: the cluster's HelmRelease and
+OCIRepository stay. The -direct Kustomization deletes what it applied from the workload cluster,
+which it reaches through the cluster's kubeconfig Secret, so it has to be gone before the
+cluster is.
 """
 
 import pykube

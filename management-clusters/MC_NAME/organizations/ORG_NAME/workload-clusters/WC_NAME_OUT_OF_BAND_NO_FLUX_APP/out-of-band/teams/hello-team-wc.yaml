@@ -1,5 +1,5 @@
 # The hello-team-wc application team, whose Flux runs in the workload cluster: the second mode of
-# docs/guides/app-teams.md. Flux on the management cluster, through the cluster's -direct
+# docs/tutorials/advanced/teams.md. Flux on the management cluster, through the cluster's -direct
 # Kustomization, delivers the team's namespace, ServiceAccount and RoleBinding, and its
 # GitRepository and Kustomization, which the workload cluster's Flux reconciles. The platform team
 # owns these objects; the team owns its repository.
@@ -41,7 +41,7 @@ spec:
     # renovate: datasource=github-tags depName=stefanprodan/podinfo
     tag: "6.17.0"  # TODO: the branch or tag of the team's repository that Flux applies
   # TODO: the team's repository. A private one needs `secretRef`, to a Secret in this namespace
-  #  that this file delivers too, encrypted, see docs/guides/app-teams.md.
+  #  that this file delivers too, encrypted, see docs/tutorials/advanced/teams.md.
   url: https://github.com/stefanprodan/podinfo
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
