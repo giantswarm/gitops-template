@@ -52,7 +52,7 @@ jobs:
   validate:
     needs: changes
     if: needs.changes.outputs.markdown_only != 'true'
-    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@f9fc5718dfa9da23ce672680d4c2f108d8e80eb3 # github-workflows#389, test only
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@57aa9e69209f7a2dbff18298b774a4b5c325508e # github-workflows#389, test only
     with:
       # Matches [requires] python_version in tests/ats/Pipfile.
       # renovate: datasource=python-version depName=python versioning=python
