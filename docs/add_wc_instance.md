@@ -14,7 +14,7 @@ An example of a workload cluster instance created from the CAPA cluster base is 
 
 ## Creating a cluster from the CAPA cluster base
 
-The [CAPA cluster base](/bases/clusters/capa/template) deploys the `release-aws` chart with a Flux `OCIRepository` and
+The [CAPA cluster base](/bases/clusters/capa) deploys the `release-aws` chart with a Flux `OCIRepository` and
 `HelmRelease`. Its chart version is the Giant Swarm release, so the release lives in the Kustomization CR in git, and
 you upgrade the cluster by changing it there. The chart sets the release in the values itself.
 
@@ -41,7 +41,7 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     ```
 
     ```sh
-    export CLUSTER_PATH=bases/clusters/capa/template
+    export CLUSTER_PATH=bases/clusters/capa
     ```
 
     Pick the cluster's region from [bases/environments/regions](/bases/environments/regions). Every cluster needs one:
@@ -52,7 +52,7 @@ CLI create them. It needs kubectl-gs 6.0.0 or newer, see [kubectl-gs version](./
     export REGION=eu_central
     ```
 
-    To create a cluster together with a set of apps from an environment template instead, see
+    To pin the release and app versions of a cluster to a stage, such as dev, staging or prod, see
     [Add Workload Cluster environments](./guides/environments.md).
 
 1. Go to the Workload Cluster definition directory:

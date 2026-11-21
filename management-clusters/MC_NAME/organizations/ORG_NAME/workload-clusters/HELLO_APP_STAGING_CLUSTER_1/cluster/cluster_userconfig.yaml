@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  values: ""
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: ${cluster_name}-cluster-userconfig
+  namespace: org-${organization}

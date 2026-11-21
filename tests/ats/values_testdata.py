@@ -30,6 +30,6 @@ def ref(name: str, kind: str = "ConfigMap", **extra: object) -> dict:
     return {"kind": kind, "name": name, "valuesKey": "values", **extra}
 
 
-# the stage's node pool and a region's extra one, as the examples set them
+# a node pool of the cluster's own and a region's extra one, as the production examples set them
 STAGE = config_map("global:\n  nodePools:\n    nodepool0:\n      minSize: 10\n")
 REGION = config_map("global:\n  nodePools:\n    large:\n      minSize: 1\n")

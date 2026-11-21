@@ -1,9 +1,10 @@
 """The node pools of every workload cluster, as Flux applies them in the kind test.
 
-A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its HelmRelease: the
-stage sets `nodepool0`, and a production cluster's region adds an extra pool. No assertion file
-shows the result, so this check reads the HelmRelease and its ConfigMaps from the test cluster,
-merges them as helm-controller does and compares the node pools with `EXPECTED_NODE_POOLS`.
+A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its HelmRelease: a
+production cluster's own values set `nodepool0`, and its region adds an extra pool. No assertion
+file shows the result, so this check reads the HelmRelease and its ConfigMaps from the test
+cluster, merges them as helm-controller does and compares the node pools with
+`EXPECTED_NODE_POOLS`.
 
 test_flux_objects.py runs the check with that module's fixtures: after Flux has applied the
 repository and the HelmReleases' references have been checked.
@@ -20,7 +21,7 @@ from pytest_helm_charts.flux.helm_release import HelmReleaseCR
 from values_sources import ValuesSourceError
 
 # The node pools in the values of each workload cluster's HelmRelease, by `namespace/name`.
-#  Every cluster has to be listed. Production clusters get the stage's `nodepool0` and their
+#  Every cluster has to be listed. Production clusters get their own `nodepool0` and their
 #  region's extra pool. Dev and staging have no pools of their own and get the chart's defaults,
 #  as does scheduled-upgrades.
 EXPECTED_NODE_POOLS: dict[str, set[str]] = {

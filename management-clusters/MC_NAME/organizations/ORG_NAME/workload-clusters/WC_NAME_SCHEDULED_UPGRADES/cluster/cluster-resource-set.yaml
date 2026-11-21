@@ -58,7 +58,7 @@ spec:
         timeout: 1m0s
         url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
     # Flux merges the `valuesFrom` entries in order, as for the cluster base, see
-    # bases/clusters/capa/template/cluster.yaml. A component's patch doesn't reach
+    # bases/clusters/capa/cluster.yaml. A component's patch doesn't reach
     # into a ResourceSet, so the region's entry is listed here, after the base's.
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease

@@ -4,9 +4,9 @@ These guides cover what comes after [Getting started](../getting-started.md). Ea
 
 Clusters:
 
-- [Add a CAPx Workload Cluster template](./cluster-templates.md) to create many clusters from one definition.
-- [Add Workload Cluster environments](./environments.md) to run dev, staging and production clusters from shared
-  templates.
+- [Add a CAPx Workload Cluster base](./clusters.md) to create many clusters from one definition.
+- [Add Workload Cluster environments](./environments.md) to pin the release and app versions of dev, staging and
+  production clusters per stage.
 
 Apps:
 

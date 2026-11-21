@@ -83,7 +83,7 @@ export APP_NAME=APP_NAME
     **Note**, a range only matches pre-release tags, like `3.1.0-rc.1`, if it has a pre-release comparator itself:
     `>=3.0.0-0` matches every release and pre-release from `3.0.0` on. Use `spec.ref.semverFilter` to narrow the
     matching tags down with a regular expression, see
-    [Add Workload Cluster environments](./environments.md#the-development-cluster) for an example that
+    [Add Workload Cluster environments](./environments.md#the-development-stage) for an example that
     follows development builds, and the [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/)
     for all the options.
 

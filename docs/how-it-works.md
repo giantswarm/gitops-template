@@ -56,7 +56,7 @@ Some objects delete a whole cluster when they go, so they carry two markers:
 
 The protected objects are:
 
-- The cluster's `HelmRelease`, in `bases/clusters/capa/template`. Deleting it uninstalls the chart, and Cluster API
+- The cluster's `HelmRelease`, in `bases/clusters/capa`. Deleting it uninstalls the chart, and Cluster API
   then deletes the cluster and its cloud infrastructure. The base also puts the annotation and the label on the
   cluster's `OCIRepository`, so that the `HelmRelease` keeps its chart, and sets `global.metadata.preventDeletion` so
   that the chart puts the label on the `Cluster`.
@@ -96,13 +96,13 @@ cluster and point it at that directory.
 
 Most clusters and apps look alike. The `bases` directory holds what they share, so a cluster's own files stay short:
 
-- `bases/clusters` holds the cluster bases, grouped by provider. For example, `bases/clusters/capa/template`
-  installs the `release-aws` chart, whose version is the Giant Swarm release.
+- `bases/clusters` holds the cluster bases. A provider's base is named after the provider: for example,
+  `bases/clusters/capa` installs the `release-aws` chart, whose version is the Giant Swarm release. A cluster base built
+  on it sits next to it, see [Cluster bases](./guides/clusters.md).
 - `bases/apps` has App Templates: an app with its default values, ready to deploy to many clusters.
 - `bases/stacks` has stacks: several apps deployed together that may depend on each other, such as
   `bases/stacks/hello-web`, see [Stacks](./guides/stacks.md).
-- `bases/cluster_templates` and `bases/environments` combine these into clusters for stages like dev and production,
-  or for regions.
+- `bases/environments` has the stages and regions a cluster adds as components.
 
 A cluster's directory points at bases in its `kustomization.yaml` and only adds what's different, such as its own
 values. The bases use variables like `${cluster_name}` where every cluster needs its own name. The cluster's Flux
@@ -112,9 +112,9 @@ variables:
 | Variable | What it's for |
 | --- | --- |
 | `cluster_name` | The workload cluster's name. It names the cluster's resources and its apps, such as `${cluster_name}-hello-world`, and the `<cluster>-kubeconfig` Secret and `<cluster>-cluster-values` ConfigMap the apps read. |
-| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa/template` sets it as `global.metadata.organization` in the chart values. The organisation's `kustomization.yaml` updates it to the name of its `Organization`, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). |
-| `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa/template`. |
-| `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa/template`. |
+| `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa` sets it as `global.metadata.organization` in the chart values. The organisation's `kustomization.yaml` updates it to the name of its `Organization`, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). |
+| `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa`. |
+| `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa`. |
 
 Set every variable the cluster's bases use. Flux replaces a variable that isn't set with an empty string; CI fails on
 it instead, see [CI validation](./guides/ci-validation.md). CI reads only `spec.postBuild.substitute`, not
@@ -131,7 +131,7 @@ kind: Kustomization
 components:
   - ../../../../../../../bases/environments/regions/eu_central
 resources:
-  - ../../../../../../../bases/clusters/capa/template
+  - ../../../../../../../bases/clusters/capa
 ```
 
 To upgrade the cluster, you change `release` and push.

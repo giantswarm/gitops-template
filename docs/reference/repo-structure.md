@@ -25,8 +25,9 @@ has workload clusters.
 .sops.yaml
 bases
 ├── apps
-├── cluster_templates
-├── clusters
+├── clusters                                            cluster bases, see guides/clusters.md
+|   ├── PROVIDER                                        a provider's base, such as capa
+|   └── [BASE_NAME]                                     a cluster base built on a provider's base
 ├── environments
 ├── secret_stores
 ├── shared_objects
@@ -194,6 +195,8 @@ A new management cluster needs none of this: its organisations' namespaces don't
 | `MC_NAME` | The management cluster's codename |
 | `ORG_NAME` | The organization's name, in lowercase and without the `org-` prefix |
 | `WC_NAME` | Any name, but the workload cluster's name is clearest |
+| `PROVIDER` | The Cluster API provider, such as `capa`, as `kubectl gs gitops add base --provider` names it |
+| `BASE_NAME` | Any name other than a provider's, such as `my-defaults` |
 
 Files and resources use the names `kubectl gs gitops` generates, so it recognizes them in `gitops check`,
 `gitops upgrade` and `gitops add automatic-update`:
@@ -209,9 +212,11 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognize
 | Flux `Kustomization` of an organisation's apps on several clusters | `MC_NAME-multicluster-apps-ORG_NAME`, in `multicluster/apps.yaml`. `kubectl gs gitops` doesn't generate it |
 | An app's `HelmRelease` and `OCIRepository` | `helm-release.yaml` and `oci-repository.yaml`, one resource each, in `apps/APP_NAME` |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `cluster` |
-| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` of a cluster `kubectl gs gitops add workload-cluster` generates. A cluster made from a cluster template, such as `hello_app_cluster`, lists the template's `userconfig` component instead, which holds the same patch |
+| The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` |
 | A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../guides/environments.md#regions). `kubectl gs gitops` doesn't generate it |
-| A cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER/template` |
+| A workload cluster's stage | a `components:` entry for `bases/environments/stages/STAGE`, in `cluster/kustomization.yaml`, optional, see [Stages](../guides/environments.md#stages). `kubectl gs gitops` doesn't generate it |
+| A provider's cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER` |
+| A cluster base built on a provider's base | `kustomization.yaml` and its own files, in `bases/clusters/BASE_NAME`, next to the provider's base and never inside it, see [Cluster bases](../guides/clusters.md) |
 | A stack, several apps deployed together | `kustomization.yaml` and a values file per app, in `bases/stacks/STACK_NAME`, see [Stacks](../guides/stacks.md). `kubectl gs gitops` doesn't generate it |
 
 Repositories forked before the template used these names can move to them with
@@ -454,7 +459,7 @@ placeholder `org-ORG_NAME`: Flux doesn't substitute variables in a Kustomization
 `kustomization.yaml` puts the organisation's name into the placeholder of a `Kustomization` with the label
 `giantswarm.io/health-check-cluster: "true"`, see [The organisation's name](#the-organisations-name). Without the label,
 the health check keeps the placeholder, and the `Kustomization` never gets `Ready`. With the label, the namespace must be
-the placeholder. A cluster without apps, such as the
+the placeholder. A cluster without secondary apps, such as the
 `HELLO_APP_*` examples, has only `WC_NAME.yaml`, which applies the cluster's directory, whose `kustomization.yaml`
 lists `cluster`, and needs no health check.
 
@@ -491,6 +496,6 @@ repository.
 
 | Object | Where it comes from | Used by |
 | --- | --- | --- |
-| ConfigMap `cluster-app-installation-values`, key `values.yaml`, in every `org-*` namespace | Giant Swarm creates it in the `giantswarm` namespace. The Kyverno policy `sync-cluster-app-configmap-to-org-namespaces`, in `kyverno-policies-ux` 0.14.0 and newer, copies it into every organization namespace and keeps the copies in sync. With an older `kyverno-policies-ux` it is missing, and every cluster `HelmRelease` fails because Flux can't resolve that `valuesFrom` entry. See [Values from the management cluster](/bases/clusters/capa/template/readme.md#values-from-the-management-cluster) | The first `valuesFrom` entry of a cluster's `HelmRelease`. On management clusters with `kyverno-policies-ux` 0.15.1 or newer, the `prepend-cluster-app-config-map-hr` policy adds the same entry to a cluster `HelmRelease` that lacks it; the explicit entry is for management clusters without that policy and does no harm next to it |
+| ConfigMap `cluster-app-installation-values`, key `values.yaml`, in every `org-*` namespace | Giant Swarm creates it in the `giantswarm` namespace. The Kyverno policy `sync-cluster-app-configmap-to-org-namespaces`, in `kyverno-policies-ux` 0.14.0 and newer, copies it into every organization namespace and keeps the copies in sync. With an older `kyverno-policies-ux` it is missing, and every cluster `HelmRelease` fails because Flux can't resolve that `valuesFrom` entry. See [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster) | The first `valuesFrom` entry of a cluster's `HelmRelease`. On management clusters with `kyverno-policies-ux` 0.15.1 or newer, the `prepend-cluster-app-config-map-hr` policy adds the same entry to a cluster `HelmRelease` that lacks it; the explicit entry is for management clusters without that policy and does no harm next to it |
 | ConfigMap `${cluster_name}-cluster-values` | cluster-apps-operator, once the cluster exists | The `valuesFrom` of the apps of a cluster |
 | Secret `${cluster_name}-kubeconfig` | Cluster API, once the cluster exists | The `kubeConfig` of the apps' `HelmRelease`s and of `WC_NAME-direct.yaml` |
