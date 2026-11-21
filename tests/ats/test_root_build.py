@@ -14,6 +14,8 @@ from root_build import (
     misplaced_objects,
     namespace_build_problems,
     organization_namespace_problems,
+    root_dependency_problems,
+    root_kustomization_name,
 )
 
 ORGANIZATION = {
@@ -108,6 +110,36 @@ def test_generated_resources(tmp_path: Path) -> None:
     ]
 
 
+def test_root_dependency_problems_none() -> None:
+    k = organization_kustomization("org-acme")
+    k["spec"]["dependsOn"] = [{"name": "mc-gitops"}]
+    assert root_dependency_problems([k], "mc-gitops") == []
+
+
+def test_root_dependency_problems_without_the_root() -> None:
+    k = organization_kustomization("org-acme")
+    k["spec"]["dependsOn"] = [{"name": "other"}]
+    assert root_dependency_problems([ORGANIZATION, k], "mc-gitops") == [
+        "Kustomization 'default/mc-organization-acme' doesn't depend on 'mc-gitops'"
+    ]
+    del k["spec"]["dependsOn"]
+    assert root_dependency_problems([k], "mc-gitops") == [
+        "Kustomization 'default/mc-organization-acme' doesn't depend on 'mc-gitops'"
+    ]
+
+
+def test_root_dependency_problems_in_another_namespace() -> None:
+    k = organization_kustomization("org-acme")
+    k["spec"]["dependsOn"] = [{"name": "mc-gitops", "namespace": "flux-system"}]
+    assert root_dependency_problems([k], "mc-gitops") == [
+        "Kustomization 'default/mc-organization-acme' doesn't depend on 'mc-gitops'"
+    ]
+
+
+def test_root_kustomization_name() -> None:
+    assert root_kustomization_name() == "mc-name-gitops"
+
+
 @pytest.fixture(scope="module")
 def root_build() -> list[dict]:
     return build(MC_DIR)
@@ -130,6 +162,15 @@ def test_root_build_applies_each_organisation_namespace(
     root_build: list[dict],
 ) -> None:
     problems = organization_namespace_problems(root_build)
+    assert not problems, "\n".join(problems)
+
+
+def test_organisation_namespace_kustomizations_follow_the_root(
+    root_build: list[dict],
+) -> None:
+    # the root applies every commit first, so an object that moves between the root and an
+    #  organisation's namespace/ moves in that order
+    problems = root_dependency_problems(root_build, root_kustomization_name())
     assert not problems, "\n".join(problems)
 
 

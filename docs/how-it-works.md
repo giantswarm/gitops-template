@@ -21,7 +21,8 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
    `default` and the `Organization`s, so it works on a new management cluster, where the `org-demoorg` namespace
    doesn't exist yet: organization-operator creates it for the `Organization`. What the organisation keeps in its
    namespace is in `organizations/demoorg/namespace`, which the organisation's own `Kustomization`, `namespace.yaml`,
-   applies into `org-demoorg`. That one fails until the namespace exists, and succeeds on its next retry. See
+   applies into `org-demoorg`. That one fails until the namespace exists, and succeeds on its next retry. Its
+   `dependsOn` names `demomc.yaml`'s `Kustomization`, so `demomc.yaml` always applies a commit first. See
    [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
 1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory. While it does, it fills in variables
    such as `${cluster_name}`, `${organization}` and `${release}` from its own settings.
