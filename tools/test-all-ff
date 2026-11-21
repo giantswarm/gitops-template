@@ -436,7 +436,7 @@ function test() {
 		# -direct Kustomizations this way. The checks look the Kustomization in namespace/ up by
 		# the namespace Flux applies it in, and by none, as its file names none.
 		fixture_dir="${tmp_dir}/parent-kustomization"
-		mkdir -p "${fixture_dir}/.git"
+		git_fixture "${fixture_dir}"
 		cp -r "$(dirname $0)/testdata/parent-kustomization/." "${fixture_dir}"
 		for check in "parent-direct:org-from-the-parent|name: parent-direct$" \
 			"parent-direct:|name: parent-direct$" \
