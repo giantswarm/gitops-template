@@ -21,6 +21,7 @@ from prune_objects import (
     APPS_KUSTOMIZATION,
     CLUSTER_KUSTOMIZATIONS,
     DIRECT_KUSTOMIZATION,
+    ORGANIZATION_KUSTOMIZATION,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
     ROOT_KUSTOMIZATION,
@@ -84,9 +85,11 @@ def delete_cluster_kustomizations(
     gone, in the getting-started guides' order; return what the cluster's two applied to the
     management cluster, and what the -direct one applied to the workload cluster.
 
-    The management cluster's Kustomization is suspended first, so it doesn't create them again.
+    The management cluster's Kustomization, and the organisation's namespace Kustomization, which
+    applies the -direct one, are suspended first, so they don't create them again.
     """
     suspend(kustomization(api, ROOT_KUSTOMIZATION))
+    suspend(kustomization(api, ORGANIZATION_KUSTOMIZATION))
     kustomizations = [kustomization(api, k) for k in CLUSTER_KUSTOMIZATIONS]
     direct = kustomization(api, DIRECT_KUSTOMIZATION)
     applied = set().union(*(inventory_keys(k.obj) for k in kustomizations))
