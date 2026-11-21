@@ -133,16 +133,18 @@ def no_organization_before_bootstrap(kube_cluster: Cluster) -> None:
 
 
 def create_namespace(
-    api: pykube.HTTPClient, setups: list[NamespaceSetup]
-) -> list[pykube.objects.APIObject]:
-    """Create the organisation's namespace, then what each of `setups` creates in it. Return
-    everything created, the namespace first."""
+    api: pykube.HTTPClient,
+    setups: list[NamespaceSetup],
+    created: list[pykube.objects.APIObject],
+) -> None:
+    """Create the organisation's namespace, then what each of `setups` creates in it. Add
+    everything to `created` as it goes, the namespace first, so it's deleted also when a setup
+    fails."""
     namespace = pykube.Namespace(api, {"metadata": {"name": ORG_NAMESPACE}})
     namespace.create()
-    created: list[pykube.objects.APIObject] = [namespace]
+    created.append(namespace)
     for setup in setups:
         created += setup(api, ORG_NAMESPACE)
-    return created
 
 
 @pytest.fixture(scope="module")
@@ -174,7 +176,7 @@ def organization_operator(
     )
 
     started = time.monotonic()
-    organization_objects += create_namespace(api, organization_namespace_setups)
+    create_namespace(api, organization_namespace_setups, organization_objects)
     wait_until(
         lambda: ready_problems(
             _kustomization(api, ORGANIZATION_KUSTOMIZATION), ORGANIZATION_KUSTOMIZATION
