@@ -31,6 +31,10 @@ It writes:
 With `--skip-encryption` instead, it leaves out the master key, the `secrets` and `.sops.keys` directories and the
 `decryption`, for a repository that keeps no secrets in Git, see [Secrets](../explanation/secrets.md).
 
+Pass `--gen-master-key` only for a management cluster without a master key: check with
+`kubectl get secret sops-gpg-master -n default` first. Replacing an existing one leaves Flux unable to decrypt anything
+encrypted for the old key.
+
 Then change:
 
 1. In `MC_NAME.yaml`, set `prune: true`, `interval: 10m` and `retryInterval: 1m`. The command writes `prune: false`, so
@@ -57,17 +61,18 @@ Then change:
    [Keep a private key in a password manager](./sops.md#keep-a-private-key-in-a-password-manager). Once the file is
    encrypted and the key is gone from your keyring, the password manager holds the only copy you can read.
 
-1. Encrypt the Secret with the rule kubectl-gs wrote, protect it with a `secrets/kustomization.yaml`, as in the
-   [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster), and delete the private
-   key from your keyring:
+1. Apply the Secret, so that Flux has `sops-gpg-master` in `default` before it needs it, then encrypt the file with
+   the rule kubectl-gs wrote, and delete the private key from your keyring. This is the order the
+   [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster) uses: the file holds the
+   private key in plain text until `sops` has encrypted it, so don't add it to Git before then.
 
     ```sh
+    kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
     sops --encrypt --in-place ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
     gpg --batch --yes --delete-secret-keys "${KEY_FP}"
     ```
 
-    Flux on the management cluster needs the same Secret, `sops-gpg-master` in `default`, before it can decrypt
-    anything: create it once from your keyring, as the basic tutorial does, before you delete the key.
+    Then protect the Secret with a `secrets/kustomization.yaml`, as the basic tutorial does.
 
 1. Add the `.sops.yaml` rule for the workload clusters' keys in the organisations' `namespace/secrets`, which the
    command doesn't write, see [SOPS keys](../reference/sops-keys.md#encryption-rules).

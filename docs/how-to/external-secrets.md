@@ -245,10 +245,16 @@ see [App values](../reference/values.md#app-values). An `ExternalSecret` next to
     EOF
     ```
 
-1. Add it to the app's `kustomization.yaml`, and push:
+1. List it, and push. An app with a `kustomization.yaml` of its own lists it there. An app whose files the cluster's
+   `apps/kustomization.yaml` lists one by one, as the `hello-world` example does, gets it listed there, as
+   `APP_NAME/externalsecret.yaml`:
 
     ```sh
-    yq -i '.resources += ["externalsecret.yaml"]' ${APP_DIR}/kustomization.yaml
+    if [ -f ${APP_DIR}/kustomization.yaml ]; then
+      yq -i '.resources += ["externalsecret.yaml"]' ${APP_DIR}/kustomization.yaml
+    else
+      yq -i '.resources += ["'"${APP_NAME}"'/externalsecret.yaml"]' ${APP_DIR}/../kustomization.yaml
+    fi
     ```
 
 1. The app's `HelmRelease` has to list the Secret in `valuesFrom`, as the App Templates and

@@ -446,10 +446,16 @@ first, with the rule for its `apps` directory.
     sops --encrypt --in-place secret.enc.yaml
     ```
 
-1. List it in the app's `kustomization.yaml`, and push:
+1. List it, and push. An app with a `kustomization.yaml` of its own lists it there. An app whose files the cluster's
+   `apps/kustomization.yaml` lists one by one, such as `WC_NAME/apps/cert-manager`, gets it listed there, as
+   `APP_NAME/secret.enc.yaml`:
 
     ```sh
-    yq -i '.resources += ["secret.enc.yaml"]' kustomization.yaml
+    if [ -f kustomization.yaml ]; then
+      yq -i '.resources += ["secret.enc.yaml"]' kustomization.yaml
+    else
+      yq -i '.resources += ["'"${APP_NAME}"'/secret.enc.yaml"]' ../kustomization.yaml
+    fi
     ```
 
 The Secret names `${cluster_name}` and `${organization}`, which Flux fills in after it decrypts the file, so the

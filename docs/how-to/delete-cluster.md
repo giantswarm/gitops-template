@@ -156,10 +156,29 @@ themselves stay on the management cluster, protected, until you delete them in t
     done
     ```
 
+1. A cluster can have more keys than its first, each with a public key of its own, such as the
+   `.sops.${WC_NAME}-APP_NAME.asc` that [Add another key to a cluster](./sops.md#add-another-key-to-a-cluster)
+   shares. Their rules point into the cluster's directory, so remove the public key of every key those rules name,
+   unless a rule of another cluster still uses it. `gpg --show-keys` only reads each file; it imports nothing:
+
+    ```sh
+    export CLUSTER_RULES='.creation_rules[] | select(.path_regex | test("/workload-clusters/'"${WC_NAME}"'/"))'
+    export OTHER_RULES='.creation_rules[] | select(.path_regex | test("/workload-clusters/'"${WC_NAME}"'/") | not)'
+    for k in $(yq "${CLUSTER_RULES} | (.pgp // \"\"), (.age // \"\")" .sops.yaml | tr -d ' ' | tr ',' '\n' | sort -u); do
+      yq "${OTHER_RULES} | (.pgp // \"\"), (.age // \"\")" .sops.yaml | tr -d ' ' | tr ',' '\n' | grep -qixF "${k}" && continue
+      for f in management-clusters/${MC_NAME}/.sops.keys/.sops.*; do
+        if grep -qxF "${k}" "${f}" ||
+          gpg --show-keys --with-colons "${f}" 2>/dev/null | awk -F: '/^fpr/{print $10}' | grep -qixF "${k}"; then
+          git rm -q "${f}"
+        fi
+      done
+    done
+    ```
+
 1. Remove the cluster's rules from `.sops.yaml`, the ones whose `path_regex` points into the cluster's directory:
 
     ```sh
-    yq -i 'del(.creation_rules[] | select(.path_regex | test("/workload-clusters/'"${WC_NAME}"'/")))' .sops.yaml
+    yq -i "del(${CLUSTER_RULES})" .sops.yaml
     ```
 
 1. Delete the private keys from your password manager once the cluster is gone, or keep them if you want to read the

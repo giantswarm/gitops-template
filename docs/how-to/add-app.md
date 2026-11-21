@@ -311,11 +311,16 @@ an `ExternalSecret` from your secret manager, see [Read secrets from a secret ma
     sops --encrypt --in-place pullsecret.enc.yaml
     ```
 
-1. Reference the Secret in the `OCIRepository`, and list it in the app's `kustomization.yaml`:
+1. Reference the Secret in the `OCIRepository`, and list it: in the app's `kustomization.yaml` if it has one, or as
+   `APP_NAME/pullsecret.enc.yaml` in the cluster's `apps/kustomization.yaml` if that lists the app's files one by one:
 
     ```sh
     yq -i ".spec.secretRef.name = \"${WC_NAME}-${APP_NAME}-pull-secret\"" oci-repository.yaml
-    yq -i '.resources += ["pullsecret.enc.yaml"]' kustomization.yaml
+    if [ -f kustomization.yaml ]; then
+      yq -i '.resources += ["pullsecret.enc.yaml"]' kustomization.yaml
+    else
+      yq -i '.resources += ["'"${APP_NAME}"'/pullsecret.enc.yaml"]' ../kustomization.yaml
+    fi
     ```
 
 For an app from an App Template, set `secretRef` with a patch of the template's `OCIRepository`, as for the version

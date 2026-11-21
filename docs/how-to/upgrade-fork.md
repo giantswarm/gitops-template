@@ -71,18 +71,19 @@ Then it rewrites the user config patch of each workload cluster for the `HelmRel
 
 Version 3 drops the `mapi` directory of workload clusters. Its `cluster`, `apps` and any other directories move up
 into the cluster's directory, next to `out-of-band`, and the cluster's `kustomization.yaml` lists what the cluster's
-Kustomizations apply, never `out-of-band`, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
-It also moves everything an organisation keeps in its namespace into the organisation's `namespace` directory, which
-its own Kustomization, `namespace.yaml`, applies, see
-[Move an organisation's namespace objects](#move-an-organisations-namespace-objects). The workload clusters'
-Kustomizations stay in `workload-clusters`, but `namespace.yaml` applies them too, into the organisation's namespace,
-with their SOPS keys in `namespace/secrets`, see
+Kustomizations apply, never `out-of-band`, see
+[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). It also moves everything
+an organisation keeps in its namespace into the organisation's `namespace` directory, which its own Kustomization,
+`namespace.yaml`, applies, see [Move an organisation's namespace objects](#move-an-organisations-namespace-objects).
+The workload clusters' Kustomizations stay in `workload-clusters`, but `namespace.yaml` applies them too, into the
+organisation's namespace, with their SOPS keys in `namespace/secrets`, see
 [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations).
-
 kubectl-gs doesn't know version 3 yet: `kubectl gs gitops add workload-cluster` still generates `mapi`, the version 2
 layout, and `kubectl gs gitops upgrade` has no migration to version 3. Move an existing cluster by hand, as the
-[CHANGELOG](/CHANGELOG.md) describes: its "To split a running cluster's `Kustomization`" and "To move a running
-cluster" steps keep every object while it changes owner.
+[CHANGELOG](/CHANGELOG.md) describes.
+
+The CHANGELOG's "To split a running cluster's `Kustomization`" and "To move a running cluster" steps keep every
+object while it changes owner.
 
 Note that layers recorded without a structure version can't be upgraded. If you know the version they were created
 with, set their `structureVersion` by hand. Otherwise, remove their entries and run
@@ -273,7 +274,7 @@ To move them without a deletion, use three commits, and let Flux apply each one 
 1. Move the objects into `namespace`, or into `multicluster/secret-stores` for the workload clusters' secret stores,
    which `namespace/kustomization.yaml` lists as `../multicluster/secret-stores`, add `namespace.yaml`, and take them
    out of the organisation's `kustomization.yaml`, as in
-   [Add an organisation](../tutorials/basic/getting-started.md#2-add-an-organisation). The workload clusters'
+   [Add an organization](../tutorials/basic/getting-started.md#2-add-an-organisation). The workload clusters'
    `Kustomization`s, `-direct` ones included, move with the steps of
    [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations) instead. `MC_NAME.yaml` applies
    the commit first: it leaves the annotated objects where they are and creates `namespace.yaml`'s `Kustomization`,
@@ -344,7 +345,7 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
     - Copy each key Secret those `Kustomization`s name in `decryption.secretRef` into the organisation's
       `namespace/secrets`, in the organisation's namespace, and list it in `namespace/secrets/kustomization.yaml`. If
       the organisation doesn't have that directory yet, create it as in
-      [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg), with
+      [Add an organization](./sops.md#add-a-workload-cluster-key-gpg), with
       its `kustomization.yaml`, and list `secrets` in `namespace/kustomization.yaml`. With the master private key in
       your keyring, for each key file, such as `WC_NAME.gpgkey.enc.yaml`:
 
