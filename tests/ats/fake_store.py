@@ -1,7 +1,7 @@
 """The test's fake SecretStores and their values, which the examples' ExternalSecrets read.
 
-external_secrets.py creates the stores. docs/appendices.md, "Secret store for testing", has stores
-of the same name for trying the guides by hand: it lists `gitops/hello-world-values` with a
+external_secrets.py creates the stores. docs/how-to/external-secrets.md, "A secret store for
+testing", has stores of the same name for trying the guides by hand: it lists `gitops/hello-world-values` with a
 GitHub token of the reader's own, and names the notification guide's two keys in its text.
 """
 

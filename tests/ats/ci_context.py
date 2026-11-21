@@ -85,7 +85,7 @@ def missing_secrets_skip_reason(environ: Mapping[str, str]) -> str | None:
         " requests from forks none of the repository's secrets, so"
         f" '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' is empty and Flux can't decrypt the SOPS"
         " secrets. The checks that need no cluster still run. The kind test runs on pull"
-        " requests from a branch of the repository itself (see docs/guides/ci-validation.md)."
+        " requests from a branch of the repository itself (see docs/how-to/configure-ci.md)."
     )
 
 

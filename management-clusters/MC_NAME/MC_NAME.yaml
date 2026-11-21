@@ -14,7 +14,7 @@ spec:
   # delete a cluster, the Organizations, the cluster HelmReleases and the SOPS
   # keys, have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so
   # Flux leaves them, and the `giantswarm.io/prevent-deletion` label, so nobody
-  # can delete them until it's removed. See docs/how-it-works.md.
+  # can delete them until it's removed. See docs/explanation/deletion-protection.md.
   prune: true
   retryInterval: 1m0s
   serviceAccountName: automation

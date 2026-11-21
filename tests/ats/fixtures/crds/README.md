@@ -2,7 +2,7 @@
 
 The kind test creates these `CustomResourceDefinition`s in the vCluster that stands in for the
 `out-of-band-no-flux` workload cluster (see
-[ci-validation.md](../../../../docs/guides/ci-validation.md#the-workload-cluster-of-the-out-of-band-no-flux-example)).
+[CI checks](../../../../docs/reference/ci-checks.md#the-out-of-band-no-flux-workload-cluster)).
 A Giant Swarm workload cluster gets them from its default apps. The apps of the example create objects of these
 kinds, and their charts don't install the CRDs themselves. The test installs only the CRDs, no controllers.
 

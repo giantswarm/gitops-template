@@ -1,6 +1,6 @@
 """The `.sops.yaml` rule that encrypts the workload clusters' SOPS keys in an organisation's
 namespace/secrets with the management cluster's master key comes before any other rule for that
-directory, such as the organisation key's rule docs/add_org.md appends. Needs no cluster.
+directory, such as the organisation key's rule docs/how-to/sops.md appends. Needs no cluster.
 """
 
 import re
@@ -10,7 +10,7 @@ import yaml
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 ORG_SECRETS = "management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secrets"
-# the rule docs/add_org.md appends for an organisation's own key
+# the rule docs/how-to/sops.md appends for an organisation's own key
 ORGANIZATION_KEY_RULE = {
     "encrypted_regex": "^(data|stringData)$",
     "path_regex": f"{ORG_SECRETS}/.*\\.enc\\.yaml",

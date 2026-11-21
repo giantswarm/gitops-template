@@ -1,6 +1,6 @@
 # The shared object. Every organisation's directory lists this base, with the organisation's
 # namespace set there, so Flux applies a copy into each `org-*` namespace and keeps every copy
-# in sync with this file. See docs/add_mc.md, "Share an object with every organization".
+# in sync with this file. See docs/how-to/share-objects.md.
 apiVersion: v1
 kind: ConfigMap
 metadata:

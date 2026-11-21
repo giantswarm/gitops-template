@@ -1,0 +1,497 @@
+# Keep secrets in the repository
+
+[SOPS](https://github.com/getsops/sops) encrypts the values of a Secret in a file, so you can commit the file, and Flux
+decrypts it when it applies it. This page covers the keys and the files: adding a key for a workload cluster or an
+organisation, encrypting an app's values, and changing them later. For which keys exist and what each one decrypts, see
+[SOPS keys](../reference/sops-keys.md); for when to use SOPS rather than a secret manager, see
+[Secrets](../explanation/secrets.md).
+
+You need:
+
+- `gpg`, `sops` and `yq`, and `age-keygen` for an age key, see [Tools](../reference/tools.md#tools);
+- the management cluster's master key, which the
+  [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster) creates: its public key in
+  `management-clusters/MC_NAME/.sops.keys/.sops.master.asc` and its private key in the `sops-gpg-master` Secret;
+- the `.sops.yaml` rule that encrypts the workload clusters' keys with the master key, from the same step.
+
+Export the names the commands use, and run them from the root of your clone:
+
+```sh
+export MC_NAME=CODENAME
+export ORG_NAME=ORGANIZATION
+export WC_NAME=CLUSTER_NAME
+export ORG_SECRETS=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/secrets
+```
+
+Every private key you create here ends up in two places: encrypted in the repository, for Flux, and in a password
+manager, for you. Never commit one unencrypted, and delete it from your keyring when you're done.
+
+## Add a workload cluster key (GPG)
+
+A key of the cluster's own keeps its secrets apart from other clusters': the cluster's key can decrypt its files, and
+nothing else. Its private key goes into a Secret in the organisation's `namespace/secrets`, in the organisation's
+namespace, with the cluster's `Kustomization`s that decrypt with it. The master key encrypts that Secret.
+
+> [!Note]
+> `kubectl gs gitops add encryption --workload-cluster` does these steps for the layout of structure version 2, which
+> this repository no longer uses. It writes the key Secret into `MC_NAME/secrets`, in `default`, where the cluster's
+> `Kustomization`s, in the organisation's namespace, can't read it, and it adds `decryption` only to `WC_NAME.yaml`.
+> Its `.sops.yaml` rule covers only the cluster's `secrets/` directory, `--target secrets/` by default, so files in
+> `cluster` and `apps` aren't encrypted with the cluster's key. Follow the steps below instead. If you have already run
+> it, move its key as the steps below place it, and replace its rule with the one in the last steps, which covers
+> `cluster` and `apps`: `--target /` covers the whole cluster directory, `out-of-band` included.
+
+If you need more granular encryption, repeat the steps to make several keys with a rule each, but keep all their
+private keys in the one `WC_NAME.gpgkey.enc.yaml` Secret: a `Kustomization` reads one Secret.
+
+1. Generate a GPG key with no passphrase (`%no-protection`), as Flux has to use it unattended:
+
+    ```sh
+    export KEY_NAME="${WC_NAME}"
+    export KEY_COMMENT="${WC_NAME} Flux Secrets"
+
+    gpg --batch --full-generate-key <<EOF
+    %no-protection
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
+    Expire-Date: 0
+    Name-Comment: ${KEY_COMMENT}
+    Name-Real: ${KEY_NAME}
+    EOF
+    ```
+
+1. Retrieve the key fingerprint and store it in an environment variable:
+
+    ```sh
+    export KEY_FP=$(gpg --list-secret-keys --with-colons "${KEY_NAME}" | awk -F: '/^fpr/{print $10; exit}')
+    echo "${KEY_FP}"
+    ```
+
+1. The private key goes into a Kubernetes Secret in the organisation's `namespace/secrets` directory. If the
+   organisation has no `namespace/secrets` yet, create it: its `kustomization.yaml` keeps Flux from deleting the keys,
+   see [Deletion protection](../explanation/deletion-protection.md), and `namespace/kustomization.yaml` lists it:
+
+    ```sh
+    if [ ! -f ${ORG_SECRETS}/kustomization.yaml ]; then
+      mkdir -p ${ORG_SECRETS}
+      yq -i '.resources += ["secrets"]' ${ORG_SECRETS}/../kustomization.yaml
+      cat <<EOF > ${ORG_SECRETS}/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    # Flux decrypts with the SOPS keys here: deleting one stops GitOps for what uses it
+    commonAnnotations:
+      kustomize.toolkit.fluxcd.io/prune: disabled
+    labels:
+      - pairs:
+          giantswarm.io/managed-by: flux
+          # nobody can delete them, Flux included, until this label is removed
+          giantswarm.io/prevent-deletion: "true"
+    resources: []
+    EOF
+    fi
+    ```
+
+1. Save the private key as a Kubernetes Secret into that directory, in the organisation's namespace:
+
+    ```sh
+    gpg --export-secret-keys --armor "${KEY_FP}" |
+    kubectl create secret generic sops-gpg-${WC_NAME} \
+    --dry-run=client \
+    --namespace=org-${ORG_NAME} \
+    --from-file=${WC_NAME}.main.asc=/dev/stdin \
+    -o yaml > ${ORG_SECRETS}/${WC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Add the newly created secret to the resources of `${ORG_SECRETS}/kustomization.yaml`:
+
+    ```sh
+    yq -i ".resources += \"${WC_NAME}.gpgkey.enc.yaml\" | .resources style=\"\"" \
+    ${ORG_SECRETS}/kustomization.yaml
+    ```
+
+1. Import the master GPG public key and encrypt the Kubernetes Secret with it. The management cluster's rule for the
+   workload clusters' keys in `namespace/secrets` picks the master key. If your `.sops.yaml` doesn't have it, add it
+   ahead of any rule of an organisation's own key for `namespace/secrets`, see
+   [SOPS keys](../reference/sops-keys.md#encryption-rules):
+
+    ```sh
+    gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
+    sops --encrypt --in-place ${ORG_SECRETS}/${WC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Save the private key in your password manager, see
+   [Keep a private key in a password manager](#keep-a-private-key-in-a-password-manager), then delete it from the
+   keychain:
+
+    ```sh
+    gpg --delete-secret-keys "${KEY_FP}"
+    ```
+
+1. Share the new GPG public key in this repository:
+
+    ```sh
+    gpg --export --armor "${KEY_FP}" \
+    > management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc
+    ```
+
+1. Add the rule that encrypts the cluster's files with its key to the [SOPS configuration file](/.sops.yaml). It covers
+   `cluster` and `apps`, the directories the cluster's `Kustomization`s decrypt:
+
+    ```sh
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/(cluster|apps)/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
+    ```
+
+1. Commit the encrypted `${WC_NAME}.gpgkey.enc.yaml` in the same commit as the `secrets/kustomization.yaml` that
+   lists it, together with the public key and `.sops.yaml`. If the list reaches the repository without the file,
+   the organisation's namespace Kustomization fails to build and stops reconciling:
+
+    ```sh
+    git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
+    management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc \
+    .sops.yaml
+    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
+    ```
+
+Then tell the cluster's `Kustomization`s to use it, see [Decrypt a cluster's files](#decrypt-a-clusters-files).
+
+## Add a workload cluster key (age)
+
+Instead of a GPG key, the cluster can have an [age](https://github.com/FiloSottile/age) key, which is simpler to
+create and handle. [age or GPG](../reference/sops-keys.md#age-or-gpg) compares them. The master key stays a GPG key:
+it encrypts the age key like it encrypts the GPG keys of other clusters. The example `WC_NAME` cluster uses one.
+
+1. Generate the key. The file holds the private key, so keep it out of the repository:
+
+    ```sh
+    age-keygen -o ${WC_NAME}.agekey
+    export AGE_PUBLIC_KEY=$(age-keygen -y ${WC_NAME}.agekey)
+    ```
+
+1. Save the private key as a Kubernetes Secret into the organisation's `namespace/secrets` directory, in the
+   organisation's namespace. Create the directory first if the organisation doesn't have it, as for the GPG key above.
+   kustomize-controller reads age keys from Secret keys that end in `.agekey`:
+
+    ```sh
+    kubectl create secret generic sops-age-${WC_NAME} \
+    --dry-run=client \
+    --namespace=org-${ORG_NAME} \
+    --from-file=${WC_NAME}.agekey=${WC_NAME}.agekey \
+    -o yaml > ${ORG_SECRETS}/${WC_NAME}.agekey.enc.yaml
+    ```
+
+1. Add it to the resources of `${ORG_SECRETS}/kustomization.yaml`, and encrypt it with the master key, which the
+   management cluster's rule for the workload clusters' keys picks, as for the GPG key above:
+
+    ```sh
+    yq -i ".resources += \"${WC_NAME}.agekey.enc.yaml\" | .resources style=\"\"" \
+    ${ORG_SECRETS}/kustomization.yaml
+    gpg --import management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc
+    sops --encrypt --in-place ${ORG_SECRETS}/${WC_NAME}.agekey.enc.yaml
+    ```
+
+1. Save `${WC_NAME}.agekey` in your password manager, see
+   [Keep a private key in a password manager](#keep-a-private-key-in-a-password-manager), then delete the file:
+
+    ```sh
+    rm ${WC_NAME}.agekey
+    ```
+
+1. Share the public key in this repository and add its rule to the [SOPS configuration file](/.sops.yaml):
+
+    ```sh
+    echo "${AGE_PUBLIC_KEY}" > management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.agekey.pub
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/workload-clusters/'"${WC_NAME}"'/(cluster|apps)/.*\\.enc\\.yaml",
+      "age": "'"${AGE_PUBLIC_KEY}"'"
+    }]' .sops.yaml
+    ```
+
+1. Commit the encrypted Secret, `secrets/kustomization.yaml`, the public key and `.sops.yaml` together:
+
+    ```sh
+    git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
+    management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.agekey.pub \
+    .sops.yaml
+    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
+    ```
+
+The cluster's `Kustomization`s name `sops-age-${WC_NAME}` in `decryption.secretRef`, see
+[Decrypt a cluster's files](#decrypt-a-clusters-files). A `Kustomization` reads one Secret: to use a GPG and an age
+key for the same cluster, put both private keys into that one Secret.
+
+## Add an organisation key
+
+Each management cluster comes with a master key that encrypts the organisation's files already. If you want to keep
+one organisation's secrets apart from another's, give it a key of its own. Its private key goes into the master
+Secret, `sops-gpg-master`, which the organisation's namespace `Kustomization` decrypts with, so it can decrypt the
+files in the organisation's `namespace`.
+
+1. Generate a GPG key with no passphrase (`%no-protection`):
+
+    ```sh
+    export KEY_NAME="${ORG_NAME}"
+    export KEY_COMMENT="${ORG_NAME} Flux Secrets"
+
+    gpg --batch --full-generate-key <<EOF
+    %no-protection
+    Key-Type: EDDSA
+    Key-Curve: ed25519
+    Key-Usage: sign
+    Subkey-Type: ECDH
+    Subkey-Curve: cv25519
+    Subkey-Usage: encrypt
+    Expire-Date: 0
+    Name-Comment: ${KEY_COMMENT}
+    Name-Real: ${KEY_NAME}
+    EOF
+    export KEY_FP=$(gpg --list-secret-keys --with-colons "${KEY_NAME}" | awk -F: '/^fpr/{print $10; exit}')
+    ```
+
+1. Share the new GPG public key in this repository:
+
+    ```sh
+    gpg --export --armor "${KEY_FP}" \
+    > management-clusters/${MC_NAME}/.sops.keys/.sops.${ORG_NAME}.asc
+    ```
+
+1. Configure the automatic key selection rule in the [SOPS configuration file](/.sops.yaml). `sops` uses the first rule
+   that matches a file, so this rule has to come after the management cluster's rule for the workload clusters' SOPS
+   keys in `namespace/secrets`, which encrypts them with the master key. `+=` appends it at the end of the list, after
+   that rule. If your `.sops.yaml` doesn't have that rule yet, add it first, see
+   [SOPS keys](../reference/sops-keys.md#encryption-rules):
+
+    ```sh
+    touch .sops.yaml
+    yq -i '.creation_rules += [{
+      "encrypted_regex": "^(data|stringData)$",
+      "path_regex": "management-clusters/'"${MC_NAME}"'/organizations/'"${ORG_NAME}"'/namespace/secrets/.*\\.enc\\.yaml",
+      "pgp": "'"${KEY_FP}"'"
+    }]' .sops.yaml
+    ```
+
+1. Import the management cluster's master private key from your password manager into your keychain, see
+   [Keep a private key in a password manager](#keep-a-private-key-in-a-password-manager), then decrypt the master
+   Secret:
+
+    ```sh
+    sops --decrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Add the organisation's private key to it, and encrypt it again:
+
+    ```sh
+    (
+    cat <<EOF
+    data:
+      ${MC_NAME}.${ORG_NAME}.asc: $(gpg --export-secret-keys --armor "${KEY_FP}" | base64 | tr -d '\n')
+    EOF
+    ) | kubectl patch \
+    --local \
+    -f management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml \
+    --patch-file=/dev/stdin \
+    -o yaml > management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml.new
+    mv management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml.new \
+    management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    sops --encrypt --in-place management-clusters/${MC_NAME}/secrets/${MC_NAME}.gpgkey.enc.yaml
+    ```
+
+1. Save the organisation's private key in your password manager, then delete the organisation's and the master
+   private keys from the keychain:
+
+    ```sh
+    export MASTER_KEY_FP=$(gpg --show-keys --with-colons management-clusters/${MC_NAME}/.sops.keys/.sops.master.asc |
+    awk -F: '/^fpr/{print $10; exit}')
+    gpg --delete-secret-keys "${KEY_FP}" "${MASTER_KEY_FP}"
+    ```
+
+1. Push the changes and wait for Flux to apply the master Secret. After that, Flux can decrypt the organisation's
+   secrets.
+
+1. Put a Secret into the organisation's `namespace/secrets`, which the organisation's namespace `Kustomization` applies
+   into its namespace. Create the directory first if the organisation doesn't have it, as for a
+   [workload cluster key](#add-a-workload-cluster-key-gpg), then list the file in its `kustomization.yaml`. Name the
+   real namespace, `org-${ORG_NAME}`, the same one the namespace `Kustomization`'s `targetNamespace` sets, so Flux
+   leaves the encrypted file as it is and can decrypt it:
+
+    ```sh
+    kubectl create secret generic my-secret \
+    --namespace=org-${ORG_NAME} \
+    --from-literal=token=CHANGE_ME \
+    --dry-run=client \
+    -o yaml > ${ORG_SECRETS}/secret.enc.yaml
+    yq -i '.resources += ["secret.enc.yaml"]' ${ORG_SECRETS}/kustomization.yaml
+    ```
+
+1. Encrypt it. The rule above picks the organisation's key:
+
+    ```sh
+    sops --encrypt --in-place ${ORG_SECRETS}/secret.enc.yaml
+    ```
+
+1. Push the changes.
+
+`namespace/secrets/kustomization.yaml` gives every Secret there the deletion protection of the keys. Put Secrets that
+Flux may delete with their files in another directory of `namespace`, with a rule of their own for the organisation's
+key.
+
+## Decrypt a cluster's files
+
+Flux decrypts a file only when the `Kustomization` that applies it says which key to use. A workload cluster's
+`Kustomization`s, `WC_NAME.yaml` and `WC_NAME-apps.yaml`, name the cluster's key Secret in `spec.decryption`. Both need
+it if both directories have encrypted files: `WC_NAME.yaml` applies `cluster`, and `WC_NAME-apps.yaml` the rest.
+
+```sh
+for f in ${WC_NAME}.yaml ${WC_NAME}-apps.yaml; do
+  yq -i '.spec.decryption = {"provider": "sops", "secretRef": {"name": "sops-gpg-'"${WC_NAME}"'"}}' \
+    management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${f}
+done
+```
+
+For an age key, name `sops-age-${WC_NAME}` instead. The
+[WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) example has it.
+
+A `Kustomization` reads the Secret in its own namespace, so the key has to be in the organisation's namespace with
+them, in `namespace/secrets`. A `-direct` `Kustomization`, which applies `out-of-band` to the workload cluster, decrypts
+with a key of its own, `WC_NAME-direct.gpgkey.enc.yaml` in the same directory, made the same way, see
+[Add the -direct Kustomization](../tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
+
+## Encrypt an app's values
+
+Values you'd rather not keep in plain text go into the app's `-user-secrets` Secret, encrypted with the cluster's key.
+The app's `HelmRelease` reads it last, see [App values](../reference/values.md#app-values). The cluster needs a key
+first, with the rule for its `apps` directory.
+
+1. In the app's directory, put the Helm values into the `values` key of the Secret. Keep the
+   `reconcile.fluxcd.io/watch` label, so a change reaches the app at once: CI fails without it.
+
+    ```sh
+    export APP_NAME=APP_NAME
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    cat <<EOF > secret.enc.yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+      name: \${cluster_name}-${APP_NAME}-user-secrets
+      namespace: org-\${organization}
+    stringData:
+      values: |
+        # secret values of the app for this cluster
+    EOF
+    ```
+
+1. Encrypt it. The cluster's rule picks the key. A GPG key has to be in your keyring for `sops` to encrypt with it,
+   so import the cluster's public key first; an age key needs nothing:
+
+    ```sh
+    gpg --import "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc"
+    sops --encrypt --in-place secret.enc.yaml
+    ```
+
+1. List it in the app's `kustomization.yaml`, and push:
+
+    ```sh
+    yq -i '.resources += ["secret.enc.yaml"]' kustomization.yaml
+    ```
+
+The Secret names `${cluster_name}` and `${organization}`, which Flux fills in after it decrypts the file, so the
+encrypted file stays as it is. To label a Secret that's already encrypted, don't edit the file: add a patch to the
+app's `kustomization.yaml`, as the `envoy-gateway-from-template` example of the `WC_NAME_OUT_OF_BAND_FLUX_APP` cluster
+does, or edit it with `sops edit`.
+
+## Change encrypted values
+
+To change an encrypted file, you need the private key it was encrypted for.
+
+1. Import the cluster's private key from your password manager, see
+   [Keep a private key in a password manager](#keep-a-private-key-in-a-password-manager). For an age key, point
+   `sops` at it instead:
+
+    ```sh
+    export SOPS_AGE_KEY_FILE=$(pwd)/${WC_NAME}.agekey
+    ```
+
+1. Edit the file. `sops edit` decrypts it into your editor and encrypts it again when you save:
+
+    ```sh
+    cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
+    sops edit secret.enc.yaml
+    ```
+
+    To change it with other tools, decrypt it in place, change it, and encrypt it again:
+
+    ```sh
+    sops --decrypt --in-place secret.enc.yaml
+    # edit the values under .stringData.values
+    sops --encrypt --in-place secret.enc.yaml
+    ```
+
+    If the Secret holds the values base64-encoded under `.data.values` instead, as Secrets created with
+    `kubectl create secret` do, decode them into a temporary file, edit it, and encode them back before you encrypt:
+
+    ```sh
+    yq .data.values secret.enc.yaml | base64 -d > values.tmp.yaml
+    # edit values.tmp.yaml
+    export NEW_USER_VALUES=$(base64 < values.tmp.yaml | tr -d '\n')
+    yq -i ".data.values = \"${NEW_USER_VALUES}\"" secret.enc.yaml
+    rm values.tmp.yaml
+    ```
+
+1. Remove the private key from your keychain, or delete the age key file, and push:
+
+    ```sh
+    export KEY_FP=$(gpg --show-keys --with-colons \
+    "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc" |
+    awk -F: '/^fpr/{print $10; exit}')
+    gpg --delete-secret-keys "${KEY_FP}"
+    ```
+
+## Keep a private key in a password manager
+
+Flux has its own copy of every private key, in a Secret on the management cluster. You need yours to change the
+encrypted files, and to rebuild the Secret if it's lost. Keep it in a password manager, and nowhere else.
+
+For example, with the 1Password CLI, `op`, store a GPG private key as the body of a secure note. The `jq` filter wraps
+the armoured key into the item template, in the `notesPlain` field. Put the vault you keep the keys in for `YOUR_VAULT`:
+
+```sh
+export VAULT=YOUR_VAULT
+export ITEM="GPG private key (${MC_NAME}, ${WC_NAME}, Flux)"   # or (${MC_NAME}, master, Flux), (${MC_NAME}, ${ORG_NAME}, Flux)
+eval $(op signin)
+gpg --export-secret-keys --armor "${KEY_FP}" |
+jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |
+op item create --vault "${VAULT}" --category securenote --title "${ITEM}" --format json -
+```
+
+To import the key back into your keychain later, read the note body:
+
+```sh
+op item get "${ITEM}" --vault "${VAULT}" --format json |
+jq -j '.fields[] | select(.id == "notesPlain") | .value' |
+gpg --import
+```
+
+An age key is a file, so store the file's contents the same way, and write them back to a file to use it:
+
+```sh
+jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' \
+  ${WC_NAME}.agekey |
+op item create --vault "${VAULT}" --category securenote --title "age private key (${MC_NAME}, ${WC_NAME}, Flux)" --format json -
+op item get "age private key (${MC_NAME}, ${WC_NAME}, Flux)" --vault "${VAULT}" --format json |
+jq -j '.fields[] | select(.id == "notesPlain") | .value' > ${WC_NAME}.agekey
+```
+
+Other password managers work the same way: store the armoured key or the age key file as a secret note, and read it
+back into `gpg --import` or a file.
