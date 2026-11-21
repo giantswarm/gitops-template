@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams
+# teams
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams`
 
 Application teams that deliver to this cluster from their own repositories, with Flux on the management cluster
 applying their work. The platform team owns these objects, and each team owns its repository. Each team has the same

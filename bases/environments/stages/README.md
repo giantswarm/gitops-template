@@ -1,4 +1,6 @@
-# bases/environments/stages
+# stages
+
+`bases/environments/stages`
 
 One Component per stage, each pinning the versions its clusters run: the Giant Swarm release, and the version of
 hello-world as an example app. Each stage has the same shape, so this README covers them all.

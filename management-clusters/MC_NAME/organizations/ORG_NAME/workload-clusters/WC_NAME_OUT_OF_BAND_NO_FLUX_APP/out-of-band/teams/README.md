@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams
+# teams
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams`
 
 The application teams' scope inside the workload cluster: each team's namespace, and the rights to it. The platform
 team owns these objects.
@@ -17,10 +19,9 @@ into the workload cluster, through its kubeconfig.
 
 ## When you copy it
 
-One file per team. Change the namespace, the repository, the ref and, for a team with Flux in the workload cluster,
-the `path` in its repository. Keep the `admin` ClusterRole bound in a
-RoleBinding, not a ClusterRoleBinding: a team gets everything in its own namespace and nothing anywhere else. The
-second mode needs Flux in the workload cluster.
+One file per team. Change the namespace, the repository, the ref and, for a team with Flux in the workload cluster, the
+`path` in its repository. Keep the `admin` ClusterRole bound in a RoleBinding, not a ClusterRoleBinding: a team gets
+everything in its own namespace and nothing anywhere else. The second mode needs Flux in the workload cluster.
 
 ## Read more
 

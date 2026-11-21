@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/secret-stores
+# secret-stores
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/secret-stores`
 
 A `SecretStore` for every workload cluster of the organisation, made as the cluster comes up, so External Secrets
 Operator can push secrets into it. Nobody writes a store per cluster: a Kyverno policy does it.

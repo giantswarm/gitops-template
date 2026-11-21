@@ -1,4 +1,6 @@
-# bases/stacks/hello-web
+# hello-web
+
+`bases/stacks/hello-web`
 
 hello-world served over HTTPS through Envoy Gateway: a stack built from the [`envoy-gateway`](../envoy-gateway/) stack
 and the [`hello-world`](../../apps/hello-world/) App Template. It holds what ties the two together, so a cluster lists

@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/namespace/shared-objects
+# shared-objects
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/namespace/shared-objects`
 
 This organisation's copy of the objects every organisation shares. The `kustomization.yaml` here lists
 [`bases/shared_objects`](/bases/shared_objects/), so a change to the base reaches every organisation that lists it.

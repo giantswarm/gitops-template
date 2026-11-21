@@ -1,4 +1,6 @@
-# WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/pushed-password
+# pushed-password
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/pushed-password`
 
 A generated password pushed into the workload cluster through `${cluster_name}-eso-cluster-store`, the `SecretStore`
 that the Kyverno policy in the organisation's `multicluster/secret-stores/` makes for every cluster. Nothing about

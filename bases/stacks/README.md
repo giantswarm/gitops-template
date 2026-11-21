@@ -1,4 +1,6 @@
-# bases/stacks
+# stacks
+
+`bases/stacks`
 
 Stacks: several apps a cluster installs together, with what ties them together in one place. That's the order they
 install in, the values that have to agree with each other, and the chart versions known to work together. A cluster

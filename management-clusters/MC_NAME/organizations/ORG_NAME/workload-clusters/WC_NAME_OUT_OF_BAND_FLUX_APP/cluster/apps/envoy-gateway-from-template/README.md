@@ -1,4 +1,6 @@
-# WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template
+# envoy-gateway-from-template
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template`
 
 The [`envoy-gateway`](/bases/stacks/envoy-gateway/) stack as base apps of this cluster, with the cluster's own
 values on top. Base apps install with the cluster, so the Gateway is there before the secondary apps that route

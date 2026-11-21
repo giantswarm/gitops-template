@@ -1,4 +1,6 @@
-# bases/clusters
+# clusters
+
+`bases/clusters`
 
 Cluster bases: what every workload cluster of one provider has in common, so a cluster's own directory only holds
 what makes it different. There's one directory per provider.

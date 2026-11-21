@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/namespace
+# namespace
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/namespace`
 
 Everything the organisation keeps in its own namespace, `org-<name>`: the workload clusters' SOPS keys, their Flux
 Kustomizations, the secret stores and the commit status objects.
@@ -22,8 +24,8 @@ then and succeeds on its next retry, and nothing else has to wait. The files her
 Copy it with the organisation. `kustomization.yaml` needs no change: the names come from the organisation's directory.
 The subdirectories do: put your own clusters' keys in `secrets/`, and change the two `TODO`s in `notifications/`, the
 `Provider`'s repository and the `Alert`'s list of Kustomizations. Don't give a file a namespace other than the
-organisation's. Something that has to be in `default` belongs in the organisation's
-directory instead, and something cluster-scoped doesn't belong to an organisation.
+organisation's. Something that has to be in `default` belongs in the organisation's directory instead, and something
+cluster-scoped doesn't belong to an organisation.
 
 ## Read more
 

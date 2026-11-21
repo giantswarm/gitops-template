@@ -1,4 +1,6 @@
-# WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/workload-cluster-secrets
+# workload-cluster-secrets
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/workload-cluster-secrets`
 
 Secrets pushed into the workload cluster as soon as it's up, through a store you keep in Git: one secret every cluster
 needs, from your secret manager, and one password generated for this cluster alone.

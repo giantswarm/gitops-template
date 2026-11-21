@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME
+# MC_NAME
+
+`management-clusters/MC_NAME`
 
 The example management cluster. Copy it once per management cluster, and rename it to that cluster's name.
 

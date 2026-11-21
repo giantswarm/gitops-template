@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/multicluster
+# multicluster
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/multicluster`
 
 What the organisation rolls out to several of its workload clusters at once, rather than cluster by cluster: apps, and
 the secret store every cluster gets.

@@ -1,4 +1,6 @@
-# WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template
+# hello-world-from-template
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template`
 
 hello-world from its App Template, [`bases/apps/hello-world`](/bases/apps/hello-world/), with values of this
 cluster's own on top. The App Template holds what every cluster has; this directory holds only what's different here.

@@ -1,4 +1,6 @@
-# WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-automatic-updates
+# hello-world-automatic-updates
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-automatic-updates`
 
 hello-world installed at whatever version is newest in a range, so Flux upgrades it as soon as a matching chart is
 published, without a change in Git.

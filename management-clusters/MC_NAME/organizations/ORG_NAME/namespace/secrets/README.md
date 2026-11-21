@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secrets
+# secrets
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secrets`
 
 The SOPS keys the organisation's workload clusters decrypt their files with, as Secrets encrypted with the management
 cluster's master key. A Flux Kustomization reads its decryption Secret from its own namespace, so the keys live here,

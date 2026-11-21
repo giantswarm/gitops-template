@@ -1,4 +1,6 @@
-# bases/environments/regions
+# regions
+
+`bases/environments/regions`
 
 One Component per region. Every cluster lists exactly one, as the `release-aws` chart otherwise creates the cluster in
 the management cluster's own region. Each region has the same shape, so this README covers them all.

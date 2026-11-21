@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+# WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP`
 
 A cluster without Flux of its own, which still gets objects applied straight into it: the management cluster's Flux
 applies `out-of-band/` through the cluster's kubeconfig. It also shows ESO and SOPS side by side, secrets pushed into
@@ -49,9 +51,13 @@ Kustomization's kubeconfig Secret. Change the `-direct` Kustomization's name in 
 - set `spec.decryption.secretRef.name` in the cluster's Kustomization and its apps Kustomization to that Secret's name;
   the `-direct` one decrypts nothing;
 - encrypt `cluster/apps/envoy-gateway-from-template/secret.enc.yaml` again with it, or delete it and its line in that
-  directory's `kustomization.yaml`. Point the `ExternalSecret`s at your own store. Delete the examples
-you don't need, with their lines in the `kustomization.yaml` that lists them. `teams/` needs the `-direct`
-Kustomization, and `apps/pushed-password/` the store from the organisation's `multicluster/secret-stores/`.
+  directory's `kustomization.yaml`.
+
+Point the `ExternalSecret`s at your own store. Delete the examples you don't need, with their lines in the
+`kustomization.yaml` that lists them. `teams/` needs the `-direct` Kustomization, and `apps/pushed-password/` the store
+from the organisation's `multicluster/secret-stores/`. List the cluster's Kustomizations in
+`workload-clusters/kustomization.yaml` and in the organisation's commit status `Alert`, as
+[`workload-clusters/README.md`](../README.md#when-you-copy-it) says.
 
 ## Read more
 

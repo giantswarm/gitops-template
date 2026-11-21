@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations
+# organizations
+
+`management-clusters/MC_NAME/organizations`
 
 One directory per organisation on this management cluster, named after it. An organisation is a tenant: it gets its
 own namespace, `org-<name>`, and its workload clusters live there.

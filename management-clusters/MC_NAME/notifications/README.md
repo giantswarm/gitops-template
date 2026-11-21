@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/notifications
+# notifications
+
+`management-clusters/MC_NAME/notifications`
 
 Commit statuses on GitHub: each Flux Kustomization in `default` reports, on the commit it applied, whether it worked.
 These are the management cluster's Kustomization, and each organisation's namespace Kustomization and multicluster apps

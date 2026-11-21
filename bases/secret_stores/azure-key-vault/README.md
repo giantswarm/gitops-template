@@ -1,4 +1,6 @@
-# bases/secret_stores/azure-key-vault
+# azure-key-vault
+
+`bases/secret_stores/azure-key-vault`
 
 A `SecretStore` named `azure-key-vault` that reads Azure Key Vault with Azure Workload Identity. ESO signs in as the
 managed identity the ServiceAccount names, with a token Kubernetes issues for that ServiceAccount, so no client secret

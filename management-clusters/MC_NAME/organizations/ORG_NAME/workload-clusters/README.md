@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters
+# workload-clusters
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters`
 
 The organisation's workload clusters: one directory per cluster, and next to it the Flux Kustomizations that apply it.
 

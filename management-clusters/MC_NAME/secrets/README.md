@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/secrets
+# secrets
+
+`management-clusters/MC_NAME/secrets`
 
 The management cluster's master key, `sops-gpg-master`, as a Secret encrypted with the master key itself. With it,
 Flux decrypts the encrypted files that the management cluster's Kustomization and the organisations' namespace

@@ -1,4 +1,6 @@
-# bases/secret_stores
+# secret_stores
+
+`bases/secret_stores`
 
 External Secrets Operator `SecretStore`s for cloud secret managers that keep no credential anywhere. Each one signs in
 with a token Kubernetes issues for a ServiceAccount, so there's no access key in the cluster or in Git to leak or

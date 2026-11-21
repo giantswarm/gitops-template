@@ -1,4 +1,6 @@
-# bases/apps
+# apps
+
+`bases/apps`
 
 App Templates: one app's chart, version and default values, written once and installed on any number of workload
 clusters. Each directory here is one App Template, and they all have the same shape, so this README covers them.

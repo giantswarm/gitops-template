@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME
+# ORG_NAME
+
+`management-clusters/MC_NAME/organizations/ORG_NAME`
 
 The example organisation: its `Organization`, the Flux Kustomizations that fill its namespace, and its workload
 clusters. Copy it once per organisation.

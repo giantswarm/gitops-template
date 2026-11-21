@@ -1,4 +1,6 @@
-# bases/clusters/capa
+# capa
+
+`bases/clusters/capa`
 
 The cluster base for AWS. It deploys a cluster with the `release-aws` chart, as a Flux `OCIRepository` and
 `HelmRelease`. The chart version is the Giant Swarm release version, so the release lives in git and you upgrade the

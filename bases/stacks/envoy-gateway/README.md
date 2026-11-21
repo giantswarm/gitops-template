@@ -1,4 +1,6 @@
-# bases/stacks/envoy-gateway
+# envoy-gateway
+
+`bases/stacks/envoy-gateway`
 
 Envoy Gateway, so apps in a workload cluster can be reached over HTTPS through the Gateway API. It's three charts that
 install in a set order, each waiting for the one before it with `dependsOn`.

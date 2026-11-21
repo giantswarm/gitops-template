@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST
+# HELLO_APP_PROD_CLUSTER_US_WEST
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST`
 
 One of four clusters that run the same stack, hello-web, in different stages and regions. This one is a prod cluster, in
 `us-west-2`. The four directories differ in the Components they list, and the two prod clusters in their own

@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/.sops.keys
+# .sops.keys
+
+`management-clusters/MC_NAME/.sops.keys`
 
 The public halves of the SOPS keys, so anyone with the repository can encrypt a file for a cluster without being able
 to decrypt it. Import a public key with `gpg --import`, or read an age recipient from its `.agekey.pub` file.

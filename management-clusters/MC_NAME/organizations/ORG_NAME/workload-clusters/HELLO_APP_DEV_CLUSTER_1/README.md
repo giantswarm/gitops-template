@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1
+# HELLO_APP_DEV_CLUSTER_1
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1`
 
 One of four clusters that run the same stack, hello-web, in different stages and regions. This one is the dev cluster,
 in `eu-central-1`. The four directories differ in the Components they list, and the two prod clusters in their own

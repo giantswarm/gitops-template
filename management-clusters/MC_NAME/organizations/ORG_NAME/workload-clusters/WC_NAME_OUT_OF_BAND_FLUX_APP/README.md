@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP
+# WC_NAME_OUT_OF_BAND_FLUX_APP
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP`
 
 A cluster with Flux of its own. The management cluster installs flux-app into the workload cluster, and that Flux
 applies `out-of-band/` from inside the cluster. Use it for what you'd rather the workload cluster reconciled itself.
@@ -38,7 +40,9 @@ in both, and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.ya
 - encrypt `cluster/apps/envoy-gateway-from-template/secret.enc.yaml` again with it, or delete it and its line in that
   directory's `kustomization.yaml`.
 
-Point flux-app's values at your repository, and the path at this cluster's `out-of-band/`.
+Point flux-app's values at your repository, and the path at this cluster's `out-of-band/`. List the cluster's
+Kustomizations in `workload-clusters/kustomization.yaml` and in the organisation's commit status `Alert`, as
+[`workload-clusters/README.md`](../README.md#when-you-copy-it) says.
 
 ## Read more
 

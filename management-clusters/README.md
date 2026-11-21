@@ -1,5 +1,7 @@
 # management-clusters
 
+`management-clusters`
+
 One directory per management cluster, named after it. Everything Flux applies to a management cluster, and through it
 to that cluster's organisations and workload clusters, starts in that cluster's directory.
 

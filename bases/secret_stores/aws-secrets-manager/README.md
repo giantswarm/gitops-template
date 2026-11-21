@@ -1,4 +1,6 @@
-# bases/secret_stores/aws-secrets-manager
+# aws-secrets-manager
+
+`bases/secret_stores/aws-secrets-manager`
 
 A `SecretStore` named `aws-secrets-manager` that reads AWS Secrets Manager with IAM roles for service accounts. ESO
 assumes the IAM role the ServiceAccount names, with a token Kubernetes issues for that ServiceAccount, so no access key

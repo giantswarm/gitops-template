@@ -1,4 +1,6 @@
-# bases/shared_objects
+# shared_objects
+
+`bases/shared_objects`
 
 Objects every organisation gets its own copy of, such as a CA bundle that all clusters trust. Write the object once
 here, and every organisation that lists this base gets it in its namespace and keeps it in step with this file.

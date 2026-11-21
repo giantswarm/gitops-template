@@ -1,4 +1,6 @@
-# bases/environments
+# environments
+
+`bases/environments`
 
 Stages and regions, as kustomize Components. A cluster is in one region and, optionally, one stage, and it picks them
 up by listing the Components in its `cluster/kustomization.yaml`:

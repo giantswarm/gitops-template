@@ -1,4 +1,6 @@
-# management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications
+# notifications
+
+`management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications`
 
 The organisation's commit statuses on GitHub: each of this repository's Flux Kustomizations in the organisation's
 namespace, the workload clusters' ones, reports on the commit it applied whether it worked. An `Alert` only reaches a
