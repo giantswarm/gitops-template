@@ -1,0 +1,19 @@
+# One of two Kustomizations named parent-twin that the root applies, told apart only by their
+# namespace: tools/fake-flux has to pick the one in the namespace it's asked for.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: parent-twin
+  namespace: org-from-the-parent
+spec:
+  interval: 1m
+  path: ./root/organization/direct
+  postBuild:
+    substitute:
+      cluster_name: "twin-org-from-the-parent"
+      organization: "from-the-parent"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: parent-kustomization
+    namespace: default

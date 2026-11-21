@@ -1,0 +1,11 @@
+# Everything the organisation keeps in its namespace, which the Kustomization in ../namespace.yaml
+# applies with `targetNamespace`: the files here name no namespace. Where a file needs the
+# organisation's name as a value, it writes `${organization}`, which that Kustomization's
+# `postBuild` fills in.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - notifications
+  - shared-objects
+  - workload-cluster-secret-stores
+  - workload-clusters

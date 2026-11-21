@@ -4,6 +4,7 @@ need no cluster."""
 import base64
 
 from commit_status import receiver_problems, suspended, suspended_alerts, token_problems
+from notification_objects import organization_alerts
 
 READY = {"conditions": [{"type": "Ready", "status": "True"}]}
 
@@ -24,6 +25,18 @@ def test_suspended_alerts_of_a_build() -> None:
     provider = {"kind": "Provider", "metadata": {"name": "p"}, "spec": {}}
     assert suspended_alerts([provider, alert, None]) == [
         {"kind": "Alert", "metadata": {"name": "a"}, "spec": {"suspend": True}}
+    ]
+
+
+def test_organization_alerts_in_the_organisation_namespace() -> None:
+    # the build of namespace/ names no namespace: Flux's targetNamespace sets it
+    build = "kind: Provider\nmetadata: {name: p}\n---\nkind: Alert\nmetadata: {name: a}\nspec: {}\n"
+    assert organization_alerts(build, "org-a") == [
+        {
+            "kind": "Alert",
+            "metadata": {"name": "a", "namespace": "org-a"},
+            "spec": {"suspend": True},
+        }
     ]
 
 

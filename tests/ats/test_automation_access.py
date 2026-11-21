@@ -1,12 +1,10 @@
 """Checks of the SubjectAccessReviews test_flux_objects asks about the `automation`
 ServiceAccounts; they need no cluster."""
 
-import pytest
 from automation_access import (
     Access,
     access_problems,
     expected_access,
-    org_namespace,
     subject_access_review,
 )
 
@@ -66,11 +64,3 @@ def test_expected_access_checks_both_accounts_both_ways() -> None:
         ("org-a", True),
         ("org-a", False),
     }
-
-
-@pytest.mark.parametrize(
-    "namespaces, expected",
-    [(["default", "org-a", "org-b"], "org-a"), (["default"], None)],
-)
-def test_org_namespace(namespaces: list[str], expected: str | None) -> None:
-    assert org_namespace(namespaces) == expected

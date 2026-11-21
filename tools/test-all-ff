@@ -428,6 +428,64 @@ function test() {
 			echo "${output}"
 			has_validation_errors=1
 		fi
+
+		# fake-flux must build a Kustomization that another Flux Kustomization applies as that
+		# parent applies it: in the namespace the parent's `targetNamespace` puts it in, with the
+		# values the parent's `postBuild` substitutes, and the parent itself as the replacements
+		# of its own parent's build set it. An organisation's namespace Kustomization applies its
+		# -direct Kustomizations this way. The checks look the Kustomization in namespace/ up by
+		# the namespace Flux applies it in, and by none, as its file names none.
+		fixture_dir="${tmp_dir}/parent-kustomization"
+		git_fixture "${fixture_dir}"
+		cp -r "$(dirname $0)/testdata/parent-kustomization/." "${fixture_dir}"
+		for check in "parent-direct:org-from-the-parent|name: parent-direct$" \
+			"parent-direct:|name: parent-direct$" \
+			"parent-namespace:default|name: parent-direct$"; do
+			lookup="${check%%|*}"
+			echo -n "fake-flux, a Kustomization its parent applies, ${lookup}: "
+			status=0
+			output=$(cd "${fixture_dir}" && "${fakeflux_path}" build "${lookup}" -M 2>&1) || status=$?
+			if [ "${status}" -eq 0 ] && grep -q "namespace: org-from-the-parent" <<<"${output}" &&
+				grep -q "${check#*|}" <<<"${output}"; then
+				echo "OK, set"
+			else
+				echo "not set:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
+
+		# The root applies two Kustomizations named parent-twin, in `default` and in
+		# org-from-the-parent: fake-flux must take the one in the namespace it's asked for from the
+		# parent's build, not the first of that name.
+		for check in "default|twin-default|twin-org-from-the-parent" \
+			"org-from-the-parent|twin-org-from-the-parent|twin-default"; do
+			IFS='|' read -r namespace wanted other <<<"${check}"
+			echo -n "fake-flux, a Kustomization its parent applies, parent-twin:${namespace}: "
+			status=0
+			output=$(cd "${fixture_dir}" && "${fakeflux_path}" build "parent-twin:${namespace}" -M 2>&1) || status=$?
+			if [ "${status}" -eq 0 ] && grep -q "name: ${wanted}$" <<<"${output}" &&
+				! grep -q "${other}" <<<"${output}"; then
+				echo "OK, picked"
+			else
+				echo "not picked:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
+
+		# It must not find a Kustomization in a namespace its parent doesn't put it in: the -direct
+		# one in namespace/ is in org-from-the-parent, not in `default`.
+		echo -n "fake-flux, a Kustomization its parent applies, in another namespace: "
+		status=0
+		output=$(cd "${fixture_dir}" && "${fakeflux_path}" build parent-direct:default -M 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "No kustomization found" <<<"${output}"; then
+			echo "OK, not found"
+		else
+			echo "found:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
 	fi
 
 	if [ "${mode}" == "validate" ]; then

@@ -130,13 +130,25 @@ Fake flux is a script that can emulate the behaviour of flux locally before comm
 It's purpose is to support you in the detection of issues which may arise from syntax errors, failing patches or other
 issues caused by incompatibilities with the flux ecosystem.
 
-It builds a Flux `Kustomization` as Flux applies it, not as its file is written. Flux's build of a directory without a
-`kustomization.yaml` stops at a directory with one and builds that whole, so a replacement there can change the
-`Kustomization`: the organisation's `kustomization.yaml` sets `organization` in `spec.postBuild.substitute` and the
-organisation's namespace in place of the `org-ORG_NAME` placeholder. `fake-flux` builds the file's directory with
-kustomize if it has a `kustomization.yaml`, and its parent if that has one too, and so on up, and takes the
-`Kustomization` from the build of the highest of those directories that has it. Without one, it reads the file as it
-is. `test-all-ff validate` checks this with the fixture in [testdata/ancestor-replacement](testdata/ancestor-replacement).
+It builds a Flux `Kustomization` as Flux applies it, not as its file is written.
+
+A `Kustomization` that another Flux `Kustomization` of the repository applies is read from that parent's `flux build`:
+in the namespace the parent's `targetNamespace` puts it in, with the values the parent's `postBuild` substitutes. An
+organisation's namespace `Kustomization`, `namespace.yaml`, applies its `-direct` `Kustomization`s this way, with no
+namespace in their files and `organization: "${organization}"`. The parent is itself built as Flux applies it, the same
+way, so the values its own parent's replacements set reach the child. The parents are this repository's
+`Kustomization`s, the ones whose source is the `GitRepository` of a `Kustomization` that applies the directory its own
+file is in, such as `MC_NAME.yaml`, and whose path holds the file. The one with the deepest path whose build has the
+`Kustomization` wins. `test-all-ff validate` checks this with the fixture in
+[testdata/parent-kustomization](testdata/parent-kustomization).
+
+Without such a parent, as for `MC_NAME.yaml` itself, it builds the directories above the file. Flux's build of a
+directory without a `kustomization.yaml` stops at a directory with one and builds that whole, so a replacement there
+can change the `Kustomization`: the organisation's `kustomization.yaml` sets `organization` in
+`spec.postBuild.substitute`. `fake-flux` builds the file's directory with kustomize if it has a `kustomization.yaml`,
+and its parent if that has one too, and so on up, and takes the `Kustomization` from the build of the highest of those
+directories that has it. Without one, it reads the file as it is. `test-all-ff validate` checks this with the fixture
+in [testdata/ancestor-replacement](testdata/ancestor-replacement).
 
 For a detailed description of what this tool can do, please see `fake-flux usage` which includes a comprehensive set of
 examples.

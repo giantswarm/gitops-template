@@ -1,9 +1,9 @@
 # The organisation's commit statuses: the events of the Flux Kustomizations in its namespace,
 # such as the -direct one of WC_NAME_OUT_OF_BAND_NO_FLUX_APP. An Alert reaches only a Provider in
 # its own namespace, so the Alert, its Provider and the Provider's token all live in the
-# organisation's namespace. `org-ORG_NAME` is a fixed placeholder: ../kustomization.yaml
-# completes it with the Organization's name. The management cluster's Alert, in
-# management-clusters/MC_NAME/notifications, covers the Kustomizations in `default`.
+# organisation's namespace, where the organisation's namespace Kustomization puts them. The
+# management cluster's Alert, in management-clusters/MC_NAME/notifications, covers the
+# Kustomizations in `default`, the organisation's namespace Kustomization among them.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

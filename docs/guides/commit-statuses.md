@@ -11,15 +11,15 @@
 Flux's notification-controller can tell you on GitHub whether Flux applied a commit. A `Provider` of type `github` posts
 a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`s, this
 repository's Flux `Kustomization`s in the `default` namespace and in the organisation's namespace report on the commit
-they applied: the management cluster's, in `MC_NAME.yaml`, the workload clusters', in the `workload-clusters`
-directories, and the `-direct` ones. Each `Kustomization` shows as its own check on the commit, green once it applied
-the commit and red when it failed. An event source without a `namespace` matches only the `Alert`'s own namespace, and
-an `Alert` reaches only a `Provider` in its own namespace. So the management cluster's `Alert` covers `default`, and
-each organisation has its own `Alert`, `Provider` and token in its namespace. Neither covers `flux-giantswarm`, where
-Giant Swarm's own `Kustomizations` live, so keep that namespace out of them. The organisation's `Alert` names this
-repository's `Kustomization`s in its namespace, the `-direct` ones, instead of `name: "*"`: an application team's
-`Kustomization` lives there too, but reads the team's repository, see [Application teams](./app-teams.md). List each
-`-direct` `Kustomization` you add.
+they applied: the management cluster's, in `MC_NAME.yaml`, each organisation's namespace `Kustomization`, in
+`namespace.yaml`, the workload clusters', in the `workload-clusters` directories, and the `-direct` ones. Each
+`Kustomization` shows as its own check on the commit, green once it applied the commit and red when it failed. An event
+source without a `namespace` matches only the `Alert`'s own namespace, and an `Alert` reaches only a `Provider` in its
+own namespace. So the management cluster's `Alert` covers `default`, and each organisation has its own `Alert`,
+`Provider` and token in its namespace. Neither covers `flux-giantswarm`, where Giant Swarm's own `Kustomizations` live,
+so keep that namespace out of them. The organisation's `Alert` names this repository's `Kustomization`s in its
+namespace, the `-direct` ones, instead of `name: "*"`: an application team's `Kustomization` lives there too, but reads
+the team's repository, see [Application teams](./app-teams.md). List each `-direct` `Kustomization` you add.
 
 A `Receiver` does the opposite: GitHub calls it on a push, and Flux fetches the repository at once instead of
 waiting for the `GitRepository`'s interval. It's optional.
@@ -38,12 +38,13 @@ The example is in [MC_NAME/notifications](/management-clusters/MC_NAME/notificat
   optional `Receiver` and its webhook secret.
 
 The organisation's are in
-[MC_NAME/organizations/ORG_NAME/notifications](/management-clusters/MC_NAME/organizations/ORG_NAME/notifications/):
-the same `Provider`, `Alert` and token `ExternalSecret`, in the namespace `org-ORG_NAME`. That's a fixed placeholder:
-the organisation's `kustomization.yaml` lists `notifications` and puts the organisation's name into it, see
-[The organisation's name](../reference/repo-structure.md#the-organisations-name). Leave it as it is.
+[MC_NAME/organizations/ORG_NAME/namespace/notifications](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications/):
+the same `Provider`, `Alert` and token `ExternalSecret`, with no namespace. The organisation's
+`namespace/kustomization.yaml` lists `notifications`, and its namespace `Kustomization`, `namespace.yaml`, applies them
+into the organisation's namespace, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
 
-The `Kustomization` of the management cluster applies them, so they need no `Kustomization` of their own.
+The management cluster's `Kustomization` applies its own, and the organisation's namespace `Kustomization` the
+organisation's, so they need no `Kustomization` of their own.
 
 ## Export environment variables
 
@@ -53,7 +54,7 @@ export GITOPS_REPO=REPO_NAME         # name of the Flux GitRepository, for examp
 export GITHUB_REPO=YOUR_ORG/YOUR_REPO
 export MC_DIR=management-clusters/${MC_NAME}
 export ORG_NAME=ORG_NAME             # organisation whose clusters report, without the `org-` prefix
-export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
+export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}/namespace   # the organisation's namespace directory
 ```
 
 ## Commit statuses
@@ -72,7 +73,7 @@ Store the token in your secret manager, then copy the example:
 ```sh
 mkdir -p ${MC_DIR}/notifications
 cp management-clusters/MC_NAME/notifications/commit-status-*.yaml ${MC_DIR}/notifications/
-cp -r management-clusters/MC_NAME/organizations/ORG_NAME/notifications ${ORG_DIR}/
+cp -r management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications ${ORG_DIR}/
 yq -i '.resources += ["notifications"]' ${ORG_DIR}/kustomization.yaml
 ```
 
@@ -96,7 +97,7 @@ organisation's `notifications/kustomization.yaml` then lists the encrypted Secre
 ```sh
 mkdir -p ${MC_DIR}/notifications ${ORG_DIR}/notifications
 cp management-clusters/MC_NAME/notifications/commit-status-{provider,alert}.yaml ${MC_DIR}/notifications/
-cp management-clusters/MC_NAME/organizations/ORG_NAME/notifications/{kustomization,commit-status-provider,commit-status-alert}.yaml \
+cp management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications/{kustomization,commit-status-provider,commit-status-alert}.yaml \
   ${ORG_DIR}/notifications/
 yq -i '.resources |= map(select(. != "commit-status-externalsecret.yaml")) + ["github-commit-status-token.enc.yaml"]' \
   ${ORG_DIR}/notifications/kustomization.yaml
@@ -114,14 +115,14 @@ Secret. Add a rule to `.sops.yaml`, so `sops` encrypts the files in both `notifi
 export KEY_FP=MASTER_KEY_FINGERPRINT
 yq -i '.creation_rules += [{
   "encrypted_regex": "^(data|stringData)$",
-  "path_regex": "management-clusters/'"${MC_NAME}"'/(organizations/[^/]+/)?notifications/.*\\.enc\\.yaml",
+  "path_regex": "management-clusters/'"${MC_NAME}"'/(organizations/[^/]+/namespace/)?notifications/.*\\.enc\\.yaml",
   "pgp": "'"${KEY_FP}"'"
 }]' .sops.yaml
 ```
 
 Then write the token into the Secrets, and encrypt them. The organisation's names its real namespace,
-`org-${ORG_NAME}`, not the placeholder `org-ORG_NAME`: the organisation's `kustomization.yaml` would change the encrypted
-file, which breaks its MAC, so Flux couldn't decrypt it:
+`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, so Flux leaves the encrypted file as
+it is: changing it would break its MAC, so Flux couldn't decrypt it:
 
 ```sh
 kubectl create secret generic github-commit-status-token --namespace=default \

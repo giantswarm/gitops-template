@@ -1,11 +1,16 @@
 """Pins the `spec.path` of every workload cluster Kustomization, the layout of
 docs/reference/repo-structure.md; needs no cluster."""
 
+from pathlib import Path
+
 import yaml
 from repository_gates import WORKLOAD_CLUSTERS_DIR
 
+# the -direct Kustomizations, in the organisation's namespace: the organisation's namespace
+#  Kustomization applies them, from namespace/
+NAMESPACE_CLUSTERS_DIR = WORKLOAD_CLUSTERS_DIR / "../namespace/workload-clusters"
 # the directory each Kustomization applies, relative to workload-clusters/: the cluster's
-#  applies `cluster/`, the apps one the cluster root, and a -direct one `out-of-band/`
+#  applies `cluster/`, the apps one the cluster root
 EXPECTED_PATHS = {
     "HELLO_APP_DEV_CLUSTER_1.yaml": "HELLO_APP_DEV_CLUSTER_1",
     "HELLO_APP_PROD_CLUSTER_EU_CENTRAL.yaml": "HELLO_APP_PROD_CLUSTER_EU_CENTRAL",
@@ -17,15 +22,18 @@ EXPECTED_PATHS = {
     "WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml": "WC_NAME_OUT_OF_BAND_FLUX_APP",
     "WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml": "WC_NAME_OUT_OF_BAND_NO_FLUX_APP/cluster",
     "WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml": "WC_NAME_OUT_OF_BAND_NO_FLUX_APP",
-    "WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml": "WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band",
     "WC_NAME_SCHEDULED_UPGRADES.yaml": "WC_NAME_SCHEDULED_UPGRADES",
+}
+# and the one a -direct Kustomization applies: `out-of-band/`
+EXPECTED_NAMESPACE_PATHS = {
+    "WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml": "WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band",
 }
 PREFIX = "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/"
 
 
-def _kustomization_paths() -> dict[str, str]:
+def _kustomization_paths(directory: Path) -> dict[str, str]:
     paths = {}
-    for file in sorted(WORKLOAD_CLUSTERS_DIR.glob("*.yaml")):
+    for file in sorted(directory.glob("*.yaml")):
         if file.name != "kustomization.yaml":
             with file.open() as f:
                 paths[file.name] = yaml.safe_load(f)["spec"]["path"]
@@ -33,8 +41,14 @@ def _kustomization_paths() -> dict[str, str]:
 
 
 def test_cluster_kustomization_paths() -> None:
-    assert _kustomization_paths() == {
+    assert _kustomization_paths(WORKLOAD_CLUSTERS_DIR) == {
         file: PREFIX + path for file, path in EXPECTED_PATHS.items()
+    }
+
+
+def test_direct_kustomization_paths() -> None:
+    assert _kustomization_paths(NAMESPACE_CLUSTERS_DIR) == {
+        file: PREFIX + path for file, path in EXPECTED_NAMESPACE_PATHS.items()
     }
 
 

@@ -122,15 +122,16 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001 # master key
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/secrets/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/namespace/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002 # organization key
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/apps/app1/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000003 # app1 key
 ```
 
-The organization key decrypts files that `MC_NAME.yaml` applies, so it goes into the master Secret. The app key
-goes into the workload cluster's Secret:
+The organization key decrypts files that the organisation's namespace `Kustomization`, `namespace.yaml`, applies. That
+`Kustomization` decrypts with the master Secret, as `MC_NAME.yaml` does, so the key goes into the master Secret. The app
+key goes into the workload cluster's Secret:
 
 ```yaml
 ## MC_NAME.gpgkey.enc.yaml ##

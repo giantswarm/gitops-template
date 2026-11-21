@@ -9,7 +9,6 @@ from automation_access import (
     access_problems,
     api_server_review,
     expected_access,
-    org_namespace,
 )
 from checks.assertion_files import (
     EXISTS_ASSERTIONS_DIR,
@@ -26,6 +25,7 @@ from conftest import GitOpsTestConfig
 from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster
 from notification_objects import check_notifications
+from organization_operator import ORG_NAMESPACE
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from resource_set_cluster_guard import check_cluster_input_loss
@@ -42,7 +42,8 @@ from workload_cluster_secrets import check_secrets_pushed
 # Kyverno has to run before gitops_deployment installs External Secrets Operator, and Flux
 #  Operator before it applies the repository: pytest sets up the fixtures of `usefixtures`
 #  before the ones a test requests.
-#  The Alert of the notification example has to be suspended before then, too.
+#  The management cluster's Alert of the notification example has to be suspended before then,
+#  too; organization_operator suspends the organisation's, before Flux can apply it.
 pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert", "flux_operator")
 
 
@@ -73,18 +74,18 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
 
 def test_automation_access(
     kube_cluster: Cluster,
-    gitops_test_config: GitOpsTestConfig,
     automation_rbac: None,
     check_kustomizations_successful: None,
 ) -> None:
     # the `automation` ServiceAccounts have the rights of a management cluster, no more and no
-    #  less, once the repository is applied: SubjectAccessReviews also catch what other objects,
+    #  less, once the repository is applied and organization_operator has given the
+    #  organisation's namespace its rights: SubjectAccessReviews also catch what other objects,
     #  such as ones left over from an earlier run, grant them
-    org = org_namespace(gitops_test_config.init_namespaces)
-    assert org, "GITOPS_INIT_NAMESPACES has no `org-*` namespace"
     review = api_server_review(kube_cluster.kube_client)
     # and Kyverno's background controller has the rights rbac-operator gives it
-    problems = access_problems(review, expected_access(org) + kyverno_access(org))
+    problems = access_problems(
+        review, expected_access(ORG_NAMESPACE) + kyverno_access(ORG_NAMESPACE)
+    )
     assert not problems, "\n".join(problems)
 
 

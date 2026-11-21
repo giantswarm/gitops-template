@@ -12,7 +12,6 @@ from typing import NamedTuple
 
 import pykube
 from automation_accounts import DEFAULT_NAMESPACE, PROTECTED_NAMESPACE
-from automation_bindings import ORG_NAMESPACE_PREFIX
 from rbac_manifests import AUTOMATION
 
 
@@ -46,10 +45,6 @@ def expected_access(org: str) -> list[Access]:
         Access(default, "create", "apps", "deployments", default, True),
         Access(org, "create", "apps", "deployments", org, True),
     ]
-
-
-def org_namespace(namespaces: list[str]) -> str | None:
-    return next((ns for ns in namespaces if ns.startswith(ORG_NAMESPACE_PREFIX)), None)
 
 
 def subject_access_review(access: Access) -> dict:

@@ -78,11 +78,17 @@ EOF
 [ "$(git rev-parse --show-toplevel 2>/dev/null)" != "$(pwd -P)" ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
 
 ##
-# Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
+# Discover all fluxcd kustomizations and store filename, name, namespace, path, kind and source,
+# `<kind>/<namespace>/<name>`, for each found
+# $ns is a yq variable
+# shellcheck disable=SC2016
 export KUSTOMIZATIONS=(
 	$(
 		for f in $(find . -name '*.yaml' -not -path './tools/testdata/*' -exec awk '/api.*\.fluxcd\.io/{print FILENAME; nextfile}' {} \;); do
-			yq --no-doc '[filename,.metadata.name,.metadata.namespace,.spec.path,.kind] | select(.[4] == "Kustomization") | join(",")' $f
+			yq --no-doc '(.metadata.namespace // "default") as $ns |
+				[filename,.metadata.name,.metadata.namespace,.spec.path,.kind,
+					.spec.sourceRef.kind + "/" + (.spec.sourceRef.namespace // $ns) + "/" + .spec.sourceRef.name] |
+				select(.[4] == "Kustomization") | join(",")' $f
 		done
 	)
 )
@@ -223,28 +229,108 @@ fi
 PLACEHOLDER_NAMESPACE="org-ORG_NAME"
 
 ##
+# The directory a Flux Kustomization's `spec.path` names, as find prints it, from the repository
+# root: `./a/b` for `a/b/`, `.` for `./` or none.
+function _directory() {
+	local path="${1#./}"
+	path="${path%/}"
+	echo "./${path}" | sed 's|^\./$|.|'
+}
+
+##
+# The sources of this repository: the GitRepositories of the Kustomizations that apply the
+# directory their own file is in, such as management-clusters/MC_NAME/MC_NAME.yaml, as in
+# test-all-ff and check-kustomization-paths. One per line.
+function _repository_sources() {
+	local k file path source
+	for k in "${KUSTOMIZATIONS[@]}"; do
+		IFS=, read -r file _ _ path _ source <<<"${k}"
+		if [ "$(dirname "${file}")" == "$(_directory "${path}")" ] && [[ "${source}" == GitRepository/* ]]; then
+			echo "${source}"
+		fi
+	done | sort -u
+}
+
+##
+# The Flux Kustomizations that may apply the file $1, other than the Kustomization $2 in it: the
+# ones of this repository whose path holds the file, the deepest path first. One entry of
+# KUSTOMIZATIONS per line.
+function _parents() {
+	local file="$1" name="$2" k k_file k_name path source sources dir
+	sources=$(_repository_sources)
+	for k in "${KUSTOMIZATIONS[@]}"; do
+		IFS=, read -r k_file k_name _ path _ source <<<"${k}"
+		[ "${k_file}" == "${file}" ] && [ "${k_name}" == "${name}" ] && continue
+		grep -qxF -- "${source}" <<<"${sources}" || continue
+		dir=$(_directory "${path}")
+		if [ "${dir}" == "." ] || [[ "$(dirname "${file}")/" == "${dir}/"* ]]; then
+			echo "${#dir} ${k}"
+		fi
+	done | sort -rn | cut -d' ' -f2-
+}
+
+##
+# Select the Flux Kustomization named $name from the build on stdin: the one in the namespace
+# $namespace, any namespace if it's empty. One in the namespace PLACEHOLDER_NAMESPACE matches one
+# in any `org-` namespace of the build, as the replacement gives it the organisation's.
+function _select_kustomization() {
+	placeholder="${PLACEHOLDER_NAMESPACE}" yq '
+		select(.apiVersion == "kustomize.toolkit.fluxcd.io/*" and .kind == "Kustomization" and
+			.metadata.name == strenv(name) and
+			(strenv(namespace) == "" or (.metadata.namespace // "default") == strenv(namespace) or
+				(strenv(namespace) == strenv(placeholder) and ((.metadata.namespace // "") | test("^org-")))))'
+}
+
+##
 # Write the Flux Kustomization named $2 in namespace $3, from file $1, to file $4 as Flux applies
-# it, or fail if a build fails. A Kustomization in the namespace PLACEHOLDER_NAMESPACE matches one
-# in any `org-` namespace of the build, as the replacement gives it the organisation's. Flux's
-# generated build of a directory without a kustomization.yaml stops at a directory with one and
-# builds it whole, so the file's directory is built by kustomize if it has one, and its parent
-# too if that has one, and so on. A replacement in such an ancestor, such as the one in an
-# organisation's kustomization.yaml that sets `organization`, changes the Kustomization. The
-# highest of those directories whose build has the Kustomization wins; without one, the file is
-# used as it is.
+# it, or fail if a build fails. $3 is the namespace its file names, empty if it names none, or the
+# one Flux applies it in.
+#
+# A Kustomization that another Flux Kustomization of this repository applies is read from that
+# parent's `flux build`, as the parent applies it: in the namespace of the parent's
+# `targetNamespace`, with the values of the parent's `postBuild`. The parent is itself built as
+# Flux applies it, so an organisation's namespace Kustomization brings the values its own
+# parent's replacements set. The parent with the deepest path whose build has the Kustomization
+# wins. $5 lists the Kustomizations being resolved already, so a Kustomization isn't its own
+# parent's parent.
+#
+# Without such a parent, as for the management cluster's root Kustomization, the ancestor
+# directories are built instead. Flux's generated build of a directory without a
+# kustomization.yaml stops at a directory with one and builds it whole, so the file's directory
+# is built by kustomize if it has one, and its parent too if that has one, and so on. A
+# replacement in such an ancestor, such as the one in an organisation's kustomization.yaml that
+# sets `organization`, changes the Kustomization. The highest of those directories whose build
+# has the Kustomization wins; without one, the file is used as it is.
 function _as_applied() {
-	local file="$1" out="$4" dir dirs=()
+	local file="$1" out="$4" seen="${5:-}" dir dirs=() parent p_file p_name p_namespace p_path p_applied
+	seen="${seen} ${file}#$2"
+	while read -r parent; do
+		[ -n "${parent}" ] || continue
+		IFS=, read -r p_file p_name p_namespace p_path _ <<<"${parent}"
+		[[ "${seen} " == *" ${p_file}#${p_name} "* ]] && continue
+		p_applied=$(mktemp)
+		if ! _as_applied "${p_file}" "${p_name}" "${p_namespace}" "${p_applied}" "${seen}"; then
+			rm -f "${p_applied}"
+			return 1
+		fi
+		p_namespace=$(yq '.metadata.namespace // "default"' "${p_applied}")
+		if ! flux build kustomization -n "${p_namespace}" "${p_name}" --path "${p_path}" \
+			--kustomization-file "${p_applied}" --dry-run --strict-substitute |
+			name="$2" namespace="$3" _select_kustomization >"${out}"; then
+			rm -f "${p_applied}"
+			return 1
+		fi
+		rm -f "${p_applied}"
+		[ -s "${out}" ] && return 0
+	done <<<"$(_parents "${file}" "$2")"
+
 	dir=$(dirname "${file}")
 	while [ "${dir}" != "." ] && [ -e "${dir}/kustomization.yaml" ]; do
 		dirs=("${dir}" "${dirs[@]}")
 		dir=$(dirname "${dir}")
 	done
 	for dir in "${dirs[@]}"; do
-		"${kustomize_build[@]}" "${dir}" | name="$2" namespace="${3:-default}" placeholder="${PLACEHOLDER_NAMESPACE}" yq '
-			select(.apiVersion == "kustomize.toolkit.fluxcd.io/*" and .kind == "Kustomization" and
-				.metadata.name == strenv(name) and
-				((.metadata.namespace // "default") == strenv(namespace) or
-					(strenv(namespace) == strenv(placeholder) and ((.metadata.namespace // "") | test("^org-")))))' >"${out}" ||
+		"${kustomize_build[@]}" "${dir}" | name="$2" namespace="$3" _select_kustomization >"${out}" ||
 			return 1
 		[ -s "${out}" ] && return 0
 	done

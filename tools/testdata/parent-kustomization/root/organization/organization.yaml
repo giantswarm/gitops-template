@@ -1,0 +1,6 @@
+# the source of the replacements in kustomization.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: from-the-parent
+  namespace: default

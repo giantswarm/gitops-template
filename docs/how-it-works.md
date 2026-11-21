@@ -17,7 +17,13 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
 1. The management cluster's own Flux `Kustomization`, `demomc.yaml`, applies everything under
    `management-clusters/demomc`: the organizations, and the Flux `Kustomization` of each workload cluster listed in
    `workload-clusters/kustomization.yaml`, such as `demowc.yaml`. A cluster file that isn't in that list does
-   nothing. It stops there and doesn't apply what's inside the `demowc` directory.
+   nothing. It stops there and doesn't apply what's inside the `demowc` directory. It applies only objects in
+   `default` and the `Organization`s, so it works on a new management cluster, where the `org-demoorg` namespace
+   doesn't exist yet: organization-operator creates it for the `Organization`. What the organisation keeps in its
+   namespace is in `organizations/demoorg/namespace`, which the organisation's own `Kustomization`, `namespace.yaml`,
+   applies into `org-demoorg`. That one fails until the namespace exists, and succeeds on its next retry. Its
+   `dependsOn` names `demomc.yaml`'s `Kustomization`, so `demomc.yaml` always applies a commit first. See
+   [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
 1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory. While it does, it fills in variables
    such as `${cluster_name}`, `${organization}` and `${release}` from its own settings.
 1. `cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
@@ -58,9 +64,10 @@ The protected objects are:
   with every cluster in it. Its file can't go on its own anyway: the organisation's `kustomization.yaml` takes the
   organisation's name from it, so without it the management cluster's Kustomization fails to build, and applies and
   prunes nothing until the file is back.
-- The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`. Flux decrypts with them, so deleting one stops
-  GitOps for every cluster that uses it. The keys are encrypted, so `secrets/kustomization.yaml` adds the annotation
-  and the label instead: changing an encrypted file by hand breaks its SOPS checksum.
+- The SOPS key `Secret`s in `secrets/`, such as `sops-gpg-master`, and in an organisation's `namespace/secrets/`, such
+  as a `-direct` `Kustomization`'s key. Flux decrypts with them, so deleting one stops GitOps for every cluster that
+  uses it. The keys are encrypted, so each directory's `kustomization.yaml` adds the annotation and the label instead:
+  changing an encrypted file by hand breaks its SOPS checksum.
 
 When you delete their files, they stay on the management cluster and the cluster keeps running, but Flux no longer
 manages them. A cluster `HelmRelease` that stays without its ConfigMaps can't reconcile, and reports it as not ready.
@@ -81,7 +88,8 @@ variables, and a mistake in one cluster's directory doesn't stop the others.
 Everything in `cluster` and `apps` is a resource on the management cluster that configures the
 workload cluster. Resources that must be applied inside the workload cluster directly go into an optional
 `out-of-band` directory next to them, which the cluster's `kustomization.yaml` leaves out. A third Kustomization,
-such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. You can also run Flux in the workload
+such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. It lives with that Secret in
+`org-demoorg`, so it's in the organisation's `namespace/workload-clusters`. You can also run Flux in the workload
 cluster and point it at that directory.
 
 ## Bases and variables
