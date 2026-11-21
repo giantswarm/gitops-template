@@ -70,8 +70,9 @@ PRUNED_OBJECTS = [
 PROTECTED_OBJECTS = [("Organization", "", "org-name")]
 # P2: what the management cluster's Kustomization keeps, in its inventory and on the cluster,
 #  when it can't build the organisation without its Organization: it prunes nothing
-KEPT_BY_FAILED_BUILD = PROTECTED_OBJECTS + [
-    ("Kustomization", *ORGANIZATION_KUSTOMIZATION)
+KEPT_BY_FAILED_BUILD = [
+    *PROTECTED_OBJECTS,
+    ("Kustomization", *ORGANIZATION_KUSTOMIZATION),
 ]
 # P2: what the organisation's namespace Kustomization keeps meanwhile: it waits for the
 #  management cluster's, in its `dependsOn`, so it applies and prunes nothing either

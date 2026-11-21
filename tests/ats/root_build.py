@@ -200,3 +200,8 @@ def decryption_problems(objects: list[dict]) -> list[str]:
         )
         and ref not in secrets
     ]
+
+
+def namespace_builds(root: list[dict]) -> list[tuple[dict, list[dict]]]:
+    """Each organisation's namespace Kustomization in the root build `root`, with its build."""
+    return [(k, build(REPO_DIR / k["spec"]["path"])) for k in root if _labelled(k)]

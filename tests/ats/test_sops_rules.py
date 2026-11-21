@@ -49,7 +49,7 @@ def test_cluster_keys_are_encrypted_with_the_master_key() -> None:
     assert master is not None
     keys = _keys()
     assert keys, f"no SOPS key in {ORG_SECRETS}"
-    for rules_in_use in (rules, rules + [ORGANIZATION_KEY_RULE]):
+    for rules_in_use in (rules, [*rules, ORGANIZATION_KEY_RULE]):
         assert {k: (first_rule(rules_in_use, k) or {}).get("pgp") for k in keys} == {
             k: master["pgp"] for k in keys
         }
@@ -57,5 +57,5 @@ def test_cluster_keys_are_encrypted_with_the_master_key() -> None:
 
 def test_the_organisation_key_encrypts_the_organisation_secrets() -> None:
     # the master key's rule leaves the organisation's other Secrets to the organisation's key
-    rules = _rules() + [ORGANIZATION_KEY_RULE]
+    rules = [*_rules(), ORGANIZATION_KEY_RULE]
     assert first_rule(rules, f"{ORG_SECRETS}/secret.enc.yaml") == ORGANIZATION_KEY_RULE
