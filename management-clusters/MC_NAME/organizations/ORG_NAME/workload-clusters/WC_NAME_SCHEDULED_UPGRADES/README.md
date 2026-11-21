@@ -1,4 +1,4 @@
-# workload-clusters/WC_NAME_SCHEDULED_UPGRADES
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES
 
 A cluster whose Giant Swarm release upgrades only inside a window you choose, such as Tuesday nights, rather than the
 moment someone merges. A Flux Operator `ResourceSet` renders the cluster at the release a provider picks, and the

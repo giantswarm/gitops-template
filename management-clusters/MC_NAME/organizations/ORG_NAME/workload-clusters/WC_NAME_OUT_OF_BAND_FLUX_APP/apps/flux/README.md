@@ -1,4 +1,4 @@
-# WC_NAME_OUT_OF_BAND_FLUX_APP/apps/flux
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/flux
 
 flux-app, Giant Swarm's Flux chart, installed into the workload cluster, so the cluster runs Flux of its own. That
 Flux reads your repository and applies the cluster's `out-of-band/` directory from inside the cluster.

@@ -1,7 +1,8 @@
-# workload-clusters/HELLO_APP_STAGING_CLUSTER_1
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1
 
 One of four clusters that run the same stack, hello-web, in different stages and regions. This one is the staging
-cluster, in `eu-central-1`. The four directories differ only in the Components they list.
+cluster, in `eu-central-1`. The four directories differ in the Components they list, and the two prod clusters in their
+own values too.
 
 The Flux Kustomization `HELLO_APP_STAGING_CLUSTER_1.yaml`, next to this directory in `workload-clusters/`, applies it
 into `org-<name>`. The cluster's release comes from its stage, so the Kustomization sets no `release`.

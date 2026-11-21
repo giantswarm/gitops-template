@@ -1,4 +1,4 @@
-# workload-clusters/WC_NAME
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME
 
 The plain example: one cluster on AWS from the CAPA cluster base, with one secondary app whose values are encrypted
 with SOPS and the cluster's own age key. Start here if you want a cluster and nothing clever.
@@ -25,10 +25,18 @@ the age key `sops-age-wc-name`, from the organisation's `namespace/secrets/`:
 
 ## When you copy it
 
-Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name`, `release` and
-the health check's cluster name in both. Give the cluster its own key, add its public half to `.sops.keys/` and a rule
-to `.sops.yaml`, and encrypt `secret.enc.yaml` again with it, or delete the file. Pick your region in
-`cluster/kustomization.yaml`. Keep the split between `cluster/` and `apps/`: the apps need a running cluster.
+Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` and `release`
+in both, and the health check's cluster name in `WC_NAME.yaml`, the only one with a health check. Give the cluster its
+own key:
+
+- add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
+- add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`
+  in the `kustomization.yaml` there;
+- set `spec.decryption.secretRef.name` in both Kustomizations to that Secret's name;
+- encrypt `apps/cert-manager/secret.enc.yaml` again with it, or delete the file.
+
+Pick your region in `cluster/kustomization.yaml`. Keep the split between `cluster/` and `apps/`: the apps need a
+running cluster.
 
 ## Read more
 

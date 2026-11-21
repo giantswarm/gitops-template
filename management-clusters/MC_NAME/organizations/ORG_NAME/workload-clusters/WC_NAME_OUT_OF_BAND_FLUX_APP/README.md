@@ -1,4 +1,4 @@
-# workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP
 
 A cluster with Flux of its own. The management cluster installs flux-app into the workload cluster, and that Flux
 applies `out-of-band/` from inside the cluster. Use it for what you'd rather the workload cluster reconciled itself.
@@ -28,9 +28,17 @@ the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 
 ## When you copy it
 
-Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name`, `release` and
-the health check's cluster name. Give the cluster its own SOPS key, and encrypt the `secret.enc.yaml` files again with
-it. Point flux-app's values at your repository, and the path at this cluster's `out-of-band/`.
+Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` and `release`
+in both, and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml`. Give the cluster its own SOPS key:
+
+- add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
+- add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`
+  in the `kustomization.yaml` there;
+- set `spec.decryption.secretRef.name` in both Kustomizations to that Secret's name;
+- encrypt `cluster/apps/envoy-gateway-from-template/secret.enc.yaml` again with it, or delete it and its line in that
+  directory's `kustomization.yaml`.
+
+Point flux-app's values at your repository, and the path at this cluster's `out-of-band/`.
 
 ## Read more
 

@@ -1,4 +1,4 @@
-# ORG_NAME/multicluster/apps
+# management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps
 
 Apps the organisation installs on several of its workload clusters from one place. Each app is a Flux Operator
 `ResourceSet` that renders an `OCIRepository` and a `HelmRelease` for every cluster in `clusters.yaml`. Each app has

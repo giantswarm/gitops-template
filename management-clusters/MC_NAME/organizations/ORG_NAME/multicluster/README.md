@@ -1,4 +1,4 @@
-# ORG_NAME/multicluster
+# management-clusters/MC_NAME/organizations/ORG_NAME/multicluster
 
 What the organisation rolls out to several of its workload clusters at once, rather than cluster by cluster: apps, and
 the secret store every cluster gets.
@@ -11,7 +11,8 @@ organisation's namespace Kustomization applies [`secret-stores/`](secret-stores/
 ## What's here
 
 - `apps.yaml`: the Flux Kustomization that applies `apps/`.
-- `kustomization.yaml`: lists `apps.yaml`, and leaves the two directories to their own Kustomizations.
+- `kustomization.yaml`: lists `apps.yaml`, and leaves out the two directories: `apps.yaml` applies `apps/`, and the
+  organisation's namespace Kustomization applies `secret-stores/`, which has no Kustomization of its own.
 - [`apps/`](apps/): apps on several clusters, one `ResourceSet` each.
 - [`secret-stores/`](secret-stores/): a Kyverno policy that gives each workload cluster a `SecretStore`.
 

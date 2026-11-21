@@ -1,8 +1,9 @@
 # management-clusters/MC_NAME/notifications
 
 Commit statuses on GitHub: each Flux Kustomization in `default` reports, on the commit it applied, whether it worked.
-These are the management cluster's Kustomization and each organisation's namespace Kustomization. Each organisation
-has its own for the Kustomizations in its namespace, in its `namespace/notifications/`.
+These are the management cluster's Kustomization, and each organisation's namespace Kustomization and multicluster apps
+Kustomization, such as `mc-name-multicluster-apps-org-name`. The `Alert` takes them all, with `name: "*"`. Each
+organisation has its own for the Kustomizations in its namespace, in its `namespace/notifications/`.
 
 The management cluster's Kustomization, in `../MC_NAME.yaml`, applies this directory into the `default` namespace.
 

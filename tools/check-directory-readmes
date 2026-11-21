@@ -8,11 +8,12 @@ Must be run from the repository root, or from the directory given as the only ar
 
 Usage: $0 [dir]
 
-It walks bases/ and management-clusters/, so tests/, tools/, .github/ and docs/ are left out.
-Every directory there needs a README.md (or readme.md), unless it's listed in COVERED below:
-a leaf that's a copy of its siblings' shape, such as a stage or a region, which the README of
-a parent directory covers. That README must name the leaf, as its path relative to the parent
-followed by a slash, such as \`dev/\`.
+It walks the directories of the files git tracks, staged ones included, in bases/ and
+management-clusters/, so tests/, tools/, .github/ and docs/ are left out, and so is a directory
+git doesn't know about yet. Every directory there needs a tracked README.md (or readme.md),
+unless it's listed in COVERED below: a leaf that's a copy of its siblings' shape, such as a stage
+or a region, which the README of a parent directory covers. That README must name the leaf in
+backticks, as its path relative to the parent followed by a slash, such as \`dev/\`.
 "
 	exit 1
 }
@@ -58,18 +59,23 @@ done
 [ $# -gt 1 ] && help
 cd "${1:-.}" || help
 
-for top in bases management-clusters; do
-	if [ ! -d "${top}" ]; then
-		echo "No ${top}/ below $(pwd): nothing to check."
-		exit 1
-	fi
-done
+# Works with bash 3.2, as on macOS: no associative arrays or mapfile.
+if ! files=$(git ls-files -- bases management-clusters); then
+	echo "git can't list the files below $(pwd): run this in a git repository."
+	exit 1
+fi
+if [ -z "${files}" ]; then
+	echo "git tracks no files in bases/ or management-clusters/ below $(pwd): nothing to check."
+	exit 1
+fi
+# every directory with a tracked file, and every directory above it
+dirs=$(awk -F/ '{ p = $1; print p; for (i = 2; i < NF; i++) { p = p "/" $i; print p } }' <<<"${files}" | sort -u)
 
 ##
-# The README of directory $1, if it has one.
+# The tracked README of directory $1, if it has one.
 function readme() {
 	for name in README.md readme.md; do
-		if [ -f "$1/${name}" ]; then
+		if grep -qxF "$1/${name}" <<<"${files}"; then
 			echo "$1/${name}"
 			return
 		fi
@@ -77,27 +83,28 @@ function readme() {
 }
 
 failed=0
-declare -A covered
+covered=""
 for entry in "${COVERED[@]}"; do
 	read -r parent leaf <<<"${entry}"
-	covered["${parent}/${leaf}"]=1
-	if [ ! -d "${parent}/${leaf}" ]; then
+	covered="${covered}${parent}/${leaf}"$'\n'
+	if ! grep -qxF "${parent}/${leaf}" <<<"${dirs}"; then
 		echo "${parent}/${leaf} is listed in COVERED in $0, but doesn't exist: remove it from the list."
 		failed=1
 		continue
 	fi
 	parent_readme=$(readme "${parent}")
-	if [ -n "${parent_readme}" ] && ! grep -qF "${leaf}/" "${parent_readme}"; then
+	if [ -n "${parent_readme}" ] && ! grep -qF "\`${leaf}/\`" "${parent_readme}"; then
 		echo "${parent_readme} covers ${parent}/${leaf}, but doesn't name it: describe \`${leaf}/\` there."
 		failed=1
 	fi
 done
 
 while IFS= read -r dir; do
-	if [ -z "$(readme "${dir}")" ] && [ -z "${covered["${dir}"]:-}" ]; then
-		echo "${dir} has no README.md: write one, or, if a parent's README covers it, list it in COVERED in $0."
+	if [ -z "$(readme "${dir}")" ] && ! grep -qxF "${dir}" <<<"${covered}"; then
+		echo "${dir} has no README.md: write one and add it to git, or, if a parent's README covers it, list it" \
+			"in COVERED in $0."
 		failed=1
 	fi
-done < <(find bases management-clusters -type d | sort)
+done <<<"${dirs}"
 
 exit ${failed}

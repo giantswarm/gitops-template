@@ -1,7 +1,8 @@
-# workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST
 
 One of four clusters that run the same stack, hello-web, in different stages and regions. This one is a prod cluster, in
-`us-west-2`. The four directories differ only in the Components they list.
+`us-west-2`. The four directories differ in the Components they list, and the two prod clusters in their own
+values too.
 
 The Flux Kustomization `HELLO_APP_PROD_CLUSTER_US_WEST.yaml`, next to this directory in `workload-clusters/`, applies it
 into `org-<name>`. The cluster's release comes from its stage, so the Kustomization sets no `release`.
@@ -12,7 +13,7 @@ into `org-<name>`. The cluster's release comes from its stage, so the Kustomizat
 - `cluster/`: the cluster.
   - `kustomization.yaml`: the CAPA base, then the `us_west` region, its extra node pool and the `prod` stage as
     Components, and a patch with the cluster's own values.
-  - `cluster_userconfig.yaml`: the cluster's own values, empty here.
+  - `cluster_userconfig.yaml`: the cluster's own values, here a bigger `nodepool0`: `m6a.8xlarge`, 10 to 50 nodes.
   - `patch_cluster_userconfig.yaml`: appends them to the cluster `HelmRelease`'s `valuesFrom`, last.
 - `cluster/apps/`: the base apps, installed with the cluster. Its `kustomization.yaml` lists the
   [`hello-web`](/bases/stacks/hello-web/) stack.

@@ -26,8 +26,9 @@ Each `node_pool/` does the same with `node_pool.yaml` and `${cluster_name}-regio
 ## When you copy it
 
 Copy a region directory for each region you run in, and change the region and the availability zones. Keep the
-ConfigMap names and the `HelmRelease` target `${cluster_name}`: the cluster base reads the name, and the patch has to
-find the cluster's `HelmRelease`. A cluster lists the node pool after its region.
+ConfigMap names: the region's own patch appends them by name, and `WC_NAME_SCHEDULED_UPGRADES`'s
+`cluster/cluster-resource-set.yaml` names `${cluster_name}-region-config` in its `valuesFrom`. Keep the patch's
+target, the `HelmRelease` `${cluster_name}`, or it misses the cluster. A cluster lists the node pool after its region.
 
 ## Read more
 

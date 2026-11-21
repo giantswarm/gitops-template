@@ -1,4 +1,4 @@
-# workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
 
 A cluster without Flux of its own, which still gets objects applied straight into it: the management cluster's Flux
 applies `out-of-band/` through the cluster's kubeconfig. It also shows ESO and SOPS side by side, secrets pushed into
@@ -38,9 +38,18 @@ The first two decrypt with the GPG key `sops-gpg-from-template-wc-name`, from th
 
 ## When you copy it
 
-Copy the directory and its three Kustomizations, rename them after your cluster, and set `cluster_name`, `release`,
-the health check's cluster name and the `-direct` Kustomization's kubeconfig Secret. Give the cluster its own SOPS key,
-and encrypt the `secret.enc.yaml` file again with it. Point the `ExternalSecret`s at your own store. Delete the examples
+Copy the directory and its three Kustomizations, rename them after your cluster, and set `cluster_name` in all three,
+`release` in the first two, the health check's cluster name in `WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml`, and the `-direct`
+Kustomization's kubeconfig Secret. Change the `-direct` Kustomization's name in the `dependsOn` of
+`teams/hello-team/flux-kustomization.yaml` too, where a `TODO` marks it. Give the cluster its own SOPS key:
+
+- add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
+- add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`
+  in the `kustomization.yaml` there;
+- set `spec.decryption.secretRef.name` in the cluster's Kustomization and its apps Kustomization to that Secret's name;
+  the `-direct` one decrypts nothing;
+- encrypt `cluster/apps/envoy-gateway-from-template/secret.enc.yaml` again with it, or delete it and its line in that
+  directory's `kustomization.yaml`. Point the `ExternalSecret`s at your own store. Delete the examples
 you don't need, with their lines in the `kustomization.yaml` that lists them. `teams/` needs the `-direct`
 Kustomization, and `apps/pushed-password/` the store from the organisation's `multicluster/secret-stores/`.
 

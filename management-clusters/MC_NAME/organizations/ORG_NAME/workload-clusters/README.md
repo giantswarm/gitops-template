@@ -1,4 +1,4 @@
-# ORG_NAME/workload-clusters
+# management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters
 
 The organisation's workload clusters: one directory per cluster, and next to it the Flux Kustomizations that apply it.
 
@@ -32,10 +32,11 @@ The examples:
 ## When you copy it
 
 Copy the example closest to what you want, directory and Kustomizations together, and add the Kustomizations to
-`kustomization.yaml`. In the Kustomizations, change the `TODO`s: the names, `cluster_name`, the health check's cluster
-name, `release` and the decryption Secret, where the example has them. Keep `spec.path` pointing at the cluster's own
-directory, and keep each cluster directory's `kustomization.yaml`: without it, Flux would apply `cluster/` and
-`out-of-band/` with the apps.
+`kustomization.yaml`, and by name to the `eventSources` of the organisation's commit status `Alert`, in
+`../namespace/notifications/commit-status-alert.yaml`. In the Kustomizations, change the `TODO`s: the names,
+`cluster_name`, the health check's cluster name, `release` and the decryption Secret, where the example has them. Keep
+`spec.path` pointing at the cluster's own directory, and keep each cluster directory's `kustomization.yaml`: without it,
+Flux would apply `cluster/` and `out-of-band/` with the apps.
 
 ## Read more
 

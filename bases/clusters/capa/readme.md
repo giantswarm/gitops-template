@@ -23,12 +23,12 @@ v32.3.0 and v33.3.0.
 
 The cluster's Flux Kustomization sets these in `spec.postBuild.substitute`:
 
-| Variable | Expected Value |
+| Variable | Expected value |
 | :--: | :--: |
-| `cluster_description` | User Friendly name for the cluster |
-| `cluster_name` | Unique name of the Workload Cluster, MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-| `organization` | Organization name, the `org-` prefix MUST not be part of it and MUST comply with the [Kubernetes Names](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
-| `release` | Giant Swarm release version without the `v` prefix, for example `36.2.0` |
+| `cluster_description` | A human-friendly description of the cluster |
+| `cluster_name` | The workload cluster's unique name, a valid [Kubernetes name](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
+| `organization` | The organisation's name, without the `org-` prefix, a valid [Kubernetes name](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names) |
+| `release` | The Giant Swarm release version without the `v` prefix, for example `36.2.0` |
 
 ## The order of the values
 
