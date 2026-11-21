@@ -30,7 +30,8 @@ and [Stacks](./stacks.md), your cluster's hello-world gets its `OCIRepository` f
 of its own to try the range on: hello-world once more, as `hello-world-auto`, in a namespace of its own.
 
 1. Create the app with a fixed version, as in the basic tutorial. `3.2.2` is a version the repository's examples pin;
-   any published version from `3.0.0` on works:
+   any published version from `3.0.0` on works. Its Ingress is switched off, as in the basic tutorial, so that it
+   doesn't claim the host of the cluster's other hello-world:
 
     ```sh
     export APP_DIR=${WC_DIR}/apps/hello-world-auto
@@ -66,6 +67,9 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
       releaseName: hello-world-auto
       storageNamespace: hello-world-auto
       targetNamespace: hello-world-auto
+      values:
+        ingress:
+          enabled: false
       valuesFrom:
         - kind: ConfigMap
           name: ${cluster_name}-cluster-values

@@ -41,7 +41,8 @@ to several clusters from one list, see [Multicluster apps](./multicluster-apps.m
 ## Schedule an app's upgrades
 
 The app is a second copy of hello-world, `hello-world-window`, in its own namespace, which upgrades only from Monday
-to Thursday, 09:00 to 17:00 in Berlin. It waits for the Gateway API CRDs of the cluster's envoy-gateway, so it needs
+to Thursday, 09:00 to 17:00 in Berlin. Its Ingress is switched off, as in the basic tutorial, so that it doesn't claim
+the host of the cluster's other hello-world. It waits for the Gateway API CRDs of the cluster's envoy-gateway, so it needs
 the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the cluster.
 
 1. Create the app's directory:
@@ -146,6 +147,9 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
                 remediateLastFailure: true
                 retries: 10
                 strategy: rollback
+            values:
+              ingress:
+                enabled: false
             valuesFrom:
               - kind: ConfigMap
                 name: ${cluster_name}-cluster-values

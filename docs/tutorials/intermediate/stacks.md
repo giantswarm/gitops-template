@@ -238,11 +238,14 @@ hello-world's `HTTPRoute` is attached to the Gateway:
 kubectl --context ${WC_CONTEXT} get httproute -n hello-world
 ```
 
-Your cluster installs the stack as a secondary app, from `apps`, once the cluster is up. A cluster can also install a
-stack with the cluster, as a base app, by listing it in `cluster/apps/kustomization.yaml`, as the `HELLO_APP_*`
-clusters in [Stages and regions](./stages-and-regions.md) do. A stack's apps are always applied by the same Flux
-`Kustomization`. When only some of them have to be base apps, list their bases separately instead: the out-of-band
-example clusters install the envoy-gateway stack in `cluster/apps` and hello-world from its template in `apps`.
+Your cluster installs the stack as a secondary app, from `${WC_DIR}/apps`, once the cluster is up. A cluster can also
+install a stack with the cluster, as a base app, by listing it in `${WC_DIR}/cluster/apps/kustomization.yaml`, as the
+`HELLO_APP_*` clusters in [Stages and regions](./stages-and-regions.md) do. A stack's apps are always applied by the
+same Flux `Kustomization`. When only some of them have to be base apps, list their bases separately instead: the
+out-of-band example clusters install the envoy-gateway stack in
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/cluster/apps`,
+and hello-world from its template in
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps`.
 
 ## Move an app into or out of a stack
 

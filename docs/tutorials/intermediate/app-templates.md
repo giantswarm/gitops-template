@@ -253,8 +253,9 @@ one, applies both. So Flux updates the release in place, rather than uninstallin
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 ```
 
-The cluster now runs the version the template pins. If it ran a newer one before, Helm has just rolled it back to the
-template's; the next section shows how one cluster keeps a version of its own.
+The cluster now runs the version the template pins. If it ran a newer one before, such as the basic tutorial's
+`3.2.3`, helm-controller has just upgraded the release to the template's older chart, `3.2.2` when this was written.
+The next section shows how one cluster keeps a version of its own.
 
 ## Override values for one cluster
 

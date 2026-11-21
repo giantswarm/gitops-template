@@ -260,8 +260,25 @@ file: the target name escaped for kustomize, which reads it as a regular express
 
 A stage holds versions only. The prod clusters' bigger nodes are their own values, below.
 
-The fork's stage files have a comment on each pin, which these commands replace. To keep the comments, change only the
-`value:` of each pin in the fork's files instead.
+1. The fork's stage files are the same, with a comment on each pin and a `# block end` marker. Once you've compared
+   them, put the fork's back, and set only your versions in them. `pin` changes the `value:` under the `# renovate:`
+   comment of one chart in one stage, and leaves every other line, comments included, as it is:
+
+    ```sh
+    git checkout -- bases/environments/stages
+    pin() {  # pin STAGE CHART VERSION
+      sed -i "/depName=gsoci.azurecr.io\/charts\/giantswarm\/$2 /{n;s/value: \".*\"/value: \"$3\"/;}" \
+        bases/environments/stages/$1/kustomization.yaml
+    }
+    pin dev release-aws "${DEV_RELEASE}"
+    pin staging hello-world "${STAGING_HELLO_WORLD}"
+    pin staging release-aws "${STAGING_RELEASE}"
+    pin prod hello-world "${PROD_HELLO_WORLD}"
+    pin prod release-aws "${PROD_RELEASE}"
+    git diff bases/environments/stages
+    ```
+
+    `git diff` shows only the `value:` lines of the pins you changed.
 
 A cluster whose release comes from a `ResourceSet`, as in [Scheduled upgrades](../advanced/scheduled-upgrades.md),
 ignores the stage's release pin: it has no `OCIRepository` of the base's for the patch to change, and the `ResourceSet`
@@ -270,7 +287,8 @@ picks the release.
 ## Add clusters to the stages
 
 Each cluster is built like any other CAPA cluster: the cluster base, the hello-web stack as a base app in
-`cluster/apps`, its own values in `cluster_userconfig.yaml`, and its region and stage under `components:`. The
+`${ORG_DIR}/workload-clusters/<cluster>/cluster/apps`, its own values in `cluster_userconfig.yaml`, and its region and
+stage under `components:`. The
 components append to the cluster's `HelmRelease` `valuesFrom` in the order they're listed, and the cluster's own patch
 runs after them, so Flux merges the layers in this order:
 
@@ -280,8 +298,9 @@ runs after them, so Flux merges the layers in this order:
 1. `${cluster_name}-region-node-pool-config`, the region's extra node pool, for the clusters that add it;
 1. `${cluster_name}-cluster-userconfig`, the cluster's own.
 
-1. Create the dev cluster's directory. Its `kustomization.yaml` lists only `cluster/`, so the cluster's `Kustomization`
-   never applies an `out-of-band` directory next to it to the management cluster:
+1. Create the dev cluster's directory, `${STAGES_DIR}/HELLO_APP_DEV_CLUSTER_1`. Its `kustomization.yaml` lists only
+   `cluster/`, so the cluster's `Kustomization` never applies an `out-of-band` directory next to it to the management
+   cluster:
 
     ```sh
     export STAGES_DIR=${ORG_DIR}/workload-clusters

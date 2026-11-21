@@ -4,13 +4,14 @@ An organisation in this repository is usually a department, with many clusters. 
 on most: a logging agent, a policy set, a team's service. Listing the app in every cluster's `apps` works, and it's
 one more directory to add, and keep in step, for every cluster you create.
 
-A multicluster app is written once, in the organisation's `multicluster/apps`, as a Flux Operator `ResourceSet`. The
-organisation lists its clusters once, in `multicluster/apps/clusters.yaml`, and every app in the directory is
-installed on every cluster in that list. Adding a cluster to the list rolls all of them out to it.
+A multicluster app is written once, in `${ORG_DIR}/multicluster/apps`, as a Flux Operator `ResourceSet`. The
+organisation lists its clusters once, in `${ORG_DIR}/multicluster/apps/clusters.yaml`, and every app in the directory
+is installed on every cluster in that list. Adding a cluster to the list rolls all of them out to it.
 
-This tutorial sets up `multicluster/apps` in the organisation from the [basic tutorial](../basic/getting-started.md),
-lists its clusters, and adds hello-world as a multicluster app, upgraded only in an upgrade window. It builds on
-[Scheduled upgrades](./scheduled-upgrades.md), which explains the `ResourceSetInputProvider` and the `ResourceSet`.
+This tutorial sets up `${ORG_DIR}/multicluster/apps` in the organisation from the
+[basic tutorial](../basic/getting-started.md), lists its clusters, and adds hello-world as a multicluster app, upgraded
+only in an upgrade window. It builds on [Scheduled upgrades](./scheduled-upgrades.md), which explains the
+`ResourceSetInputProvider` and the `ResourceSet`.
 
 - [The multicluster directory](#the-multicluster-directory)
 - [List the clusters](#list-the-clusters)
@@ -26,9 +27,10 @@ its steps add.
 
 ## The multicluster directory
 
-The management cluster's `Kustomization` doesn't apply `multicluster/apps` itself. It applies one Flux `Kustomization`,
-in `multicluster/apps.yaml`, and that one applies `multicluster/apps`, with `${organization}` filled in. The apps then
-have a `Kustomization` of their own: a mistake in one of them doesn't stop the management cluster's.
+The management cluster's `Kustomization` doesn't apply `${ORG_DIR}/multicluster/apps` itself. It applies one Flux
+`Kustomization`, in `${ORG_DIR}/multicluster/apps.yaml`, and that one applies `${ORG_DIR}/multicluster/apps`, with
+`${organization}` filled in. The apps then have a `Kustomization` of their own: a mistake in one of them doesn't stop
+the management cluster's.
 
 1. Create the directory, and its `kustomization.yaml`, which lists only `apps.yaml`. The organisation's
    `multicluster` directory may already hold `secret-stores`, from the basic tutorial. Leave it out of this list: the
@@ -48,9 +50,10 @@ have a `Kustomization` of their own: a mistake in one of them doesn't stop the m
     EOF
     ```
 
-1. Create the `Kustomization` that applies `multicluster/apps`. It lives in `default`, as the management cluster's
-   `Kustomization` applies it, and runs as the `automation` ServiceAccount there. `ORG_NAME` is a placeholder that the
-   organisation's `kustomization.yaml` replaces with the `Organization`'s name, as it does for `namespace.yaml`:
+1. Create the `Kustomization` that applies `${ORG_DIR}/multicluster/apps`. It lives in `default`, as the management
+   cluster's `Kustomization` applies it, and runs as the `automation` ServiceAccount there. `ORG_NAME` is a
+   placeholder that the organisation's `kustomization.yaml` replaces with the `Organization`'s name, as it does for
+   `namespace.yaml`:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/multicluster/apps.yaml
@@ -83,8 +86,9 @@ have a `Kustomization` of their own: a mistake in one of them doesn't stop the m
 
 ## List the clusters
 
-`multicluster/apps/clusters.yaml` names the clusters, by their `cluster_name`. `multicluster/apps/kustomization.yaml`
-applies it as a patch to every `ResourceSet` in the directory, which sets their `spec.inputs`:
+`${ORG_DIR}/multicluster/apps/clusters.yaml` names the clusters, by their `cluster_name`.
+`${ORG_DIR}/multicluster/apps/kustomization.yaml` applies it as a patch to every `ResourceSet` in the directory, which
+sets their `spec.inputs`:
 
 1. Export the clusters, separated by spaces: the cluster from the basic tutorial, and any others in the organisation:
 
@@ -109,8 +113,8 @@ applies it as a patch to every `ResourceSet` in the directory, which sets their 
     done
     ```
 
-1. Create `multicluster/apps/kustomization.yaml`, which applies the list to every `ResourceSet` and, for now, lists no
-   app:
+1. Create `${ORG_DIR}/multicluster/apps/kustomization.yaml`, which applies the list to every `ResourceSet` and, for
+   now, lists no app:
 
     ```sh
     cat <<'EOF' > ${ORG_DIR}/multicluster/apps/kustomization.yaml
@@ -249,7 +253,7 @@ the provider's under `inputs.hello_world_scheduled_version`.
     `clusters.yaml` uninstalls the app there. It's also why every app has a `ResourceSet` of its own: apps that shared
     one would go together.
 
-1. List the app in `multicluster/apps/kustomization.yaml`, then commit and push:
+1. List the app in `${ORG_DIR}/multicluster/apps/kustomization.yaml`, then commit and push:
 
     ```sh
     yq -i '.resources += ["hello-world-scheduled/input-provider.yaml", "hello-world-scheduled/resource-set.yaml"]' \

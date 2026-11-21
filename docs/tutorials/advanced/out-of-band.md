@@ -27,9 +27,9 @@ Reach for `out-of-band` when the object belongs in the workload cluster and no c
 [team](./teams.md) whose Flux runs in the workload cluster. When a chart exists for the thing, prefer an app: Helm
 tracks its objects and its version, and the cluster's apps wait for the cluster to be ready.
 
-Everything in `cluster` and `apps` is applied to the management cluster. `out-of-band` never is: the cluster
-directory's `kustomization.yaml` lists `cluster/` or `apps/`, never `out-of-band/`, so the cluster's `Kustomization`s
-leave it out. Something has to apply it to the workload cluster instead, and the procedure has two facets:
+Everything in `${WC_DIR}/cluster` and `${WC_DIR}/apps` is applied to the management cluster. `${WC_DIR}/out-of-band`
+never is: `${WC_DIR}/kustomization.yaml` lists `cluster/` or `apps/`, never `out-of-band/`, so the cluster's
+`Kustomization`s leave it out. Something has to apply it to the workload cluster instead, and the procedure has two facets:
 
 - **Push.** A Flux `Kustomization` on the management cluster applies `out-of-band` through the workload cluster's
   kubeconfig Secret, as in the
@@ -65,8 +65,8 @@ directory to the same cluster fight over the same objects.
     `${cluster_name}` and `${organization}` are filled in by the `-direct` `Kustomization`, below, the same way as in
     the cluster's other files. Each object names the namespace in the workload cluster it goes into.
 
-1. Check that `${WC_DIR}/kustomization.yaml` doesn't list `out-of-band/`. It must never be applied to the management
-   cluster:
+1. Check that `${WC_DIR}/kustomization.yaml` doesn't list `out-of-band/`: `${WC_DIR}/out-of-band` must never be applied
+   to the management cluster:
 
     ```sh
     yq '.resources' ${WC_DIR}/kustomization.yaml
@@ -157,15 +157,24 @@ example is such a cluster: flux-app in its `apps`, and its `out-of-band` directo
 
 Giant Swarm ships Flux as the `flux-app` chart, and you install it like any other app, from the cluster's `apps`.
 Flux in a workload cluster is also what reconciles the Flux objects that a push delivers, such as the `GitRepository`
-and `Kustomization` of a [team](./teams.md#add-a-team-with-flux-in-the-workload-cluster): that needs the first two
-steps below, without the third.
+and `Kustomization` of a [team](./teams.md#add-a-team-with-flux-in-the-workload-cluster): that needs steps 2 and 3
+below, and none of the others.
 
-1. Export the cluster's directory, a cluster set up as in the basic tutorial, with an `apps` directory and its apps
-   `Kustomization`, the chart version, from the [flux-app releases](https://github.com/giantswarm/flux-app/releases),
-   and the app's directory:
+1. Create the second cluster as in
+   [3. Create a workload cluster](../basic/getting-started.md#3-create-a-workload-cluster) of the basic tutorial. That
+   gives it its `apps` directory and its apps `Kustomization`. Run that step in a new shell, with `WC_NAME` and
+   `WC_DIR` exported for the second cluster, so that this shell keeps your first cluster's, and come back once it's
+   pushed. Then export its name and directory here:
 
     ```sh
-    export FLUX_WC_DIR=${ORG_DIR}/workload-clusters/CLUSTER_NAME
+    export FLUX_WC_NAME=CLUSTER_NAME
+    export FLUX_WC_DIR=${ORG_DIR}/workload-clusters/${FLUX_WC_NAME}
+    ```
+
+1. Export the chart version, from the [flux-app releases](https://github.com/giantswarm/flux-app/releases), and the
+   app's directory:
+
+    ```sh
     export FLUX_APP_VERSION=FLUX_APP_VERSION
     export FLUX_DIR=${FLUX_WC_DIR}/apps/flux
     mkdir -p ${FLUX_DIR}
@@ -240,8 +249,27 @@ steps below, without the third.
     Both of the cluster's own values layers are optional, so Flux installs without them, and reconciles nothing of its
     own yet.
 
-1. Point it at the cluster's `out-of-band` directory, which holds what the cluster should get, as in
-   [Add the out-of-band directory](#add-the-out-of-band-directory). flux-app takes a list of `sources`, your
+1. Give the cluster's `out-of-band` directory, `${FLUX_WC_DIR}/out-of-band`, something to apply, as in
+   [Add the out-of-band directory](#add-the-out-of-band-directory):
+
+    ```sh
+    mkdir -p ${FLUX_WC_DIR}/out-of-band/configmaps
+    cat <<'EOF' > ${FLUX_WC_DIR}/out-of-band/configmaps/configmap.yaml
+    apiVersion: v1
+    data:
+      values: |-
+        I am the ${cluster_name} cluster, and my own Flux pulled me in.
+    kind: ConfigMap
+    metadata:
+      name: hello-from-out-of-band
+      namespace: default
+    EOF
+    ```
+
+    `${FLUX_WC_DIR}/kustomization.yaml`, from the basic tutorial, lists only `apps/`, so the management cluster never
+    applies this directory.
+
+1. Point Flux in the workload cluster at `${FLUX_WC_DIR}/out-of-band`. flux-app takes a list of `sources`, your
    repository, and of `kustomizations`, what to apply from them. The `Kustomization` goes into a ConfigMap. The
    cluster's apps `Kustomization` fills in `${cluster_name}` and `${organization}` in it, and `postBuild` passes them
    on to Flux in the workload cluster, so `out-of-band` gets the same variables as with a push:
@@ -296,7 +324,8 @@ steps below, without the third.
 1. Commit and push:
 
     ```sh
-    git add ${FLUX_WC_DIR}/apps && git commit -m "Pull out-of-band resources with Flux in the workload cluster" && git push
+    git add ${FLUX_WC_DIR}
+    git commit -m "Pull out-of-band resources with Flux in ${FLUX_WC_NAME}" && git push
     ```
 
 **Check:** the release is `Ready` on the management cluster, and Flux in the workload cluster reconciles `out-of-band`:
