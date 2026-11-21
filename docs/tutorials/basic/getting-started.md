@@ -289,8 +289,13 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 1. Encrypt the files in place. From now on the repository keeps only the encrypted copies:
 
     ```sh
-    for f in ${MC_DIR}/secrets/*.enc.yaml; do sops --encrypt --in-place "${f}"; done
+    for f in ${MC_DIR}/secrets/*.enc.yaml; do
+      sops --encrypt --in-place "${f}" || { echo "sops couldn't encrypt ${f}: fix the error above first"; break; }
+    done
     ```
+
+    The loop stops at the first file `sops` can't encrypt, and says which. Don't go on until every file is
+    encrypted.
 
     List them in `${MC_DIR}/secrets/kustomization.yaml`. Without them, Flux can neither read nor decrypt the
     repository, so the annotation keeps Flux from deleting them when their files go, and the label keeps anyone else
@@ -330,10 +335,16 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     : "${KEY_FP:?set KEY_FP first}" && gpg --delete-secret-keys "${KEY_FP}"
     ```
 
-1. Commit and push:
+1. Commit and push. The `if` refuses to commit while any `*.enc.yaml` file in `${MC_DIR}` isn't encrypted, and
+   names it. `sops` adds a `sops:` section to every file it encrypts, so a file without one still holds its secret in
+   plain text:
 
     ```sh
-    git add .sops.yaml ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
+    if find ${MC_DIR} -name '*.enc.yaml' -exec grep -L '^sops:' {} + | grep .; then
+      echo "Not committed: encrypt the files above first"
+    else
+      git add .sops.yaml ${MC_DIR} && git commit -m "Add management cluster ${MC_NAME}" && git push
+    fi
     ```
 
 1. Create the `GitRepository`, which tells Flux where the repository is and how to read it. Its `ignore` field keeps
@@ -557,10 +568,14 @@ organisation reads its secrets through the organisation's namespace.
     yq -i '.resources[0] = "'"${ORG_NAME}"'.yaml"' ${ORG_DIR}/kustomization.yaml
     ```
 
-1. Commit and push:
+1. Commit and push, with the same check as in step 1, for any Secret you've encrypted in `${ORG_DIR}`:
 
     ```sh
-    git add ${ORG_DIR} && git commit -m "Add organisation ${ORG_NAME}" && git push
+    if find ${ORG_DIR} -name '*.enc.yaml' -exec grep -L '^sops:' {} + | grep .; then
+      echo "Not committed: encrypt the files above first"
+    else
+      git add ${ORG_DIR} && git commit -m "Add organisation ${ORG_NAME}" && git push
+    fi
     ```
 
 **Check:** the namespace `org-${ORG_NAME}` exists, which takes about a minute:
@@ -767,10 +782,14 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
       ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
-1. Commit and push:
+1. Commit and push, with the same check as in step 1:
 
     ```sh
-    git add ${ORG_DIR} && git commit -m "Add workload cluster ${WC_NAME}" && git push
+    if find ${ORG_DIR} -name '*.enc.yaml' -exec grep -L '^sops:' {} + | grep .; then
+      echo "Not committed: encrypt the files above first"
+    else
+      git add ${ORG_DIR} && git commit -m "Add workload cluster ${WC_NAME}" && git push
+    fi
     ```
 
 **Check:** the cluster takes 15 to 20 minutes to come up, which is long enough for a cup of tea. Watch it with:
@@ -959,10 +978,14 @@ Git and one secret value from the organisation's store.
     yq -i '.resources += ["hello-world"]' ${WC_DIR}/apps/kustomization.yaml
     ```
 
-1. Commit and push:
+1. Commit and push, with the same check as in step 1, for an app whose secret values you've encrypted:
 
     ```sh
-    git add ${WC_DIR}/apps && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
+    if find ${WC_DIR}/apps -name '*.enc.yaml' -exec grep -L '^sops:' {} + | grep .; then
+      echo "Not committed: encrypt the files above first"
+    else
+      git add ${WC_DIR}/apps && git commit -m "Deploy hello-world to ${WC_NAME}" && git push
+    fi
     ```
 
 **Check:** the `ExternalSecret` reports `SecretSynced`:
@@ -1002,10 +1025,14 @@ Next, change a value, so that at least two replicas run:
 yq -i '.autoscaling.minReplicas = 2' ${APP_DIR}/override_config.yaml
 ```
 
-Then commit and push:
+Then commit and push, with the same check as in step 1:
 
 ```sh
-git add ${APP_DIR} && git commit -m "Update hello-world on ${WC_NAME}" && git push
+if find ${APP_DIR} -name '*.enc.yaml' -exec grep -L '^sops:' {} + | grep .; then
+  echo "Not committed: encrypt the files above first"
+else
+  git add ${APP_DIR} && git commit -m "Update hello-world on ${WC_NAME}" && git push
+fi
 ```
 
 **Check:** the release reports the new chart version:
