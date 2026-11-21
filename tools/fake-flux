@@ -75,7 +75,7 @@ EOF
 
 ##
 # We want to be running this script from git root to have widest possible discovery
-[ ! -d .git ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
+[ "$(git rev-parse --show-toplevel 2>/dev/null)" != "$(pwd -P)" ] && echo "Not a valid git repository or not run from git root." && usage && exit 1
 
 ##
 # Discover all fluxcd kustomizations and store filename, name, namespace and path for each found
