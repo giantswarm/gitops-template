@@ -18,6 +18,6 @@ patches:
       kind: HelmRelease
       name: \${cluster_name}
 resources:
-  - ../../../../../../../bases/clusters/capa/template
+  - ../../../../../../../bases/clusters/capa
   - cluster_userconfig.yaml
   - apps/

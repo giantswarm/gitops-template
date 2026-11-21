@@ -19,7 +19,7 @@ To learn what happens between a `git push` and a running cluster, read [How it w
 
 ## Guides
 
-The [guides](docs/guides/README.md) cover what comes after getting started, such as cluster templates, environments
+The [guides](docs/guides/README.md) cover what comes after getting started, such as cluster bases, environments
 for dev, staging and production, and adding and updating apps.
 
 These pages explain each part of the repository step by step:

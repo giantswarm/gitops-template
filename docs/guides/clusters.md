@@ -14,7 +14,7 @@ The values come in layers. Flux merges the entries of the `HelmRelease`'s `value
 
 - the `cluster-app-installation-values` ConfigMap holds the values of the management cluster, such as its name and
   base domain. You don't create it: a Kyverno policy on the management cluster copies it into every organization
-  namespace, see [Values from the management cluster](/bases/clusters/capa/template/readme.md#values-from-the-management-cluster)
+  namespace, see [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster)
 - the base's `${cluster_name}-config` ConfigMap holds the defaults of every cluster made from the base
 - the `${cluster_name}-region-config` ConfigMap holds the cluster's region. The base doesn't read it: every cluster
   adds a region component, which creates the ConfigMap and appends it, see [Regions](environments.md#regions). A cluster
@@ -29,19 +29,19 @@ guide need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../appendices.md#
 
 ## Example
 
-[bases/clusters/capa/template](/bases/clusters/capa/template) is the base for CAPA clusters. It has the files
+[bases/clusters/capa](/bases/clusters/capa) is the base for CAPA clusters. It has the files
 `kubectl gs gitops add base --provider capa` writes, described [below](#create-a-base-for-another-provider-optional),
 with deliberate differences: its `HelmRelease` also reads `cluster-app-installation-values`, and in
 `cluster_config.yaml` it sets `global.metadata.description` from
 `${cluster_description}` and leaves out the empty `nodepool0` node pool. The base's
-[readme](/bases/clusters/capa/template/readme.md#differences-to-kubectl-gs-gitops-add-base) explains why.
+[readme](/bases/clusters/capa/readme.md#differences-to-kubectl-gs-gitops-add-base) explains why.
 
 ## Choose a base
 
 Go to the [bases](/bases/clusters) directory and pick a base, then export its path:
 
 ```sh
-export CLUSTER_PATH=bases/clusters/capa/template
+export CLUSTER_PATH=bases/clusters/capa
 ```
 
 The `release-aws` chart exists for every release from v34.0.0 on. Older releases and Release CRs created by hand have
@@ -57,14 +57,14 @@ a provider. For example, for CAPZ:
 kubectl gs gitops add base --provider capz
 ```
 
-It writes `bases/clusters/capz/template` with three files:
+It writes `bases/clusters/capz` with three files:
 
 - `cluster.yaml` with the `OCIRepository` of the `release-azure` chart and the `HelmRelease`
 - `cluster_config.yaml` with the default values
 - `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap
 
 The `HelmRelease` it writes only reads `${cluster_name}-config`. Add the `cluster-app-installation-values` entry in front
-of it, as the [CAPA base](/bases/clusters/capa/template/cluster.yaml) does, or the chart misses
+of it, as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, or the chart misses
 `global.managementCluster` and `global.connectivity.baseDomain`. On management clusters that run
 `kyverno-policies-ux` 0.15.1 or newer, its `prepend-cluster-app-config-map-hr` policy prepends the same entry to a
 `HelmRelease` that lacks it. The explicit entry is for management clusters without that policy, and it does no harm
@@ -97,14 +97,14 @@ that replaces the `${cluster_name}-config` ConfigMap.
 1. Create its directory:
 
     ```sh
-    mkdir -p bases/clusters/capa/${BASE_NAME}
+    mkdir -p bases/clusters/${BASE_NAME}
     ```
 
 1. Write the defaults into `cluster_config.yaml`. They follow the `values.yaml` schema of the cluster chart. Keep the
    `metadata` block, because it replaces the one of the base below:
 
     ```sh
-    cat <<'EOF' > bases/clusters/capa/${BASE_NAME}/cluster_config.yaml
+    cat <<'EOF' > bases/clusters/${BASE_NAME}/cluster_config.yaml
     global:
       metadata:
         description: ${cluster_description}
@@ -125,7 +125,7 @@ that replaces the `${cluster_name}-config` ConfigMap.
 1. Create the `kustomization.yaml`. It replaces the base's ConfigMap with one generated from `cluster_config.yaml`:
 
     ```sh
-    cat <<'EOF' > bases/clusters/capa/${BASE_NAME}/kustomization.yaml
+    cat <<'EOF' > bases/clusters/${BASE_NAME}/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     configMapGenerator:
       - behavior: replace
@@ -139,20 +139,20 @@ that replaces the `${cluster_name}-config` ConfigMap.
         reconcile.fluxcd.io/watch: Enabled
     kind: Kustomization
     resources:
-      - ../template
+      - ../capa
     EOF
     ```
 
 1. Copy the `readme.md` of the base below, which lists the variables the base expects:
 
     ```sh
-    cp bases/clusters/capa/template/readme.md bases/clusters/capa/${BASE_NAME}/readme.md
+    cp bases/clusters/capa/readme.md bases/clusters/${BASE_NAME}/readme.md
     ```
 
 1. Export the path of the new base:
 
     ```sh
-    export CLUSTER_PATH=bases/clusters/capa/${BASE_NAME}
+    export CLUSTER_PATH=bases/clusters/${BASE_NAME}
     ```
 
 ## Recommended next steps

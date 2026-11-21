@@ -3,11 +3,11 @@
 - [General note](#general-note)
 - [Environments](#environments)
   - [Stages](#stages)
-    - [The development cluster](#the-development-cluster)
-    - [The staging cluster](#the-staging-cluster)
-    - [The production cluster](#the-production-cluster)
+    - [The development stage](#the-development-stage)
+    - [The staging stage](#the-staging-stage)
+    - [The production stage](#the-production-stage)
     - [Promote a change from dev to prod](#promote-a-change-from-dev-to-prod)
-- [Add Workload Clusters based on the environment cluster templates](#add-workload-clusters-based-on-the-environment-cluster-templates)
+- [Add Workload Clusters to the stages](#add-workload-clusters-to-the-stages)
 - [Tips for developing environments](#tips-for-developing-environments)
 
 You might want to set up multiple, similar Workload Clusters that serve as for example development,
@@ -56,7 +56,7 @@ in [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
 
 ### Stages
 
-We have 3 example clusters under [/bases/environments/stages](/bases/environments/stages):
+We have 3 example stages under [/bases/environments/stages](/bases/environments/stages):
 
 - [dev](/bases/environments/stages/dev)
 - [staging](/bases/environments/stages/staging)
@@ -68,40 +68,20 @@ mkdir -p bases/environments/stages/staging
 mkdir -p bases/environments/stages/prod
 ```
 
-Each of these contain a `hello_app_cluster` example, built from the
-[hello_app_cluster](/bases/cluster_templates/hello_app_cluster) cluster template that ships with this repository. A
-cluster template bundles everything a kind of cluster gets: here the [CAPA cluster base](/bases/clusters/capa/template)
-and the [hello-web](/bases/stacks/hello-web) stack, which installs hello-world served through Envoy Gateway. None
-of the other docs create it, so if your repository doesn't have it, copy `bases/cluster_templates/hello_app_cluster`
-together with the bases it references.
+A stage is a [kustomize Component](https://kubectl.docs.kubernetes.io/guides/config_management/components/) that holds
+the versions its clusters run: the Giant Swarm release and the versions of their apps. A cluster lists its stage under
+`components:`, next to its [region](#regions). A stage patches objects it doesn't create, the cluster's `OCIRepository`
+and those of its apps, which is why it is a Component, see
+[A base or a Component](./stacks.md#a-base-or-a-component). Its patches add nothing to the cluster's `valuesFrom`, so
+its place in the `components:` list doesn't matter. Any CAPA cluster can use a stage: a patch for an app the cluster
+doesn't have changes nothing.
 
-The hello-web stack holds what ties its apps together: it orders hello-world after the Gateway API CRDs, sets the
-Gateway's `hello` subdomain next to hello-world's hostname, and pins the chart versions known to work together. See
-[Stacks](./stacks.md).
+The example clusters of the stages install the [hello-web](/bases/stacks/hello-web) stack, which installs hello-world
+served through Envoy Gateway. The hello-web stack holds what ties its apps together: it orders hello-world after the
+Gateway API CRDs, sets the Gateway's `hello` subdomain next to hello-world's hostname, and pins the chart versions known
+to work together. See [Stacks](./stacks.md). A stage overrides the version of hello-world.
 
-```sh
-mkdir -p bases/environments/stages/dev/hello_app_cluster
-mkdir -p bases/environments/stages/staging/hello_app_cluster
-mkdir -p bases/environments/stages/prod/hello_app_cluster
-```
-
-By checking each `kustomization.yaml` files - the [dev](
-/bases/environments/stages/dev/hello_app_cluster/kustomization.yaml) one for example - you will notice that they
-all reference our [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base.
-
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-# ...
-resources:
-  # ...
-  - ../../../../cluster_templates/hello_app_cluster
-```
-
-You can put additional configuration under these folders that should be same for each instances of these clusters.
-Let's take a closer look at our examples.
-
-#### The development cluster
+#### The development stage
 
 Set up our environment first.
 
@@ -112,9 +92,8 @@ export ORG_NAME=ORGANIZATION
 export GIT_REPOSITORY_NAME=REPOSITORY_NAME
 ```
 
-Each stage also pins the Giant Swarm release its clusters run. The cluster template uses the CAPA cluster base, whose
-`release-aws` chart has the release as its version, so a patch sets the release as the tag of the cluster's
-`OCIRepository`.
+Each stage pins the Giant Swarm release its clusters run. The clusters use the CAPA cluster base, whose `release-aws`
+chart has the release as its version, so a patch sets the release as the tag of the cluster's `OCIRepository`.
 Pick an AWS release from v34.0.0 on, which has a `release-aws` chart. Each stage pins its own release, so a new release
 reaches dev first and staging and prod only when you promote it, see
 [Promote a change from dev to prod](#promote-a-change-from-dev-to-prod). In this example dev runs `36.2.0`, staging
@@ -124,15 +103,11 @@ reaches dev first and staging and prod only when you promote it, see
 export RELEASE_VERSION=36.2.0
 ```
 
-Change our working directory to the `hello_app_cluster` development cluster environment base.
+Change our working directory to the development stage.
 
 ```sh
-cd bases/environments/stages/dev/hello_app_cluster
+cd bases/environments/stages/dev
 ```
-
-The [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) base cluster template defines that the
-[hello-web](/bases/stacks/hello-web) stack should be installed in all of these clusters. Values for its apps come
-from the stack itself; what a stage adds on top is the chart version to run.
 
 The version of an app lives on its `OCIRepository`, and it can be either a fixed `spec.ref.tag` or a `spec.ref.semver`
 range. With a range, Flux deploys the highest chart tag that satisfies it and upgrades the app as soon as a newer
@@ -140,21 +115,19 @@ matching tag is published, so `Automatic Updates` need nothing besides the `OCIR
 [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/) for `semver` and
 `semverFilter`.
 
-For our development cluster we want Flux to automatically roll out the dev builds of `hello-world` from version
+For our development clusters we want Flux to automatically roll out the dev builds of `hello-world` from version
 `3.0.0` on. Dev builds are pre-releases tagged `X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`. The `-0` suffix on the range
 makes pre-releases eligible at all, `semverFilter` then keeps only dev builds. Flux picks the highest matching tag, and
 for builds of the same version semver orders by the branch hash before the timestamp, so if several branches publish dev
 builds, put the CRC32 of the branch to follow into the filter instead of `[0-9a-f]{8}`.
 
-Let's create the `kustomization.yaml` file for the development cluster. A patch sets the release as the tag of the
-cluster's `OCIRepository`. Don't set `global.release.version` in the cluster values, because the `release-aws` chart
-sets it.
+Let's create the `kustomization.yaml` file for the development stage. Don't set `global.release.version` in the cluster
+values, because the `release-aws` chart sets it.
 
 ```sh
 cat <<EOF > kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
 patches:
   - patch: |-
       - op: replace
@@ -173,35 +146,28 @@ patches:
     target:
       kind: OCIRepository
       name: \\\${cluster_name}
-resources:
-  - ../../../../cluster_templates/hello_app_cluster
 EOF
 ```
 
 The `# renovate:` comment lets Renovate find the release, which it can't see in a kustomize patch otherwise.
 
-And pretty much that is it for the development cluster. Let's look at the staging cluster next to the minor differences.
+And pretty much that is it for the development stage. Let's look at the staging stage next to the minor differences.
 
-#### The staging cluster
+#### The staging stage
 
-Let's change our working directory to the staging cluster.
+Let's change our working directory to the staging stage.
 
 ```sh
-cd ../../staging/hello_app_cluster
+cd ../staging
 ```
 
-We will use the same environment variables for this cluster template as we did for the development cluster.
-
-It is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base, like the development
-cluster. Unlike it, staging doesn't follow a range: it pins the exact `hello-world` version and the release, so it only
-runs a version once you have promoted it from dev. The hello-world patch overrides the version the hello-web stack
-pins.
+Unlike dev, staging doesn't follow a range: it pins the exact `hello-world` version and the release, so it only runs a
+version once you have promoted it from dev. The hello-world patch overrides the version the hello-web stack pins.
 
 ```sh
 cat <<EOF > kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
 patches:
   - patch: |-
       - op: replace
@@ -219,72 +185,27 @@ patches:
     target:
       kind: OCIRepository
       name: \\\${cluster_name}
-resources:
-  - ../../../../cluster_templates/hello_app_cluster
 EOF
 ```
 
-So basically our staging cluster in our example is a smaller scale cluster carrying stable versions of our applications.
+So basically our staging stage carries stable versions of our applications.
 
-Now, let's take a look at the production cluster example.
+Now, let's take a look at the production stage.
 
-#### The production cluster
+#### The production stage
 
-Let's change our working directory to the production cluster.
+Let's change our working directory to the production stage.
 
 ```sh
-cd ../../prod/hello_app_cluster
+cd ../prod
 ```
 
-We will use the same environment variables for this cluster template as we did for the development cluster.
-
-Let's create the `Kustomization` for the production cluster environment template.
+Like staging, prod pins the exact versions it runs instead of following a range.
 
 ```sh
 cat <<EOF > kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: replace
-    files:
-      - values=cluster_userconfig.yaml
-    name: \${cluster_name}-cluster-userconfig
-    namespace: org-\${organization}
-generatorOptions:
-  disableNameSuffixHash: true
-  labels:
-    reconcile.fluxcd.io/watch: Enabled
-kind: Kustomization
-resources:
-  - ../../../../cluster_templates/hello_app_cluster
-EOF
-```
-
-It is similar to the staging cluster in the following manners:
-
-- it is based on the [hello_app_cluster](/bases/cluster_templates/hello_app_cluster) template base
-- it pins the exact versions it runs instead of following a range
-
-Note in the `kustomization.yaml` above that we replace the empty `${cluster_name}-cluster-userconfig` `ConfigMap` of the
-cluster template with extra settings for the production cluster: bigger nodes, and more of them.
-
-```sh
-cat <<EOF > cluster_userconfig.yaml
-global:
-  nodePools:
-    nodepool0:
-      instanceType: m6a.8xlarge
-      maxSize: 50
-      minSize: 10
-EOF
-```
-
-Like staging, we use the `Kustomization` in the cluster's [kustomization.yaml](
-/bases/environments/stages/prod/hello_app_cluster/kustomization.yaml) to patch the exact versions to use
-in our `OCIRepository` resources, next to the release of the cluster.
-
-```sh
-cat <<EOF >> kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
 patches:
   - patch: |-
       - op: replace
@@ -306,6 +227,9 @@ EOF
 ```
 
 We tell Flux to use version `3.2.2` of the `hello-world` app and release `36.1.0`, one step behind staging.
+
+A stage holds only versions. The production clusters' bigger nodes, and more of them, are their own values, see
+[Add Workload Clusters to the stages](#add-workload-clusters-to-the-stages).
 
 #### Promote a change from dev to prod
 
@@ -464,11 +388,11 @@ global:
 EOF
 ```
 
-The pool is called `large` and doesn't share a key with the stage's `nodepool0`, so a production cluster gets both
-pools: the stage's and the region's. The dev and staging clusters don't add the node pool component, so they only get
-the chart's default node pools.
+The pool is called `large` and doesn't share a key with the production clusters' own `nodepool0`, so a production
+cluster gets both pools: its own and the region's. The dev and staging clusters don't add the node pool component, so
+they only get the chart's default node pools.
 
-## Add Workload Clusters based on the environment cluster templates
+## Add Workload Clusters to the stages
 
 Just as any other Workload Clusters we define them in
 [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
@@ -523,59 +447,90 @@ yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"
 > labels and delete its `HelmRelease` by hand, then its `OCIRepository`, see
 > [Delete the cluster](../getting-started.md#6-delete-the-cluster-optional).
 
-In our example we create one instance from each cluster environment base:
+In our example we create one cluster for each stage:
 
-- for the dev environment we create [HELLO_APP_DEV_CLUSTER_1](
+- for the dev stage we create [HELLO_APP_DEV_CLUSTER_1](
 /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1/cluster/kustomization.yaml)
-- for the staging environment we create [HELLO_APP_STAGING_CLUSTER_1](
+- for the staging stage we create [HELLO_APP_STAGING_CLUSTER_1](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1/cluster/kustomization.yaml)
 
 The dev and staging clusters run in `eu-central`. Production runs in two regions, and its clusters add their region's
 extra node pool:
 
-- for the production environment we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
+- for the prod stage we create [HELLO_APP_PROD_CLUSTER_EU_CENTRAL](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster/kustomization.yaml)
 - and another one in a different region with some different values for the cluster [HELLO_APP_PROD_CLUSTER_US_WEST](
   /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST/cluster/kustomization.yaml)
 
-Every cluster lists the components that append to its `HelmRelease` `valuesFrom`: its region, optionally the region's
-extra node pool, and last the cluster template's [userconfig](/bases/cluster_templates/hello_app_cluster/userconfig)
-component, which appends the cluster's own `${cluster_name}-cluster-userconfig`. kustomize applies the components in
-the order they are listed, so Flux merges the entries in this order:
+Each cluster is built like any other CAPA cluster: the [CAPA cluster base](/bases/clusters/capa), its own values in
+`cluster_userconfig.yaml`, and the hello-web stack as a base app in `cluster/apps`. It lists its region, optionally the
+region's extra node pool, and its stage under `components:`. The components append to the cluster's `HelmRelease`
+`valuesFrom` in the order they are listed, and the cluster's own patch runs after them, so Flux merges the entries in
+this order:
 
 1. `cluster-app-installation-values`, the management cluster's values (see the [cluster base](
-   /bases/clusters/capa/template/readme.md#values-from-the-management-cluster))
+   /bases/clusters/capa/readme.md#values-from-the-management-cluster))
 1. `${cluster_name}-config`, the base values
 1. `${cluster_name}-region-config`, the region
 1. `${cluster_name}-region-node-pool-config`, the region's extra node pool, for the clusters that add it
 1. `${cluster_name}-cluster-userconfig`, the cluster's own values
 
-The cluster template doesn't append the cluster's own values itself. It is a resource of the cluster's kustomization,
-and kustomize applies the patches of a resource before the components of the kustomization that uses it. A region
-component would then land after the cluster's own values and override them.
-
-> **Note**
->
-> Always list the `userconfig` component. Without it, the `${cluster_name}-cluster-userconfig` ConfigMap is still
-> created, but nothing reads it: the cluster silently loses its own values and those of its stage. CI doesn't catch
-> this.
-
-Let's take a look at the development environment instance. It runs in `eu-central`. The cluster's directory lists
-`cluster/` in its own `kustomization.yaml`, so the cluster's `Kustomization` never applies an `out-of-band` directory
-next to it to the management cluster.
+Let's take a look at the development cluster. It runs in `eu-central`. The cluster's directory lists `cluster/` in its
+own `kustomization.yaml`, so the cluster's `Kustomization` never applies an `out-of-band` directory next to it to the
+management cluster.
 
 ```sh
-mkdir -p HELLO_APP_DEV_CLUSTER_1/cluster
+mkdir -p HELLO_APP_DEV_CLUSTER_1/cluster/apps
 
 cat <<EOF > HELLO_APP_DEV_CLUSTER_1/cluster/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-kind: Kustomization
 components:
   - ../../../../../../../bases/environments/regions/eu_central
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
+  - ../../../../../../../bases/environments/stages/dev
+kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/managed-by: flux
+patches:
+  - path: patch_cluster_userconfig.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: \\\${cluster_name}
 resources:
-  - ../../../../../../../bases/environments/stages/dev/hello_app_cluster
+  - ../../../../../../../bases/clusters/capa
+  - cluster_userconfig.yaml
+  - apps/
+EOF
+
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/cluster/cluster_userconfig.yaml
+apiVersion: v1
+data:
+  values: ""
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: \${cluster_name}-cluster-userconfig
+  namespace: org-\${organization}
+EOF
+
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/cluster/patch_cluster_userconfig.yaml
+- op: add
+  path: /spec/valuesFrom/-
+  value:
+    kind: ConfigMap
+    name: \${cluster_name}-cluster-userconfig
+    valuesKey: values
+EOF
+
+cat <<EOF > HELLO_APP_DEV_CLUSTER_1/cluster/apps/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+resources:
+  - ../../../../../../../../bases/stacks/hello-web
 EOF
 
 cat <<EOF > HELLO_APP_DEV_CLUSTER_1/kustomization.yaml
@@ -588,53 +543,43 @@ EOF
 
 The staging cluster looks the same with the staging stage.
 
-The production clusters also add their region's extra node pool, between the region and the cluster's own values.
+The production clusters list the prod stage, and also add their region's extra node pool after the region. Copy the
+development cluster's files and change the components:
 
 ```bash
-mkdir -p HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster
-cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-kind: Kustomization
-components:
-  - ../../../../../../../bases/environments/regions/eu_central
-  - ../../../../../../../bases/environments/regions/eu_central/node_pool
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
-resources:
-  - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
-EOF
+mkdir -p HELLO_APP_PROD_CLUSTER_EU_CENTRAL
+cp -r HELLO_APP_DEV_CLUSTER_1/cluster HELLO_APP_DEV_CLUSTER_1/kustomization.yaml HELLO_APP_PROD_CLUSTER_EU_CENTRAL/
 
-cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - cluster/
+yq -i eval '.components = [
+  "../../../../../../../bases/environments/regions/eu_central",
+  "../../../../../../../bases/environments/regions/eu_central/node_pool",
+  "../../../../../../../bases/environments/stages/prod"
+]' HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster/kustomization.yaml
+```
+
+Their own values give them bigger nodes, and more of them:
+
+```bash
+cat <<EOF > HELLO_APP_PROD_CLUSTER_EU_CENTRAL/cluster/cluster_userconfig.yaml
+apiVersion: v1
+data:
+  values: |
+    global:
+      nodePools:
+        nodepool0:
+          instanceType: m6a.8xlarge
+          maxSize: 50
+          minSize: 10
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: \${cluster_name}-cluster-userconfig
+  namespace: org-\${organization}
 EOF
 ```
 
-The `us-west` version of the production cluster uses the other region.
-
-```bash
-mkdir -p HELLO_APP_PROD_CLUSTER_US_WEST/cluster
-cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/cluster/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-kind: Kustomization
-components:
-  - ../../../../../../../bases/environments/regions/us_west
-  - ../../../../../../../bases/environments/regions/us_west/node_pool
-  - ../../../../../../../bases/cluster_templates/hello_app_cluster/userconfig
-resources:
-  - ../../../../../../../bases/environments/stages/prod/hello_app_cluster
-EOF
-
-cat <<EOF > HELLO_APP_PROD_CLUSTER_US_WEST/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - cluster/
-EOF
-```
+The `us-west` version of the production cluster is the same, with the `us_west` region and its node pool.
 
 > **Note**
 >

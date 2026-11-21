@@ -113,8 +113,8 @@ If the apps are independent, don't make a stack: list each App Template in the c
 ## Using a stack in a cluster
 
 Use it as you use an [App Template](./add-app.md#adding-app-using-app-template): a directory in the cluster's `apps`,
-whose `kustomization.yaml` lists the stack under `resources:`. A cluster template lists it in its
-`apps/kustomization.yaml`, as [hello_app_cluster](/bases/cluster_templates/hello_app_cluster/apps/) does. There is no
+whose `kustomization.yaml` lists the stack under `resources:`. A cluster that installs it with the cluster lists it in
+`cluster/apps/kustomization.yaml`, as the `HELLO_APP_*` clusters do. There is no
 `${cluster_name}-hello-web` `HelmRelease`: to change an app's values for one cluster, add a `configMapGenerator` entry
 named after that app, `${cluster_name}-<app>-user-values`, as
 [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template/)
@@ -147,10 +147,11 @@ When that isn't enough, two other ways fit better:
 Make a stack a base, under `resources:`, as hello-web is. Use a
 [kustomize Component](https://kubectl.docs.kubernetes.io/guides/config_management/components/) only when the piece has
 to patch objects outside itself, in an order that matters, as the [regions](./environments.md#regions) do when they
-append to the cluster's `valuesFrom`. A stack only adds objects. A base also builds on its own, so it can be the path
+append to the cluster's `valuesFrom`, or as the [stages](./environments.md#stages) do when they pin the versions of
+the cluster and its apps. A stack only adds objects. A base also builds on its own, so it can be the path
 of a Flux `Kustomization`, and a Component can't.
 
 ## Recommended next steps
 
 - [Add a new App Template to the repository](./app-templates.md)
-- [Add Workload Cluster environments](./environments.md), which install hello-web through a cluster template
+- [Add Workload Cluster environments](./environments.md), which install hello-web on a cluster per stage

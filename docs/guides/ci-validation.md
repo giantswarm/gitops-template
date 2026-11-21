@@ -149,7 +149,7 @@ A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its `
 shows them. For every `HelmRelease` that creates a workload cluster, the test reads the `HelmRelease` and its
 ConfigMaps from the test cluster, merges the values the way helm-controller does, `spec.values` included, and compares
 the node pools with `EXPECTED_NODE_POOLS` in [node_pools.py](../../tests/ats/node_pools.py). A production cluster gets
-the stage's `nodepool0` and its region's extra pool. Dev and staging have no pools of their own and get the chart's
+its own `nodepool0` and its region's extra pool. Dev and staging have no pools of their own and get the chart's
 defaults. The test fails for a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or
 change its node pools, update that table.
 

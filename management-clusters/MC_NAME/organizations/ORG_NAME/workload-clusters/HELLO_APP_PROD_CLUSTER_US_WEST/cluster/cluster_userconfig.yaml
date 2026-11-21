@@ -1,0 +1,15 @@
+apiVersion: v1
+data:
+  values: |
+    global:
+      nodePools:
+        nodepool0:
+          instanceType: m6a.8xlarge
+          maxSize: 50
+          minSize: 10
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: ${cluster_name}-cluster-userconfig
+  namespace: org-${organization}

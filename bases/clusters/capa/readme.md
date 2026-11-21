@@ -92,4 +92,4 @@ before it, with the [values from the management cluster](#values-from-the-manage
 in the base: each cluster adds it with a component.
 
 If you create a base with `kubectl gs gitops add base`, add the entry to its `HelmRelease`, see
-[Create a base for another provider](/docs/guides/cluster-templates.md#create-a-base-for-another-provider-optional).
+[Create a base for another provider](/docs/guides/clusters.md#create-a-base-for-another-provider-optional).
