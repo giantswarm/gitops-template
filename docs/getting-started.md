@@ -905,36 +905,40 @@ the team from the cluster first, as that guide describes.
 1. Remove the cluster from the organization's list:
 
     ```sh
-    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml" or . == "'"${WC_NAME}"'-apps.yaml" or
-      . == "'"${WC_NAME}"'-direct.yaml"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
+    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'.yaml" or . == "'"${WC_NAME}"'-apps.yaml"))' \
+      ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
-    If the cluster has out-of-band resources, its `-direct` `Kustomization` in `${WC_NAME}-direct.yaml` applies them to
-    the workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree).
-    The command above takes it out of the list too. Skip to the cluster's files below if the cluster has no
-    `${WC_NAME}-direct.yaml`. Otherwise, save the name of its SOPS key Secret, if it has one, and remove its file:
+    If the cluster has out-of-band resources, its `-direct` `Kustomization` in
+    `${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-direct.yaml` applies them to the workload cluster, see
+    [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree). The organisation's
+    namespace `Kustomization` applies it. Skip to the cluster's files below if the cluster has none. Otherwise, take it
+    out of that directory's list, save the name of its SOPS key Secret, if it has one, and remove its file:
 
     ```sh
     unset DIRECT_KEY KEY_FILE
-    export DIRECT_KEY=$(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml)
-    git rm ${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml
+    yq -i 'del(.resources[] | select(. == "'"${WC_NAME}"'-direct.yaml"))' \
+      ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
+    export DIRECT_KEY=$(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-direct.yaml)
+    git rm ${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-direct.yaml
     ```
 
     If `DIRECT_KEY` isn't empty, the `-direct` `Kustomization` decrypts with a key Secret in the organisation's
     namespace, which another cluster's `-direct` `Kustomization` may share. Check whether one does:
 
     ```sh
-    yq ea 'select(.metadata.namespace == "org-ORG_NAME" and .spec.decryption.secretRef.name == strenv(DIRECT_KEY)) | filename' \
-      ${ORG_DIR}/workload-clusters/*.yaml
+    yq ea 'select(.spec.decryption.secretRef.name == strenv(DIRECT_KEY)) | filename' \
+      ${ORG_DIR}/namespace/workload-clusters/*.yaml
     ```
 
     If this prints a file, that cluster uses the key: keep it and run `unset DIRECT_KEY`. Otherwise, find the key's
-    file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, and remove it and its entry in `secrets/kustomization.yaml`:
+    file, such as `${WC_NAME}-direct.gpgkey.enc.yaml`, in the organisation's `namespace/secrets`, where everything in
+    the organisation's namespace goes, and remove it and its entry in `namespace/secrets/kustomization.yaml`:
 
     ```sh
-    export KEY_FILE=$(basename "$(yq ea 'select(.metadata.name == strenv(DIRECT_KEY) and .metadata.namespace == "org-" + strenv(ORG_NAME)) | filename' ${MC_DIR}/secrets/*.enc.yaml)")
-    yq -i 'del(.resources[] | select(. == strenv(KEY_FILE)))' ${MC_DIR}/secrets/kustomization.yaml
-    git rm ${MC_DIR}/secrets/${KEY_FILE}
+    export KEY_FILE=$(basename "$(yq ea 'select(.metadata.name == strenv(DIRECT_KEY)) | filename' ${ORG_DIR}/namespace/secrets/*.enc.yaml)")
+    yq -i 'del(.resources[] | select(. == strenv(KEY_FILE)))' ${ORG_DIR}/namespace/secrets/kustomization.yaml
+    git rm ${ORG_DIR}/namespace/secrets/${KEY_FILE}
     ```
 
     Remove the cluster's files, then commit and push everything in one go:
@@ -947,6 +951,7 @@ the team from the cluster first, as that guide describes.
 
     ```sh
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
+    flux reconcile kustomization ${MC_NAME}-organization-${ORG_NAME} -n default
     ```
 
     Flux deletes the cluster's `Kustomization`s, which delete the cluster's apps and configuration first, and the
