@@ -1,5 +1,6 @@
 """Checks of how the organization-operator stand-in judges the bootstrap; they need no cluster."""
 
+from conftest import organization_init_namespaces
 from organization_operator import (
     ORG_NAMESPACE,
     ORGANIZATION,
@@ -101,3 +102,10 @@ def test_waiting_problems_before_its_first_reconcile() -> None:
         f"Kustomization 'default/{ORGANIZATION_KUSTOMIZATION}' doesn't wait for namespace "
         f"'{ORG_NAMESPACE}': has no conditions"
     ]
+
+
+def test_organization_init_namespaces() -> None:
+    # Flux has to bootstrap the organisation's namespace as on a new management cluster, where
+    #  only organization-operator creates it
+    assert organization_init_namespaces(["default"]) == []
+    assert organization_init_namespaces(["default", "org-a", "other"]) == ["org-a"]

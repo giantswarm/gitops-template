@@ -16,8 +16,21 @@ from collections.abc import Callable, Iterator
 
 import pykube
 import pytest
+import yaml
+from automation_rbac import organization_rbac
 from checks.conditions import is_ready, not_ready_reason, obj_key
+from conftest import (
+    CLUSTER_VALUES_STUB,
+    WORKLOAD_CLUSTER_KUBECONFIG_NAME,
+    WORKLOAD_CLUSTER_VALUES_NAME,
+    WORKLOAD_CLUSTER_VCLUSTER_NAME,
+    VCluster,
+    apply,
+    installation_values_config_map,
+)
+from external_secrets import organization_store
 from flux_reconcile import wait_until
+from notification_objects import organization_alert
 from prune_objects import OrganizationCR
 from pykube.objects import APIObject
 from pytest_helm_charts.clusters import Cluster
@@ -39,8 +52,7 @@ WAITING_TIMEOUT_SEC = 120
 RECOVERY_TIMEOUT_SEC = 150
 
 # What the stand-in creates in the namespace once it exists: each takes the test cluster's
-#  client and the namespace, and returns the objects it created. The modules of the fixtures
-#  that set up the rest of the test register them here.
+#  client and the namespace, and returns the objects it created.
 NamespaceSetup = Callable[[pykube.HTTPClient, str], list[pykube.objects.APIObject]]
 
 logger = logging.getLogger(__name__)
@@ -189,3 +201,92 @@ def organization_operator(
         f"{time.monotonic() - started:.0f} s after its namespace was created"
     )
     yield None
+
+
+def installation_values(
+    api: pykube.HTTPClient, namespace: str
+) -> list[pykube.objects.APIObject]:
+    """Create the stand-in `cluster-app-installation-values` in the organisation's `namespace`,
+    as the management cluster's Kyverno policy copies it there."""
+    return [apply(installation_values_config_map(api, namespace))]
+
+
+def workload_cluster_objects(
+    api: pykube.HTTPClient, namespace: str, kubeconfig: dict
+) -> list[pykube.objects.APIObject]:
+    """Create in the organisation's `namespace` what the management cluster has there for the
+    workload cluster: its kubeconfig Secret, as Cluster API writes it, and its cluster values,
+    as cluster-apps-operator writes them."""
+    with open(CLUSTER_VALUES_STUB) as f:
+        cluster_values = pykube.ConfigMap(
+            api,
+            {
+                "metadata": {
+                    "name": WORKLOAD_CLUSTER_VALUES_NAME,
+                    "namespace": namespace,
+                },
+                "data": {"values": f.read()},
+            },
+        )
+    kubeconfig_secret = pykube.Secret(
+        api,
+        {
+            # labelled and typed as Cluster API writes it, which the Kyverno policy
+            # `generate-eso-cluster-auth-from-kubeconfig` matches
+            "metadata": {
+                "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
+                "namespace": namespace,
+                "labels": {
+                    "cluster.x-k8s.io/cluster-name": WORKLOAD_CLUSTER_VCLUSTER_NAME
+                },
+            },
+            "type": "cluster.x-k8s.io/secret",
+            "stringData": {"value": yaml.safe_dump(kubeconfig)},
+        },
+    )
+    return [apply(cluster_values), apply(kubeconfig_secret)]
+
+
+@pytest.fixture(scope="module")
+def organization_objects(
+    external_secrets: None,
+    workload_cluster: pykube.HTTPClient,
+    automation_rbac: None,
+) -> Iterator[list[pykube.objects.APIObject]]:
+    """What organization_operator creates in the organisation's namespace, and the namespace
+    itself. They're deleted, the namespace last, once the repository's Kustomizations are gone,
+    and before the fixtures this one depends on remove what they installed."""
+    created: list[pykube.objects.APIObject] = []
+
+    yield created
+
+    for obj in reversed(created):
+        if obj.exists():
+            obj.delete()
+
+
+@pytest.fixture(scope="module")
+def organization_namespace_setups(
+    kube_cluster: Cluster, vcluster: VCluster
+) -> list[NamespaceSetup]:
+    """What organization_operator creates in the organisation's namespace once it exists, in
+    order, as the management cluster's operators do: the organisation's Alert, suspended before
+    Flux applies it; `automation` and its rights (rbac-operator); the installation values
+    (Kyverno); the test's secret store; the workload cluster's kubeconfig Secret and cluster
+    values (Cluster API and cluster-apps-operator)."""
+    return [
+        lambda api, namespace: organization_alert(kube_cluster, namespace),
+        organization_rbac,
+        installation_values,
+        organization_store,
+        lambda api, namespace: workload_cluster_objects(
+            api, namespace, vcluster.kubeconfig
+        ),
+    ]
+
+
+@pytest.fixture(scope="module")
+def gitops_deployment(organization_operator: None) -> None:
+    """The repository bootstrapped as on a new management cluster: Flux has applied the root
+    Kustomization, and the organisation's namespace Kustomization is ready, once
+    organization_operator has created the namespace."""

@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from root_build import (
     MC_DIR,
-    REPO_DIR,
     ORGANIZATION_NAMESPACE_LABEL,
+    REPO_DIR,
     build,
     generated_resources,
     misplaced_objects,
