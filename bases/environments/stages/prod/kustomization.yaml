@@ -1,17 +1,5 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-buildMetadata: [originAnnotations]
-configMapGenerator:
-  - behavior: replace
-    files:
-      - values=cluster_userconfig.yaml
-    name: ${cluster_name}-cluster-userconfig
-    namespace: org-${organization}
-generatorOptions:
-  disableNameSuffixHash: true
-  # a change to these values reaches the HelmRelease at once, not at its next interval
-  labels:
-    reconcile.fluxcd.io/watch: Enabled
-kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
 # (optional) pin the hello-world version and the Giant Swarm release that prod
 # runs; the hello-world patch overrides the one in bases/stacks/hello-web.
 # Renovate updates these pins in a pull request of their own, on a
@@ -36,5 +24,3 @@ patches:
       kind: OCIRepository
       name: \${cluster_name}
 # block end
-resources:
-  - ../../../../clusters/hello_app_cluster
