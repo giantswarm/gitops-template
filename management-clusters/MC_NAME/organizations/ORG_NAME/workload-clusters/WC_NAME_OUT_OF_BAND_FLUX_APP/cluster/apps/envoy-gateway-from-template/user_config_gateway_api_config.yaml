@@ -6,7 +6,7 @@ gateways:
         # `hello.<cluster base domain>`
         subdomains:
           - hello
-    # an example override on top of the App Template defaults
+    # an example override on top of the stack defaults
     service:
       annotations:
         example.com/owner: platform-team

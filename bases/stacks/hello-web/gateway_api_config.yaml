@@ -1,4 +1,4 @@
-# replaces the envoy-gateway App Template's default_config_gateway_api_config.yaml
+# replaces the envoy-gateway stack's default_config_gateway_api_config.yaml
 gateways:
   default:
     # hello_world.yaml's `route.parentRefs` attaches hello-world's HTTPRoute to

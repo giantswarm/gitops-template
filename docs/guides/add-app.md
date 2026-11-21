@@ -32,9 +32,10 @@ Kustomization for all of its directory.
 Examples of creating apps are available in following locations:
 
 - An example of a directly configured App (the simplest use case - no configuration): an [app without configuration](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world/)
-- An example of an app created from an App Template, with plain and SOPS-encrypted (`secret.enc.yaml`) overrides, is
-  available in [WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
-  It's a base app.
+- An example of apps created from a [stack](./stacks.md), with plain and SOPS-encrypted (`secret.enc.yaml`) overrides,
+  is available in [WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
+  They're base apps. [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template/)
+  is an app created from an App Template.
 
 ## Common steps
 
