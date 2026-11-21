@@ -215,7 +215,7 @@ exists, these steps bring it under GitOps.
 
 > **Shortcut:** [`kubectl gs gitops add organization`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-org/)
 > creates the same files, but without the annotation of the `Organization` below, and without the organisation's
-> `kustomization.yaml`, which you create as below:
+> namespace `Kustomization` and `kustomization.yaml`, which you create as below:
 >
 > ```sh
 > kubectl gs gitops add organization --name ${ORG_NAME} --management-cluster ${MC_NAME}
@@ -227,10 +227,10 @@ exists, these steps bring it under GitOps.
 > yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${ORG_DIR}/${ORG_NAME}.yaml
 > ```
 
-First, create the organization's directory:
+First, create the organization's directory, with `namespace` for what the organisation keeps in its namespace:
 
 ```sh
-mkdir -p ${ORG_DIR}/workload-clusters
+mkdir -p ${ORG_DIR}/workload-clusters ${ORG_DIR}/namespace
 ```
 
 Create the `Organization`. Deleting it deletes the `org-${ORG_NAME}` namespace, with every cluster in it, so the
@@ -260,11 +260,48 @@ resources: []
 EOF
 ```
 
+Create the organisation's namespace `Kustomization`. Your management cluster's `Kustomization` applies only the
+`Organization` and objects in `default`, so it works before organization-operator has created the namespace. This
+`Kustomization`, in `default`, applies the organisation's `namespace` directory into `org-${ORG_NAME}`: it fails until
+the namespace exists and succeeds on its next retry. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
+organisation's `kustomization.yaml` completes, see
+[Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). The `namespace` directory lists nothing yet:
+
+```sh
+cat <<EOF > ${ORG_DIR}/namespace.yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    giantswarm.io/organization-namespace: "true"
+  name: ${MC_NAME}-organization-${ORG_NAME}
+  namespace: default
+spec:
+  interval: 10m
+  path: ./management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace
+  postBuild:
+    substitute:
+      organization: "ORG_NAME"
+  prune: true
+  retryInterval: 1m
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: ${GITOPS_REPO}
+  targetNamespace: org-ORG_NAME
+  timeout: 2m
+EOF
+cat <<EOF > ${ORG_DIR}/namespace/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: []
+EOF
+```
+
 Create the organisation's `kustomization.yaml`. Its replacements copy the name of the `Organization` into the
-`organization` that every cluster's `Kustomization` writes, and into the namespace of objects in the placeholder
-namespace `org-ORG_NAME`, such as the organisation's commit-status notifications, see
-[The organisation's name](./reference/repo-structure.md#the-organisations-name). The quoted `'EOF'` keeps the
-placeholders as they are:
+`organization` that every cluster's `Kustomization` writes, and into the `targetNamespace` of the organisation's
+namespace `Kustomization`, see [The organisation's name](./reference/repo-structure.md#the-organisations-name). The
+quoted `'EOF'` keeps the placeholders as they are:
 
 ```sh
 cat <<'EOF' > ${ORG_DIR}/kustomization.yaml
@@ -272,6 +309,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ORGANIZATION_FILE
+  - namespace.yaml
   - workload-clusters
 replacements:
   - source:
@@ -304,9 +342,11 @@ replacements:
       fieldPath: metadata.name
     targets:
       - select:
-          namespace: org-ORG_NAME
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          labelSelector: giantswarm.io/organization-namespace=true
         fieldPaths:
-          - metadata.namespace
+          - spec.targetNamespace
         options:
           delimiter: "-"
           index: 1

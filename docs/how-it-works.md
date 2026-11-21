@@ -17,7 +17,12 @@ Take a cluster named `demowc` in the organization `demoorg`, on the management c
 1. The management cluster's own Flux `Kustomization`, `demomc.yaml`, applies everything under
    `management-clusters/demomc`: the organizations, and the Flux `Kustomization` of each workload cluster listed in
    `workload-clusters/kustomization.yaml`, such as `demowc.yaml`. A cluster file that isn't in that list does
-   nothing. It stops there and doesn't apply what's inside the `demowc` directory.
+   nothing. It stops there and doesn't apply what's inside the `demowc` directory. It applies only objects in
+   `default` and the `Organization`s, so it works on a new management cluster, where the `org-demoorg` namespace
+   doesn't exist yet: organization-operator creates it for the `Organization`. What the organisation keeps in its
+   namespace is in `organizations/demoorg/namespace`, which the organisation's own `Kustomization`, `namespace.yaml`,
+   applies into `org-demoorg`. That one fails until the namespace exists, and succeeds on its next retry. See
+   [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
 1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory. While it does, it fills in variables
    such as `${cluster_name}`, `${organization}` and `${release}` from its own settings.
 1. `cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
@@ -81,7 +86,8 @@ variables, and a mistake in one cluster's directory doesn't stop the others.
 Everything in `cluster`, `apps` and `app_sets` is a resource on the management cluster that configures the
 workload cluster. Resources that must be applied inside the workload cluster directly go into an optional
 `out-of-band` directory next to them, which the cluster's `kustomization.yaml` leaves out. A third Kustomization,
-such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. You can also run Flux in the workload
+such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. It lives with that Secret in
+`org-demoorg`, so it's in the organisation's `namespace/workload-clusters`. You can also run Flux in the workload
 cluster and point it at that directory.
 
 ## Bases and variables

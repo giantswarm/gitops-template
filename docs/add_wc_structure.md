@@ -411,17 +411,18 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    `org-acme-corp-corp`. A health check that names the real namespace works without the label.
 
 1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
-   directory and referencing the right `kubeconfig` Secret. Create it in the namespace of that Secret, which is the
-   organization namespace for CAPI clusters. Write it as the fixed placeholder `org-ORG_NAME`, which the
-   organisation's `kustomization.yaml` completes:
+   directory and referencing the right `kubeconfig` Secret. It lives in the namespace of that Secret, which is the
+   organization namespace for CAPI clusters, so it goes in the organisation's `namespace/workload-clusters`
+   directory: the organisation's namespace `Kustomization` applies it there, and fills in `${organization}`. It names
+   no namespace. The `\$` keeps `${organization}` as it is in the file:
 
    ```sh
-   cat <<EOF > ${WC_NAME}-direct.yaml
+   mkdir -p ../namespace/workload-clusters
+   cat <<EOF > ../namespace/workload-clusters/${WC_NAME}-direct.yaml
    apiVersion: kustomize.toolkit.fluxcd.io/v1
    kind: Kustomization
    metadata:
      name: ${MC_NAME}-clusters-${WC_NAME}-direct
-     namespace: org-ORG_NAME
    spec:
      interval: 10m
      kubeConfig:
@@ -432,7 +433,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
      postBuild:
        substitute:
          cluster_name: "${WC_NAME}"
-         organization: "${ORG_NAME}"
+         organization: "\${organization}"
      prune: true
      retryInterval: 1m
      sourceRef:
@@ -444,8 +445,9 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
    ```
 
    **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
-   in the above command to tell Flux where to look for the `kubeconfig`, and to write the namespace the legacy
-   cluster's `kubeconfig` Secret lives in instead of `org-ORG_NAME`.
+   in the above command to tell Flux where to look for the `kubeconfig`. A legacy cluster's `kubeconfig` Secret
+   lives in `default`: write the file in `workload-clusters` instead, with `namespace: default` and
+   `organization: "ORG_NAME"`, as the cluster's other Kustomizations have, and list it there.
 
 ### Configuring default apps
 
@@ -456,11 +458,10 @@ The default apps of a cluster are part of its cluster chart. Configure them in t
 ## MC configuration
 
 1. Still in the `workload-clusters` directory, edit the mandatory `kustomization.yaml` adding the WC's Kustomization
-   CR as a resource. Uncomment second line if you have created the out-of-band Kustomization CR as well:
+   CR as a resource:
 
     ```sh
     yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
-    # yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" kustomization.yaml
     ```
 
     The resulting file should look like this:
@@ -470,7 +471,17 @@ The default apps of a cluster are part of its cluster chart. Configure them in t
     kind: Kustomization
     resources:
     - ${WC_NAME}.yaml
-    - ${WC_NAME}-direct.yaml
+    ```
+
+1. If you have created the out-of-band Kustomization CR as well, list it in
+   `namespace/workload-clusters/kustomization.yaml`, and list `workload-clusters` in `namespace/kustomization.yaml`
+   if it isn't there yet:
+
+    ```sh
+    touch ../namespace/workload-clusters/kustomization.yaml
+    yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" \
+      ../namespace/workload-clusters/kustomization.yaml
+    yq -i eval '.resources |= ((. // []) + ["workload-clusters"] | unique)' ../namespace/kustomization.yaml
     ```
 
 After completing all the steps, you can open a PR with the changes. Once it is merged, Flux should be ready to reconcile

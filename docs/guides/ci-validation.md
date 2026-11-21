@@ -20,8 +20,9 @@ The workflow offers the following jobs:
   the job. A variable that a `Kustomization`'s manifests use but its `spec.postBuild.substitute` doesn't set fails the
   job, where Flux would replace it with an empty string. `flux build` doesn't read `spec.postBuild.substituteFrom`, so
   a variable set only there fails the job too, although Flux sets it on the cluster. It reads each `Kustomization` as
-  Flux applies it, from the build of the directories above its file that have a `kustomization.yaml`, such as the
-  organisation's, which sets `organization` and the organisation's namespace, see
+  Flux applies it: from the build of the Flux `Kustomization` that applies it, such as an organisation's namespace
+  `Kustomization` for a `-direct` one, or else from the build of the directories above its file that have a
+  `kustomization.yaml`, such as the organisation's, which sets `organization`, see
   [fake-flux](../../tools/README.md#fake-flux). It attaches a validation report as a comment to your PR.
 - `get_diff`: it templates your changed manifests and compares them to a templated version without your changes,
   then it generates and saves a diff between the two and attaches it to your PR
@@ -200,11 +201,14 @@ This build step requires additional configuration using the following environmen
 
 - `GITOPS_FLUX_APP_VERSION`: the version of [flux-app](https://github.com/giantswarm/flux-app/releases)
   version provided by Giant Swarm
-- `GITOPS_INIT_NAMESPACES`: a comma-separated list of the namespaces where the test deploys `Kustomization` objects
-  (example: `default,org-org-name`). The test creates the ones that don't exist, and an `automation` ServiceAccount
-  in each, with the rights it has on a management cluster: see
-  [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts). They have to be
-  `default` or `org-*` namespaces, the only ones where a management cluster has `automation`.
+- `GITOPS_INIT_NAMESPACES`: a comma-separated list of the namespaces that exist before Flux applies the repository.
+  The test creates the ones that don't exist, and an `automation` ServiceAccount in each, with the rights it has on a
+  management cluster: see
+  [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts).
+  [validate.yaml](../../.github/workflows/validate.yaml) sets it to `default` with the `gitops_init_namespaces` input
+  of the shared workflow, whose default also names `org-org-name`. The test fails for an `org-*` namespace in the
+  list: as on a new management cluster, the organisation's namespace exists only once Flux has applied its
+  `Organization`, see [The organization-operator stand-in](#the-organization-operator-stand-in).
 - `GITOPS_IGNORED_OBJECTS`: a comma-separated list of (namespaced) `HelmRelease`s and sources that the test doesn't
   look at (example: "org-org-name/my-helmrelease"). It doesn't apply to `Kustomization`s, which all have to get
   `Ready`. [validate.yaml](../../.github/workflows/validate.yaml) sets it with the `gitops_ignored_objects` input of
@@ -218,20 +222,48 @@ This build step requires additional configuration using the following environmen
   GitHub gives no secrets, the test skips every test that needs the cluster and says so in a warning on the run; the
   checks that need no cluster still run.
 
+### The organization-operator stand-in
+
+The test bootstraps the repository as a new management cluster does: no `Organization` and no `org-*` namespace exist
+before Flux applies `MC_NAME.yaml`. On a management cluster, organization-operator creates the organisation's
+namespace once Flux has applied the `Organization`, and other operators fill it. The kind cluster runs none of them,
+so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py) stands in for them:
+
+1. Before Flux applies `MC_NAME.yaml`, it checks that neither the `Organization` `org-name` nor the namespace
+   `org-org-name` exists.
+1. It waits for `mc-name-gitops` to get `Ready` and apply the `Organization`, which carries the
+   `kustomize.toolkit.fluxcd.io/name: mc-name-gitops` label, and for the organisation's namespace `Kustomization`,
+   `mc-name-organization-org-name`, to fail for want of the namespace. Its error names `org-org-name`: the namespace
+   doesn't exist, or `default/automation` may not write there, as it gets its rights in the namespace only with it.
+1. It creates `org-org-name`, and in it what the management cluster's operators create there: the organisation's
+   commit-status `Alert`, suspended, before Flux can apply it; `automation` and the rights rbac-operator gives in a
+   new organisation namespace, see [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts);
+   the `cluster-app-installation-values` ConfigMap, which Kyverno copies there; the test's secret store; and the
+   kubeconfig Secret and cluster values of the [vCluster](#the-workload-cluster-of-the-out-of-band-no-flux-example).
+1. Without asking Flux to reconcile, it waits up to 150 seconds, two `retryInterval`s and a margin, for the
+   organisation's `Kustomization` to get `Ready` on its own retry.
+
+The other checks run after it. The cluster `Kustomization`s, in `default`, apply into `org-org-name` too, so they also
+fail until the namespace exists and recover on their own retries. `tests/ats/test_root_build.py` checks, without a
+cluster, that the build of `MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each
+organisation's namespace `Kustomization` applies into the organisation's namespace.
+
 ### The rights of the `automation` ServiceAccounts
 
 A `Kustomization` or `HelmRelease` with `serviceAccountName: automation` runs as the `automation` ServiceAccount of its
-namespace, which [rbac-operator](https://github.com/giantswarm/rbac-operator) creates in `default` and in every
-`org-*` namespace of a management cluster. The test gives these ServiceAccounts exactly the rights they have there, so
-an example that a management cluster would refuse with `Forbidden` fails the test too. The `automation_rbac` fixture
-in [tests/ats/automation_rbac.py](../../tests/ats/automation_rbac.py) creates them once every CRD of the test is
-installed. It replaces an existing one whose rules or subjects differ, as rbac-operator does, and deletes and creates
-again a binding whose role differs, which the API server doesn't let it change, as `kubectl auth reconcile` does.
-`test_automation_access` in [tests/ats/test_flux_objects.py](../../tests/ats/test_flux_objects.py) then asks the
-cluster with `SubjectAccessReview`s whether each ServiceAccount may and may not do the things that
-[tests/ats/automation_access.py](../../tests/ats/automation_access.py) lists, so it also fails when something else,
-such as an object left over from an earlier run, grants more. Everything else the test sets up, such as Flux,
-Kyverno, External Secrets Operator, the vCluster, the stand-in clusters and the fixtures, uses the test's admin client.
+namespace, which [rbac-operator](https://github.com/giantswarm/rbac-operator) creates in `default` and in every `org-*`
+namespace of a management cluster. The test gives these ServiceAccounts exactly the rights they have there, so an
+example that a management cluster would refuse with `Forbidden` fails the test too. The `automation_rbac` fixture in
+[tests/ats/automation_rbac.py](../../tests/ats/automation_rbac.py) creates them for `default` once every CRD of the test
+is installed, and [the organization-operator stand-in](#the-organization-operator-stand-in) for the organisation's
+namespace once it exists, as rbac-operator does for a new organisation namespace. It replaces an existing one whose
+rules or subjects differ, as rbac-operator does, and deletes and creates again a binding whose role differs, which the
+API server doesn't let it change, as `kubectl auth reconcile` does. `test_automation_access` in
+[tests/ats/test_flux_objects.py](../../tests/ats/test_flux_objects.py) then asks the cluster with `SubjectAccessReview`s
+whether each ServiceAccount may and may not do the things that
+[tests/ats/automation_access.py](../../tests/ats/automation_access.py) lists, so it also fails when something else, such
+as an object left over from an earlier run, grants more. Everything else the test sets up, such as Flux, Kyverno,
+External Secrets Operator, the vCluster, the stand-in clusters and the fixtures, uses the test's admin client.
 
 `default/automation`:
 
@@ -281,7 +313,8 @@ management cluster. When rbac-operator changes the rights, update the modules an
 `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, and the cluster's
 `HelmRelease`s install their apps there, through the `out-of-band-no-flux-kubeconfig` Secret a management cluster
 has for it. The test installs a [vCluster](https://www.vcluster.com/) named `out-of-band-no-flux` in the test
-cluster and puts its kubeconfig, with the vCluster's in-cluster Service as the server, in that Secret, so the
+cluster, and [the organization-operator stand-in](#the-organization-operator-stand-in) puts its kubeconfig, with the
+vCluster's in-cluster Service as the server, in that Secret once the organisation's namespace exists, so the
 `Kustomization` and the `HelmRelease`s reconcile like on a management cluster. As that Secret exists, the apps have to
 get `Ready`. The test also creates what they need:
 
@@ -310,8 +343,8 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
   `gateway-api-crds`, which runs no workload, it's the `gateways.gateway.networking.k8s.io` CRD the chart installs.
 - Every `Deployment` in them has to be available, too. That includes the `podinfo` `Deployment` that the
   [application team](./app-teams.md) `hello-team` delivers from its own repository into its namespace. Its
-  `Kustomization` runs as the `automation` ServiceAccount, which the test creates in every namespace of
-  `GITOPS_INIT_NAMESPACES`, `org-org-name` among them, with the rights a Giant Swarm management cluster gives it.
+  `Kustomization` runs as the `automation` ServiceAccount of `org-org-name`, which the organization-operator stand-in
+  creates with the rights a Giant Swarm management cluster gives it.
 - The `GitRepository` and `Kustomization` of the application team `hello-team-wc` only have to exist, as nothing in
   the vCluster reconciles them.
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
@@ -345,9 +378,10 @@ the chart's 500m CPU and 1Gi, sized for a management cluster, so that Flux still
 ### Shared objects
 
 `test_shared_object_copied` checks the [shared-objects example](../add_mc.md#share-an-object-with-every-organization).
-Every organisation directory whose `shared-objects` lists the base has to have the `shared-ca-bundle` ConfigMap in its
+Every organisation whose `namespace/shared-objects` lists the base has to have the `shared-ca-bundle` ConfigMap in its
 namespace, with the data of the base in Git, so a change to the base reaches every copy. The test then changes one
-copy, asks Flux to reconcile the management cluster's `Kustomization`, and waits for Flux to put the copy back.
+copy, asks Flux to reconcile the organisation's namespace `Kustomization`, which applied it, and waits for Flux to put
+the copy back.
 `tests/ats/test_shared_objects.py` checks, without a cluster, that the example organisation lists the base.
 
 ### Flux Operator
@@ -386,7 +420,7 @@ cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
 [workload cluster secret store example](../add_org.md#give-every-workload-cluster-a-secret-store), the organisation's
 Kyverno `Policy`, with the vCluster's kubeconfig Secret, which the test labels and types as Cluster API does. Kyverno's
 background controller needs rights in the organisation's namespace that rbac-operator grants on a management cluster
-and the example doesn't ship; the `automation_rbac` fixture creates them with the others, see
+and the example doesn't ship; the organization-operator stand-in creates them with the others, see
 [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts). Flux applies the
 `Policy` as `default/automation`, and the `default` store reads the organisation's namespace as its `automation`.
 The test waits for the organisation's `SecretStore` `default`, `out-of-band-no-flux-eso-cluster-auth` and the
