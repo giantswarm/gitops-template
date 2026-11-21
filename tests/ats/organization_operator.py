@@ -8,8 +8,8 @@ until the namespace exists. The stand-in then does what the management cluster d
 the namespace, as organization-operator does for the `Organization`, and in it what the other
 operators create, such as `automation` and its rights (rbac-operator). The organisation's
 Kustomization has to get ready on its own next retry, without being asked to reconcile. The
-workload clusters' Kustomizations are in its namespace/, so they appear only then, and run as the
-organisation's `automation`.
+workload clusters' Kustomizations are in workload-clusters/, which its namespace/ lists, so they
+appear only then, and run as the organisation's `automation`.
 """
 
 import logging
