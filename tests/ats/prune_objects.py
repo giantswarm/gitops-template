@@ -1,4 +1,4 @@
-"""P1, P2: what test_prune removes from what Flux applies, and the objects in it."""
+"""P1-P3: what test_prune removes from what Flux applies, and the objects in it."""
 
 import pykube
 from checks.kinds import REFERENCED_KINDS
@@ -39,6 +39,22 @@ CLUSTER_KUSTOMIZATIONS = [
     (FLUX_OBJECTS_NAMESPACE, "mc-name-clusters-out-of-band-no-flux"),
     APPS_KUSTOMIZATION,
 ]
+# the cluster's -direct Kustomization, which applies its out-of-band directory to the workload
+#  cluster. It is in the namespace of the cluster's kubeconfig Secret, the organisation's.
+DIRECT_KUSTOMIZATION = (
+    "org-org-name",
+    "mc-name-clusters-out-of-band-no-flux-direct",
+)
+# P3: the cluster's application team, hello-team, which the getting-started guides remove
+#  before they delete the cluster: its GitRepository and Kustomization, which the apps
+#  Kustomization applies from the cluster's teams/ directory, and the team's workload, which
+#  its Kustomization applies to the workload cluster as the organisation's automation
+#  ServiceAccount, through a RoleBinding the -direct Kustomization applies
+TEAM_OBJECTS = [
+    ("GitRepository", "org-org-name", "out-of-band-no-flux-hello-team"),
+    ("Kustomization", "org-org-name", "out-of-band-no-flux-hello-team"),
+]
+TEAM_WORKLOAD = ("hello-team", "podinfo")
 # P1: an app, the hello-web-app-1 app set of the out-of-band-no-flux cluster. spec.ignore can't
 #  leave its directory out of the source as P2 does: app_sets/kustomization.yaml lists it, so the
 #  apps Kustomization wouldn't build, while deleting it from Git deletes that entry too. Instead,
@@ -77,6 +93,10 @@ PRUNE_KINDS: dict[str, type[APIObject]] = {
     "Password": PasswordCR,
     # the Kustomization of the cluster's application team, hello-team
     "Kustomization": KustomizationCR,
+    # what the -direct Kustomization applies to the workload cluster for the application teams
+    "Namespace": pykube.Namespace,
+    "ServiceAccount": pykube.ServiceAccount,
+    "RoleBinding": pykube.RoleBinding,
 }
 # the GitRepository and the Kustomizations reconcile when asked
 PRUNE_TIMEOUT_SEC = 180

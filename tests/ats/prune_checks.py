@@ -10,7 +10,12 @@ import pykube
 import pytest
 from checks.waits import fail_on_problems
 from flux_reconcile import wait_until
-from prune_cluster import delete_cluster_kustomizations, workload_problems
+from prune_cluster import (
+    delete_cluster_kustomizations,
+    direct_problems,
+    remove_team,
+    workload_problems,
+)
 from prune_objects import (
     KEPT_BY_FAILED_BUILD,
     PROTECTED_CLUSTER,
@@ -76,16 +81,21 @@ def check_removed_files(
 def check_removed_cluster(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
-    """P3: deleting a cluster's Kustomizations deletes what they applied, except the
-    cluster's HelmRelease and OCIRepository."""
-    applied = delete_cluster_kustomizations(api)
+    """P3: deleting a cluster as the getting-started guides do, its application team first,
+    then its Kustomizations and its -direct one, deletes what they applied, from both clusters,
+    except the cluster's HelmRelease and OCIRepository."""
+    remove_team(api, workload_cluster)
+    applied, direct_applied = delete_cluster_kustomizations(api)
     not_applied = [o for o in PROTECTED_CLUSTER if o not in applied]
     if not_applied:
         pytest.fail(f"The cluster's Kustomizations didn't apply {not_applied}.")
+    if not direct_applied:
+        pytest.fail("The cluster's -direct Kustomization didn't apply anything.")
     deleted = sorted(applied - set(PROTECTED_CLUSTER))
     wait_until(
         lambda: deleted_problems(api, deleted)
-        + workload_problems(workload_cluster, applied),
+        + workload_problems(workload_cluster, applied)
+        + direct_problems(workload_cluster, direct_applied),
         UNINSTALL_TIMEOUT_SEC,
         "the cluster's objects weren't deleted",
     )
