@@ -13,6 +13,7 @@ Kustomization has to get ready on its own next retry, without being asked to rec
 import logging
 import time
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pykube
 import pytest
@@ -217,17 +218,13 @@ def workload_cluster_objects(
     """Create in the organisation's `namespace` what the management cluster has there for the
     workload cluster: its kubeconfig Secret, as Cluster API writes it, and its cluster values,
     as cluster-apps-operator writes them."""
-    with open(CLUSTER_VALUES_STUB) as f:
-        cluster_values = pykube.ConfigMap(
-            api,
-            {
-                "metadata": {
-                    "name": WORKLOAD_CLUSTER_VALUES_NAME,
-                    "namespace": namespace,
-                },
-                "data": {"values": f.read()},
-            },
-        )
+    cluster_values = pykube.ConfigMap(
+        api,
+        {
+            "metadata": {"name": WORKLOAD_CLUSTER_VALUES_NAME, "namespace": namespace},
+            "data": {"values": Path(CLUSTER_VALUES_STUB).read_text()},
+        },
+    )
     kubeconfig_secret = pykube.Secret(
         api,
         {
