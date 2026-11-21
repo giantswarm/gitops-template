@@ -1,6 +1,8 @@
-# The workload clusters' Flux Kustomizations, which live in the organisation's namespace. They
-# apply the clusters' directories in ../../workload-clusters as the organisation's `automation`
-# ServiceAccount, and decrypt with the cluster keys in ../secrets.
+# The workload clusters' Flux Kustomizations, one or more per cluster directory here. The
+# organisation's namespace Kustomization, in ../namespace.yaml, applies them into the
+# organisation's namespace, as ../namespace/kustomization.yaml lists this directory; the management
+# cluster's Kustomization doesn't. They apply the cluster directories as the organisation's
+# `automation` ServiceAccount, and decrypt with the cluster keys in ../namespace/secrets.
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 kind: Kustomization

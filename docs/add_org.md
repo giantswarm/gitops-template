@@ -77,20 +77,20 @@ export ORG_NAME=ORGANIZATION
     ```
 
 1. Create the `namespace` directory, for everything the organisation keeps in its namespace, `org-${ORG_NAME}`. The
-   files in it name no namespace: the `Kustomization` of the next step puts them in the organisation's. Its
-   `workload-clusters` directory holds the workload clusters' Flux `Kustomization`s, with a `kustomization.yaml` that
-   lists none yet. The cluster directories they apply go in `workload-clusters` next to `namespace`, see
+   files its `kustomization.yaml` lists name no namespace: the `Kustomization` of the next step puts them in the
+   organisation's. It lists `../workload-clusters`, which holds the workload clusters' directories and, next to them,
+   their Flux `Kustomization`s, with a `kustomization.yaml` that lists none yet, see
    [Add a new Workload Cluster](./add_wc.md):
 
     ```sh
-    mkdir -p namespace/workload-clusters
+    mkdir -p namespace workload-clusters
     cat <<EOF > namespace/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
-      - workload-clusters
+      - ../workload-clusters
     EOF
-    cat <<EOF > namespace/workload-clusters/kustomization.yaml
+    cat <<EOF > workload-clusters/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources: []
@@ -403,7 +403,7 @@ External Secrets Operator (ESO) on the management cluster can read Secrets from 
 it, through a `SecretStore` that reaches the cluster's API server. Rather than adding that store and its credentials to
 Git for each new cluster, let a Kyverno `Policy`, managed with GitOps like everything else here, react to every new
 cluster and generate them from the kubeconfig Secret Cluster API writes for it. The example in
-[organizations/ORG_NAME/namespace/workload-cluster-secret-stores](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-cluster-secret-stores/)
+[organizations/ORG_NAME/multicluster/secret-stores](/management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/secret-stores/)
 has two files, both in the organisation's namespace, since customers on a Giant Swarm management cluster can't create
 cluster-scoped objects:
 
@@ -436,12 +436,14 @@ organisation's namespace to manage the `ExternalSecret`s and `SecretStore`s the 
 kubeconfig Secrets that trigger it. Giant Swarm's rbac-operator grants them in every organisation's namespace, with the
 ClusterRole `write-kyverno-generated-externalsecrets`, so the example doesn't. Without them, Kyverno rejects the policy.
 
-The organisation's `namespace/kustomization.yaml` lists the directory. The organisation's namespace `Kustomization`
-puts the objects in the organisation's namespace and fills in `${organization}`, in the namespace the policy generates
-in and in the one the `default` store reads, see
+The directory belongs with the organisation's other objects for several clusters, in `multicluster`, but has no
+`Kustomization` of its own: the organisation's `namespace/kustomization.yaml` lists it as
+`../multicluster/secret-stores`, and `multicluster/kustomization.yaml`, which the management cluster's `Kustomization`
+applies, leaves it out. The organisation's namespace `Kustomization` puts the objects in the organisation's namespace
+and fills in `${organization}`, in the namespace the policy generates in and in the one the `default` store reads, see
 [The organisation's name](reference/repo-structure.md#the-organisations-name). A cluster's apps then read from or push
 to the cluster with `secretStoreRef: {kind: SecretStore, name: <cluster>-eso-cluster-store}` in the organisation's
-namespace. For another organisation, copy the directory into its own `namespace` and list it in its
+namespace. For another organisation, copy the directory into its own `multicluster` and list it in its
 `namespace/kustomization.yaml`.
 
 ### Push a Secret into a workload cluster

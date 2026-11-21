@@ -123,7 +123,7 @@ Renaming a Flux `Kustomization` creates a new one. If the `Kustomization` that a
 template, Flux deletes the old one. If it has `prune: false`, as in earlier versions, the old one stays, and both apply
 the same resources until you delete it. The workload cluster `Kustomization`s are in the organisation's namespace,
 `org-ORG_NAME`, and the organisation's namespace `Kustomization` applies them. If yours are still in `default`, and
-the management cluster's `Kustomization` applies them, use `-n default` and `workload-clusters` below, see
+the management cluster's `Kustomization` applies them, use `-n default` below, see
 [Move the workload cluster Kustomizations](../reference/repo-structure.md#move-the-workload-cluster-kustomizations).
 
 > **Warning:** check that the old workload cluster `Kustomization` has `prune: false` before you go on. Deleting a
@@ -140,7 +140,7 @@ the management cluster's `Kustomization` applies them, use `-n default` and `wor
     If it prints `true`, set `prune: false` in its file first, push, and wait until Flux has applied it.
 
 1. Change `metadata.name` in
-   `management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-clusters/WC_NAME.yaml` to
+   `management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml` to
    `MC_NAME-clusters-WC_NAME`, and the same for `WC_NAME-direct.yaml` next to it if you have one. If your repository
    runs the [CI validation](./ci-validation.md), rename the `Kustomization` in the `gitops_ignored_objects` input of
    `.github/workflows/validate.yaml` and in the `kustomize.toolkit.fluxcd.io/name` labels of `tests/ats/assertions` too.

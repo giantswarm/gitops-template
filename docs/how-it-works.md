@@ -11,20 +11,21 @@ This page explains what happens between a `git push` and a running cluster. For 
 ## From a commit to a cluster
 
 Take a cluster named `demowc` in the organization `demoorg`, on the management cluster `demomc`. Its files live in
-`management-clusters/demomc/organizations/demoorg/workload-clusters/demowc/`, and its Flux `Kustomization`s in the
-organisation's `namespace/workload-clusters/`.
+`management-clusters/demomc/organizations/demoorg/workload-clusters/demowc/`, and its Flux `Kustomization`s, such as
+`demowc.yaml`, next to it in `workload-clusters/`.
 
 1. You push a commit. A Flux `GitRepository` on the management cluster fetches it.
 1. The management cluster's own Flux `Kustomization`, `demomc.yaml`, applies everything under
    `management-clusters/demomc` that goes in `default`, and the `Organization`s, so it works on a new management
    cluster, where the `org-demoorg` namespace doesn't exist yet: organization-operator creates it for the
-   `Organization`. What the organisation keeps in its namespace is in `organizations/demoorg/namespace`, which the
-   organisation's own `Kustomization`, `namespace.yaml`, applies into `org-demoorg`. That one fails until the
+   `Organization`. What the organisation keeps in its namespace is what `organizations/demoorg/namespace` lists, which
+   the organisation's own `Kustomization`, `namespace.yaml`, applies into `org-demoorg`. That one fails until the
    namespace exists, and succeeds on its next retry. Its `dependsOn` names `demomc.yaml`'s `Kustomization`, so
    `demomc.yaml` always applies a commit first. See
    [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
-1. `namespace.yaml` applies the Flux `Kustomization` of each workload cluster listed in
-   `namespace/workload-clusters/kustomization.yaml`, such as `demowc.yaml`, into `org-demoorg`. A cluster file that
+1. `namespace/kustomization.yaml` lists `../workload-clusters`, so `namespace.yaml` applies the Flux `Kustomization`
+   of each workload cluster listed in `workload-clusters/kustomization.yaml`, such as `demowc.yaml`, into
+   `org-demoorg`. A cluster file that
    isn't in that list does nothing. It stops there and doesn't apply what's inside the `demowc` directory. The
    cluster's `Kustomization`s depend on `namespace.yaml`'s, so it applies a commit before them.
 1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory, as the `automation` ServiceAccount of
@@ -48,8 +49,8 @@ Flux sets it back at its next run. Fields added by hand stay.
 The Kustomizations in this repository have `prune: true`. When you delete a file in Git, or take it out of a
 `kustomization.yaml`, Flux deletes what the file created at its next run. For example, delete an app's directory and
 Flux deletes its `HelmRelease`, which uninstalls the app from the workload cluster, and its `OCIRepository` and
-ConfigMaps. When you take a cluster's `Kustomization` out of `namespace/workload-clusters/kustomization.yaml`, Flux
-deletes it together with everything it applied, except the objects below.
+ConfigMaps. When you take a cluster's `Kustomization` out of `workload-clusters/kustomization.yaml`, Flux deletes
+it together with everything it applied, except the objects below.
 
 Some objects delete a whole cluster when they go, so they carry two markers:
 
@@ -93,7 +94,7 @@ Everything in `cluster` and `apps` is a resource on the management cluster that 
 workload cluster. Resources that must be applied inside the workload cluster directly go into an optional
 `out-of-band` directory next to them, which the cluster's `kustomization.yaml` leaves out. A third Kustomization,
 such as `demowc-direct.yaml`, applies it with the `demowc-kubeconfig` Secret. It lives with that Secret in
-`org-demoorg`, so it's in the organisation's `namespace/workload-clusters`. You can also run Flux in the workload
+`org-demoorg`, where the organisation's namespace `Kustomization` puts it. You can also run Flux in the workload
 cluster and point it at that directory.
 
 ## Bases and variables

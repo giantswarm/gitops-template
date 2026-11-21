@@ -10,7 +10,7 @@ spec:
   # Flux applies a commit here only once the organisation's namespace Kustomization, which
   # applies this one, is Ready at it, so this one's spec is up to date
   dependsOn:
-    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../../namespace.yaml
+    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../namespace.yaml
       namespace: default
   # Applies the cluster and its base apps, in cluster/. Ready once Cluster
   # API reports the cluster Available. The Kustomization in WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml

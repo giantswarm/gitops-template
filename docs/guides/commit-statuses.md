@@ -12,7 +12,7 @@ Flux's notification-controller can tell you on GitHub whether Flux applied a com
 a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`s, this
 repository's Flux `Kustomization`s in the `default` namespace and in the organisation's namespace report on the commit
 they applied: the management cluster's, in `MC_NAME.yaml`, each organisation's namespace `Kustomization`, in
-`namespace.yaml`, and the workload clusters', in the organisations' `namespace/workload-clusters` directories. Each
+`namespace.yaml`, and the workload clusters', in the organisations' `workload-clusters` directories. Each
 `Kustomization` shows as its own check on the commit, green once it applied the commit and red when it failed. An event
 source without a `namespace` matches only the `Alert`'s own namespace, and an `Alert` reaches only a `Provider` in its
 own namespace. So the management cluster's `Alert` covers `default`, and each organisation has its own `Alert`,

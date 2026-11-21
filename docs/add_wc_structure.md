@@ -363,25 +363,24 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
     EOF
     ```
 
-1. Go back to the `workload-clusters` directory and create the cluster's Flux `Kustomization` in the organisation's
-   `namespace/workload-clusters` directory. The organisation's namespace `Kustomization` applies it into the
-   organisation's namespace, where it runs as that namespace's `automation` ServiceAccount and decrypts with a key
-   Secret in the organisation's `namespace/secrets`. It names no namespace, reads the `GitRepository` in `default`,
-   and has the organisation's namespace `Kustomization` in `dependsOn`, so that one applies every commit first. Its
-   `organization` is `${organization}`, which the organisation's namespace `Kustomization` fills in: the `\$` keeps it
-   as it is in the file. With `prune: true`, Flux deletes what you delete from the cluster's files, but not the
-   cluster, if its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the
-   `giantswarm.io/prevent-deletion` label, as in the cluster bases of this repository. See
-   [How it works](./how-it-works.md) and [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
-   Use one of the templates:
+1. Go back to the `workload-clusters` directory and create the cluster's Flux `Kustomization` there, next to the
+   cluster's directory. The organisation's namespace `Kustomization` applies it into the organisation's namespace, as
+   its `namespace/kustomization.yaml` lists `../workload-clusters`, where it runs as that namespace's `automation`
+   ServiceAccount and decrypts with a key Secret in the organisation's `namespace/secrets`. It names no namespace, reads
+   the `GitRepository` in `default`, and has the organisation's namespace `Kustomization` in `dependsOn`, so that one
+   applies every commit first. Its `organization` is `${organization}`, which the organisation's namespace
+   `Kustomization` fills in: the `\$` keeps it as it is in the file. With `prune: true`, Flux deletes what you delete
+   from the cluster's files, but not the cluster, if its `HelmRelease` has the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, as in the
+   cluster bases of this repository. See [How it works](./how-it-works.md) and
+   [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). Use one of the templates:
 
     - if you haven't created a dedicated GPG key for the cluster (running without Secrets encryption):
 
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
       cd ../../
-      mkdir -p ../namespace/workload-clusters
-      cat <<EOF > ../namespace/workload-clusters/${WC_NAME}.yaml
+      cat <<EOF > ${WC_NAME}.yaml
       apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
@@ -413,8 +412,7 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
       ```sh
       # management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
       cd ../../
-      mkdir -p ../namespace/workload-clusters
-      cat <<EOF > ../namespace/workload-clusters/${WC_NAME}.yaml
+      cat <<EOF > ${WC_NAME}.yaml
       apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
@@ -445,18 +443,18 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
       ```
 
    If the cluster's `Kustomization` waits for the cluster with a `Cluster` health check, as
-   [WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-clusters/WC_NAME.yaml) does,
+   [WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml) does,
    write the health check's namespace as `org-${organization}`, which the organisation's namespace `Kustomization`
    fills in too.
 
 1. If you use the `out-of-band` delivery method create another Kustomization CR pointing to `out-of-band`
    directory and referencing the right `kubeconfig` Secret. It lives in the namespace of that Secret, which is the
-   organization namespace for CAPI clusters, so it goes in the organisation's `namespace/workload-clusters`
-   directory: the organisation's namespace `Kustomization` applies it there, and fills in `${organization}`. It names
+   organization namespace for CAPI clusters, where the organisation's namespace `Kustomization` puts it from
+   `workload-clusters`, as it does the cluster's, and fills in `${organization}`. It names
    no namespace, and depends on the organisation's namespace `Kustomization`, as the cluster's does:
 
    ```sh
-   cat <<EOF > ../namespace/workload-clusters/${WC_NAME}-direct.yaml
+   cat <<EOF > ${WC_NAME}-direct.yaml
    apiVersion: kustomize.toolkit.fluxcd.io/v1
    kind: Kustomization
    metadata:
@@ -487,9 +485,9 @@ one Secret: to use a GPG and an age key for the same cluster, put both private k
 
    **NOTE**: In some cases, especially for the legacy clusters, you may be forced to uncomment the `key` field
    in the above command to tell Flux where to look for the `kubeconfig`. A legacy cluster's `kubeconfig` Secret
-   lives in `default`: write the file in `workload-clusters` instead, with `namespace: default`,
-   `organization: "ORG_NAME"` and no `dependsOn`, list it in a `kustomization.yaml` there, and list `workload-clusters`
-   in the organisation's `kustomization.yaml`, so the management cluster's `Kustomization` applies it.
+   lives in `default`: write the file in the organisation's directory instead, with `namespace: default`,
+   `organization: "ORG_NAME"` and no `dependsOn`, and list it in the organisation's `kustomization.yaml`, so the
+   management cluster's `Kustomization` applies it.
 
 ### Configuring default apps
 
@@ -500,16 +498,14 @@ The default apps of a cluster are part of its cluster chart. Configure them in t
 ## MC configuration
 
 1. Still in the `workload-clusters` directory, list the cluster's `Kustomization`, and the out-of-band one if you
-   created it, in `namespace/workload-clusters/kustomization.yaml`, and list `workload-clusters` in
-   `namespace/kustomization.yaml` if it isn't there yet:
+   created it, in its `kustomization.yaml`, and list `../workload-clusters` in `namespace/kustomization.yaml` if it
+   isn't there yet:
 
     ```sh
-    touch ../namespace/workload-clusters/kustomization.yaml
-    yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" \
-      ../namespace/workload-clusters/kustomization.yaml
-    # yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" \
-    #   ../namespace/workload-clusters/kustomization.yaml
-    yq -i eval '.resources |= ((. // []) + ["workload-clusters"] | unique)' ../namespace/kustomization.yaml
+    touch kustomization.yaml
+    yq -i eval ".resources += \"${WC_NAME}.yaml\" | .resources style=\"\"" kustomization.yaml
+    # yq -i eval ".resources += \"${WC_NAME}-direct.yaml\" | .resources style=\"\"" kustomization.yaml
+    yq -i eval '.resources |= ((. // []) + ["../workload-clusters"] | unique)' ../namespace/kustomization.yaml
     ```
 
     The resulting file should look like this:

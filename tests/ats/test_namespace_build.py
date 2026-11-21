@@ -5,6 +5,8 @@ that it applies too. Checks of root_build and of the repository's builds; they n
 only kubectl."""
 
 import pytest
+import yaml
+from repository_gates import ORG_DIR, WORKLOAD_CLUSTERS_DIR
 from root_build import (
     MC_DIR,
     build,
@@ -132,3 +134,27 @@ def test_organisation_namespace_kustomizations_decrypt_with_their_keys(
     #  the organisation's namespace/secrets
     problems = [p for _, b in namespace_builds(root) for p in decryption_problems(b)]
     assert not problems, "\n".join(problems)
+
+
+def _kinds_and_names(build_objects: list[dict]) -> set[tuple[str, str]]:
+    return {(o["kind"], o["metadata"]["name"]) for o in build_objects}
+
+
+def test_organisation_namespace_build_applies_the_cluster_kustomizations() -> None:
+    # namespace/kustomization.yaml lists ../workload-clusters: the Kustomizations live next to
+    #  the cluster directories they apply, and go into the organisation's namespace
+    expected = set()
+    for file in WORKLOAD_CLUSTERS_DIR.glob("*.yaml"):
+        if file.name != "kustomization.yaml":
+            with file.open() as f:
+                expected.add(("Kustomization", yaml.safe_load(f)["metadata"]["name"]))
+    assert expected
+    assert expected <= _kinds_and_names(build(ORG_DIR / "namespace"))
+
+
+def test_organisation_namespace_build_applies_the_secret_stores() -> None:
+    # namespace/kustomization.yaml lists ../multicluster/secret-stores, which has no Flux
+    #  Kustomization of its own
+    stores = build(ORG_DIR / "multicluster" / "secret-stores")
+    assert stores
+    assert _kinds_and_names(stores) <= _kinds_and_names(build(ORG_DIR / "namespace"))

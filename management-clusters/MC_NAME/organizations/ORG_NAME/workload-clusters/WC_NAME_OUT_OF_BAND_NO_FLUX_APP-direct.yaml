@@ -6,13 +6,14 @@ metadata:
   name: mc-name-clusters-out-of-band-no-flux-direct
   # No namespace: the rule of thumb is to follow the `kubeconfig` Secret's namespace, and here
   # it's the organisation's, where the organisation's namespace Kustomization puts this one. A
-  # legacy cluster's kubeconfig Secret is in `default`: its -direct Kustomization goes in
-  # ../../workload-clusters, with `namespace: default`, see docs/reference/repo-structure.md.
+  # legacy cluster's kubeconfig Secret is in `default`: its -direct Kustomization goes in the
+  # organisation's directory instead, with `namespace: default`, see
+  # docs/reference/repo-structure.md.
 spec:
   # Flux applies a commit here only once the organisation's namespace Kustomization, which
   # applies this one, is Ready at it, so this one's spec is up to date
   dependsOn:
-    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../../namespace.yaml
+    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../namespace.yaml
       namespace: default
   interval: 10m
   kubeConfig:

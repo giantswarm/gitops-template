@@ -137,11 +137,13 @@ repository's `Kustomization`s too, but aren't ones to build.
 A `Kustomization` that another Flux `Kustomization` of the repository applies is read from that parent's `flux build`:
 in the namespace the parent's `targetNamespace` puts it in, with the values the parent's `postBuild` substitutes. An
 organisation's namespace `Kustomization`, `namespace.yaml`, applies its workload clusters' `Kustomization`s this way,
-`-direct` ones included, with no namespace in their files and `organization: "${organization}"`. The parent is itself
-built as Flux applies it, the same way, so the values its own parent's replacements set reach the child. The parents are
-this repository's `Kustomization`s, the ones whose source is the `GitRepository` of a `Kustomization` that applies the
-directory its own file is in, such as `MC_NAME.yaml`, and whose path holds the file. The one with the deepest path whose
-build has the `Kustomization` wins. `test-all-ff validate` checks this with the fixture in
+`-direct` ones included, from `../workload-clusters`, with no namespace in their files and
+`organization: "${organization}"`. The parent is itself built as Flux applies it, the same way, so the values its own
+parent's replacements set reach the child. The parent is the `Kustomization` of this repository, one whose source is
+the `GitRepository` of a `Kustomization` that applies the directory its own file is in, such as `MC_NAME.yaml`, whose
+build reads the file: `fake-flux` follows the `resources` and `components` of each `kustomization.yaml` from the
+parent's path, `../` ones too, and Flux's generated build where there is none. A file that two such builds read fails,
+as two `Kustomization`s would apply it. `test-all-ff validate` checks this with the fixture in
 [testdata/parent-kustomization](testdata/parent-kustomization).
 
 Without such a parent, as for `MC_NAME.yaml` itself, it builds the directories above the file. Flux's build of a

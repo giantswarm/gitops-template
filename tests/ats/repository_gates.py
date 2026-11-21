@@ -9,11 +9,10 @@ ORG_DIR = (
     Path(__file__).resolve().parent
     / "../../management-clusters/MC_NAME/organizations/ORG_NAME"
 )
-# the workload clusters' Flux Kustomizations, which the organisation's namespace Kustomization
-#  applies into its namespace
-WORKLOAD_CLUSTERS_DIR = ORG_DIR / "namespace/workload-clusters"
-# the directories those Kustomizations apply, one per cluster
-CLUSTER_DIRECTORIES_DIR = ORG_DIR / "workload-clusters"
+# the workload clusters' Flux Kustomizations, next to the directories they apply, one per cluster.
+#  The organisation's namespace Kustomization applies them into its namespace, through
+#  namespace/kustomization.yaml, which lists ../workload-clusters.
+WORKLOAD_CLUSTERS_DIR = ORG_DIR / "workload-clusters"
 # the organisation's namespace Kustomization, which every cluster Kustomization depends on
 ORGANIZATION_KUSTOMIZATION_FILE = ORG_DIR / "namespace.yaml"
 # for each `Cluster`: the Kustomization that health-checks it, then the ones that depend on

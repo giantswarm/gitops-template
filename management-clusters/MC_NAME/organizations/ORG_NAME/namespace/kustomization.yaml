@@ -1,12 +1,15 @@
 # Everything the organisation keeps in its namespace, which the Kustomization in ../namespace.yaml
-# applies with `targetNamespace`: the files here name no namespace. Where a file needs the
-# organisation's name as a value, it writes `${organization}`, which that Kustomization's
-# `postBuild` fills in.
+# applies into that namespace with `targetNamespace`: the files it lists name no namespace. Where a
+# file needs the organisation's name as a value, it writes `${organization}`, which that
+# Kustomization's `postBuild` fills in. Two of the directories are outside namespace/, next to
+# what they belong with: ../workload-clusters holds the workload clusters' Flux Kustomizations
+# next to the cluster directories they apply, and ../multicluster/secret-stores the secret stores
+# of every workload cluster.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - notifications
   - secrets
   - shared-objects
-  - workload-cluster-secret-stores
-  - workload-clusters
+  - ../multicluster/secret-stores
+  - ../workload-clusters

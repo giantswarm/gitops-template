@@ -4,7 +4,7 @@ docs/reference/repo-structure.md; needs no cluster."""
 from pathlib import Path
 
 import yaml
-from repository_gates import CLUSTER_DIRECTORIES_DIR, WORKLOAD_CLUSTERS_DIR
+from repository_gates import WORKLOAD_CLUSTERS_DIR
 
 # the directory each Kustomization applies, relative to the organisation's workload-clusters/:
 #  the cluster's applies `cluster/`, the apps one the cluster root, a -direct one `out-of-band/`
@@ -40,18 +40,12 @@ def test_cluster_kustomization_paths() -> None:
     }
 
 
-def test_cluster_directories_hold_no_kustomizations() -> None:
-    # the organisation's namespace Kustomization applies the cluster Kustomizations from
-    #  namespace/workload-clusters; the root Kustomization applies nothing here
-    assert sorted(f.name for f in CLUSTER_DIRECTORIES_DIR.glob("*.yaml")) == []
-
-
 def test_cluster_roots_leave_out_cluster_and_out_of_band() -> None:
     # without a kustomization.yaml, Flux would apply every directory below the cluster
     #  root, out-of-band/ too, to the management cluster
     for path in {path for path in EXPECTED_PATHS.values() if "/" not in path}:
-        with (CLUSTER_DIRECTORIES_DIR / path / "kustomization.yaml").open() as f:
+        with (WORKLOAD_CLUSTERS_DIR / path / "kustomization.yaml").open() as f:
             resources = yaml.safe_load(f)["resources"]
         assert "out-of-band/" not in resources, path
-        if (CLUSTER_DIRECTORIES_DIR / path / "apps").is_dir():
+        if (WORKLOAD_CLUSTERS_DIR / path / "apps").is_dir():
             assert "cluster/" not in resources, path

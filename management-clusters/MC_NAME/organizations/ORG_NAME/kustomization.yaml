@@ -5,9 +5,10 @@
 #   the replacement updates; one without it fails the build, naming the field;
 # - into the `targetNamespace` of the Kustomization in namespace.yaml, the one with the label
 #   `giantswarm.io/organization-namespace: "true"`. It applies namespace/, everything the
-#   organisation keeps in its namespace, with that namespace: the workload clusters'
-#   Kustomizations and their keys among them. The files in namespace/ name no namespace, and use
-#   `${organization}` where they need the name, which that Kustomization's `postBuild` sets.
+#   organisation keeps in its namespace, with that namespace: the workload clusters' keys among
+#   them, and workload-clusters/ and multicluster/secret-stores/, which namespace/ lists. The
+#   files it applies name no namespace, and use `${organization}` where they need the name, which
+#   that Kustomization's `postBuild` sets.
 # `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
 # the name after it. A SOPS-encrypted Secret in namespace/ must name the real namespace,
 # `org-<name>`, never the placeholder: changing an encrypted file breaks its MAC, so Flux
@@ -15,8 +16,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # The management cluster's Kustomization applies these: only the Organization and objects in
-# `default`. What goes in the organisation's namespace is in namespace/, which the Kustomization
-# in namespace.yaml applies once organization-operator has created the namespace.
+# `default`. What goes in the organisation's namespace is what namespace/kustomization.yaml lists,
+# which the Kustomization in namespace.yaml applies once organization-operator has created the
+# namespace: workload-clusters/ and multicluster/secret-stores/ are among it, so they aren't here.
 resources:
   - ORG_NAME.yaml
   - namespace.yaml

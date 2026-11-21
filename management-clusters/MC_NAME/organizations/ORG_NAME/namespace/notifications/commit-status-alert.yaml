@@ -4,7 +4,7 @@
 # such as hello-team in WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams, lives in this namespace too, but
 # reads the team's repository, and GitHub refuses statuses for commits it doesn't know. List each
 # of this repository's Kustomizations in this namespace: the workload clusters', in
-# ../workload-clusters. `info` forwards successes as well as failures, so a commit shows when Flux
+# ../../workload-clusters. `info` forwards successes as well as failures, so a commit shows when Flux
 # applied it.
 apiVersion: notification.toolkit.fluxcd.io/v1beta3
 kind: Alert
@@ -14,7 +14,7 @@ spec:
   providerRef:
     name: github-commit-status
   eventSeverity: info
-  # TODO: the names of the Kustomizations in ../workload-clusters
+  # TODO: the names of the Kustomizations in ../../workload-clusters
   eventSources:
     - kind: Kustomization
       name: mc-name-clusters-capi-wc-name

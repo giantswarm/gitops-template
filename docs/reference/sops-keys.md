@@ -23,7 +23,7 @@ To encrypt files of a workload cluster, add a key pair for it:
 - Its private key goes into the `WC_NAME.gpgkey.enc.yaml` Secret in the organisation's `namespace/secrets`
   directory, in the organisation's namespace, encrypted with the master key.
 
-The cluster's two Kustomizations, in the organisation's `namespace/workload-clusters`, reference that Secret in
+The cluster's two Kustomizations, which the organisation's namespace Kustomization applies, reference that Secret in
 `spec.decryption` and use it to decrypt what they apply: `WC_NAME.yaml` the `WC_NAME/cluster` directory, and
 `WC_NAME-apps.yaml` the `WC_NAME/apps` directory. A Kustomization reads the Secret in its own namespace, so the key
 has to be in the organisation's namespace with them.

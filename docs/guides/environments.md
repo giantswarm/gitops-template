@@ -398,17 +398,14 @@ they only get the chart's default node pools.
 
 Just as any other Workload Clusters we define them in
 [/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters](
-/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters), and their Flux `Kustomization`s in the
-organisation's [namespace/workload-clusters](
-/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/workload-clusters), which the organisation's namespace
-`Kustomization` applies into the organisation's namespace, see
+/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters), with their Flux `Kustomization`s next to
+them, which the organisation's namespace `Kustomization` applies into the organisation's namespace, see
 [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
 
-Relative to the root of the repository, let's change our working directory to the organisation's
-`namespace/workload-clusters` folder.
+Relative to the root of the repository, let's change our working directory to our `workload-clusters` folder.
 
 ```sh
-cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/workload-clusters
+cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters
 ```
 
 Then let's tell Flux to manage our cluster instance. The `Kustomization` names no namespace, reads the `GitRepository`
@@ -443,7 +440,7 @@ spec:
 EOF
 ```
 
-Then add it to the `kustomization.yaml` of the `namespace/workload-clusters` directory, so Flux creates it:
+Then add it to the `kustomization.yaml` of the `workload-clusters` directory, so Flux creates it:
 
 ```sh
 yq -i eval ".resources += \"HELLO_APP_DEV_CLUSTER_1.yaml\" | .resources style=\"\"" kustomization.yaml

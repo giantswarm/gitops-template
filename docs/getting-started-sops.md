@@ -291,15 +291,14 @@ exists, these steps bring it under GitOps.
 > yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${ORG_DIR}/${ORG_NAME}.yaml
 > ```
 >
-> The CLI also writes `${ORG_DIR}/workload-clusters/kustomization.yaml`, a list of clusters that this guide keeps in
-> `${ORG_DIR}/namespace/workload-clusters` instead. Keep it if you use the CLI for the cluster in the next step, which
-> needs it, and leave it out of the organisation's `kustomization.yaml` below.
+> The CLI also writes `${ORG_DIR}/workload-clusters/kustomization.yaml`, the organisation's list of clusters, as below.
+> Leave it out of the organisation's `kustomization.yaml`: the organisation's namespace `Kustomization` applies it.
 
-First, create the organization's directory, with `namespace` for what the organisation keeps in its namespace, its
-clusters' `Kustomization`s among them:
+First, create the organization's directory, with `namespace` for what the organisation keeps in its namespace, and
+`workload-clusters` for its clusters:
 
 ```sh
-mkdir -p ${ORG_DIR}/namespace/workload-clusters
+mkdir -p ${ORG_DIR}/namespace ${ORG_DIR}/workload-clusters
 ```
 
 Create the `Organization`. Deleting it deletes the `org-${ORG_NAME}` namespace, with every cluster in it, so the
@@ -325,8 +324,10 @@ Create the organisation's namespace `Kustomization`. Your management cluster's `
 the namespace exists and succeeds on its next retry. Its `dependsOn` names your management cluster's `Kustomization`,
 so that one always applies a commit first. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
 organisation's `kustomization.yaml` completes, see
-[Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). The `namespace` directory lists only the
-organisation's list of clusters, which is empty. You add your cluster to it in the next step:
+[Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations). The `namespace` directory lists only
+`../workload-clusters`, the organisation's list of clusters, which is empty: the clusters' `Kustomization`s live next
+to their directories, and this `Kustomization` applies them into the organisation's namespace. You add your cluster to
+the list in the next step:
 
 ```sh
 cat <<EOF > ${ORG_DIR}/namespace.yaml
@@ -362,9 +363,9 @@ cat <<EOF > ${ORG_DIR}/namespace/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - workload-clusters
+  - ../workload-clusters
 EOF
-cat <<EOF > ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
+cat <<EOF > ${ORG_DIR}/workload-clusters/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources: []
@@ -462,15 +463,10 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
 > ```
 >
 > The CLI still writes a single `Kustomization` that applies all of `${WC_DIR}/mapi`, so the apps don't wait for the
-> cluster. It writes it into `${ORG_DIR}/workload-clusters/${WC_NAME}.yaml`, in `default`, and lists it in
-> `${ORG_DIR}/workload-clusters/kustomization.yaml`, which it needs: create that list as an empty one before you run
-> the CLI if the organisation doesn't have it. Replace the CLI's `Kustomization` with the two of the last steps below,
-> which go in the organisation's namespace, and add `${WC_DIR}/kustomization.yaml` as in the step before them. Then
-> delete the CLI's file and list, which nothing applies:
->
-> ```sh
-> rm ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml ${ORG_DIR}/workload-clusters/kustomization.yaml
-> ```
+> cluster. It writes it into `${ORG_DIR}/workload-clusters/${WC_NAME}.yaml` and lists it in
+> `${ORG_DIR}/workload-clusters/kustomization.yaml`, as the last steps below do, but in `default` and without the
+> fields the organisation's namespace needs. Replace it with the two `Kustomization`s of the last steps below, and add
+> `${WC_DIR}/kustomization.yaml` as in the step before them.
 >
 > Then commit and push, as in the last step below.
 
@@ -549,17 +545,17 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
     EOF
     ```
 
-1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files.
-   It never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
+1. Create the cluster's `Kustomization`. With `prune: true`, Flux deletes what you delete from the cluster's files. It
+   never deletes the cluster itself: the cluster's `HelmRelease`, from the CAPA cluster base, has the
    `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label. Its health
-   check waits until Cluster API reports the cluster `Available`, which takes up to its `timeout` of 30 minutes. It
-   goes in the organisation's `namespace` directory, so the organisation's namespace `Kustomization` applies it into
-   `org-${ORG_NAME}`, and it runs as that namespace's `automation` ServiceAccount. It names no namespace, and reads
-   your `GitRepository` in `default`. Its `dependsOn` names the organisation's namespace `Kustomization`, so that one
-   always applies a commit first:
+   check waits until Cluster API reports the cluster `Available`, which takes up to its `timeout` of 30 minutes. It goes
+   in the organisation's `workload-clusters`, next to the cluster's directory. The organisation's namespace
+   `Kustomization` applies it into `org-${ORG_NAME}`, and it runs as that namespace's `automation` ServiceAccount. It
+   names no namespace, and reads your `GitRepository` in `default`. Its `dependsOn` names the organisation's namespace
+   `Kustomization`, so that one always applies a commit first:
 
     ```sh
-    cat <<EOF > ${ORG_DIR}/namespace/workload-clusters/${WC_NAME}.yaml
+    cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
@@ -600,7 +596,7 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
    it until the cluster's is `Ready`:
 
     ```sh
-    cat <<EOF > ${ORG_DIR}/namespace/workload-clusters/${WC_NAME}-apps.yaml
+    cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
@@ -630,8 +626,8 @@ than 20 characters. For other providers, see [Add a CAPx Workload Cluster base](
     Add both to the organization's list of clusters:
 
     ```sh
-    yq -i '.resources += ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'-apps.yaml"]' \
-      ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
+    yq -i '.resources |= ((. // []) + ["'"${WC_NAME}"'.yaml", "'"${WC_NAME}"'-apps.yaml"] | unique)' \
+      ${ORG_DIR}/workload-clusters/kustomization.yaml
     ```
 
     Finally, commit and push:
@@ -892,7 +888,7 @@ the team from the cluster first, as that guide describes.
     ```
 
 1. Remove the cluster from the organization's list. The cluster's `Kustomization`s are in
-   `${ORG_DIR}/namespace/workload-clusters`, which the organisation's namespace `Kustomization` applies: the
+   `${ORG_DIR}/workload-clusters`, which the organisation's namespace `Kustomization` applies: the
    cluster's, the apps', and the `-direct` one if the cluster has out-of-band resources, which it applies to the
    workload cluster, see [Add a new Workload Cluster repository structure](./add_wc_structure.md#directory-tree). Take
    them out of that directory's list, save the names of the SOPS key Secrets they decrypt with, if any, and remove
@@ -901,10 +897,10 @@ the team from the cluster first, as that guide describes.
     ```sh
     unset KEYS KEY_FILE
     for f in ${WC_NAME}.yaml ${WC_NAME}-apps.yaml ${WC_NAME}-direct.yaml; do
-      [ -f ${ORG_DIR}/namespace/workload-clusters/${f} ] || continue
-      yq -i 'del(.resources[] | select(. == "'"${f}"'"))' ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
-      KEYS="${KEYS} $(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/namespace/workload-clusters/${f})"
-      git rm -q ${ORG_DIR}/namespace/workload-clusters/${f}
+      [ -f ${ORG_DIR}/workload-clusters/${f} ] || continue
+      yq -i 'del(.resources[] | select(. == "'"${f}"'"))' ${ORG_DIR}/workload-clusters/kustomization.yaml
+      KEYS="${KEYS} $(yq '.spec.decryption.secretRef.name // ""' ${ORG_DIR}/workload-clusters/${f})"
+      git rm -q ${ORG_DIR}/workload-clusters/${f}
     done
     export KEYS=$(echo ${KEYS} | tr ' ' '\n' | sort -u | tr '\n' ' ')
     ```
@@ -914,7 +910,7 @@ the team from the cluster first, as that guide describes.
 
     ```sh
     yq ea 'select(.spec.decryption.secretRef.name as $n | strenv(KEYS) | split(" ") | any_c(. == $n)) |
-      filename + ": " + .spec.decryption.secretRef.name' ${ORG_DIR}/namespace/workload-clusters/*.yaml
+      filename + ": " + .spec.decryption.secretRef.name' ${ORG_DIR}/workload-clusters/*.yaml
     ```
 
     If this prints a file, that cluster uses the key it names: keep the key, and take its name out of `KEYS`. Find the
