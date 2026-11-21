@@ -24,7 +24,7 @@ was forked from one of those versions.
 | The ConfigMap's name | `${cluster_name}-user-config` | `${cluster_name}-cluster-userconfig` |
 | A workload cluster's Flux `Kustomization` | `clusters-WC_NAME` | `MC_NAME-clusters-WC_NAME` |
 | The CAPA cluster base | `helmrelease.yaml`, `ocirepository.yaml` | `cluster.yaml` |
-| The envoy-gateway App Template | `helmreleases.yaml`, `ocirepositories.yaml` | one directory per chart |
+| The envoy-gateway stack | `helmreleases.yaml`, `ocirepositories.yaml` | one directory per chart |
 
 `kubectl gs gitops` relies on the app and cluster user config names. It doesn't read the `Kustomization` names or
 the files of the cluster base, so renaming those is optional and only makes your repository look like what
@@ -67,9 +67,9 @@ Every command below runs from the root of the clone.
 
     On macOS, use `sed -i ''`.
 
-1. If an App Template keeps several `HelmRelease`s or `OCIRepository`s in one file, like the envoy-gateway template
-   did, split it into a directory per chart, each with a `helm-release.yaml` and an `oci-repository.yaml`. See
-   [bases/apps/envoy-gateway](/bases/apps/envoy-gateway/kustomization.yaml).
+1. If a base keeps several `HelmRelease`s or `OCIRepository`s in one file, like the envoy-gateway stack did, split
+   it into a directory per chart, each with a `helm-release.yaml` and an `oci-repository.yaml`. See
+   [bases/stacks/envoy-gateway](/bases/stacks/envoy-gateway/kustomization.yaml).
 
 Nothing changes in the clusters: Flux applies the same resources from the new files.
 

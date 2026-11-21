@@ -351,14 +351,14 @@ their `ResourceSet`s itself. See [Apps on several clusters](../guides/scheduled-
 
 A cluster with apps has two Kustomizations:
 
-1. `WC_NAME.yaml` applies `cluster`: the cluster's `HelmRelease` and its base apps, in `cluster/apps`.
-   Base apps are the ones the cluster needs from the start, such as the Gateway API stack of
-   [envoy-gateway](/bases/apps/envoy-gateway/) in the out-of-band examples. Flux applies them with the cluster, and
-   their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name the
-   Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available` condition
-   is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster coming up.
-   While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you push to
-   the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
+1. `WC_NAME.yaml` applies `cluster`: the cluster's `HelmRelease` and its base apps, in `cluster/apps`. Base apps are the
+   ones the cluster needs from the start, such as the Gateway API charts of the
+   [envoy-gateway](/bases/stacks/envoy-gateway/) stack in the out-of-band examples. Flux applies them with the cluster,
+   and their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name
+   the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available`
+   condition is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster
+   coming up. While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you
+   push to the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
    Kustomization reports `DependencyNotReady` all the while.
 1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps`, which its `kustomization.yaml`
    lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster is

@@ -1,4 +1,4 @@
-# Same shape as the envoy-gateway App Template, see bases/apps/envoy-gateway.
+# Same shape as the HelmReleases of the envoy-gateway stack, see bases/stacks/envoy-gateway.
 #
 # Values are merged in `valuesFrom` order, later entries win (maps are merged,
 # lists are replaced):
@@ -21,7 +21,7 @@ spec:
     namespace: org-${organization}
   # The HTTPRoute needs the Gateway API CRDs. This App Template doesn't list
   # them in `dependsOn`, so it works without envoy-gateway; a layer that
-  # installs it together with the envoy-gateway App Template adds
+  # installs it together with the envoy-gateway stack adds
   # `dependsOn: [{name: ${cluster_name}-gateway-api-crds}]`, see
   # bases/stacks/hello-web.
   install:

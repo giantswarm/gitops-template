@@ -258,9 +258,9 @@ path to the directory in an env variable:
           name: \${cluster_name}-hello-world
     ```
 
-    A patch also orders the app after a release of another App Template it needs. `hello-world` needs the Gateway
-    API CRDs, so in a cluster that has the envoy-gateway App Template, add `${cluster_name}-gateway-api-crds` to its
-    `dependsOn`, as described in [App Templates](./app-templates.md).
+    A patch also orders the app after a release of another base it needs. `hello-world` needs the Gateway API CRDs,
+    so in a cluster that has the [envoy-gateway](/bases/stacks/envoy-gateway/) stack, add
+    `${cluster_name}-gateway-api-crds` to its `dependsOn`, as described in [App Templates](./app-templates.md).
 
 1. Continue with [Listing the App in the cluster](#listing-the-app-in-the-cluster).
 

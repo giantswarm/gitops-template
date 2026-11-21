@@ -1,6 +1,6 @@
 # Deploy several apps together as a stack
 
-- [Example](#example)
+- [Examples](#examples)
 - [When a stack helps](#when-a-stack-helps)
 - [Creating a stack](#creating-a-stack)
 - [Using a stack in a cluster](#using-a-stack-in-a-cluster)
@@ -10,19 +10,26 @@
 
 A stack is several `HelmRelease`s that are deployed together and may depend on each other. It's a kustomize base: a
 directory with a `kustomization.yaml` that kustomize builds into a list of objects. Its `resources:` lists the
-[App Templates](./app-templates.md) of its apps, which can each still be used on their own, and the stack adds what
-ties them together. Stacks live in `bases/stacks`. A cluster lists a stack in its apps like an App Template, and gets
-all of its apps.
+`HelmRelease`s and `OCIRepository`s of its charts, or [App Templates](./app-templates.md) and other stacks, which can
+each still be used on their own, and the stack adds what ties them together. Stacks live in `bases/stacks`, single apps
+in `bases/apps`. A cluster lists a stack in its apps like an App Template, and gets all of its apps.
 
-## Example
+## Examples
 
-[hello-web](/bases/stacks/hello-web/) installs [hello-world](/bases/apps/hello-world/), served over HTTPS through
-[Envoy Gateway](/bases/apps/envoy-gateway/). It lists both App Templates and adds what makes hello-world reachable
-through the Gateway:
+[envoy-gateway](/bases/stacks/envoy-gateway/) installs Envoy Gateway as three charts, in order: `gateway-api-crds`,
+the Gateway API CRDs; `envoy-gateway`, the controller, which `dependsOn` the CRDs; and `gateway-api-config`, the
+`giantswarm-default` `GatewayClass` and `Gateway`, which `dependsOn` the controller. Each chart has a directory of its
+own with a `helm-release.yaml` and an `oci-repository.yaml`, and the stack's `kustomization.yaml` lists all of them.
+Every file then holds a single resource, as the files `kubectl gs gitops` writes do, so commands like
+`yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` change only the chart you mean.
+
+[hello-web](/bases/stacks/hello-web/) is a stack built from a stack and an app: it installs
+[hello-world](/bases/apps/hello-world/), served over HTTPS through the envoy-gateway stack. It lists both and adds what
+makes hello-world reachable through the Gateway:
 
 ```text
 bases/stacks/hello-web
-├── kustomization.yaml       resources: the envoy-gateway and hello-world App Templates, the dependsOn and version patches
+├── kustomization.yaml       resources: the envoy-gateway stack and the hello-world App Template, the dependsOn and version patches
 ├── gateway_api_config.yaml  the Gateway, with the `hello` subdomain
 └── hello_world.yaml         hello-world, with the hostname `hello.<base domain>` on that Gateway
 ```
@@ -49,9 +56,9 @@ If the apps are independent, don't make a stack: list each App Template in the c
 
 1. Create a directory for it under `bases/stacks`.
 
-1. Put the values each app gets into a file of its own. Each file replaces the App Template's whole `-values`
-   ConfigMap, so it has to hold every default the app needs: start from the App Template's default config and change
-   what the stack needs. The `-user-values` ConfigMaps and `-user-secrets` Secrets stay free for a cluster's own
+1. Put the values each app gets into a file of its own. Each file replaces the whole `-values` ConfigMap of the base
+   that installs the app, so it has to hold every default the app needs: start from that base's default config and
+   change what the stack needs. The `-user-values` ConfigMaps and `-user-secrets` Secrets stay free for a cluster's own
    values.
 
 1. Write the `kustomization.yaml`. In hello-web it looks like this, shortened to the version patch of hello-world:
@@ -92,11 +99,11 @@ If the apps are independent, don't make a stack: list each App Template in the c
           kind: OCIRepository
           name: \${cluster_name}-hello-world
     resources:
-      - ../../apps/envoy-gateway
+      - ../envoy-gateway
       - ../../apps/hello-world
     ```
 
-    The `name` of each generated ConfigMap has to be the name the listed App Template uses, and `namespace` the
+    The `name` of each generated ConfigMap has to be the name the listed base uses, and `namespace` the
     organisation's namespace, or `behavior: replace` finds nothing to replace. The `$` of a target name is escaped,
     as `kustomize` reads the name as a regular expression. A label under `labels:` marks every object the stack
     builds, if you want to find them on the management cluster later; it is a plain label that nothing acts on.
@@ -111,13 +118,13 @@ named after that app, `${cluster_name}-<app>-user-values`, as
 [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world-from-template/)
 does for hello-world.
 
-A stack and an App made from one of the App Templates it lists produce objects with the same names, for example
+A stack and an App made from one of the bases it lists produce objects with the same names, for example
 `${cluster_name}-hello-world`. A cluster can only have one of them. To move an app into a stack, or out of it, change
 both in the same commit: the objects keep their names, so Flux updates them in place instead of reinstalling the app.
 
-The out-of-band example clusters install Envoy Gateway as a base app, with the cluster, and hello-world from its own
-App Template as a secondary app, once the cluster is ready. A stack's apps are always applied by the same
-Kustomization, so when some of them have to be base apps, list the App Templates separately, as those clusters do.
+The out-of-band example clusters install the envoy-gateway stack as base apps, with the cluster, and hello-world from
+its own App Template as a secondary app, once the cluster is ready. A stack's apps are always applied by the same
+Kustomization, so when some of them have to be base apps, list the bases separately, as those clusters do.
 
 ## Limits
 

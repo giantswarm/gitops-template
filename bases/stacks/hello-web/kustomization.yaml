@@ -1,8 +1,8 @@
 # hello-world, served over HTTPS through Envoy Gateway: a stack, several
 # HelmReleases deployed together that may depend on each other. It installs
-# the envoy-gateway and hello-world App Templates together and holds what ties
-# them together, so a cluster lists `hello-web` in its apps to get the whole
-# stack:
+# the envoy-gateway stack and the hello-world App Template together and holds
+# what ties them together, so a cluster lists `hello-web` in its apps to get
+# the whole stack:
 #   - the order: hello-world waits for the Gateway API CRDs (dependsOn)
 #   - the values that have to agree: the Gateway's `hello` subdomain and
 #     hello-world's hostname and parentRefs, side by side in this directory
@@ -10,7 +10,7 @@
 # See docs/guides/stacks.md.
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
-# The values replace the App Templates' whole `-values` ConfigMaps, so they
+# The values replace the listed bases' whole `-values` ConfigMaps, so they
 # hold every default the charts need. The `-user-values` ConfigMaps and
 # `-user-secrets` Secrets stay free for a cluster's own overrides.
 configMapGenerator:
@@ -76,5 +76,5 @@ patches:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
 resources:
-  - ../../apps/envoy-gateway
+  - ../envoy-gateway
   - ../../apps/hello-world
