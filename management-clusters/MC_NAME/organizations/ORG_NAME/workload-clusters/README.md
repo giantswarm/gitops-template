@@ -26,8 +26,8 @@ The examples:
 - [`HELLO_APP_DEV_CLUSTER_1/`](HELLO_APP_DEV_CLUSTER_1/),
   [`HELLO_APP_STAGING_CLUSTER_1/`](HELLO_APP_STAGING_CLUSTER_1/),
   [`HELLO_APP_PROD_CLUSTER_EU_CENTRAL/`](HELLO_APP_PROD_CLUSTER_EU_CENTRAL/),
-  [`HELLO_APP_PROD_CLUSTER_US_WEST/`](HELLO_APP_PROD_CLUSTER_US_WEST/): the hello-web stack on clusters in several stages and
-  regions.
+  [`HELLO_APP_PROD_CLUSTER_US_WEST/`](HELLO_APP_PROD_CLUSTER_US_WEST/): the hello-web stack on clusters in several
+  stages and regions.
 
 ## When you copy it
 
