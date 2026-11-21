@@ -231,8 +231,6 @@ Export the names the commands below use:
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
-# the commit you start from: the third commit reads the files as they were there
-export BEFORE=$(git rev-parse HEAD)
 ```
 
 1. The first commit moves nothing:
@@ -242,18 +240,26 @@ export BEFORE=$(git rev-parse HEAD)
       which the second commit takes out of its build, and the `Organization`s. Give them the
       `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, and
       give `MC_NAME.yaml` `prune: true`. This commit takes nothing out of its build, so turning `prune` on deletes
-      nothing: Flux deletes only what leaves the build once it's on. The commands leave what's there already:
+      nothing: Flux deletes only what leaves the build once it's on. The commands leave what's there already, and
+      stop at the first that fails:
 
       ```sh
-      yq -i '.commonAnnotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
-        with(select([.labels[]?.pairs["giantswarm.io/prevent-deletion"]] | all_c(. != "true"));
-          .labels += [{"pairs": {"giantswarm.io/prevent-deletion": "true"}}])' \
-        management-clusters/${MC_NAME}/secrets/kustomization.yaml
-      for d in management-clusters/${MC_NAME}/organizations/*/; do
-        yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
-          .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' ${d}$(basename ${d}).yaml
-      done
-      yq -i '.spec.prune = true' management-clusters/${MC_NAME}/${MC_NAME}.yaml
+      (
+        set -eu
+        yq -i '.commonAnnotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
+          with(select([.labels[]?.pairs["giantswarm.io/prevent-deletion"]] | all_c(. != "true"));
+            .labels += [{"pairs": {"giantswarm.io/prevent-deletion": "true"}}])' \
+          management-clusters/${MC_NAME}/secrets/kustomization.yaml
+        organizations=$(yq -N 'select(.kind == "Organization") | filename' \
+          management-clusters/${MC_NAME}/organizations/*/*.yaml | sort -u)
+        : "${organizations:?no Organization found}"
+        for f in ${organizations}; do
+          yq -i 'with(select(.kind == "Organization");
+            .metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
+            .metadata.labels["giantswarm.io/prevent-deletion"] = "true")' ${f}
+        done
+        yq -i '.spec.prune = true' management-clusters/${MC_NAME}/${MC_NAME}.yaml
+      )
       ```
 
     - Protect every `Kustomization` in the organisation's `workload-clusters`, by the namespace it's in. One in
@@ -302,6 +308,13 @@ export BEFORE=$(git rev-parse HEAD)
       yq -i '.resources += [strenv(KEY_FILE)]' ${ORG_DIR}/namespace/secrets/kustomization.yaml
       ```
 
+   Commit with this message, which the third commit finds it by. If you merge it through a pull request, keep the
+   message as the commit's subject, for example as the title of a squash merge:
+
+    ```sh
+    git commit -m "protect the workload cluster Kustomizations of ${ORG_NAME} before the move"
+    ```
+
    Push, and wait until `MC_NAME-gitops` and `MC_NAME-organization-ORG_NAME` are `Ready` at this revision. Check
    that `MC_NAME-gitops` prints `true`, that every old `Kustomization` in `default` prints `Orphan`, that every
    `-direct` one prints `disabled`, that the keys in `default` print `disabled`, and that the keys are in the
@@ -342,6 +355,8 @@ export BEFORE=$(git rev-parse HEAD)
       if [ -e ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml ]; then
         for F in $(yq '(.resources // [])[]' ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml); do
           git mv ${ORG_DIR}/namespace/workload-clusters/${F} ${ORG_DIR}/workload-clusters/
+          # the namespace it read its GitRepository in there
+          yq -i '.spec.sourceRef.namespace |= (. // ("org-" + strenv(ORG_NAME)))' ${ORG_DIR}/workload-clusters/${F}
           F=${F} yq -i '.resources += [strenv(F)]' ${ORG_DIR}/workload-clusters/kustomization.yaml
         done
         git rm -q ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
@@ -396,28 +411,36 @@ export BEFORE=$(git rev-parse HEAD)
     kubectl get helmrelease -n org-${ORG_NAME} -L kustomize.toolkit.fluxcd.io/namespace
     ```
 
-   If an old one is still in `default`, because `MC_NAME.yaml` still had `prune: false`, delete it by hand. It has
-   `deletionPolicy: Orphan`, so its finalizer deletes nothing it applied:
+   If an old one is still in `default`, because it has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation,
+   such as one you gave it yourself, `MC_NAME.yaml` left it: delete it by hand. It has `deletionPolicy: Orphan`, so its
+   finalizer deletes nothing it applied:
 
     ```sh
     kubectl delete kustomization -n default KUSTOMIZATION_NAME
     ```
 
 1. The third commit removes the annotation from the `-direct` `Kustomization`s, once `namespace.yaml` owns them, so
-   that Flux deletes them again when you delete their files from Git. It takes it only from the ones the first commit
-   gave it, chosen as it chose them, from the files at `BEFORE`: one that had it already keeps it:
+   that Flux deletes them again when you delete their files from Git. It takes it only from the files the first commit
+   gave it to: it finds that commit by its message, and compares each file there with the same file in its parent, so
+   one that had the annotation before keeps it. It stops if it can't find the first commit:
 
     ```sh
-    for f in ${ORG_DIR}/workload-clusters/*.yaml; do
-      [ "$(basename ${f})" = kustomization.yaml ] && continue
-      before=$(git show ${BEFORE}:${f} 2>/dev/null) || continue
-      case "$(yq '.metadata.namespace' <<<"${before}"):$(
-        yq '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"]' <<<"${before}")" in
-        default:* | null:* | *:disabled) ;;
-        *) yq -i 'del(.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"]) |
-          del(.metadata.annotations | select(length == 0))' ${f} ;;
-      esac
-    done
+    (
+      set -eu
+      first=$(git log --format=%H -1 --fixed-strings \
+        --grep "protect the workload cluster Kustomizations of ${ORG_NAME} before the move")
+      : "${first:?no first commit in the history of HEAD}"
+      annotation='.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"]'
+      for f in ${ORG_DIR}/workload-clusters/*.yaml; do
+        [ "$(basename ${f})" = kustomization.yaml ] && continue
+        git cat-file -e ${first}:${f} 2>/dev/null || continue
+        added=$(git show ${first}:${f} | yq "${annotation}")
+        had=$(git show ${first}^:${f} | yq "${annotation}")
+        if [ "${added}" = disabled ] && [ "${had}" != disabled ]; then
+          yq -i "del(${annotation}) | del(.metadata.annotations | select(length == 0))" ${f}
+        fi
+      done
+    )
     ```
 
 1. Once no `Kustomization` in `default`, of any organisation, names them, delete the old keys from `default` by hand.
