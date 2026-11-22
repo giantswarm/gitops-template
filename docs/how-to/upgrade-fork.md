@@ -47,12 +47,12 @@ Changes to examples you don't use, such as new apps under `bases/`, need nothing
 
 ## The path from main
 
-Do the mandatory steps in this order. Take the optional ones whenever you like after step 4, one at a time, each
-in its own pull request:
+Do the mandatory steps in this order. Take the optional ones once step 5 is done, one at a time, each in its own pull
+request:
 
 1. Update kubectl-gs to X.Y.Z or newer, with `kubectl gs selfupdate`, and start from a clean clone, on a new branch.
-1. [Move to the kubectl-gs names](#move-to-the-kubectl-gs-names). Optional, but it's renames only and changes nothing
-   on the cluster, and the next step finds more of your repository with them.
+1. [Move to the kubectl-gs names](#move-to-the-kubectl-gs-names). Optional, but it's mostly renames, and the next
+   step finds more of your repository with them. On the cluster, only each cluster's values ConfigMap gets a new name.
 1. [Give every cluster its region](#give-every-cluster-its-region).
 1. [Check and upgrade the structure version](#check-and-upgrade-the-structure-version), which drops `mapi` and adds
    each organisation's `namespace.yaml`.
@@ -128,6 +128,27 @@ is deleted on the way.
 > Run the upgrade in the next commit, and remove the annotations once the `Kustomization`s are `Ready` at that commit.
 > Keep it on the objects that carry it anyway, such as the cluster's `HelmRelease`.
 
+The per-cluster rules in `.sops.yaml` are yours to change too. A fork of `main` has rules whose `path_regex` names a
+cluster's `mapi/` directory, which is gone: a new `*.enc.yaml` in the cluster's `cluster` or `apps` then matches no
+rule, and `sops` refuses it, or it matches a broader rule further down and is encrypted with the wrong key. In each
+such rule, replace `mapi/` with `(cluster|apps)/`, or `(cluster|apps|app_sets)/` for a cluster that still has App
+Sets, so the rule doesn't reach `out-of-band`, where the cluster's key can't decrypt. Files already encrypted keep
+their keys; the rules only decide what a file gets the next time `sops` encrypts it. Then check that every encrypted
+file, and a new one in each cluster's `apps`, meets the rule you mean, the first one that matches its path:
+
+```sh
+check_rules() {
+  for f in "$@"; do
+    rule=$(yq '.creation_rules[].path_regex' .sops.yaml | while read -r r; do
+      if printf '%s\n' "${f}" | grep -Eq -- "${r}"; then printf '%s\n' "${r}"; break; fi
+    done)
+    printf '%s\t%s\n' "${f}" "${rule:-NO RULE}"
+  done
+}
+check_rules $(git ls-files '*.enc.yaml')
+check_rules management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/apps/new.enc.yaml
+```
+
 What it leaves to you, it prints. The workload clusters' `Kustomization`s stay in `default`, applied by
 `MC_NAME.yaml`, with their keys in `MC_NAME/secrets`: move them with
 [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations). It doesn't split a cluster's
@@ -141,8 +162,10 @@ their `structureVersion` by hand. Otherwise, remove their entries and run `kubec
 
 This template uses the file and resource names that `kubectl gs gitops` generates. Earlier versions of the template
 used names of their own, `main` among them, so `kubectl gs gitops check --adopt` skips their apps, and
-`kubectl gs gitops add automatic-update` and the `gitops upgrade` migrations can't find their files. It's renames only:
-nothing changes on the clusters.
+`kubectl gs gitops add automatic-update` and the `gitops upgrade` migrations can't find their files. It's renames, and
+on the clusters only one shows: each cluster's values ConfigMap gets its new name, and the old one stays behind, see
+[Rename the cluster user config](#rename-the-cluster-user-config). The merged values, and so the clusters, don't
+change.
 
 ### What changed
 
@@ -322,8 +345,12 @@ cluster somewhere else, so set each cluster's region to where it is now.
 
 1. Copy the template's regions, in [bases/environments/regions](/bases/environments/regions/), into your fork, or turn
    yours into Components the same way: `kind: Component`, `apiVersion: kustomize.config.k8s.io/v1alpha1`, and a patch
-   that appends the region's ConfigMap to `/spec/valuesFrom/-`. Each one sets `global.providerSpecific.region` and the
-   zones of its node pools.
+   that appends the region's ConfigMap to `/spec/valuesFrom/-`. A region sets only `global.providerSpecific.region`.
+   On `main`, a region's file also defined a node pool, `xxxxx` in the example, in the region's zones. The template's
+   region doesn't, so a cluster that took a pool from its region loses it when you switch. Carry the pool over before
+   you do, under the same name and with the same values: in a Component of its own, as the template's
+   `regions/*/node_pool` Components add the `large` pool, or in the cluster's own values. A pool that disappears from
+   the values is a node pool Cluster API deletes.
 1. In each cluster's `cluster/kustomization.yaml`, take the region out of `resources:` and list it under
    `components:` instead, and give every cluster that has none the region from the first step. Drop any patch that
    inserts the region's ConfigMap at a fixed position, such as `/spec/valuesFrom/1`.
@@ -429,7 +456,7 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
         organizations=$(yq -N 'select(.kind == "Organization") | filename' \
           management-clusters/${MC_NAME}/organizations/*/*.yaml | sort -u)
         : "${organizations:?no Organization found}"
-        for f in ${organizations}; do
+        for f in $(echo "${organizations}"); do
           yq -i 'with(select(.kind == "Organization");
             .metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
             .metadata.labels["giantswarm.io/prevent-deletion"] = "true")' ${f}
@@ -624,8 +651,8 @@ namespace: a cluster directory that applies anything else fails with "forbidden"
 
 On `main`, one `Kustomization` per cluster applies the cluster and its apps together, so the apps fail and retry until
 the cluster is up. Here, a cluster with apps has two: `WC_NAME.yaml` applies `cluster`, the cluster's `HelmRelease`
-and its base apps, and waits for the Cluster API `Cluster` to be `Available`; `WC_NAME-apps.yaml` applies the rest
-once it is, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). The `HELLO_APP_*` examples
+and its base apps, and waits for the Cluster API `Cluster`'s control plane to be up; `WC_NAME-apps.yaml` applies the
+rest once it is, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). The `HELLO_APP_*` examples
 have no secondary apps and keep one.
 
 Do this after [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations), and while the
@@ -643,7 +670,7 @@ cluster's `Kustomization` still has `prune: false`: objects then change owner wi
    example.
 
 Push. The cluster's `Kustomization` stops applying the apps, and leaves them where they are, as its `prune` is off.
-The apps `Kustomization` takes them over once the cluster is `Available`, without changing them. Check that the apps
+The apps `Kustomization` takes them over once the cluster's control plane is up, without changing them. Check that the apps
 `Kustomization` lists them in its inventory:
 
 ```sh

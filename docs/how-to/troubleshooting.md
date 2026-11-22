@@ -14,6 +14,7 @@ that failed, and the trick is finding that object, because one failure makes eve
 - [A variable comes out empty](#a-variable-comes-out-empty)
 - [Forbidden, or refused at admission](#forbidden-or-refused-at-admission)
 - [A cluster's Kustomization waits on its health check](#a-clusters-kustomization-waits-on-its-health-check)
+- [A new cluster's apps started before its nodes joined](#a-new-clusters-apps-started-before-its-nodes-joined)
 - [A HelmRelease can't find its values](#a-helmrelease-cant-find-its-values)
 - [A HelmRelease has run out of retries](#a-helmrelease-has-run-out-of-retries)
 - [A cluster's first install failed](#a-clusters-first-install-failed)
@@ -153,14 +154,15 @@ upstream Flux documentation.
 `Reconciliation in progress` for a long time, and its apps `Kustomization` says `DependencyNotReady`. After 30 minutes
 it turns `False` with reason `HealthCheckFailed` and a message that names the Cluster API `Cluster`.
 
-**What it means.** The cluster's `Kustomization` only gets `Ready` once the `Cluster` is `Available`, so that the
-apps don't start before there's a cluster for them, and its `timeout` of 30 minutes covers a new cluster coming up,
-see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). For a new cluster, waiting is normal.
-For a running one, `Available` covers every node pool too, so one node pool that's short of nodes holds the
-`Kustomization` back.
+**What it means.** The cluster's `Kustomization` only gets `Ready` once the `Cluster`'s `ControlPlaneAvailable` and
+`RemoteConnectionProbe` conditions are `True`: its control plane is up, and the management cluster can reach it,
+which is all the apps need to install. Its `timeout` of 30 minutes covers a new cluster coming up, see
+[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). For a new cluster, waiting is normal. For
+a running one, it means the control plane is down or out of reach. The worker nodes don't count: a node pool that's
+short of nodes doesn't hold the `Kustomization` back.
 
-A new commit doesn't cut the wait short. A fix you push to the cluster's files, such as a smaller node pool, is only
-applied once the current wait has run out, and then the next wait starts.
+A new commit doesn't cut the wait short. A fix you push to the cluster's files is only applied once the current wait
+has run out, and then the next wait starts.
 
 **What you can do.** Look at the cluster itself, which you can read:
 
@@ -170,10 +172,24 @@ kubectl describe cluster CLUSTER_NAME -n org-ORG_NAME
 kubectl get machinedeployments,machinepools -n org-ORG_NAME
 ```
 
-A condition that's `False` usually says why: a node pool can't get instances, or the control plane isn't up. If it's
-something in your values, fix it and push, and wait for the current check to time out. If it's the infrastructure,
-such as a cloud quota or an outage, or the cluster has been stuck for a long time with nothing in your files to
-explain it, it's Giant Swarm's: open a support ticket with the cluster's name.
+A condition that's `False` usually says why. If it's something in your values, fix it and push, and wait for the
+current check to time out. If it's the infrastructure, such as a cloud quota or an outage, or the control plane has
+been down for a long time with nothing in your files to explain it, it's Giant Swarm's: open a support ticket with the
+cluster's name.
+
+## A new cluster's apps started before its nodes joined
+
+**What you see.** On a new cluster, the apps `Kustomization` is `Ready`, but the apps' pods wait `Pending`, and a
+`HelmRelease` may fail with a timeout, uninstall, and try again.
+
+**What it means.** The apps wait for the control plane, not for the worker nodes, so on a new cluster they can start
+before any node has joined. A `HelmRelease` then runs out its 10-minute `timeout`. The app bases retry a failed install
+up to 10 times, uninstalling it in between, so it settles by itself once the nodes join. It's the price of not holding
+back every later change to the apps while one node pool is short.
+
+**What you can do.** Usually nothing but wait. If the nodes don't come, look at the node pools as in the section
+above, and if a `HelmRelease` has used up its retries by then, see
+[A HelmRelease has run out of retries](#a-helmrelease-has-run-out-of-retries).
 
 ## A HelmRelease can't find its values
 

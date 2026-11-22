@@ -412,8 +412,8 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   through a new `kustomization.yaml` that lists `cluster/`, so an `out-of-band` directory next to it is never applied
   to the management cluster. The `.sops.yaml` rules of the out-of-band examples and of `WC_NAME` match the cluster's
   `cluster`, `apps` and `app_sets` directories. A new test pins the `spec.path` of every example cluster `Kustomization`.
-  `kubectl gs gitops add workload-cluster` still generates `mapi`, and `kubectl gs gitops upgrade` has no migration to
-  structure version 3: see `docs/reference/repo-structure.md` for how to move what it writes.
+  kubectl-gs releases before structure version 3 still generate `mapi`; the release that brings version 3 writes
+  this layout, and its `kubectl gs gitops upgrade` migrates an existing repository to it.
   ([#298](https://github.com/giantswarm/gitops-template/issues/298))
   To move a running cluster, see
   [Check and upgrade the structure version](docs/how-to/upgrade-fork.md#check-and-upgrade-the-structure-version).

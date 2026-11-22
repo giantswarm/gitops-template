@@ -21,6 +21,11 @@ gs gitops add automatic-update`.
 See [Apps from an App Template or a
 stack](../tutorials/intermediate/automatic-updates.md#apps-from-an-app-template-or-a-stack).
 
+## Apps from an App Set
+
+App Sets are now stacks, see [Apps from an App Template or a
+stack](../tutorials/intermediate/automatic-updates.md#apps-from-an-app-template-or-a-stack).
+
 ## Checking the installed version
 
 See [Check the installed version](../tutorials/intermediate/automatic-updates.md#check-the-installed-version).

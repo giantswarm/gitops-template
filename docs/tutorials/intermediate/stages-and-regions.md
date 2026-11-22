@@ -19,7 +19,8 @@ put it in a place and a stage. Why environments are directories rather than bran
 [Directories, branches or repositories](../../explanation/composition.md#directories-branches-or-repositories).
 
 Four real clusters cost real money, and the two prod clusters are sized like production: each asks for ten to fifty
-`m6a.8xlarge` nodes in `nodepool0`, plus the region's `large` pool of `m6a.2xlarge`. That's more than twenty big
+`m6a.8xlarge` nodes in `nodepool0`, plus the region's `large` pool of one to ten `m6a.2xlarge` in `eu-central` or
+`m6a.4xlarge` in `us-west`. That's more than twenty big
 nodes before a single workload, and your account's vCPU quota may say no first. So this tutorial reads along by
 default: you write the files, commit them on a local branch, and render each cluster with `tools/fake-flux` to see
 what Flux would apply, without pushing. Creating the clusters for real is the second option, at the end of
