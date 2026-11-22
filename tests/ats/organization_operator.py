@@ -107,19 +107,46 @@ def _ready_reason(kustomization: dict) -> str | None:
 def waiting_problems(kustomization: dict, namespace: str) -> list[str]:
     """Why the Kustomization doesn't fail for want of `namespace`, if it doesn't. Flux names the
     namespace in its error: it doesn't exist, or `automation` may not write there, as
-    rbac-operator gives it its rights in the namespace only once it exists. One that depends on
-    such a Kustomization waits for it instead.
+    rbac-operator gives it its rights in the namespace only once it exists.
     """
     key = obj_key(kustomization)
     if is_ready(kustomization):
         return [f"Kustomization '{key}' is Ready without namespace '{namespace}'"]
     reason = not_ready_reason(kustomization)
-    if (
-        f'"{namespace}"' in reason
-        or _ready_reason(kustomization) == DEPENDENCY_NOT_READY
-    ):
+    if f'"{namespace}"' in reason:
         return []
     return [f"Kustomization '{key}' doesn't wait for namespace '{namespace}': {reason}"]
+
+
+def _depends_on_one_of(kustomization: dict, keys: set[str]) -> bool:
+    own = kustomization["metadata"].get("namespace", "default")
+    return any(
+        f"{d.get('namespace', own)}/{d.get('name')}" in keys
+        for d in (kustomization.get("spec") or {}).get("dependsOn") or []
+    )
+
+
+def namespace_waiting_problems(kustomizations: list[dict], namespace: str) -> list[str]:
+    """Why the Kustomizations among `kustomizations` that apply into `namespace` don't all wait
+    for it, if they don't: each fails for want of it, or reports DependencyNotReady on another
+    of them. There has to be at least one, or nothing shows the namespace is awaited."""
+    waiting = waiting_kustomizations(kustomizations, namespace)
+    if not waiting:
+        return [
+            f"No Kustomization applies into namespace '{namespace}' from another namespace, so "
+            "the stand-in can't tell that the Organization's namespace is awaited: give the "
+            f"organisation a namespace Kustomization with `targetNamespace: {namespace}`, as "
+            "the basic tutorial does"
+        ]
+    keys = {obj_key(k) for k in waiting}
+    return [
+        p
+        for k in waiting
+        if not (
+            _ready_reason(k) == DEPENDENCY_NOT_READY and _depends_on_one_of(k, keys)
+        )
+        for p in waiting_problems(k, namespace)
+    ]
 
 
 def _kustomizations(api: pykube.HTTPClient) -> dict[str, dict]:
@@ -174,11 +201,14 @@ def _waiting(api: pykube.HTTPClient, namespace: str) -> list[dict]:
 
 
 def _waiting_problems(api: pykube.HTTPClient, namespace: str) -> list[str]:
-    return [p for k in _waiting(api, namespace) for p in waiting_problems(k, namespace)]
+    return namespace_waiting_problems(list(_kustomizations(api).values()), namespace)
 
 
 def _recovery_problems(api: pykube.HTTPClient, namespace: str) -> list[str]:
-    return [p for k in _waiting(api, namespace) for p in ready_problems(k, obj_key(k))]
+    waiting = _waiting(api, namespace)
+    if not waiting:
+        return [f"No Kustomization applies into namespace '{namespace}' any more"]
+    return [p for k in waiting for p in ready_problems(k, obj_key(k))]
 
 
 def stand_in_for(

@@ -27,7 +27,7 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate, gates
 from conftest import GitOpsTestConfig
-from kind_config import kind_test_config, require_example
+from kind_config import kind_test_config, require_example, skipped_assertions
 from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster
 from node_room import node_room_problems
@@ -168,7 +168,7 @@ def test_positive_assertions(
     check_helm_release_successful: dict,
     check_kustomizations_successful: None,
 ) -> None:
-    assertions = load_assertions(skipped=kind_test_config().skipped_assertion_dirs())
+    assertions = load_assertions(skipped=skipped_assertions())
     if not assertions:
         pytest.skip(f"No assertion files in '{EXISTS_ASSERTIONS_DIR}' to check.")
     checked = check_assertions(kube_cluster.kube_client, assertions)
@@ -196,9 +196,7 @@ def test_workload_cluster_assertions(
     # kube_cluster and workload_cluster give a failure workload_diagnostics' report of both
     # The -direct out-of-band Kustomization and the H3a HelmReleases install into the
     #  workload cluster through its kubeconfig Secret; the test's vCluster stands in for it.
-    assertions = load_assertions(
-        WORKLOAD_CLUSTER_ASSERTIONS_DIR, kind_test_config().skipped_assertion_dirs()
-    )
+    assertions = load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR, skipped_assertions())
     checked = check_assertions(workload_cluster, assertions)
     assert checked > 0, f"No assertions found in '{WORKLOAD_CLUSTER_ASSERTIONS_DIR}'."
 

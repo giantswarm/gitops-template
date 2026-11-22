@@ -160,11 +160,40 @@ def test_a_missing_example_fails_the_template(
         kind_config.require_example("prune")
 
 
+def test_a_broken_binding_fails_the_template_and_skips_in_a_fork(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # a binding whose path is gone drops its assertion files: in a fork that's an example it
+    #  deleted, in the template it's a broken binding
+    write_root(tmp_path, "golem")
+    c = config(
+        tmp_path,
+        {
+            "examples": {
+                "hello-app": {
+                    "paths": ["management-clusters/golem/HELLO_APP_RENAMED"],
+                    "assertions": ["assertions/exists/hello-app"],
+                }
+            }
+        },
+    )
+    monkeypatch.setattr(kind_config, "kind_test_config", lambda: c)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/platform-gitops")
+    assert list(kind_config.skipped_assertions()) == ["assertions/exists/hello-app"]
+    assert kind_config.missing_examples() == []
+    monkeypatch.setenv("GITHUB_REPOSITORY", "giantswarm/gitops-template")
+    with pytest.raises(pytest.fail.Exception, match="hello-app"):
+        kind_config.skipped_assertions()
+    assert len(kind_config.missing_examples()) == 1
+
+
 def test_the_template_binds_every_example_it_has() -> None:
     # In the template, every example check runs: a binding whose example can't be found is a
     #  broken binding, and an assertion file no binding names would be checked in a fork that
-    #  deleted its example. A fork that deleted examples skips this.
+    #  deleted its example. A fork that deleted examples skips this; the template's CI fails.
     c = kind_test_config()
+    missing = kind_config.missing_examples()
+    assert not missing, "\n".join(missing)
     if any(c.example_skip_reason(name) for name in c.examples):
         pytest.skip("The repository doesn't have all of the template's examples.")
     bound = [

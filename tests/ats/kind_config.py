@@ -260,3 +260,24 @@ def require_example(name: str) -> None:
     if examples_required(os.environ):
         pytest.fail(f"{reason} The template's own CI runs every example check.")
     pytest.skip(reason)
+
+
+def missing_examples() -> list[str]:
+    """In the template's own CI, why each example that can't be found is missing: there, it's a
+    broken binding. Elsewhere none: a fork may delete any example."""
+    if not examples_required(os.environ):
+        return []
+    c = kind_test_config()
+    return [r for name in c.examples if (r := c.example_skip_reason(name))]
+
+
+def skipped_assertions() -> dict[str, str]:
+    """The assertion files and directories to leave out, with the reason. In the template's own
+    CI, fail instead of leaving any out."""
+    missing = missing_examples()
+    if missing:
+        pytest.fail(
+            "The template's own CI checks every example's assertions:\n"
+            + "\n".join(missing)
+        )
+    return kind_test_config().skipped_assertion_dirs()

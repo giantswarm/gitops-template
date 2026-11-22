@@ -3,6 +3,7 @@
 from conftest import organization_init_namespaces
 from organization_operator import (
     bootstrapped_problems,
+    namespace_waiting_problems,
     organization_namespace,
     ready_problems,
     waiting_kustomizations,
@@ -71,11 +72,44 @@ def test_waiting_problems_while_the_namespace_is_missing() -> None:
     assert waiting_problems(kustomization(NAME, "False", FORBIDDEN), NAMESPACE) == []
 
 
-def test_waiting_problems_behind_one_that_waits() -> None:
-    # a Kustomization that depends on the one that fails for want of the namespace waits too
-    k = kustomization(NAME, "False", "dependency 'default/other' is not ready")
-    k["status"]["conditions"][0]["reason"] = "DependencyNotReady"
-    assert waiting_problems(k, NAMESPACE) == []
+def waits_for_namespace(name: str, depends_on: str = "") -> dict:
+    k = kustomization(name, "False", NOT_FOUND, target=NAMESPACE)
+    if depends_on:
+        k["spec"]["dependsOn"] = [{"name": depends_on}]
+        k["status"]["conditions"][0]["reason"] = "DependencyNotReady"
+        k["status"]["conditions"][0][
+            "message"
+        ] = f"dependency 'default/{depends_on}' is not ready"
+    return k
+
+
+def test_namespace_waiting_problems_behind_one_that_waits() -> None:
+    # one that depends on a Kustomization that fails for want of the namespace waits too
+    first = waits_for_namespace(NAME)
+    behind = waits_for_namespace("golem-organization-acme-extra", depends_on=NAME)
+    assert namespace_waiting_problems([first, behind], NAMESPACE) == []
+
+
+def test_namespace_waiting_problems_behind_something_else() -> None:
+    # waiting for an unrelated dependency isn't waiting for the namespace
+    first = waits_for_namespace(NAME)
+    behind = waits_for_namespace(
+        "golem-organization-acme-extra", depends_on="elsewhere"
+    )
+    assert namespace_waiting_problems([first, behind], NAMESPACE) == [
+        "Kustomization 'default/golem-organization-acme-extra' doesn't wait for namespace "
+        f"'{NAMESPACE}': Ready is False: dependency 'default/elsewhere' is not ready"
+    ]
+
+
+def test_namespace_waiting_problems_without_any() -> None:
+    # an Organization the roots applied, and nothing that applies into its namespace
+    assert namespace_waiting_problems([kustomization("golem-gitops")], NAMESPACE) == [
+        f"No Kustomization applies into namespace '{NAMESPACE}' from another namespace, so "
+        "the stand-in can't tell that the Organization's namespace is awaited: give the "
+        "organisation a namespace Kustomization with `targetNamespace: "
+        f"{NAMESPACE}`, as the basic tutorial does"
+    ]
 
 
 def test_waiting_problems_ready_without_the_namespace() -> None:
