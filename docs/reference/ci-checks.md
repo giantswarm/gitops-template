@@ -488,7 +488,7 @@ merge base and its head. The light run happens only when every file is one of th
 
 | The file | Why it doesn't count |
 | --- | --- |
-| `*.md`, except under `bases/` and `management-clusters/` | No test reads Markdown. `tools/test-all-ff validate` copies `bases/` and `management-clusters/` and checks `check-directory-readmes` on the copy, whose expected results depend on what those READMEs say. |
+| `*.md`, anywhere | Neither test reads Markdown, except the self-tests of `check-directory-readmes` in `tools/test-all-ff validate`, which depend on four READMEs under `bases/` and `management-clusters/`. A README change that breaks them also fails `check-directory-readmes` itself, a `pre-commit` hook that the light run runs as well. |
 | `docs/` | Documentation; no test reads it. |
 | `renovate.json5` | Read by Renovate only. |
 | `tests/chainsaw/` | Run by `chainsaw.yaml` against a management cluster. `tools/test-all-ff` leaves out `tests/`, and `tests/ats` doesn't read it. |

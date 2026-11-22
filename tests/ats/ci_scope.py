@@ -39,7 +39,9 @@ FULL = "full"
 # Paths neither test reads, as fnmatch patterns where `*` also matches `/`. A fork adds its own
 # here, such as a directory of notes. See docs/how-to/configure-ci.md.
 IGNORABLE = (
-    # Markdown, read by no test but test-all-ff's own checks, see NOT_IGNORABLE.
+    # Markdown, anywhere. The READMEs under bases/ and management-clusters/ are also read by
+    # test-all-ff validate's self-tests of tools/check-directory-readmes, but a README change that
+    # breaks those also fails the check itself, a pre-commit hook that the light run runs too.
     "*.md",
     "docs/*",
     # Read by Renovate only.
@@ -55,10 +57,6 @@ IGNORABLE = (
 )
 # Paths of IGNORABLE that a test does read.
 NOT_IGNORABLE = (
-    # test-all-ff validate copies both and checks tools/check-directory-readmes on the copy; the
-    # check reads the READMEs, and the self-test's expected results depend on what they say.
-    "bases/*",
-    "management-clusters/*",
     # The workflows of this run, and so of what it runs.
     ".github/workflows/validate.yaml",
     ".github/workflows/validate-light.yaml",

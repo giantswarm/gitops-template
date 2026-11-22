@@ -58,6 +58,9 @@ def test_markdown_only(tmp_path: Path) -> None:
         "LICENSE",
         "CHANGELOG.md",
         "tools/README.md",
+        # A README change that breaks test-all-ff's self-tests also fails the pre-commit hook.
+        "bases/environments/stages/README.md",
+        "management-clusters/MC_NAME/README.md",
     ],
 )
 def test_ignorable_paths(tmp_path: Path, path: str) -> None:
@@ -76,9 +79,9 @@ def test_ignorable_paths(tmp_path: Path, path: str) -> None:
         ".pre-commit-config.yaml",
         ".github/workflows/validate.yaml",
         ".github/workflows/validate-light.yaml",
-        # test-all-ff's self-tests copy the READMEs of these two and depend on what they say.
-        "bases/environments/stages/README.md",
-        "management-clusters/MC_NAME/README.md",
+        # Only Markdown is ignorable below these two.
+        "bases/environments/stages/kustomization.yaml",
+        "management-clusters/MC_NAME/notes.txt",
     ],
 )
 def test_paths_the_tests_read(tmp_path: Path, path: str) -> None:
@@ -94,6 +97,25 @@ def test_ignorable_yaml_with_a_flux_object(tmp_path: Path) -> None:
     path = "docs/example.yaml"
     head = {path: "apiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\n"}
     assert scope(tmp_path, [entry(path)], {path: "a: 1\n"}, head)[0] == FULL
+
+
+README = "management-clusters/MC_NAME/apps/README.md"
+
+
+@pytest.mark.parametrize(
+    ("head", "expected"),
+    [
+        (CONFIG_MAP, LIGHT),
+        ("# a comment\n" + CONFIG_MAP, LIGHT),
+        (CONFIG_MAP.replace("'1'", "'2'"), FULL),
+    ],
+)
+def test_example_readme_with_a_manifest(
+    tmp_path: Path, head: str, expected: str
+) -> None:
+    files = [entry(README), entry(MANIFEST)]
+    base = {README: "a", MANIFEST: CONFIG_MAP}
+    assert scope(tmp_path, files, base, {README: "b", MANIFEST: head})[0] == expected
 
 
 def test_comment_only_yaml_change(tmp_path: Path) -> None:

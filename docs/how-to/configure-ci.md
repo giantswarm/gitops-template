@@ -94,9 +94,9 @@ gives each changed file one of three answers:
 
 - **No test reads it.** The file matches a pattern in `IGNORABLE` at the top of the module and none in
   `NOT_IGNORABLE`: Markdown, `docs/`, `renovate.json5`, `tests/chainsaw/`, the workflows other than `validate.yaml`
-  and `validate-light.yaml`, `.gitignore`, `CODEOWNERS` and `LICENSE`. Markdown under `bases/` and
-  `management-clusters/` doesn't count, as `tools/test-all-ff validate` checks those READMEs. Nor does a `*.yaml`
-  that names a Flux API, wherever it is, as `tools/test-all-ff` reads every such file outside `tests/`.
+  and `validate-light.yaml`, `.gitignore`, `CODEOWNERS` and `LICENSE`. That includes the READMEs of the examples:
+  `check-directory-readmes` still checks them in the light run. A `*.yaml` that names a Flux API counts, wherever it
+  is, as `tools/test-all-ff` reads every such file outside `tests/`.
 - **Same YAML.** A YAML file changed only in its comments, whitespace, quoting or the order of its keys. The order of
   documents and of list items counts, and so does a value spelled differently, such as `yes` for `true`.
 - **Anything else counts:** a real change, however small, a file added, removed or renamed, YAML that doesn't parse.
