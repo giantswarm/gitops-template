@@ -36,7 +36,7 @@ def objects_of(doc: object) -> list[dict]:
     """`doc` if it's an object, and the objects it renders if it's a ResourceSet."""
     if not isinstance(doc, dict):
         return []
-    rendered = []
+    rendered: list[object] = []
     if doc.get("kind") == "ResourceSet":
         rendered = (doc.get("spec") or {}).get("resources") or []
     return [doc] + [resource for resource in rendered if isinstance(resource, dict)]
