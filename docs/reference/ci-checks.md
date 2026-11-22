@@ -377,7 +377,10 @@ each example's provider once and waits for its `ResourceSet`, before it checks t
   [Move a running cluster to scheduled upgrades](../how-to/scheduled-upgrades-existing-cluster.md) does, without a
   commit: it suspends the cluster's `Kustomization`, applies the provider and the `ResourceSet` built from the moved
   directory, pinned to the release the cluster runs, and forces the provider. The `ResourceSet` has to take the
-  `HelmRelease` and `OCIRepository` over with the same `valuesFrom`, and the release mustn't be upgraded. Then it
+  `HelmRelease` and `OCIRepository` over with the same `valuesFrom`, and their specs mustn't change otherwise: the
+  chart reference, the tag and the values are what helm-controller upgrades a release on. The kind test never installs
+  a cluster chart, as `release-aws` can't render without a real management cluster, so the check can't watch for an
+  upgrade itself; that the unchanged specs mean none comes from helm-controller's source, not from the test. Then it
   deletes the two, takes the `ResourceSet`'s labels off the objects and resumes the `Kustomization`. It doesn't push the
   move to Git, so it doesn't show that Flux lets go of the objects when their files go; `test_prune` shows that for
   the `prune: disabled` annotation.

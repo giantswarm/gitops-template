@@ -7,7 +7,10 @@ it suspends the cluster's Kustomization, which stands in for Flux letting go of 
 once the move is pushed, applies the provider and the ResourceSet that cluster_move builds from
 the moved directory, with the range pinned to the release the cluster runs, and forces the
 provider. The ResourceSet has to take both objects over with the cluster's `valuesFrom`, and
-helm-controller mustn't upgrade the release.
+nothing helm-controller decides an upgrade on may change: the chart reference, the tag,
+`valuesFrom` and `values`. The kind test never installs a cluster chart, so it can't see a Helm
+revision; helm-controller v1.4.5 upgrades only on a changed chart or values
+(`DetermineReleaseState`), which is what the unchanged specs stand for.
 
 Afterwards it deletes the ResourceSet and the provider, which keep the two objects, as
 `fluxcd.controlplane.io/prune: disabled` says, takes the ResourceSet's labels and annotation
@@ -17,10 +20,16 @@ off them, and resumes the Kustomization, which takes them back.
 from pathlib import Path
 
 import pykube
-from checks.conditions import is_ready, not_ready_reason
 from checks.kinds import OCIRepositoryCR
 from checks.waits import fail_on_problems
-from cluster_move import copy_cluster, move, named, substitute, values_from_problems
+from cluster_move import (
+    copy_cluster,
+    move,
+    named,
+    spec_changes,
+    substitute,
+    values_from_problems,
+)
 from flux_reconcile import suspend, wait_until
 from prune_source import kustomization
 from pykube.objects import APIObject
@@ -63,32 +72,29 @@ def moved_objects(tmp_path: Path, release: str) -> list[dict]:
     return [provider, named(objects, "ResourceSet", MOVED_CLUSTER)]
 
 
-def release_version(hr: dict) -> int | None:
-    """The revision of the Helm release the HelmRelease last installed or upgraded."""
-    history = (hr.get("status") or {}).get("history") or []
-    return history[0].get("version") if history else None
-
-
 def taken_over_problems(obj: APIObject) -> list[str]:
-    """Why `obj` isn't the ResourceSet's yet, or helm-controller hasn't reconciled its spec."""
+    """Why `obj` isn't the ResourceSet's yet. The ResourceSet sets its labels in the same
+    apply as the spec, so once they're there, the spec is what it rendered."""
     obj.reload()
     labels = obj.obj["metadata"].get("labels") or {}
     if labels.get("resourceset.fluxcd.controlplane.io/name") != MOVED_CLUSTER:
         return [f"{obj.kind} '{MOVED_CLUSTER}' isn't the ResourceSet's"]
-    status = obj.obj.get("status") or {}
-    if status.get("observedGeneration") != obj.obj["metadata"][
-        "generation"
-    ] or not is_ready(obj.obj):
-        return [f"{obj.kind} '{MOVED_CLUSTER}': {not_ready_reason(obj.obj)}"]
     return []
 
 
 def move_problems(api: pykube.HTTPClient, tmp_path: Path) -> list[str]:
-    """Move the cluster; return how its HelmRelease changed."""
-    hr = get(api, HelmReleaseCR, MOVED_CLUSTER)
-    before = hr.obj["spec"].get("valuesFrom") or []
-    version = release_version(hr.obj)
-    release = get(api, OCIRepositoryCR, MOVED_CLUSTER).obj["spec"]["ref"]["tag"]
+    """Move the cluster; return how the specs of its HelmRelease and OCIRepository changed.
+
+    helm-controller upgrades a release when its chart or its values change, so the same chart
+    reference, tag, `valuesFrom` and `values` mean no upgrade. The kind test can't watch for
+    one: it never installs a cluster chart, so there is no Helm revision to compare.
+    """
+    objects = [
+        get(api, HelmReleaseCR, MOVED_CLUSTER),
+        get(api, OCIRepositoryCR, MOVED_CLUSTER),
+    ]
+    before = {o.kind: o.obj["spec"] for o in objects}
+    release = before["OCIRepository"]["ref"]["tag"]
     for obj in moved_objects(tmp_path, release):
         kind = (
             ResourceSetCR
@@ -97,18 +103,17 @@ def move_problems(api: pykube.HTTPClient, tmp_path: Path) -> list[str]:
         )
         kind(api, obj).create()
     install_now(api, MOVED_PROVIDER, MOVED_CLUSTER)
-    source = get(api, OCIRepositoryCR, MOVED_CLUSTER)
     wait_until(
-        lambda: taken_over_problems(hr) + taken_over_problems(source),
+        lambda: [p for o in objects for p in taken_over_problems(o)],
         READY_TIMEOUT_SEC,
         "the ResourceSet didn't take the cluster over",
     )
-    problems = values_from_problems(before, hr.obj["spec"].get("valuesFrom") or [])
-    if release_version(hr.obj) != version:
-        problems.append(
-            f"the move upgraded the release from revision {version} to "
-            f"{release_version(hr.obj)}"
-        )
+    hr = objects[0].obj["spec"]
+    problems = values_from_problems(
+        before["HelmRelease"].get("valuesFrom") or [], hr.get("valuesFrom") or []
+    )
+    for o in objects:
+        problems += spec_changes(o.kind, before[o.kind], o.obj["spec"], NAMESPACE)
     return problems
 
 

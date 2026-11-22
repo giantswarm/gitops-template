@@ -136,5 +136,5 @@ kubectl get helmrelease ${WC_NAME} -n org-${ORG_NAME} -o jsonpath='{.status.hist
 ```
 
 The repository's tests make the same move on the `WC_NAME` example: `tests/ats/test_cluster_move.py` builds it without
-a cluster and fails if a `valuesFrom` entry goes missing, and the kind test moves the running cluster and checks that
-its values stay and its release isn't upgraded, see [The kind test](../reference/ci-checks.md#flux-operator).
+a cluster and fails if a `valuesFrom` entry goes missing, and the kind test moves the cluster and checks that
+the `ResourceSet` takes it over with the same values, chart and tag, see [The kind test](../reference/ci-checks.md#flux-operator).

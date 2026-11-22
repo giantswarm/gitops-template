@@ -10,6 +10,7 @@ example's `patch_cluster_userconfig.yaml` appends the cluster's own values to th
 the ResourceSet renders.
 """
 
+import copy
 import re
 import shutil
 from pathlib import Path
@@ -126,4 +127,24 @@ def substitute(objects: list[dict], variables: dict[str, str]) -> list[dict]:
     return [
         yaml.safe_load(VARIABLE.sub(replace, yaml.safe_dump(o, sort_keys=False)))
         for o in objects
+    ]
+
+
+def spec_changes(kind: str, before: dict, after: dict, namespace: str) -> list[str]:
+    """How the live `spec` of the cluster's `kind` object changed when the ResourceSet took it
+    over. A `chartRef.namespace` that names the HelmRelease's own `namespace` means the same as
+    none, which is how the ResourceSet renders it."""
+
+    def normal(spec: dict) -> dict:
+        spec = copy.deepcopy(spec)
+        chart_ref = spec.get("chartRef") or {}
+        if kind == "HelmRelease" and chart_ref.get("namespace") == namespace:
+            del chart_ref["namespace"]
+        return spec
+
+    b, a = normal(before), normal(after)
+    return [
+        f"{kind} spec.{key} changed from {b.get(key)!r} to {a.get(key)!r}"
+        for key in sorted(set(b) | set(a))
+        if b.get(key) != a.get(key)
     ]

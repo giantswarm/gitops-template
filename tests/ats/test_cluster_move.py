@@ -10,6 +10,7 @@ from cluster_move import (
     copy_cluster,
     move,
     rendered_values_from,
+    spec_changes,
     values_from_problems,
 )
 from root_build import build
@@ -54,4 +55,19 @@ def test_move_without_retargeting_loses_the_cluster_values(tmp_path: Path) -> No
     assert values_from_problems(before, after) == [
         "the rendered HelmRelease lacks the valuesFrom entry ConfigMap "
         "'${cluster_name}-cluster-userconfig'"
+    ]
+
+
+def test_spec_changes_none_for_an_implicit_chart_namespace() -> None:
+    before = {"chartRef": {"kind": "OCIRepository", "name": "c", "namespace": "ns"}}
+    after = {"chartRef": {"kind": "OCIRepository", "name": "c"}}
+    assert spec_changes("HelmRelease", before, after, "ns") == []
+
+
+def test_spec_changes_reports_values() -> None:
+    before = {"valuesFrom": [ENTRY_A], "interval": "5m"}
+    after = {"valuesFrom": [ENTRY_A, ENTRY_B], "interval": "5m"}
+    assert spec_changes("HelmRelease", before, after, "ns") == [
+        f"HelmRelease spec.valuesFrom changed from {[ENTRY_A]!r} to "
+        f"{[ENTRY_A, ENTRY_B]!r}"
     ]
