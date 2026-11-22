@@ -109,7 +109,8 @@ jobs:
   # required checks would wait for a run that never comes. This caller has the
   # same name, and validate-light.yaml has jobs with the names of the
   # shared workflow's, so the same checks report: check-pre-commit runs the
-  # pre-commit hooks, validate and test_on_kind are skipped, which passes.
+  # pre-commit hooks, validate and test_on_kind are skipped, which passes. Its
+  # own test_without_cluster runs the tests in tests/ats that need no cluster.
   validate-light:
     name: validate
     needs: changes
