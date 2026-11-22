@@ -295,10 +295,6 @@ get `Ready`. The test also creates what they need:
   each comes from, so the test doesn't download them.
 - in the vCluster, the `giantswarm-critical` PriorityClass, which the cluster chart creates in every Giant Swarm
   workload cluster. The `envoy-gateway` Deployment's pods can't be created without it.
-- in the vCluster, Flux's `GitRepository` and `Kustomization` CRDs, copied from the test cluster, where flux-app
-  installed them. The `-direct` Kustomization delivers the `GitRepository` and `Kustomization` of the
-  [application team](../tutorials/advanced/teams.md) `hello-team-wc`, whose Flux runs in the workload cluster. The
-  vCluster runs no Flux: the objects only have to exist.
 
 The vCluster runs CoreDNS, as the apps run pods there.
 
@@ -313,8 +309,6 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
   [application team](../tutorials/advanced/teams.md) `hello-team` delivers from its own repository into its namespace. Its
   `Kustomization` runs as the `automation` ServiceAccount of `org-org-name`, which the organization-operator stand-in
   creates with the rights a Giant Swarm management cluster gives it.
-- The `GitRepository` and `Kustomization` of the application team `hello-team-wc` only have to exist, as nothing in
-  the vCluster reconciles them.
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
   its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
 
@@ -431,3 +425,19 @@ are on the management cluster and in the workload cluster. The kind cluster has 
 management cluster; the [workload cluster secret store test](#workload-cluster-secret-stores) relies on it as well.
 CI can't reach a cloud secret manager, so `tools/test-all-ff validate` only builds each base in `bases/secret_stores`
 and checks it against the schemas of its kinds.
+
+### Pulled out-of-band directories
+
+A workload cluster's own Flux pulls the `out-of-band` directory of the
+[`out-of-band-flux-app`](../tutorials/advanced/out-of-band.md#run-flux-in-the-workload-cluster) example, so no
+`Kustomization` in the repository builds it, and the kind test, which runs no Flux in a workload cluster, doesn't
+apply it. `tools/test-all-ff validate` checks the manifests of every such directory against the schemas of their
+kinds. That includes the [application team](../tutorials/advanced/teams.md) `hello-team-wc`, whose Flux runs in the
+workload cluster.
+
+### Object names
+
+A schema doesn't cover an object's name, and the API server refuses one that isn't a lowercase RFC 1123 subdomain.
+`tests/ats/test_object_names.py` checks, without a cluster, the name of every object in the YAML files of `bases/`
+and `management-clusters/`, and of every object a `ResourceSet` there renders, with the variables Flux substitutes
+filled in.
