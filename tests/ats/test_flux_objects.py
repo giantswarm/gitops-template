@@ -149,10 +149,12 @@ def test_positive_assertions(
 
 
 def test_workload_cluster_assertions(
+    kube_cluster: Cluster,
     workload_cluster: pykube.HTTPClient,
     check_kustomizations_successful: None,
     check_helm_release_successful: dict[str, dict],
 ) -> None:
+    # kube_cluster and workload_cluster give a failure workload_diagnostics' report of both
     # The -direct out-of-band Kustomization and the H3a HelmReleases install into the
     #  workload cluster through its kubeconfig Secret; the test's vCluster stands in for it.
     assertions = load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR)
@@ -196,8 +198,10 @@ def test_node_pools(
 
 def test_values_change_applied_at_once(
     kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
     check_helm_release_successful: dict[str, dict],
 ) -> None:
+    # the release installs into workload_cluster, which workload_diagnostics reports on failure
     check_values_change_applied(kube_cluster.kube_client)
 
 
