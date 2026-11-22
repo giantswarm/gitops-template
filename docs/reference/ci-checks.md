@@ -175,12 +175,15 @@ objects are stored in: the CRDs are installed without their conversion webhook, 
 conversion.
 
 The test does that for every cluster whose apps wait for it, as listed in `GATES` in
-[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with `Available` `False`.
-The cluster's `Kustomization` still has to apply the base apps, while the apps `Kustomization` has to report
-`DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization` has to
-get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
-`Kustomization`s only get `Ready` once their `Cluster` is `Available`. When you add a cluster with apps, add it to
-`GATES`: a test without the cluster compares the list with the `Kustomization`s in the repository.
+[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with a node pool short
+of its minimum: `WorkersAvailable` and `Available` stay `False` throughout. First its `ControlPlaneAvailable` and
+`RemoteConnectionProbe` are `False` too. The cluster's `Kustomization` still has to apply the base apps, while the
+apps `Kustomization` has to report `DependencyNotReady` without applying anything. Then it sets both to `True`, and
+the apps `Kustomization` has to get `Ready`, though the cluster still isn't `Available`.
+`test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster `Kustomization`s only
+get `Ready` once their `Cluster`'s control plane is up. When you add a cluster with apps, add it to `GATES`: a test
+without the cluster compares the list with the `Kustomization`s in the repository, and checks that each one's health
+check waits for the control plane and not for `Available`.
 
 The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 

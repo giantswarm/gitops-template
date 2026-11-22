@@ -52,8 +52,9 @@ pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert", "flux_operato
 def cluster_gate_problems(
     kube_cluster: Cluster, gitops_deployment: None
 ) -> Iterator[list[str]]:
-    # The cluster Kustomizations get ready only once their stand-in Cluster is Available, so
-    #  this runs before the Kustomizations are checked; test_apps_wait_for_cluster reports it.
+    # The cluster Kustomizations get ready only once their stand-in Cluster's control plane is
+    #  up, so this runs before the Kustomizations are checked; test_apps_wait_for_cluster
+    #  reports it.
     clusters = stand_in_clusters(kube_cluster.kube_client)
     yield check_cluster_gate(clusters)
     for cluster in clusters:
@@ -243,7 +244,7 @@ def test_workload_cluster_secret_store(
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
-    # G1: a cluster's apps Kustomizations apply nothing until the cluster is Available
+    # G1: a cluster's apps Kustomizations apply nothing until the cluster's control plane is up
     assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
 
 

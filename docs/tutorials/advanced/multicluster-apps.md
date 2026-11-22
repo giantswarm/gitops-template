@@ -286,7 +286,7 @@ retries until then. That dependency is the example app's own, and needs envoy-ga
 
 Nothing fails meanwhile. The `ResourceSet` applies the `HelmRelease` without waiting for it, and the multicluster
 `Kustomization` applies only the `ResourceSet` and its provider. Unlike a cluster's apps `Kustomization`, it doesn't
-wait for the Cluster API `Cluster` to be `Available`. A `HelmRelease` can only depend on other `HelmRelease`s, so an
+wait for the Cluster API `Cluster`'s control plane. A `HelmRelease` can only depend on other `HelmRelease`s, so an
 app of your own without such a dependency would only wait for the cluster's kubeconfig Secret: it fails, and retries,
 until the Secret exists. That's harmless, but noisy; give your app a `dependsOn` on a release the cluster installs with
 itself if you'd rather it waited quietly.

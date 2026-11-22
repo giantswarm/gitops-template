@@ -8,7 +8,8 @@ with SOPS and the cluster's own age key. Start here if you want a cluster and no
 Two Flux Kustomizations, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
 the age key `sops-age-wc-name`, from the organisation's `namespace/secrets/`:
 
-- `WC_NAME.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster Available.
+- `WC_NAME.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster's control plane available and
+  reachable.
 - `WC_NAME-apps.yaml` then applies this directory, whose `kustomization.yaml` lists only `apps/`.
 
 ## What's here

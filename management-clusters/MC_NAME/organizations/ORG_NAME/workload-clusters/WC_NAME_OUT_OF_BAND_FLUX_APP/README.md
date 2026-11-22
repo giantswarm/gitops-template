@@ -11,7 +11,8 @@ cluster also shows App Templates, a stack as base apps, and an app that updates 
 Two Flux Kustomizations, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
 the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 
-- `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster Available.
+- `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster's control
+  plane available and reachable.
 - `WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml` then applies this directory, whose `kustomization.yaml` lists only `apps/`.
 
 ## What's here

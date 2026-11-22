@@ -11,7 +11,7 @@ pushed into the cluster, and application teams that deliver from their own repos
 Three Flux Kustomizations, next to this directory in `workload-clusters/`, apply it:
 
 - `WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml` applies `cluster/` into `org-<name>`, and is Ready once Cluster API reports
-  the cluster Available.
+  the cluster's control plane available and reachable.
 - `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml` then applies this directory into `org-<name>`, whose
   `kustomization.yaml` lists `apps/` and `teams/`.
 - `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies `out-of-band/` into the workload cluster itself.

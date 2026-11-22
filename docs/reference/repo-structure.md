@@ -432,14 +432,20 @@ A cluster with apps has two Kustomizations:
    ones the cluster needs from the start, such as the Gateway API charts of the
    [envoy-gateway](/bases/stacks/envoy-gateway/) stack in the out-of-band examples. Flux applies them with the cluster,
    and their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name
-   the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available`
-   condition is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster
-   coming up. While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you
-   push to the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
-   Kustomization reports `DependencyNotReady` all the while.
+   the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its
+   `ControlPlaneAvailable` and `RemoteConnectionProbe` conditions are `True`: the control plane is up and the
+   management cluster can reach it, which is all the apps need to install. The Kustomization only gets `Ready` then,
+   so its `timeout` of 30 minutes covers a new cluster coming up. While the control plane isn't up, each
+   reconciliation waits for up to those 30 minutes: a change you push to the cluster's files, such as a fix to its
+   values, is only applied after the wait runs out, and the apps Kustomization reports `DependencyNotReady` all the
+   while. The check doesn't wait for the cluster's `Available` condition, which also counts every node pool: with it,
+   one node pool short of its minimum would hold back every change to the cluster's apps, including the one that
+   would fix it. Cluster API keeps `ControlPlaneAvailable` `True` through a rolling upgrade of the control plane while
+   enough of it is healthy, and reports `RemoteConnectionProbe` `False` only once the cluster has been unreachable for
+   50 seconds.
 1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps`, which its `kustomization.yaml`
-   lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster is
-   `Available`. Until then, it reports `DependencyNotReady`.
+   lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster's control
+   plane is up. Until then, it reports `DependencyNotReady`.
 
 Name the cluster in `healthChecks` with its name written out, such as `capi-wc-name`, and the namespace as
 `org-${organization}`. Flux doesn't substitute variables in a `Kustomization`'s own spec, but `namespace.yaml`, which

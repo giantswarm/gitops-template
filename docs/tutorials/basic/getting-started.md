@@ -696,7 +696,9 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
    directory. The organisation's namespace `Kustomization` applies it into `org-${ORG_NAME}`, where it runs as that
    namespace's `automation` ServiceAccount and reads your `GitRepository` in `default`. Its `dependsOn` names the
    organisation's namespace `Kustomization`, so that one always applies a commit first. Its health check waits until
-   Cluster API reports the cluster `Available`, which can take up to its `timeout` of 30 minutes.
+   Cluster API reports the cluster's control plane available and reachable, which can take up to its `timeout` of 30
+   minutes. It doesn't wait for every node pool: the apps only need the control plane, and a node pool that's short
+   of machines later on shouldn't hold back a change to them.
 
     It doesn't name the organisation: it writes `${organization}`, and the organisation's namespace `Kustomization`
     fills that in from the `Organization` when it applies the file, so the name stays set in one place. The
@@ -720,7 +722,9 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
       healthCheckExprs:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
-          current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
+          current: >-
+            status.conditions.exists(c, c.type == 'ControlPlaneAvailable' && c.status == 'True')
+            && status.conditions.exists(c, c.type == 'RemoteConnectionProbe' && c.status == 'True')
       healthChecks:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
