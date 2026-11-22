@@ -2,6 +2,7 @@
 assertions. The checks are in `checks`."""
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pykube
 import pytest
@@ -31,6 +32,7 @@ from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from resource_set_cluster_guard import check_cluster_input_loss
 from resource_set_guard import check_input_loss
+from resource_set_move import check_move
 from resource_set_objects import EXAMPLES, install_now
 from resource_set_schedule import check_schedule_window
 from resource_set_upgrade import check_scheduled_cluster_upgrade
@@ -270,6 +272,14 @@ def test_input_loss_keeps_the_cluster(
     kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
 ) -> None:
     check_cluster_input_loss(kube_cluster.kube_client)
+
+
+def test_move_to_scheduled_upgrades(
+    kube_cluster: Cluster,
+    tmp_path: Path,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    check_move(kube_cluster.kube_client, tmp_path)
 
 
 # must stay last: it deletes what the tests above check

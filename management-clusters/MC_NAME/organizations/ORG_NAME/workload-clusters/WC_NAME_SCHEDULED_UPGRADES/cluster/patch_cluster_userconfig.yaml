@@ -1,0 +1,16 @@
+# The cluster's own values, after the base's and the region's. The ResourceSet in
+# cluster-resource-set.yaml renders the cluster's HelmRelease, so this patch
+# targets the ResourceSet, see kustomization.yaml, and appends to the
+# HelmRelease in its `resources`, the second. A patch aimed at a HelmRelease, as
+# an ordinary cluster has, would match nothing here, and kustomize says nothing
+# about a patch that matches nothing. The `test` fails the build if the
+# HelmRelease isn't the second resource any more.
+- op: test
+  path: /spec/resources/1/kind
+  value: HelmRelease
+- op: add
+  path: /spec/resources/1/spec/valuesFrom/-
+  value:
+    kind: ConfigMap
+    name: ${cluster_name}-cluster-userconfig
+    valuesKey: values

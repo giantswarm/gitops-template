@@ -41,3 +41,6 @@ spec:
     - kind: ConfigMap
       name: scheduled-upgrades-region-config
       valuesKey: values
+    - kind: ConfigMap
+      name: scheduled-upgrades-cluster-userconfig
+      valuesKey: values

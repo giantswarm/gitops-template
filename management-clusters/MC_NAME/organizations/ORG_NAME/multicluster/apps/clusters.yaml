@@ -1,8 +1,10 @@
 # The workload clusters that every app in this directory is installed on. To roll
 # the apps out to a new cluster, add its name here; removing a name uninstalls
-# them from that cluster. kustomization.yaml applies this to every ResourceSet
-# here: with `inputStrategy: Permute`, each ResourceSet reads the name as
-# `inputs.<its name, with _ for ->.cluster`.
+# them from that cluster. Removing the last one doesn't: with no clusters, each
+# ResourceSet fails to build and keeps what it installed. To take an app off
+# every cluster, remove it from kustomization.yaml instead. kustomization.yaml
+# applies this to every ResourceSet here: with `inputStrategy: Permute`, each
+# ResourceSet reads the name as `inputs.<its name, with _ for ->.cluster`.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
