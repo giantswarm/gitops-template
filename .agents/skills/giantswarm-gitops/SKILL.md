@@ -15,9 +15,10 @@ are from the repository root.
 
 ## Before you change anything
 
-1. Find out whose repository this is. The template (`giantswarm/gitops-template`) holds examples with placeholder
-   names such as `MC_NAME` and `WC_NAME`. A fork holds a customer's real clusters, and a merge there changes
-   production. Keys and secrets in a fork are real.
+1. Find out whose repository this is. It's the template when the change is going to `giantswarm/gitops-template`:
+   that's the `origin` of the clone, or where the pull request will go. Anything else is a fork, which holds a
+   customer's real clusters next to the template's examples (the directories named `MC_NAME`, `ORG_NAME` and
+   `WC_NAME`, which a fork may keep). A merge in a fork changes production, and its keys and secrets are real.
 2. Read the `README.md` of the directory you're about to change, and `docs/reference/repo-structure.md` for the rule
    you're about to rely on.
 3. If the task needs something the platform doesn't allow (see below), stop and say so. Don't write a workaround into
