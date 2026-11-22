@@ -23,7 +23,8 @@ from ci_context import master_gpg_key
 from flux_teardown import delete_without_prune
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
-# flux_install have fixtures; external_secrets installs External Secrets Operator;
+# flux_install have fixtures; admission_policies applies the platform's Flux admission
+# policies; external_secrets installs External Secrets Operator;
 # notification_objects suspends the notification example's Alert; automation_rbac gives the
 # `automation` ServiceAccounts the rights they have on a management cluster;
 # flux_operator_install installs Flux Operator; organization_operator stands in for
@@ -33,6 +34,7 @@ from flux_teardown import delete_without_prune
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
+    "admission_policies",
     "flux_install",
     "external_secrets",
     "notification_objects",

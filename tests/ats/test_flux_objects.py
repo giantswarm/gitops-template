@@ -40,12 +40,14 @@ from values_watch import check_values_change_applied
 from workload_cluster_secret_stores import check_workload_cluster_secret_store
 from workload_cluster_secrets import check_secrets_pushed
 
-# Kyverno has to run before gitops_deployment installs External Secrets Operator, and Flux
-#  Operator before it applies the repository: pytest sets up the fixtures of `usefixtures`
-#  before the ones a test requests.
+# Kyverno has to run before gitops_deployment installs External Secrets Operator, and the
+#  platform's admission policies and Flux Operator before it applies the repository: pytest
+#  sets up the fixtures of `usefixtures` before the ones a test requests.
 #  The management cluster's Alert of the notification example has to be suspended before then,
 #  too; organization_operator suspends the organisation's, before Flux can apply it.
-pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert", "flux_operator")
+pytestmark = pytest.mark.usefixtures(
+    "kyverno", "admission_policies", "suspended_alert", "flux_operator"
+)
 
 
 @pytest.fixture(scope="module")

@@ -271,8 +271,31 @@ rules, [tests/ats/automation_bindings.py](../../tests/ats/automation_bindings.py
 [tests/ats/automation_accounts.py](../../tests/ats/automation_accounts.py) the bindings, and each names the file and
 lines each object comes from. rbac-operator builds `read-all` from the API server's discovery, so the test
 does too: it covers the resources served when the fixture runs. The test leaves out the binding to Crossplane's
-`crossplane-edit`, which rbac-operator creates only where Crossplane runs, and Kyverno policies that limit Flux on a
-management cluster. When rbac-operator changes the rights, update the modules and the commits.
+`crossplane-edit`, which rbac-operator creates only where Crossplane runs. When rbac-operator changes the rights, update
+the modules and the commits.
+
+## Admission policies
+
+Rights decide what `automation` may do; two Kyverno `ClusterPolicy`s decide which Flux objects a management cluster
+admits at all. Every Giant Swarm management cluster enforces them, and so does the kind test, from
+[tests/ats/fixtures/admission-policies](../../tests/ats/fixtures/admission-policies/README.md), copied from
+management-cluster-bases at `54ec7bdb049a14d343999107abe7174cb65fd9f2`. The `admission_policies` fixture applies them
+once Kyverno runs and waits until both are `Ready`, before Flux applies the repository. An object that breaks a rule is
+refused, its `Kustomization` fails, and so does the test.
+
+Outside `flux-giantswarm`, `giantswarm` and `monitoring`:
+
+- `flux-multi-tenancy`: a `Kustomization` or `HelmRelease` sets `serviceAccountName`, or a kubeconfig with
+  `spec.kubeConfig.secretRef`. Its `targetNamespace` is its own namespace or an `org-*` namespace other than
+  `org-giantswarm`, unless it has a kubeconfig. A `HelmRelease`'s `storageNamespace` is its own namespace, unless it
+  has a kubeconfig. A `Kustomization`'s `sourceRef` and a `HelmRelease`'s chart source are in its own namespace or
+  `default`. An `Alert`'s event sources, a `Receiver`'s resources and an `ImagePolicy`'s `ImageRepository` are in its
+  own namespace.
+- `flux-operator-multi-tenancy`: a `ResourceSet` sets `serviceAccountName`, and a `FluxInstance` exists only in
+  `flux-giantswarm`.
+
+When management-cluster-bases changes them, copy them again and update the commit in the files, in their README and in
+`SOURCE_COMMIT` in [tests/ats/admission_policies.py](../../tests/ats/admission_policies.py).
 
 ## The `out-of-band-no-flux` workload cluster
 
