@@ -7,6 +7,8 @@ data:
       branch: main
       url: https://github.com/my-repository
       provider: github
+      # placeholders: real credentials don't belong in a ConfigMap, put them in the
+      # ${cluster_name}-flux-app-user-secrets Secret, encrypted with SOPS, which the HelmRelease reads too
       credentials:
         username: fakeuser
         password: faketoken
