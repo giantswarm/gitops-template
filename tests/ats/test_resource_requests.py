@@ -6,7 +6,10 @@ from resource_requests import (
     cpu_millicores,
     memory_bytes,
     node_allocation,
+    planned_cpu,
     pod_requests,
+    requested_cpu,
+    room_problems,
 )
 
 MI = 1024 * 1024
@@ -109,3 +112,61 @@ def test_node_allocation_counts_the_pods_that_hold_the_node() -> None:
         "unscheduled hello-world/waiting: requests 200m CPU, 50Mi memory: "
         "Unschedulable: 0/1 nodes are available: 1 Insufficient cpu."
     )
+
+
+def deployment(name: str, replicas: int, cpu: str, max_surge: object = None) -> dict:
+    spec: dict = {
+        "replicas": replicas,
+        "template": {"spec": {"containers": [container(cpu, "50Mi")]}},
+    }
+    if max_surge is not None:
+        spec["strategy"] = {"rollingUpdate": {"maxSurge": max_surge}}
+    return {"metadata": {"name": name, "namespace": "hello-world"}, "spec": spec}
+
+
+def hpa(target: str, min_replicas: int) -> dict:
+    return {
+        "metadata": {"name": target, "namespace": "hello-world"},
+        "spec": {
+            "minReplicas": min_replicas,
+            "scaleTargetRef": {"kind": "Deployment", "name": target},
+        },
+    }
+
+
+def test_requested_cpu_counts_pending_pods_but_not_jobs_or_finished_ones() -> None:
+    job_pod = pod("job", "Running", "kind")
+    job_pod["metadata"]["ownerReferences"] = [{"kind": "Job", "name": "j"}]
+    pods = [
+        pod("running", "Running", "kind"),
+        pod("unscheduled", "Pending"),
+        pod("done", "Succeeded", "kind"),
+        job_pod,
+    ]
+    assert requested_cpu(pods) == 400
+
+
+def test_planned_cpu_is_every_scale_up_to_minreplicas_and_the_largest_surge() -> None:
+    deployments = [
+        # the HPA's minReplicas is 4: three more pods, and a surge of one when it rolls
+        deployment("hello-world", 1, "200m", max_surge=1),
+        # the default surge of 25% of 2 replicas rounds up to one pod
+        deployment("envoy", 2, "110m"),
+        # without an HPA it keeps its replicas
+        deployment("podinfo", 1, "100m", max_surge="50%"),
+    ]
+    planned = planned_cpu(deployments, [hpa("hello-world", 4), hpa("other", 9)])
+    assert planned == [
+        ("scale hello-world/hello-world from 1 to 4 replicas", 600),
+        ("roll out hello-world/hello-world with 1 more pod", 200),
+    ]
+
+
+def test_room_problems_name_the_numbers() -> None:
+    planned = [("scale hello-world/hello-world from 1 to 4 replicas", 600)]
+    assert room_problems(4000, 3585, planned, margin=200) == [
+        "the kind node can't take what the tests plan: 3585m CPU requested + 600m "
+        "planned + 200m margin = 4385m, more than the 4000m allocatable",
+        "  scale hello-world/hello-world from 1 to 4 replicas: 600m",
+    ]
+    assert room_problems(4000, 2775, planned, margin=200) == []

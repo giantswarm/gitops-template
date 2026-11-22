@@ -407,6 +407,9 @@ def vcluster(
             "statefulSet": {
                 "image": {"repository": "loft-sh/vcluster-oss"},
                 "persistence": {"volumeClaim": {"enabled": False}},
+                # 50m CPU instead of the chart's 200m: the vCluster's apps run on the one kind
+                #  node next to it, see node_room.py. It can still use up to its limits.
+                "resources": {"requests": {"cpu": "50m"}},
             },
             # CoreDNS stays on, the chart's default: the H3a releases run pods in the vCluster.
             #  Without it, gateway-api-crds and the hello-world of hello-world-from-template

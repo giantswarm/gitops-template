@@ -2,6 +2,7 @@
 placed a pod. The kind cluster is one node on a CI runner, so the CPU the test's workloads request
 decides whether a pod runs or stays Pending; workload_diagnostics reports it (#368)."""
 
+import math
 import re
 from collections.abc import Iterable
 from decimal import Decimal
@@ -139,4 +140,75 @@ def node_allocation(nodes: list[dict], pods: list[dict]) -> list[str]:
     pods no node has been found for, with the scheduler's reason."""
     return [line for node in nodes for line in _node_lines(node, pods)] + [
         _unscheduled_line(p) for p in pods if _holds_resources(p, "")
+    ]
+
+
+def requested_cpu(pods: list[dict]) -> int:
+    """The CPU the long-running pods request, scheduled or not, in millicores. A Job's pods
+    finish, so they're left to the margin."""
+    return sum(
+        pod_requests(p)[0]
+        for p in pods
+        if (p.get("status") or {}).get("phase") not in _FINISHED
+        and not any(
+            o.get("kind") == "Job" for o in p["metadata"].get("ownerReferences") or []
+        )
+    )
+
+
+def _surge(deployment: dict, replicas: int) -> int:
+    """How many pods a rollout adds on top of `replicas`: maxSurge, 25% by default, rounded
+    up as the Deployment controller does."""
+    strategy = (deployment.get("spec") or {}).get("strategy") or {}
+    if strategy.get("type") == "Recreate":
+        return 0
+    max_surge = (strategy.get("rollingUpdate") or {}).get("maxSurge", "25%")
+    if isinstance(max_surge, str) and max_surge.endswith("%"):
+        return math.ceil(replicas * int(max_surge[:-1]) / 100)
+    return int(max_surge)
+
+
+def planned_cpu(deployments: list[dict], hpas: list[dict]) -> list[tuple[str, int]]:
+    """The CPU, in millicores, the Deployments will request on top of what they do now: every
+    HorizontalPodAutoscaler scaling its Deployment up to minReplicas, and the largest one
+    rollout's surge, as the values change test rolls out one app at a time."""
+    minimum = {
+        (h["metadata"]["namespace"], h["spec"]["scaleTargetRef"]["name"]): h[
+            "spec"
+        ].get("minReplicas", 1)
+        for h in hpas
+        if h["spec"]["scaleTargetRef"].get("kind") == "Deployment"
+    }
+    planned = []
+    surges = []
+    for d in deployments:
+        meta = d["metadata"]
+        replicas = (d.get("spec") or {}).get("replicas", 1)
+        target = max(replicas, minimum.get((meta["namespace"], meta["name"]), 0))
+        cpu = pod_requests((d.get("spec") or {}).get("template") or {})[0]
+        if target > replicas:
+            planned.append(
+                (
+                    f"scale {obj_key(d)} from {replicas} to {target} replicas",
+                    (target - replicas) * cpu,
+                )
+            )
+        surge = _surge(d, target)
+        surges.append((f"roll out {obj_key(d)} with {surge} more pod", surge * cpu))
+    return planned + sorted(surges, key=lambda s: s[1])[-1:]
+
+
+def room_problems(
+    allocatable: int, requested: int, planned: list[tuple[str, int]], margin: int
+) -> list[str]:
+    """Why the node can't take what is planned on top of what is requested, with `margin` to
+    spare, if it can't; all in millicores of CPU."""
+    total = requested + sum(cpu for _, cpu in planned) + margin
+    if total <= allocatable:
+        return []
+    return [
+        f"the kind node can't take what the tests plan: {requested}m CPU requested + "
+        f"{total - requested - margin}m planned + {margin}m margin = {total}m, more than "
+        f"the {allocatable}m allocatable",
+        *(f"  {what}: {cpu}m" for what, cpu in planned),
     ]
