@@ -65,6 +65,13 @@ repos:
             language: script
             pass_filenames: false
             always_run: true
+          # every *.enc.yaml file git tracks is encrypted with SOPS, see tools/README.md
+          - id: check-sops-encrypted
+            name: SOPS files are encrypted
+            entry: tools/check-sops-encrypted
+            language: script
+            pass_filenames: false
+            always_run: true
 
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v6.0.0

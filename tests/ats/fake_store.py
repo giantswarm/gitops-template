@@ -1,9 +1,7 @@
 """The test's fake SecretStores and their values, which the examples' ExternalSecrets read.
 
 external_secrets.py creates the stores. docs/how-to/external-secrets.md, "A secret store for
-testing", has stores of the same name for trying the guides by hand: it lists
-`gitops/hello-world-values` with a GitHub token of the reader's own, and names the notification
-guide's two keys in its text.
+testing", has stores of the same name, with the same dummy values, for trying the guides by hand.
 """
 
 from collections.abc import Iterable

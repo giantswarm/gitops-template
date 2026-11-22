@@ -15,7 +15,9 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
 - `check-pre-commit` runs every `pre-commit` hook of [.pre-commit-config.yaml](../../.pre-commit-config.yaml),
   including [check-kustomization-paths](#check-kustomization-paths), on every file, and
   [check-directory-readmes](../../tools/README.md#check-directory-readmes), which fails when a directory under
-  `bases/` or `management-clusters/` has no README, unless a parent README covers it.
+  `bases/` or `management-clusters/` has no README, unless a parent README covers it, and
+  [check-sops-encrypted](../../tools/README.md#check-sops-encrypted), which fails when a `*.enc.yaml` file isn't
+  encrypted with SOPS.
 - `validate` runs `tools/test-all-ff validate`. It builds every Flux `Kustomization` that applies this repository, as
   Flux applies it, and passes the output through `yamllint` and `kubeconform`, so it fails on YAML that isn't valid
   and on objects that don't match their schemas. It also renders the chart of every `HelmRelease` with its merged
