@@ -1,16 +1,15 @@
-"""The kind test's master GPG key, and a pytest plugin that skips the tests that need the
-cluster on a pull request from a fork, which GitHub gives none of the repository's secrets.
+"""A pytest plugin that skips the tests that need the cluster on a pull request from a fork,
+which GitHub gives none of the repository's secrets.
 
 Without the GITOPS_MASTER_GPG_KEY secret, Flux can't decrypt the SOPS secrets, so the tests
 that need the cluster can't pass. Anywhere else, including the runs in a fork itself, a missing
-key is a broken setup, and `master_gpg_key` fails the tests.
+key is a broken setup, and repository_objects fails the tests when a root Kustomization decrypts.
 
 The module has no asserts to rewrite, and conftest.py imports it before pytest loads it as a
 plugin: PYTEST_DONT_REWRITE.
 """
 
 import json
-import logging
 import os
 from collections.abc import Mapping
 from pathlib import Path
@@ -23,27 +22,15 @@ CLUSTER_TEST_FIXTURE = "gitops_test_config"
 # Why the tests that need the cluster are skipped in this session, or None.
 SKIP_REASON = pytest.StashKey[str | None]()
 
-logger = logging.getLogger(__name__)
-
 
 class MissingGPGKeyError(Exception):
-    """The master private GPG key is empty."""
+    """The master private GPG key is empty, and a root Kustomization decrypts with it."""
 
     def __init__(self) -> None:
-        super().__init__("master gpg key missing")
-
-
-def master_gpg_key(environ: Mapping[str, str]) -> str:
-    """The master private GPG key from GITOPS_MASTER_GPG_KEY, which has to be set."""
-    key = environ[GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME]
-    if not key:
-        logger.error(
-            "In order to bootstrap the repository, armor-encoded master private GPG key for the"
-            f" gitops repo has to be set in '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}' environment"
-            " variable (base64 encoded)."
+        super().__init__(
+            "master gpg key missing: a root Kustomization decrypts, so the armoured private "
+            f"master key, base64-encoded, has to be in '{GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME}'"
         )
-        raise MissingGPGKeyError
-    return key
 
 
 def read_event(event_path: str | None) -> dict:

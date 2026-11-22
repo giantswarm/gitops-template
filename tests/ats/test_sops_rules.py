@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 import yaml
+from kind_config import require_example
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 ORG_SECRETS = "management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secrets"
@@ -42,6 +43,7 @@ def _keys() -> list[str]:
 
 
 def test_cluster_keys_are_encrypted_with_the_master_key() -> None:
+    require_example("organisation")
     rules = _rules()
     master = first_rule(
         rules, "management-clusters/MC_NAME/secrets/MC_NAME.gpgkey.enc.yaml"

@@ -1,6 +1,6 @@
-"""The clusters whose apps wait for them, as the repository's Kustomizations say, so that
-test_cluster_gate can compare them with cluster_gates.GATES, and their health checks with
-cluster_gates.CLUSTER_HEALTH_EXPR, without a cluster."""
+"""The clusters of the template's example organisation whose apps wait for them, as the
+repository's Kustomizations say, so that test_cluster_gate can check them without a cluster.
+"""
 
 from pathlib import Path
 
@@ -45,8 +45,7 @@ def gates_of(
             if dependency["name"] not in clusters:
                 problems.append(
                     f"Kustomization '{name}' depends on '{dependency['name']}', which doesn't "
-                    "health-check a Cluster: give it the cluster's health check, and add the "
-                    "cluster to GATES in cluster_gates.py"
+                    "health-check a Cluster: give it the cluster's health check"
                 )
                 continue
             gates[clusters[dependency["name"]]].append((name, k["spec"]["path"]))
