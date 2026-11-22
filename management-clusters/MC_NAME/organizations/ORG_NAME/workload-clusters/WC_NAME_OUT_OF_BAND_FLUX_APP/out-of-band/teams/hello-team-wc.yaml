@@ -1,8 +1,7 @@
 # The hello-team-wc application team, whose Flux runs in the workload cluster: the second mode of
-# docs/tutorials/advanced/teams.md. Flux on the management cluster, through the cluster's -direct
-# Kustomization, delivers the team's namespace, ServiceAccount and RoleBinding, and its
-# GitRepository and Kustomization, which the workload cluster's Flux reconciles. The platform team
-# owns these objects; the team owns its repository.
+# docs/tutorials/advanced/teams.md. The workload cluster's own Flux pulls this directory, and so
+# the team's namespace, ServiceAccount and RoleBinding, and its GitRepository and Kustomization,
+# which it then reconciles. The platform team owns these objects; the team owns its repository.
 apiVersion: v1
 kind: Namespace
 metadata:

@@ -24,7 +24,6 @@ from flux_teardown import delete_without_prune
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
 # flux_install have fixtures; external_secrets installs External Secrets Operator;
-# workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster;
 # notification_objects suspends the notification example's Alert; automation_rbac gives the
 # `automation` ServiceAccounts the rights they have on a management cluster;
 # flux_operator_install installs Flux Operator; organization_operator stands in for
@@ -36,7 +35,6 @@ pytest_plugins = [
     "kyverno_install",
     "flux_install",
     "external_secrets",
-    "workload_cluster_flux_crds",
     "notification_objects",
     "automation_rbac",
     "flux_operator_install",
@@ -606,7 +604,6 @@ def gitops_environment(
     workload_cluster: pykube.HTTPClient,
     flux_app_deployment: None,
     flux_deployments: list[pykube.Deployment],
-    workload_cluster_flux_crds: None,
     automation_rbac: None,
     organization_objects: list[pykube.objects.APIObject],
 ) -> None:
