@@ -36,15 +36,8 @@ to turn contributions away.
 
 Which one depends on what the page is for.
 
-**Tutorials and explanation pages** (`docs/tutorials`, `docs/explanation`) teach, so they're warm and tell a story:
-somewhere between technical documentation and a blog post, leaning slightly towards the dry.
-
-- Open by saying where the reader ends up.
-- Carry them from one step to the next with a sentence that says why the next thing comes next.
-- A little dry humour is welcome where it helps someone remember or find their way: once or twice a page, never inside a
-  step, and never a joke that needs explaining.
-
-> If you'd like your cloud bill back afterwards, the last step deletes the cluster again.
+**Tutorials and explanation pages** (`docs/tutorials`, `docs/explanation`) teach, so they're warm and tell a story.
+[Writing a tutorial](#writing-a-tutorial) below says how, sentence by sentence.
 
 **How-to guides, reference pages, READMEs and comments** (`docs/how-to`, `docs/reference`, the example directories,
 `tools`) are for someone who knows what they want, so they're factual and practical.
@@ -55,6 +48,66 @@ somewhere between technical documentation and a blog post, leaning slightly towa
 
 > `fake-flux` emulates what Flux does, locally, so you can check your changes before you commit them. It catches syntax
 > errors, failing patches and other incompatibilities with Flux.
+
+## Writing a tutorial
+
+A tutorial reads as if someone who has done this before were sitting next to you while you do it. They tell you what
+you're about to build, say what to type, tell you what you'll see, and mention the thing that caught them out the
+first time. They don't lecture, they don't sell, and they don't congratulate you.
+
+**Open with where the reader ends up**, in things they can count, and be honest about what it costs.
+
+> By the end of this tutorial you'll have one organisation, one workload cluster in it and one app running on that
+> cluster, all described in files in your fork of this repository and applied by Flux. [...] If you'd like your cloud
+> bill back afterwards, the last step deletes the cluster again.
+
+Not "In this tutorial we will explore", not "Imagine you're a platform engineer", and no scene-setting.
+
+**Start from the reader's problem, then give the answer as a short instruction.**
+
+> Application teams usually want to deliver their own workloads from their own repository, without a pull request to
+> the platform repository for every change [...]. So give each team an allotment.
+
+**Join the steps with spoken signposts.** A step begins with a word you'd say aloud: "Now", "Next", "Once it's up",
+"Before you delete the cluster", "So". The sentence says why this step comes now.
+
+> Now swap your cluster's hand-written hello-world for the template.
+
+**Land the point in a short sentence.** After a longer sentence that explains, a short one says what it comes to.
+"That's the template." "Nothing fails meanwhile." "It creates no cluster."
+
+> That's the template. On its own it does nothing: no Flux `Kustomization` points at `bases`, so it isn't part of the
+> planting plan.
+
+**Say what the reader will see, and how long it takes.** After a command, say what `Ready` looks like and what a wait
+feels like. If something fails first and then recovers, say so before it happens, so nobody stops to debug a thing
+that's working.
+
+> The cluster takes 15 to 20 minutes to come up, which is long enough for a cup of tea.
+
+**Keep the humour dry and let it come from the work.** It comes from consequences (the cloud bill), from waiting (the
+cup of tea) and from understatement. It's a clause, not a sentence of its own, and the paragraph still makes sense
+with it taken out. No puns, no pop culture, no jokes at the reader's expense, and none inside a numbered step. If
+you're unsure whether a line is funny, leave it out: a tutorial with no jokes is fine, and one with a forced joke
+isn't.
+
+**Use the words you'd use talking.**
+
+- Contractions, always: you'll, don't, it's, there's, isn't.
+- Present tense for what happens ("Flux applies it"), future only for what the reader will have ("you'll have").
+- "you" does the work: "you add a file", not "a file is added" or "the user adds a file".
+- Small plain words for big things: a cluster "comes up", a file "goes missing", Flux "leaves it alone" and "pulls it
+  up", a value "wins".
+- One aside in parentheses per paragraph at most, and only for something true and useful.
+
+**Treat the reader as capable.** Never "simply", "just" or "easy"; they make a reader who's stuck feel stupid. Never
+"Congratulations" or "Well done". When a step is hard or awkward, say that it is.
+
+**Close flat.** The last section says what the reader has now and where to go next, as a short list of links. It
+doesn't summarise the page and doesn't cheer.
+
+An explanation page uses the same language without the steps: it starts from a question the reader has by now ("what
+happens between a push and a running cluster"), answers it in order, and gives the reason for each design choice.
 
 ## One analogy
 
