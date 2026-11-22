@@ -428,7 +428,8 @@ clusters' Kustomizations are separate.
 
 In the same way, the `kustomization.yaml` in `multicluster` lists only `apps.yaml`, whose Kustomization applies the
 organisation's apps on several clusters in `multicluster/apps`, so the management cluster's Kustomization never applies
-their `ResourceSet`s itself. See [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
+their `ResourceSet`s itself. Like `namespace.yaml`, it depends on `MC_NAME.yaml`'s `Kustomization`, which applies every
+commit first. See [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
 
 A cluster with apps has two Kustomizations:
 

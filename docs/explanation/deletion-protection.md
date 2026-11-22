@@ -68,9 +68,8 @@ The cluster's own `Kustomization`s don't have the annotation: deleting them is h
 
 Removing an organisation on purpose takes a little longer than deleting its directory, which is the point:
 
-1. Delete its clusters first, as [Delete a workload cluster](../how-to/delete-cluster.md) describes. The annotation
-   on the namespace `Kustomization` keeps them only as long as nobody deletes it, and the cluster `HelmRelease`s stay
-   whatever happens.
+1. Delete its clusters first, as [Delete a workload cluster](../how-to/delete-cluster.md) describes. Otherwise the
+   last step uninstalls their apps and leaves the clusters running, empty: their `HelmRelease`s stay whatever happens.
 1. Take the annotation off `namespace.yaml` and `multicluster/apps.yaml`, and push. Flux now manages them like any
    other object.
 1. Delete the organisation's directory, and push. Flux deletes the two `Kustomization`s and what they applied,
