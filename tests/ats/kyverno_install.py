@@ -25,7 +25,7 @@ PRIORITY_CLASSES_CHART_VERSION = "0.3.1"
 # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno-crds
 KYVERNO_CRDS_CHART_VERSION = "1.19.2"
 # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/kyverno
-KYVERNO_CHART_VERSION = "0.26.1"
+KYVERNO_CHART_VERSION = "0.26.2"
 KYVERNO_NAMESPACE = "kyverno"
 # where kyverno-app puts its PolicyExceptions
 GIANTSWARM_NAMESPACE = "giantswarm"

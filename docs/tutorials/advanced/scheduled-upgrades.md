@@ -65,7 +65,7 @@ the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the clust
       type: OCIArtifactTag
       url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
       filter:
-        semver: '>=3.0.0 <4.0.0'
+        semver: '>=3.2.2 <4.0.0'
         limit: 1
       schedule:
         - cron: "0 9 * * 1-4"

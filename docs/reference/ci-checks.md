@@ -347,7 +347,7 @@ kind job 254 seconds against 237, less than the spread of about 60 seconds betwe
 Kyverno runs on every Giant Swarm management cluster, and the External Secrets Operator chart creates its
 `PolicyException`s only when Kyverno's CRDs are there, so the test installs Kyverno before ESO. It installs Giant
 Swarm's charts, the ones team Shield ships to the management clusters, from `oci://gsoci.azurecr.io/charts/giantswarm`:
-`kyverno-crds` 1.19.2, as the `kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.1, the chart of
+`kyverno-crds` 1.19.2, as the `kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.2, the chart of
 `kyverno-app`. Kyverno's pods use the `giantswarm-critical` PriorityClass and its `PolicyException`s go in the
 `giantswarm` namespace, which every management cluster has, so the test first installs Giant Swarm's
 `priority-classes` 0.3.1 chart and creates the namespace. The charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)

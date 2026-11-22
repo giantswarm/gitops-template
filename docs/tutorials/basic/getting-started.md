@@ -848,9 +848,9 @@ Git and one secret value from the organisation's store.
     mkdir -p ${APP_DIR}
     ```
 
-1. Create the `OCIRepository`, which names the chart and its version. `3.2.2` is the version this repository's
-   examples pin as this is written; any published version works. Renovate finds a `tag` in an `OCIRepository` by
-   itself, if your fork uses it:
+1. Create the `OCIRepository`, which names the chart and its version. `3.2.2` is the oldest hello-world that takes
+   the cluster values, which leaves a newer one for step 5 to upgrade to; earlier versions have a values schema that
+   refuses them. Renovate finds a `tag` in an `OCIRepository` by itself, if your fork uses it:
 
     ```sh
     cat <<'EOF' > ${APP_DIR}/oci-repository.yaml
