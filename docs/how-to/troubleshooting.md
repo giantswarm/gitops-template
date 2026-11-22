@@ -8,6 +8,7 @@ Most of it comes down to one habit. Flux nearly always tells you what's wrong, i
 that failed. The trick is finding that object, because one failure makes everything after it wait.
 
 - [Read a failure](#read-a-failure)
+- [Find what applied an object](#find-what-applied-an-object)
 - [Everything says DependencyNotReady](#everything-says-dependencynotready)
 - [The source can't be fetched](#the-source-cant-be-fetched)
 - [A build fails](#a-build-fails)
@@ -45,8 +46,8 @@ flux events --for Kustomization/NAME -n NS
 ```
 
 The same works for `HelmRelease/NAME`, `GitRepository/NAME`, `OCIRepository/NAME` and the rest. `flux tree
-kustomization NAME -n NS` lists what a Flux `Kustomization` applies, which helps when you're not sure which one owns
-an object.
+kustomization NAME -n NS` lists what a Flux `Kustomization` applies. To go the other way, from an object to what
+applied it, see [Find what applied an object](#find-what-applied-an-object).
 
 When that isn't enough, read the controllers' logs. You and Giant Swarm share one Flux, in the `flux-giantswarm`
 namespace. You can read its logs, though you can't change anything there (see
@@ -66,6 +67,67 @@ repository and apply it now:
 ```sh
 flux reconcile kustomization NAME -n NS --with-source
 ```
+
+## Find what applied an object
+
+Something on a cluster didn't change when you expected it to, and you don't know which Flux object to look at. Start
+from the object. `flux trace` goes from an object to the Flux `Kustomization` or `HelmRelease` that applied it, and on
+to the source and the revision it came from:
+
+```sh
+flux trace helmrelease NAME -n NS
+flux trace -n NS deployment/NAME externalsecret/OTHER_NAME
+```
+
+The answer names the `Kustomization`, its namespace and `Path`, the `Revision` it last applied with the message of its
+`Ready` condition, and then the `GitRepository` or `OCIRepository` with its own revision. Read it in this order:
+
+- **The revision is older than your commit.** Flux hasn't applied your change yet, or can't. The `Message` says which,
+  and the `Kustomization` it names is the one to [read](#read-a-failure).
+- **The revision is your commit, and the object still hasn't changed.** Your change isn't in what that `Kustomization`
+  builds. The file isn't under its `Path`, isn't listed in a `kustomization.yaml`, or a patch or a variable further
+  along overrides it. [Render what Flux applies](./check-changes.md#render-what-flux-applies) shows you what it builds.
+- **It names a `Kustomization` you didn't expect.** Then that's where the object's file has to change.
+
+A `Kustomization` is an object too, so you can trace it in turn, and walk up the chain as far as the management
+cluster's own:
+
+```sh
+flux trace kustomization NAME -n NS
+```
+
+`flux trace` works from labels. kustomize-controller puts `kustomize.toolkit.fluxcd.io/name` and
+`kustomize.toolkit.fluxcd.io/namespace` on everything it applies, and helm-controller puts
+`helm.toolkit.fluxcd.io/name` and `helm.toolkit.fluxcd.io/namespace` on everything a chart installs. An object without
+them is followed up through its owners, so tracing a Pod finds its Deployment's `HelmRelease`, and tracing a Secret
+that External Secrets Operator wrote finds its `ExternalSecret`'s `Kustomization`. Then it looks the Flux object up in
+the cluster you're logged in to, and that's where it stops being able to help in three cases:
+
+- **An app's objects in a workload cluster.** The `HelmRelease` that installed them, or the `-direct` `Kustomization`
+  that pushed them, lives on the management cluster, so `flux trace` in the workload cluster finds the labels and then
+  can't find the object they name. Read the labels there yourself, and trace the object they name on the management
+  cluster:
+
+    ```sh
+    kubectl get deployment NAME -n NS -o jsonpath='{.metadata.labels}'  # in the workload cluster
+    flux trace helmrelease HELMRELEASE_NAME -n HELMRELEASE_NAMESPACE     # on the management cluster
+    ```
+
+    Where the workload cluster runs its own Flux and that Flux applied the object, as with out-of-band objects it
+    pulls, `flux trace` works in the workload cluster as it is.
+- **An object a `ResourceSet` rendered.** Flux Operator labels it `resourceset.fluxcd.controlplane.io/name` and
+  `resourceset.fluxcd.controlplane.io/namespace`, which `flux trace` doesn't know, so it reports
+  `object not managed by Flux`. Read the two labels, then trace the `ResourceSet` they name, which a `Kustomization`
+  applied:
+
+    ```sh
+    kubectl get helmrelease NAME -n NS -o jsonpath='{.metadata.labels}'
+    flux trace resourceset RESOURCESET_NAME -n RESOURCESET_NAMESPACE
+    ```
+
+- **An object Flux didn't apply.** `object not managed by Flux`, and no label of the kinds above, means something else
+  made it: an operator, Kyverno (`generate.kyverno.io/policy-name` names the policy, and the policy is what you
+  trace), or someone with `kubectl`. A change in Git won't reach an object nothing in Git creates.
 
 ## Everything says DependencyNotReady
 
