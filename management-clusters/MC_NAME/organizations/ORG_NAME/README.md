@@ -32,8 +32,9 @@ the namespace Kustomization in `namespace.yaml` then applies everything that goe
 Rename the directory, set the organisation's name in `ORG_NAME.yaml`, and change the `TODO` names in `namespace.yaml`
 and `multicluster/apps.yaml`. Leave `org-ORG_NAME` and `organization: "ORG_NAME"` as they are: the replacements fill
 them in. If you don't use the replacements, `kustomization.yaml` lists the files you'd have to edit by hand. A
-SOPS-encrypted Secret in `namespace/` must name the real namespace, `org-<name>`, as changing an encrypted file breaks
-it.
+SOPS-encrypted Secret in `namespace/` names the real namespace, `org-<name>`, written before you encrypt it. Don't
+search-and-replace the old organisation's name in an encrypted file when you copy: it breaks the file's MAC, and
+`sops` can no longer decrypt it to change it or rotate its key.
 
 ## Read more
 

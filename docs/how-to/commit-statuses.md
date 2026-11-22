@@ -116,8 +116,8 @@ yq -i '.creation_rules += [{
 ```
 
 Then write the token into the Secrets, and encrypt them. The organisation's names its real namespace,
-`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, so Flux leaves the encrypted file as
-it is: changing it would break its MAC, so Flux couldn't decrypt it:
+`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, before you encrypt it: changing the
+file afterwards would break its MAC, and `sops` couldn't decrypt it to change the token or rotate its key:
 
 ```sh
 kubectl create secret generic github-commit-status-token --namespace=default \

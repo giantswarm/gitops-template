@@ -309,9 +309,13 @@ replacements keep `org-` and put the name after it, so `org-ORG_NAME` becomes `o
 `demo-gitops`. The replacements win over what the files say, so a hand-written `organization` or namespace that names
 the organisation is updated to the `Organization`'s name.
 
-A SOPS-encrypted Secret in `namespace` must name the real namespace, `org-<name>`, never the placeholder: changing the
-encrypted file breaks its MAC, so Flux couldn't decrypt it. `targetNamespace` sets the same namespace, which keeps the
-MAC intact.
+A SOPS-encrypted Secret in `namespace` names the real namespace, `org-<name>`, never the placeholder, and you write it
+before you encrypt the file. The namespace stays in clear text in the encrypted file, but SOPS covers it with the
+file's MAC all the same. Change the file after encrypting it, by hand or with a search-and-replace when you copy an
+organisation, and the MAC no longer matches: `sops` then refuses to decrypt the file in place to change it, and you
+can't rotate its key either. The only way out is to delete the Secret and create it again. Flux doesn't check the MAC
+when it decrypts, which is why `targetNamespace`, and the labels and annotations kustomize adds while it builds, do no
+harm: they change what Flux applies, not the file in Git.
 
 If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
 `ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the multi-cluster apps
