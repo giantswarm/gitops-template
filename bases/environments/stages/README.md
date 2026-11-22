@@ -6,7 +6,7 @@ One Component per stage, each pinning the versions its clusters run: the Giant S
 hello-world as an example app. Each stage has the same shape, so this README covers them all.
 
 Nothing applies this directory directly. A cluster lists one stage under `components:` in its
-`cluster/kustomization.yaml`, and the cluster's Flux Kustomization applies the result into the organisation's
+`cluster/kustomization.yaml`, and the cluster's Flux `Kustomization` applies the result into the organisation's
 namespace, `org-<name>`.
 
 ## What's here

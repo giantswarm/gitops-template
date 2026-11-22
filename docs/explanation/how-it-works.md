@@ -14,7 +14,8 @@ Take a cluster named `demowc` in the organisation `demoorg`, on the management c
 `management-clusters/demomc/organizations/demoorg/workload-clusters/demowc/`, and its Flux `Kustomization`s, such as
 `demowc.yaml`, next to it in `workload-clusters/`.
 
-Think of it as a relay. Each Flux `Kustomization` runs one leg, then hands the baton to the ones it created:
+Flux doesn't apply the repository in one go. Each Flux `Kustomization` applies its own part of it, and among what it
+applies are the `Kustomization`s for the next part:
 
 1. You push a commit. A Flux `GitRepository` on the management cluster fetches it.
 1. The management cluster's own Flux `Kustomization`, `demomc.yaml`, applies everything under
@@ -29,7 +30,7 @@ Think of it as a relay. Each Flux `Kustomization` runs one leg, then hands the b
    `org-demoorg`. A cluster file that isn't in that list does nothing. It stops there and doesn't apply what's inside
    the `demowc` directory. The cluster's `Kustomization`s depend on `namespace.yaml`'s, so it applies a commit before
    them.
-1. The `demowc.yaml` Kustomization applies the `demowc/cluster` directory, as the `automation` ServiceAccount of
+1. The `demowc.yaml` `Kustomization` applies the `demowc/cluster` directory, as the `automation` ServiceAccount of
    `org-demoorg`. While it does, it fills in variables such as `${cluster_name}`, `${organization}` and `${release}`
    from its own settings.
 1. `cluster` holds the cluster: a Flux `OCIRepository` for its chart, for example `release-aws`, and a Flux
@@ -39,29 +40,30 @@ Think of it as a relay. Each Flux `Kustomization` runs one leg, then hands the b
 1. `apps` holds the apps. Each app is a Flux `OCIRepository`, which points at a chart in an OCI registry, and a Flux
    `HelmRelease`, which installs it. Both stay on the management cluster, in the `org-demoorg` namespace. The
    `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster. A second
-   Kustomization, `demowc-apps.yaml`, applies `apps` once `demowc.yaml` is `Ready`, which is when Cluster API reports
+   `Kustomization`, `demowc-apps.yaml`, applies `apps` once `demowc.yaml` is `Ready`, which is when Cluster API reports
    the cluster's control plane available and reachable.
 
-[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) has the details of each leg: the fields,
+[Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations) has the details of each one: the fields,
 the order and what happens when one of them fails.
 
-Flux keeps doing this. When a file changes in Git, it applies the change. When someone changes a field that Git sets
-on an object a Flux `Kustomization` applies, such as a `HelmRelease` or a values ConfigMap on the management cluster,
-Flux sets it back at its next run. Fields added by hand stay.
+Flux keeps doing this, like a gardener walking round with the planting plan. When a file changes in Git, it applies
+the change. When someone changes a field that Git sets on an object a Flux `Kustomization` applies, such as a
+`HelmRelease` or a values ConfigMap on the management cluster, Flux sets it back at its next run. Fields added by hand
+stay.
 
 What a chart installs in a workload cluster is another matter. helm-controller installs and upgrades it, and by default
 doesn't look at it again until the next upgrade, so a `kubectl edit` on an app's Deployment stays until the chart or
 its values change. [Correct changes made by hand](../how-to/update-app.md#correct-changes-made-by-hand) shows how to
 have helm-controller set those back as well, and what it costs.
 
-The Kustomizations in this repository have `prune: true`. When you delete a file in Git, or take it out of a
-`kustomization.yaml`, Flux deletes what the file created at its next run. Delete an app's directory and Flux deletes its
-`HelmRelease`, which uninstalls the app from the workload cluster. That's what you want for an app, and exactly what
-you don't want for a cluster or an organisation, so the objects whose deletion would take a cluster with them are
-protected, see [Deletion protection](./deletion-protection.md).
+The `Kustomization`s in this repository have `prune: true`, so the gardener also pulls up what you take out of the
+plan. When you delete a file in Git, or take it out of a `kustomization.yaml`, Flux deletes what the file created at
+its next run. Delete an app's directory and Flux deletes its `HelmRelease`, which uninstalls the app from the workload
+cluster. That's what you want for an app, and exactly what you don't want for a cluster or an organisation, so the
+objects whose deletion would take a cluster with them are protected, see [Deletion protection](./deletion-protection.md).
 
-Why the relay, rather than one `Kustomization` that applies everything? Each leg has its own job, its own rights and
-its own failures:
+The work is split across several `Kustomization`s, rather than one that applies everything, because each has its own
+job, its own rights and its own failures:
 
 - The management cluster's `Kustomization` creates the organisations and the namespaces' `Kustomization`s. It works
   before any organisation's namespace exists, and it never waits for an organisation.
@@ -77,7 +79,7 @@ its own failures:
 
 Everything in `cluster` and `apps` is a resource on the management cluster that configures the workload cluster.
 Resources that must be applied inside the workload cluster directly go into an optional `out-of-band` directory next
-to them, which the cluster's `kustomization.yaml` leaves out. A third Kustomization, such as `demowc-direct.yaml`,
+to them, which the cluster's `kustomization.yaml` leaves out. A third `Kustomization`, such as `demowc-direct.yaml`,
 applies it with the `demowc-kubeconfig` Secret, or Flux runs in the workload cluster and reads it there, see
 [Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md).
 

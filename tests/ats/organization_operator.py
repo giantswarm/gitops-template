@@ -21,13 +21,11 @@ from pathlib import Path
 
 import pykube
 import pytest
-import yaml
 from automation_rbac import organization_rbac
 from checks import waits
 from checks.conditions import is_ready, not_ready_reason, obj_key
 from conftest import (
     CLUSTER_VALUES_STUB,
-    WORKLOAD_CLUSTER_KUBECONFIG_NAME,
     WORKLOAD_CLUSTER_KUBECONFIG_NAMESPACE,
     WORKLOAD_CLUSTER_VALUES_NAME,
     WORKLOAD_CLUSTER_VCLUSTER_NAME,
@@ -43,6 +41,13 @@ from notification_objects import organization_alert
 from prune_objects import OrganizationCR
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.kustomization import KustomizationCR
+from workload_cluster_kubeconfig_push import (
+    EXAMPLE as KUBECONFIG_PUSH_EXAMPLE,
+)
+from workload_cluster_kubeconfig_push import (
+    TOOLS_CLUSTER,
+    cluster_kubeconfig_secret,
+)
 
 ORG_NAMESPACE_PREFIX = "org-"
 # the GitRepositories have to fetch the repository before the roots apply anything
@@ -281,7 +286,9 @@ def workload_cluster_objects(
 ) -> list[pykube.objects.APIObject]:
     """Create in the organisation's `namespace` what the management cluster has there for the
     workload cluster: its kubeconfig Secret, as Cluster API writes it, and its cluster values,
-    as cluster-apps-operator writes them."""
+    as cluster-apps-operator writes them. The kubeconfig Secret of the cluster the
+    out-of-band-no-flux apps push their kubeconfig to has the vCluster's kubeconfig too, when that
+    example is there: the vCluster stands in for both clusters."""
     cluster_values = pykube.ConfigMap(
         api,
         {
@@ -289,23 +296,14 @@ def workload_cluster_objects(
             "data": {"values": Path(CLUSTER_VALUES_STUB).read_text()},
         },
     )
-    kubeconfig_secret = pykube.Secret(
-        api,
-        {
-            # labelled and typed as Cluster API writes it, which the Kyverno policy
-            # `generate-eso-cluster-auth-from-kubeconfig` matches
-            "metadata": {
-                "name": WORKLOAD_CLUSTER_KUBECONFIG_NAME,
-                "namespace": namespace,
-                "labels": {
-                    "cluster.x-k8s.io/cluster-name": WORKLOAD_CLUSTER_VCLUSTER_NAME
-                },
-            },
-            "type": "cluster.x-k8s.io/secret",
-            "stringData": {"value": yaml.safe_dump(kubeconfig)},
-        },
-    )
-    return [apply(cluster_values), apply(kubeconfig_secret)]
+    clusters = [WORKLOAD_CLUSTER_VCLUSTER_NAME]
+    if not kind_test_config().example_skip_reason(KUBECONFIG_PUSH_EXAMPLE):
+        clusters.append(TOOLS_CLUSTER)
+    kubeconfig_secrets = [
+        pykube.Secret(api, cluster_kubeconfig_secret(cluster, namespace, kubeconfig))
+        for cluster in clusters
+    ]
+    return [apply(cluster_values)] + [apply(s) for s in kubeconfig_secrets]
 
 
 @pytest.fixture(scope="module")

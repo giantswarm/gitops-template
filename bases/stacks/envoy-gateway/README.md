@@ -6,7 +6,7 @@ Envoy Gateway, so apps in a workload cluster can be reached over HTTPS through t
 install in a set order, each waiting for the one before it with `dependsOn`.
 
 Nothing applies this directory directly. A cluster or another stack lists it under `resources:`, and the Flux
-Kustomization that applies that directory puts its objects into the organisation's namespace, `org-<name>`. The
+`Kustomization` that applies that directory puts its objects into the organisation's namespace, `org-<name>`. The
 `HelmRelease`s install into the workload cluster through its `${cluster_name}-kubeconfig` Secret.
 
 ## What's here
@@ -25,7 +25,7 @@ Next to them:
   the stack's default values for each chart. The Gateway's comments list what the workload cluster needs first.
 - `kustomization.yaml`: lists the six objects and turns the defaults into `${cluster_name}-<chart>-values` ConfigMaps.
 
-`dependsOn` orders installs and upgrades, but not deletes: when a Kustomization prunes the stack, helm-controller
+`dependsOn` orders installs and upgrades, but not deletes: when a `Kustomization` prunes the stack, helm-controller
 uninstalls all three at once. So `gateway-api-config` sets `spec.uninstall.disableWait`, and its uninstall doesn't
 wait for the GatewayClass to go. If Envoy Gateway is gone before it has cleared the GatewayClass's finalizer, the
 GatewayClass stays `Terminating`. That only matters when you remove the stack from a workload cluster that stays up.

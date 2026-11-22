@@ -70,7 +70,7 @@ When that isn't enough, two other ways fit better:
 - a Flux Operator `ResourceSet` in the organisation's `multicluster/apps`, which renders the apps for several clusters
   from one set of inputs, see [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
 
-## What goes in a ResourceSet
+## What goes in a `ResourceSet`
 
 A `ResourceSet` renders whatever you put in its `resources`, so the question is how much to put there. The template's
 examples put in the whole app: the `OCIRepository` and the `HelmRelease` together, for the

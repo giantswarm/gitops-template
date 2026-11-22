@@ -5,7 +5,7 @@
 One directory per organisation on this management cluster, named after it. An organisation is a tenant: it gets its
 own namespace, `org-<name>`, and its workload clusters live there.
 
-The management cluster's Kustomization, in `../MC_NAME.yaml`, applies each organisation's directory, through the
+The management cluster's Flux `Kustomization`, in `../MC_NAME.yaml`, applies each organisation's directory, through the
 `kustomization.yaml` in it.
 
 ## What's here

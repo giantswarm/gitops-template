@@ -111,5 +111,5 @@ comes on top of the region's, and a list you set, such as a node pool's `availab
 
 The default apps of a cluster are part of its cluster chart, not apps in `apps`. Configure them in the same values,
 under `global.apps`, the same way as the rest of the cluster configuration. The chart's `values.yaml` schema lists the
-apps and what each one takes. To add an app the chart doesn't install, add
-it to the cluster's `cluster/apps` or `apps` instead, see [Add an app to a cluster](./add-app.md).
+apps and what each one takes. To add an app the chart doesn't install, add it to the cluster's `cluster/apps` or `apps`
+instead, see [Add an app to a cluster](./add-app.md).

@@ -6,8 +6,9 @@ A generated password pushed into the workload cluster through `${cluster_name}-e
 that the Kyverno policy in the organisation's `multicluster/secret-stores/` makes for every cluster. Nothing about
 the password is kept in Git.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies it into `org-<name>` once the
-cluster is up. Until Kyverno and ESO have made the store, ESO retries the push.
+The Flux `Kustomization` for the cluster's apps, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies it into
+`org-<name>` once the cluster is up. Until Kyverno and External Secrets Operator have made the store, ESO retries the
+push.
 
 ## What's here
 

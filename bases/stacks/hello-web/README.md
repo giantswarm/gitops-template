@@ -7,7 +7,7 @@ and the [`hello-world`](../../apps/hello-world/) App Template. It holds what tie
 `hello-web` and gets the lot.
 
 Nothing applies this directory directly. The stage and region examples, `HELLO_APP_*`, list it in their
-`cluster/apps/`, and each cluster's Flux Kustomization applies it into the organisation's namespace, `org-<name>`.
+`cluster/apps/`, and each cluster's Flux `Kustomization` applies it into the organisation's namespace, `org-<name>`.
 
 ## What's here
 

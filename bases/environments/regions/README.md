@@ -6,7 +6,7 @@ One Component per region. Every cluster lists exactly one, as the `release-aws` 
 the management cluster's own region. Each region has the same shape, so this README covers them all.
 
 Nothing applies this directory directly. A cluster lists a region under `components:` in its
-`cluster/kustomization.yaml`, and the cluster's Flux Kustomization applies the result into the organisation's
+`cluster/kustomization.yaml`, and the cluster's Flux `Kustomization` applies the result into the organisation's
 namespace, `org-<name>`.
 
 ## What's here

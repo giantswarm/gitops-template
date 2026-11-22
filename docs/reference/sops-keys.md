@@ -13,9 +13,9 @@ Each management cluster has its own GPG key pair, the master key:
 - Its public key is in `management-clusters/MC_NAME/.sops.keys`, unencrypted.
 - Its private key is in the `MC_NAME.gpgkey.enc.yaml` Secret, encrypted with the master key itself.
 
-Flux uses it to decrypt the files that the `MC_NAME.yaml` Kustomization applies, and the ones each organisation's
-namespace Kustomization, `namespace.yaml`, applies from the organisation's `namespace` directory, the workload clusters'
-keys among them. Use it to encrypt the other keys, so you can keep them in the repository too.
+Flux uses it to decrypt the files that the `MC_NAME.yaml` Flux `Kustomization` applies, and the ones each
+organisation's namespace `Kustomization`, `namespace.yaml`, applies from the organisation's `namespace` directory, the
+workload clusters' keys among them. Use it to encrypt the other keys, so you can keep them in the repository too.
 
 ## Workload cluster keys
 
@@ -25,9 +25,9 @@ To encrypt files of a workload cluster, add a key pair for it:
 - Its private key goes into the `WC_NAME.gpgkey.enc.yaml` Secret in the organisation's `namespace/secrets`
   directory, in the organisation's namespace, encrypted with the master key.
 
-The cluster's two Kustomizations, which the organisation's namespace Kustomization applies, reference that Secret in
-`spec.decryption` and use it to decrypt what they apply: `WC_NAME.yaml` the `WC_NAME/cluster` directory, and
-`WC_NAME-apps.yaml` the `WC_NAME` directory, whose `kustomization.yaml` lists `apps/`. A Kustomization reads the
+The cluster's two `Kustomization`s, which the organisation's namespace `Kustomization` applies, reference that Secret
+in `spec.decryption` and use it to decrypt what they apply: `WC_NAME.yaml` the `WC_NAME/cluster` directory, and
+`WC_NAME-apps.yaml` the `WC_NAME` directory, whose `kustomization.yaml` lists `apps/`. A `Kustomization` reads the
 Secret in its own namespace, so the key has to be in the organisation's namespace with them.
 
 ```text
@@ -57,12 +57,12 @@ A workload cluster key can be an age key instead of a GPG key; age keys are simp
 - Its private key goes into the `WC_NAME.agekey.enc.yaml` Secret in the organisation's `namespace/secrets`
   directory, under a key that ends in `.agekey`, encrypted with the master key.
 
-The cluster's Kustomizations name that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
+The cluster's `Kustomization`s name that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
 uses an age key: `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with the `sops-age-wc-name` Secret, and
 `WC_NAME-apps.yaml` decrypts `apps/cert-manager/secret.enc.yaml` with it. For the steps, see
 [Add a workload cluster key (age)](../how-to/sops.md#add-a-workload-cluster-key-age).
 
-A Kustomization reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.
+A `Kustomization` reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.
 
 ## age or GPG
 
@@ -91,7 +91,7 @@ wrong. Keep in mind:
 ### Which to pick
 
 Pick age if you have no reason to use GPG. Its keys are one line each, there is no keyring to import them into, and
-`age-keygen` creates one with a single command, so a key per cluster is easy to create and replace. The SOPS and
+`age-keygen` creates one with a single command, so a key per cluster costs little to create and replace. The SOPS and
 Flux docs both recommend age over OpenPGP where you can use it.
 
 Pick GPG if your organisation already manages OpenPGP keys, if people keep their keys on smart cards, as SOPS's
@@ -127,8 +127,9 @@ creation_rules:
 
 ## More keys
 
-You can add more private keys to either Secret, for example one key for an organisation and one for each app. Each
-key needs its own rule in `.sops.yaml`. For the steps, see [Add an organisation key](../how-to/sops.md#add-an-organisation-key):
+You can add more private keys to either Secret, for example one key for an organisation and one for each app. For the
+steps, see [Add an organisation key](../how-to/sops.md#add-an-organisation-key). Each key needs its own rule in
+`.sops.yaml`:
 
 ```yaml
 creation_rules:

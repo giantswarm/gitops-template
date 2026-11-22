@@ -3,12 +3,12 @@
 `bases/clusters/capa`
 
 The cluster base for AWS. It deploys a cluster with the `release-aws` chart, as a Flux `OCIRepository` and
-`HelmRelease`. The chart version is the Giant Swarm release version, so the release lives in git and you upgrade the
+`HelmRelease`. The chart version is the Giant Swarm release version, so the release lives in Git and you upgrade the
 cluster by changing `release`.
 
 Nothing applies this directory directly. A cluster's `cluster/kustomization.yaml` lists it under `resources:`, and the
-cluster's Flux Kustomization, in the organisation's `workload-clusters/`, applies it into the organisation's namespace,
-`org-<name>`, filling in the variables below.
+cluster's Flux `Kustomization`, in the organisation's `workload-clusters/`, applies it into the organisation's
+namespace, `org-<name>`, filling in the variables below.
 
 Use it when there's a `release-aws` chart for your release. That's every release from v34.0.0 on, and v31.2.0,
 v32.3.0 and v33.3.0.
@@ -23,7 +23,7 @@ v32.3.0 and v33.3.0.
 
 ## Input variables
 
-The cluster's Flux Kustomization sets these in `spec.postBuild.substitute`:
+The cluster's Flux `Kustomization` sets these in `spec.postBuild.substitute`:
 
 | Variable | Expected value |
 | :--: | :--: |
@@ -40,7 +40,7 @@ The `HelmRelease` reads its values from these ConfigMaps, in this order. Flux me
    [Values from the management cluster](#values-from-the-management-cluster).
 1. `${cluster_name}-config`: the values of this base, from `cluster_config.yaml`.
 
-The cluster appends the rest in its own kustomization:
+The cluster appends the rest in its own `kustomization.yaml`:
 
 1. `${cluster_name}-region-config`: the cluster's region, from a [region](/bases/environments/regions/) component.
    Every cluster needs one. Without `global.providerSpecific.region`, the chart takes the region of the management
@@ -51,10 +51,10 @@ The cluster appends the rest in its own kustomization:
    `HelmRelease`'s `valuesFrom`. See the [WC_NAME](
    /management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/cluster/) example.
 
-List the components under `components:` in the kustomization that has the patch with your own values. kustomize applies
-a kustomization's components before its own patches, so the region comes before your values, and the components come in
-the order you list them. `kubectl gs gitops add workload-cluster` writes this kustomization, with the patch when you
-pass `--cluster-user-config`, but without a region; add the `components:` list to it.
+List the components under `components:` in the `kustomization.yaml` that has the patch with your own values. kustomize
+applies a `kustomization.yaml`'s components before its own patches, so the region comes before your values, and the
+components come in the order you list them. `kubectl gs gitops add workload-cluster` writes this `kustomization.yaml`,
+with the patch when you pass `--cluster-user-config`, but without a region; add the `components:` list to it.
 
 ## Values from the management cluster
 
@@ -86,7 +86,7 @@ added the policy, but only for the `cluster-*` charts.) The base lists the entry
 don't run the policy. Where the policy runs, it finds the entry and leaves the `HelmRelease` as it is, so the explicit
 entry does no harm.
 
-## Differences to `kubectl gs gitops add base`
+## Differences from `kubectl gs gitops add base`
 
 This base has the files `kubectl gs gitops add base --provider capa` writes: `kustomization.yaml`, `cluster.yaml` with
 the `OCIRepository` and the `HelmRelease`, and `cluster_config.yaml` with the cluster values. The resources are the

@@ -5,8 +5,9 @@
 hello-world installed at whatever version is newest in a range, so Flux upgrades it as soon as a matching chart is
 published, without a change in Git.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies these objects into `org-<name>`
-once the cluster is up. The `HelmRelease` installs into the workload cluster's `hello-world-auto` namespace.
+The Flux `Kustomization` for the cluster's apps, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies these objects into
+`org-<name>` once the cluster is up. The `HelmRelease` installs into the workload cluster's `hello-world-auto`
+namespace.
 
 ## What's here
 

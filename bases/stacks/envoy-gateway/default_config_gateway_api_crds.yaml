@@ -1,2 +1,2 @@
-# values for the gateway-api-crds chart, the chart defaults are fine for most clusters
+# values for the gateway-api-crds chart; the chart defaults suit most clusters
 {}

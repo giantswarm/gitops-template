@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: mc-name-clusters-capi-wc-name-apps  # TODO: change 'mc-name' to your Management Cluster name and 'capi-wc-name' to your cluster name; must stay a DNS-like k8s resource name
+  name: mc-name-clusters-capi-wc-name-apps  # TODO: change 'mc-name' to your management cluster's name and 'capi-wc-name' to your cluster name; must be a valid resource name (DNS-like)
 spec:
   # the age key that decrypts the *.enc.yaml files in WC_NAME, see docs/reference/sops-keys.md
   decryption:
@@ -15,13 +15,13 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME"
   postBuild:
     substitute:
-      cluster_name: "capi-wc-name"  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
+      cluster_name: "capi-wc-name"  # TODO: change 'capi-wc-name' to your cluster name; must be a valid resource name (DNS-like)
       organization: "${organization}"  # the organisation's namespace Kustomization sets it
   prune: true
   retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
     namespace: default  # the namespace of that GitRepository
   timeout: 2m

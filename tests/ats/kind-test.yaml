@@ -68,6 +68,10 @@ examples:
     paths:
       - management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/secret-stores
       - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+  pushed-kubeconfig:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/secret-stores
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/pushed-kubeconfig
   workload-cluster-secrets:
     paths:
       - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/workload-cluster-secrets

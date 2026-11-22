@@ -7,7 +7,7 @@ install in, the values that have to agree with each other, and the chart version
 lists the stack, not each app.
 
 Nothing applies this directory directly. A `kustomization.yaml` in a cluster's directory lists a stack under
-`resources:`, and the Flux Kustomization that applies that directory puts the stack's objects into the organisation's
+`resources:`, and the Flux `Kustomization` that applies that directory puts the stack's objects into the organisation's
 namespace, `org-<name>`. From there the `HelmRelease`s install into the workload cluster.
 
 ## What's here

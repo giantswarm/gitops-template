@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: mc-name-clusters-out-of-band-flux-app-apps  # TODO: change 'mc-name' to your Management Cluster name and 'out-of-band-flux-app' to your cluster name; must stay a DNS-like k8s resource name
+  name: mc-name-clusters-out-of-band-flux-app-apps  # TODO: change 'mc-name' to your management cluster's name and 'out-of-band-flux-app' to your cluster name; must be a valid resource name (DNS-like)
 spec:
   decryption:
     provider: sops
@@ -21,6 +21,6 @@ spec:
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
     namespace: default  # the namespace of that GitRepository
   timeout: 2m

@@ -2,12 +2,12 @@
 
 `bases/secret_stores/azure-key-vault`
 
-A `SecretStore` named `azure-key-vault` that reads Azure Key Vault with Azure Workload Identity. ESO signs in as the
-managed identity the ServiceAccount names, with a token Kubernetes issues for that ServiceAccount, so no client secret
-is stored anywhere.
+A `SecretStore` named `azure-key-vault` that reads Azure Key Vault with Azure Workload Identity. External Secrets
+Operator signs in as the managed identity the ServiceAccount names, with a token Kubernetes issues for that
+ServiceAccount, so no client secret is stored anywhere.
 
 Nothing applies this directory directly. A `kustomization.yaml` in your organisation's `namespace/` lists it, and the
-organisation's namespace Kustomization applies it into `org-<name>`.
+Flux `Kustomization` for the organisation's namespace applies it into `org-<name>`.
 
 ## What's here
 

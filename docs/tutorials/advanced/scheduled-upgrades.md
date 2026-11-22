@@ -41,7 +41,7 @@ Use a `ResourceSetInputProvider` and a `ResourceSet` when upgrades have to wait 
 production cluster, or an app that should only restart in working hours. A `ResourceSet` can also roll the same app out
 to several clusters from one list, see [Multicluster apps](./multicluster-apps.md). The examples put the whole app in
 the `ResourceSet`, its `OCIRepository` and its `HelmRelease`; why, and when rendering less would do, is in
-[What goes in a ResourceSet](../../explanation/composition.md#what-goes-in-a-resourceset).
+[What goes in a `ResourceSet`](../../explanation/composition.md#what-goes-in-a-resourceset).
 
 ## Schedule an app's upgrades
 
@@ -579,8 +579,8 @@ Delete the cluster from [Schedule a cluster's release](#schedule-a-clusters-rele
 [Delete a workload cluster](../../how-to/delete-cluster.md) describes, with `WC_NAME` set to `${SU_NAME}`. Its
 `ResourceSet` renders the cluster's `HelmRelease` and `OCIRepository` with the same protection as the base, under Flux
 Operator's annotation, and they stay when the `ResourceSet` goes. The steps are the same, except that the patches that
-remove the protection target the `ResourceSet`, as that page shows. The app's schedule, on
-the basic tutorial's cluster, can stay.
+remove the protection target the `ResourceSet`, as that page shows. The app's schedule, on the basic tutorial's
+cluster, can stay.
 
 ## Next steps
 

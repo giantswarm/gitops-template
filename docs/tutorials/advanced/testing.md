@@ -22,7 +22,7 @@ reads what Flux applied.
 - [Test with Chainsaw](#test-with-chainsaw)
 - [Run Chainsaw from your machine](#run-chainsaw-from-your-machine)
 - [Run Chainsaw in GitHub Actions](#run-chainsaw-in-github-actions)
-- [Choose tests/ats, Chainsaw or both](#choose-testsats-chainsaw-or-both)
+- [Choose `tests/ats`, Chainsaw or both](#choose-testsats-chainsaw-or-both)
 
 ## What the kind test does
 
@@ -114,10 +114,10 @@ won't check your objects by renaming a binding.
 
 CI is the usual place for the kind test, but a local run is quicker when you're chasing a failure. You need:
 
-- Docker, running natively on the host, as on the GitHub runner. The test reaches the vCluster at the kind node's IP
-  address, on a node port, so it has to be able to route to kind's Docker network. Where Docker runs in a VM, such as
-  Docker Desktop or a Podman machine, or where the test runs in a container outside that network, the vCluster's setup
-  times out;
+- Docker, running natively on the host, as on the GitHub runner. The test reaches the vCluster, the workload cluster
+  it runs inside the kind cluster, at the kind node's IP address, on a node port, so it has to be able to route to
+  kind's Docker network. Where Docker runs in a VM, such as Docker Desktop or a Podman machine, or where the test runs
+  in a container outside that network, the vCluster's setup times out;
 - [kind](https://kind.sigs.k8s.io/), the version `kind_ver` in `validate.yaml` names, `kubectl` and `helm` in your
   `$PATH`;
 - Python 3.12 and [pipenv](https://pipenv.pypa.io/);
@@ -182,14 +182,14 @@ uses the existing `default` namespace and neither creates nor deletes one.
 | Test | What it checks |
 | --- | --- |
 | `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster`'s control plane is available and reachable, the cluster's `Kustomization` health-checks it and waits for its control plane, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
-| `kyverno-generate` | The [shared-objects](../../how-to/share-objects.md) policy is `Ready`, and the organisation's namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. |
+| `kyverno-generate` | The [secret-stores](../../how-to/workload-cluster-secrets.md#give-every-cluster-a-store-with-kyverno) `Policy` is `Ready`, and has given the `out-of-band-no-flux` cluster its `ExternalSecret` and its `SecretStore`, both `Ready` and labelled with the policy that made them. |
 | `external-secrets` | The example's `ExternalSecret`, which gives an app secret values as in the [basic tutorial](../basic/getting-started.md#4-deploy-an-app), has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads the values from that key is `Ready`. |
 
 The steps name no objects themselves: they read the names from a values file.
 [tests/chainsaw/values.yaml](/tests/chainsaw/values.yaml) names the template's examples: the organisation's namespace,
 the `out-of-band-no-flux` cluster with its `Kustomization`s and two of its `HelmRelease`s, the `ExternalSecret` with
-the key of the values in its Secret and the `HelmRelease` that reads that Secret, and the Kyverno policy with the
-ConfigMap it copies. Copy it and set the names of your own objects. Run only the tests whose examples you use.
+the key of the values in its Secret and the `HelmRelease` that reads that Secret, and the Kyverno policy of the
+secret stores. Copy it and set the names of your own objects. Run only the tests whose examples you use.
 
 To add a test, create a directory in `tests/chainsaw` with a `chainsaw-test.yaml`, and put the names it needs in the
 values file.
@@ -234,7 +234,7 @@ from its `checksums.txt`, in the same pull request. Nothing in CI runs the workf
 checksum: `renovate.json5` never merges a Chainsaw update automatically, so that the pull request waits for you to set
 it.
 
-## Choose tests/ats, Chainsaw or both
+## Choose `tests/ats`, Chainsaw or both
 
 - `tests/ats` only: the template's default. `validate.yaml` runs it on a kind cluster for every pull request that
   changes more than Markdown. Delete `tests/chainsaw` and `.github/workflows/chainsaw.yaml`.

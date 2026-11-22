@@ -26,7 +26,7 @@ spec:
 #      its name and base domain. Giant Swarm creates it in the `giantswarm`
 #      namespace, and a Kyverno policy copies it into every `org-*` namespace.
 #   2. ${cluster_name}-config: the values of this base.
-# A cluster appends the rest, with components and patches in its own kustomization:
+# A cluster appends the rest, with components and patches in its own `kustomization.yaml`:
 #   3. ${cluster_name}-region-config: the region, from a component in
 #      bases/environments/regions. Every cluster needs one.
 #   4. Optionally more, such as a region's extra node pool.

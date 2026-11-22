@@ -7,7 +7,7 @@ metadata:
   # See docs/explanation/deletion-protection.md.
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
-  name: mc-name-gitops  # TODO: change "mc-name" to your Management Cluster name
+  name: mc-name-gitops  # TODO: change "mc-name" to your management cluster's name
   namespace: default
 spec:
   decryption:
@@ -26,5 +26,5 @@ spec:
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
   timeout: 2m0s

@@ -14,7 +14,7 @@ which [Clean up](#clean-up) deletes again.
 
 - [When to apply directly](#when-to-apply-directly)
 - [Add the out-of-band directory](#add-the-out-of-band-directory)
-- [Add the -direct Kustomization](#add-the--direct-kustomization)
+- [Add the -direct `Kustomization`](#add-the--direct-kustomization)
 - [Run Flux in the workload cluster](#run-flux-in-the-workload-cluster)
 - [Clean up](#clean-up)
 - [Next steps](#next-steps)
@@ -31,7 +31,7 @@ tracks its objects and its version, and the cluster's apps wait for the cluster 
 
 Everything in `${WC_DIR}/cluster` and `${WC_DIR}/apps` is applied to the management cluster. `${WC_DIR}/out-of-band`
 never is: `${WC_DIR}/kustomization.yaml` lists `cluster/` or `apps/`, never `out-of-band/`, so the cluster's
-`Kustomization`s leave it out. Something has to apply it to the workload cluster instead, and the procedure has two facets:
+`Kustomization`s leave it out. Something else has to apply it to the workload cluster, and that has two facets:
 
 - **Push.** A Flux `Kustomization` on the management cluster applies `out-of-band` through the workload cluster's
   kubeconfig Secret, as in the
@@ -77,17 +77,17 @@ directory to the same cluster fight over the same objects.
 The directory needs no `kustomization.yaml`: Flux applies every YAML file in it, and in the directories below it. Add
 one if you want to list the files, or patch them.
 
-## Add the -direct Kustomization
+## Add the -direct `Kustomization`
 
 This is the push facet: the `Kustomization` that applies `out-of-band` through the cluster's kubeconfig, which the
 template names `*-direct`. The template's suffixes, such as `-direct`, `-apps` and `-from-template`, are only labels to
 tell the techniques apart, so name yours however you like. This tutorial keeps `-direct`, so that its commands match
 the examples.
 
-It applies `out-of-band` with the cluster's kubeconfig Secret, `${WC_NAME}-kubeconfig`,
-which the management cluster creates in `org-${ORG_NAME}` once the cluster is up. A `Kustomization` reads its
-kubeconfig Secret from its own namespace, so it goes in the organisation's `workload-clusters`, next to the cluster's
-other two: the organisation's namespace `Kustomization` applies it into `org-${ORG_NAME}`.
+It applies `out-of-band` with the cluster's kubeconfig Secret, `${WC_NAME}-kubeconfig`, which the management cluster
+creates in `org-${ORG_NAME}` once the cluster is up. A `Kustomization` reads its kubeconfig Secret from its own
+namespace, so it goes in the organisation's `workload-clusters`, next to the cluster's other two: the organisation's
+namespace `Kustomization` applies it into `org-${ORG_NAME}`.
 
 1. Create it. It names no namespace, reads your `GitRepository` in `default`, and depends on the organisation's
    namespace `Kustomization`, like the cluster's. `\${organization}` keeps the variable in the file for the
@@ -317,10 +317,9 @@ below, and none of the others.
    the cluster's `Kustomization`s the `decryption` of
    [Decrypt a cluster's files](../../how-to/sops.md#decrypt-a-clusters-files), with `sops-age-${FLUX_WC_NAME}`. Those
    pages use `WC_NAME`, so run them with `WC_NAME=${FLUX_WC_NAME}`, in the shell you created the cluster in, for
-   example, and come back to this one. If you keep your secrets in a secret
-   manager instead, write the same Secret with an `ExternalSecret`, see
-   [Read secrets from a secret manager](../../how-to/external-secrets.md). The basic tutorial's stand-in store keeps its
-   data in plain text in Git, so it can't hold a real token.
+   example, and come back to this one. If you keep your secrets in a secret manager instead, write the same Secret
+   with an `ExternalSecret`, see [Read secrets from a secret manager](../../how-to/external-secrets.md). The basic
+   tutorial's stand-in store keeps its data in plain text in Git, so it can't hold a real token.
 
 1. Write the Secret, encrypted on its way to the file, so the token never lands in the working tree in plain text.
    Read the token without it landing in your shell history:
@@ -352,10 +351,11 @@ below, and none of the others.
     yq -i '.resources += ["flux/secret.enc.yaml"]' ${FLUX_WC_DIR}/apps/kustomization.yaml
     ```
 
-    `--filename-override` needs `sops` 3.9.0 or newer, and makes `sops` pick the rule for the file's path in
-    `.sops.yaml`. If `sops` finds no rule, it fails and leaves the file empty, never in plain text. The source's
-    `name` is the `source_name` of the `Kustomization` in the ConfigMap above. The example cluster keeps a made-up
-    source in its ConfigMap instead, which is fine for an example and nothing else.
+    `--filename-override` makes `sops` pick the rule for the file's path in `.sops.yaml`, and the command needs
+    `sops` 3.10.0 or newer (see [Tools](../../reference/tools.md#tools)). If `sops` finds no rule, it fails and
+    leaves the file empty, never in plain text. The source's `name` is the `source_name` of the `Kustomization` in
+    the ConfigMap above. The example cluster keeps a made-up source in its ConfigMap instead, which is fine for an
+    example and nothing else.
 
 1. Commit and push:
 
