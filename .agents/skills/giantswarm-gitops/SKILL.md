@@ -120,8 +120,13 @@ suits which. Don't remove one in favour of the other.
 
 - **Nothing in plain text, not even for a moment.** Pipe a Secret into `sops` so it's encrypted on its way into the
   file, as `docs/how-to/sops.md` shows. Never write the plain file first and encrypt it after.
-- **Don't edit an encrypted file by hand.** Any change outside `sops`, including to its metadata, breaks its MAC.
-  That's why a SOPS Secret names its real namespace from the start.
+- **Don't edit an encrypted file by hand.** `sops` covers every value in the file with its MAC, the clear-text name,
+  namespace and labels included, so any change to the file outside `sops` breaks it, and `sops` then refuses to
+  decrypt the file to change it or rotate its key. So write what the file itself says before you encrypt it. What
+  kustomize and Flux do to the decrypted object while they build, such as a `namespace` or `labels` in a
+  `kustomization.yaml`, `targetNamespace` or `postBuild` variables, changes what Flux applies, not the file, and Flux
+  doesn't check the MAC. That's how the `WC_NAME` example's `apps/cert-manager/secret.enc.yaml` names no namespace and
+  gets it, and its labels, from `apps/kustomization.yaml`.
 - **A decrypted value stays on the machine.** Decrypt only to change a value, as `docs/how-to/sops.md` describes,
   and never put one in a commit, a pull request, a comment or a log.
 - **A `SecretStore` is not a Secret.** Anyone who can read the management cluster can read what it holds, so a test
@@ -134,7 +139,9 @@ Nothing here needs a cluster to check, and nothing should be applied to one by h
 
 - `pre-commit run --files <changed files>`: lint, the README check and the SOPS check.
 - `tools/test-all-ff validate`: builds every Flux `Kustomization` as Flux would, and validates the result against the
-  schemas. Run it after any change to a manifest or a tool. It takes a few minutes.
+  schemas. Run it after any change to a manifest or a tool. It takes a few minutes, and needs the network, though not
+  a cluster: it downloads the Flux CLI, the schemas and every chart a `HelmRelease` names, and keeps them under
+  `${TMPDIR:-/tmp}` for the next run.
 - `tools/fake-flux build <kustomization>`: shows exactly what one `Kustomization` would apply, to compare before and
   after a change.
 - CI's kind test applies the whole repository to a throwaway cluster. A pull request that changes only documentation
@@ -147,6 +154,11 @@ A hook or a test that fails is telling you something. Fix the cause; don't skip 
 `docs/how-to/troubleshooting.md` goes from symptom to cause. Read the failing object's own message first, then walk
 up the chain: a cluster's `Kustomization` that says `DependencyNotReady` is waiting for the one above it, and the
 fault is there.
+
+To get from an object to the Flux object that applied it, use `flux trace`, as `docs/how-to/troubleshooting.md`,
+section "Find what applied an object", shows. An app's objects in a workload cluster were applied by a `HelmRelease` on
+the management cluster, so read their labels in the workload cluster and trace the `HelmRelease` on the management
+cluster.
 
 ## How to report
 
