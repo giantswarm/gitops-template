@@ -15,6 +15,22 @@ See [Stages and regions](../tutorials/intermediate/stages-and-regions.md).
 
 See [Stages](../tutorials/intermediate/stages-and-regions.md#stages).
 
+#### The development cluster
+
+See [Stages](../tutorials/intermediate/stages-and-regions.md#stages).
+
+#### The staging cluster
+
+See [Stages](../tutorials/intermediate/stages-and-regions.md#stages).
+
+#### The production cluster
+
+See [Stages](../tutorials/intermediate/stages-and-regions.md#stages).
+
+#### Region specific settings for the production cluster
+
+See [Regions](../tutorials/intermediate/stages-and-regions.md#regions).
+
 #### The development stage
 
 See [Stages](../tutorials/intermediate/stages-and-regions.md#stages).
@@ -40,6 +56,10 @@ See [Regions](../tutorials/intermediate/stages-and-regions.md#regions).
 
 See [Add clusters to the stages](../tutorials/intermediate/stages-and-regions.md#add-clusters-to-the-stages), and
 [Cluster values](../reference/values.md#cluster-values) for the order of the values.
+
+## Add Workload Clusters based on the environment cluster templates
+
+See [Add clusters to the stages](../tutorials/intermediate/stages-and-regions.md#add-clusters-to-the-stages).
 
 ## Tips for developing environments
 

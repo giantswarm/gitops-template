@@ -78,7 +78,7 @@ management-clusters
                 ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from WC_NAME.yaml and WC_NAME-apps.yaml
 -----------------------------------------------------------------------------------
-                    ├── kustomization.yaml                WC_NAME.yaml responsibility
+                    ├── kustomization.yaml                WC_NAME-apps.yaml responsibility
                     ├── apps
                     ├── cluster
                     ├── [out-of-band]
@@ -107,27 +107,27 @@ explain what they show and what to change when you copy them.
 ### What kubectl-gs writes
 
 `kubectl gs gitops` writes some of these files, in the names this page uses. The rest you write by hand, from the
-docs or by copying an example. The commands write the layout of [structure version](#structure-version) 2, so most
-of what they write needs a few changes, which [Let kubectl-gs write the files](../how-to/kubectl-gs.md) lists.
+docs or by copying an example. From kubectl-gs X.Y.Z on, the commands write the layout of
+[structure version](#structure-version) 3; [Let kubectl-gs write the files](../how-to/kubectl-gs.md) lists what each
+writes and the little left to change.
 
 | Directory or file | Written by |
 | --- | --- |
 | `.gitops-metadata.yaml`, `.sops.yaml` | `kubectl gs gitops init`; every `add` command records its layer in `.gitops-metadata.yaml` |
 | `MC_NAME/MC_NAME.yaml`, `MC_NAME/organizations` | `kubectl gs gitops add management-cluster` |
 | `MC_NAME/.sops.keys`, `MC_NAME/secrets/MC_NAME.gpgkey.enc.yaml` | `kubectl gs gitops add management-cluster --gen-master-key`, or by hand |
-| `MC_NAME/secrets/kustomization.yaml` | by hand |
-| `ORG_NAME/ORG_NAME.yaml`, `ORG_NAME/workload-clusters/kustomization.yaml` | `kubectl gs gitops add organization` |
-| `ORG_NAME/kustomization.yaml`, `ORG_NAME/namespace.yaml`, `ORG_NAME/namespace` | by hand |
+| `MC_NAME/secrets/kustomization.yaml` | `kubectl gs gitops add management-cluster --gen-master-key`, or by hand |
+| `ORG_NAME/ORG_NAME.yaml`, `ORG_NAME/kustomization.yaml`, `ORG_NAME/namespace.yaml`, `ORG_NAME/namespace/kustomization.yaml`, `ORG_NAME/workload-clusters/kustomization.yaml` | `kubectl gs gitops add organization` |
 | `ORG_NAME/multicluster` | by hand |
-| `WC_NAME.yaml`, `WC_NAME/cluster` | `kubectl gs gitops add workload-cluster`, in `mapi/cluster` unless you pass `--skip-mapi` |
-| `WC_NAME-apps.yaml`, `WC_NAME-direct.yaml`, `WC_NAME/kustomization.yaml` | by hand |
+| `WC_NAME.yaml`, `WC_NAME-apps.yaml`, `WC_NAME/kustomization.yaml`, `WC_NAME/cluster` | `kubectl gs gitops add workload-cluster`, with `--base` for the cluster and its apps `Kustomization` |
+| `WC_NAME-direct.yaml` | by hand |
 | `WC_NAME/cluster/cluster_userconfig.yaml`, `WC_NAME/cluster/patch_cluster_userconfig.yaml` | `kubectl gs gitops add workload-cluster --cluster-user-config` |
 | `WC_NAME/apps/kustomization.yaml` | `kubectl gs gitops add workload-cluster` |
 | `WC_NAME/apps/patch_cluster_config.yaml` | by hand |
 | `WC_NAME/apps/APP_NAME` | `kubectl gs gitops add app`, which is deprecated, or by hand |
 | `WC_NAME/out-of-band`, `WC_NAME/teams` | by hand |
-| A workload cluster's SOPS key and its rule in `.sops.yaml` | by hand, see [Keep secrets in the repository](../how-to/sops.md); `kubectl gs gitops add encryption` writes the key where this layout can't use it |
-| `bases/clusters/PROVIDER` | `kubectl gs gitops add base --provider PROVIDER`, in `bases/clusters/PROVIDER/template` |
+| A workload cluster's SOPS key and its rule in `.sops.yaml` | `kubectl gs gitops add encryption --workload-cluster`, for a GPG key, or by hand, see [Keep secrets in the repository](../how-to/sops.md) |
+| `bases/clusters/PROVIDER` | `kubectl gs gitops add base --provider PROVIDER` |
 | `bases/clusters/BASE_NAME`, `bases/apps`, `bases/stacks`, `bases/environments`, `bases/secret_stores`, `bases/shared_objects` | by hand |
 | An app's version range, `spec.ref.semver` in its `oci-repository.yaml` | `kubectl gs gitops add automatic-update`, or by hand |
 
@@ -157,7 +157,7 @@ The file sits outside of what Flux applies, so it never reaches a cluster. Don't
 | --- | --- | --- |
 | 1 | Clusters and apps as App CRs | kubectl-gs before 6.0.0 |
 | 2 | Clusters and apps as Flux `HelmRelease`s, in a workload cluster's `mapi` directory | kubectl-gs 6.0.0 and newer |
-| 3 | No `mapi`; an organisation's `namespace` directory and `namespace.yaml`; the workload clusters' Kustomizations and keys in the organisation's namespace | no kubectl-gs release yet |
+| 3 | No `mapi`; an organisation's `namespace` directory and `namespace.yaml`; the workload clusters' Kustomizations and keys in the organisation's namespace | kubectl-gs X.Y.Z and newer |
 
 To check which parts of your repository are behind and bring them up to date, see
 [Check and upgrade the structure version](../how-to/upgrade-fork.md#check-and-upgrade-the-structure-version).
@@ -462,11 +462,10 @@ applies it, fills in `${organization}`. The namespace must be explicit: Flux doe
 `Kustomization`'s. A cluster without secondary apps, such as the `HELLO_APP_*` examples, has only `WC_NAME.yaml`, which
 applies the cluster's directory, whose `kustomization.yaml` lists `cluster`, and needs no health check.
 
-`kubectl gs gitops add workload-cluster` writes a single `WC_NAME.yaml` in `default` that applies the whole cluster
-directory, so its apps don't wait for the cluster, and a `mapi` directory unless you pass `--skip-mapi`.
-`kubectl gs gitops add encryption --workload-cluster` writes the cluster's key Secret into `MC_NAME/secrets`, in
-`default`, where the cluster's Kustomizations can't read it. [Workload cluster](../how-to/kubectl-gs.md#workload-cluster)
-lists what to change in what they write.
+`kubectl gs gitops add workload-cluster --base` writes both of a cluster's Kustomizations, as described here, from
+kubectl-gs X.Y.Z on, and `kubectl gs gitops add encryption --workload-cluster` its key Secret in `namespace/secrets`.
+Older releases write a single `WC_NAME.yaml` in `default` and a `mapi` directory, and the key into `MC_NAME/secrets`.
+[Workload cluster](../how-to/kubectl-gs.md#workload-cluster) lists what's left to change.
 
 ### Reconcile intervals
 
@@ -525,3 +524,55 @@ repository.
 | ConfigMap `cluster-app-installation-values`, key `values.yaml`, in every `org-*` namespace | Giant Swarm creates it in the `giantswarm` namespace. The Kyverno policy `sync-cluster-app-configmap-to-org-namespaces`, in `kyverno-policies-ux` 0.14.0 and newer, copies it into every organisation namespace and keeps the copies in sync. With an older `kyverno-policies-ux` it is missing, and every cluster `HelmRelease` fails because Flux can't resolve that `valuesFrom` entry. See [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster) | The first `valuesFrom` entry of a cluster's `HelmRelease`. On management clusters with `kyverno-policies-ux` 0.15.1 or newer, the `prepend-cluster-app-config-map-hr` policy adds the same entry to a cluster `HelmRelease` that lacks it; the explicit entry is for management clusters without that policy and does no harm next to it |
 | ConfigMap `${cluster_name}-cluster-values` | cluster-apps-operator, once the cluster exists | The `valuesFrom` of the apps of a cluster |
 | Secret `${cluster_name}-kubeconfig` | Cluster API, once the cluster exists | The `kubeConfig` of the apps' `HelmRelease`s and of `WC_NAME-direct.yaml` |
+
+## What you can do, and what Giant Swarm does
+
+On a management cluster you and Giant Swarm share one Flux, in the `flux-giantswarm` namespace, and Giant Swarm's
+[rbac-operator](https://github.com/giantswarm/rbac-operator) decides who may do what. Everything in this repository
+stays inside these rules.
+[The rights of the `automation` ServiceAccounts](./ci-checks.md#the-rights-of-the-automation-serviceaccounts) lists
+them rule by rule, with the commits they come from.
+
+What you can write:
+
+- anything namespaced in `default` and in your organisations' `org-*` namespaces;
+- two cluster-scoped kinds, which the platform grants on purpose: `Organization`, and `AWSClusterRoleIdentity` on CAPA
+  management clusters. Nothing else cluster-scoped: no `Namespace`, `ClusterRole` or `ClusterPolicy`.
+
+What you can read: every resource in every namespace, except `Secret`s and `ConfigMap`s outside the namespaces you write
+in. That includes pod logs, so `kubectl logs -n flux-giantswarm deployment/kustomize-controller` works for you.
+
+Flux applies the repository as one of two `automation` ServiceAccounts, which rbac-operator creates. A `Kustomization`,
+`HelmRelease` or `ResourceSet` names one with `serviceAccountName: automation`, and gets that account's rights in its
+own namespace:
+
+| ServiceAccount | What it may do |
+| --- | --- |
+| `default/automation` | Everything in `default` and in every `org-*` namespace except `org-giantswarm`; create `Organization`s and `AWSClusterRoleIdentity`s; read what you can read |
+| `org-ORG_NAME/automation` | Everything in its own organisation's namespace. Elsewhere, only the few things the cluster charts need, such as reading `Release`s and `Node`s |
+
+So `default`'s account reaches every organisation, and an organisation's reaches only itself. Anything that runs as
+`default/automation`, such as a `Kustomization` in `default`, can change any organisation. The repository keeps that
+account's work small: the management cluster's `Kustomization`, `MC_NAME.yaml`, applies only `Organization`s and
+objects in `default`, and each organisation's objects are applied from its own namespace, as its own account, so a
+mistake in one organisation's files can't reach another.
+
+Two Kyverno policies on the management cluster check Flux objects as they're created, outside Giant Swarm's own
+namespaces, and refuse the ones that break these rules:
+
+- A `Kustomization` or `HelmRelease` needs `spec.serviceAccountName`, or `spec.kubeConfig` when it applies to a
+  workload cluster. One copied from upstream Flux documentation usually has neither, and is refused.
+- Its source, `spec.sourceRef` or the chart's, has to be in its own namespace or in `default`. Its `targetNamespace`
+  and `storageNamespace` have to be its own namespace (`targetNamespace` may also be another `org-*`), unless it has
+  `kubeConfig`. An `Alert`, `Receiver` or `ImagePolicy` may only refer to objects in its own namespace.
+- A `ResourceSet` needs `spec.serviceAccountName`.
+
+Some things are always Giant Swarm's to do:
+
+- install, upgrade and configure Flux, Flux Operator, Kyverno, External Secrets Operator and the other platform apps,
+  and anything in `flux-giantswarm`, `giantswarm` and the other namespaces you can't write, such as exposing Flux's
+  webhook receiver;
+- give the `automation` ServiceAccounts more rights, or create any other cluster-scoped object;
+- the [objects the management cluster provides](#objects-the-management-cluster-provides).
+
+Ask Giant Swarm when a step needs one of these. Everything else in this repository is yours.

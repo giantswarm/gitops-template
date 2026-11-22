@@ -9,7 +9,7 @@ its own instead, see [Share cluster defaults](../tutorials/intermediate/cluster-
 The [WC_NAME/cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/cluster/) example
 has its own values.
 
-## Give a cluster its own values
+## Write the cluster's values ConfigMap
 
 The files have the names `kubectl gs gitops add workload-cluster --cluster-user-config` writes, so you can let it
 write them, see [Workload cluster](./kubectl-gs.md#workload-cluster), and fix what it leaves out.

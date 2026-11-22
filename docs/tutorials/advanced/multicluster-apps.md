@@ -11,7 +11,8 @@ is installed on every cluster in that list. Adding a cluster to the list rolls a
 This tutorial sets up `${ORG_DIR}/multicluster/apps` in the organisation from the
 [basic tutorial](../basic/getting-started.md), lists its clusters, and adds hello-world as a multicluster app, upgraded
 only in an upgrade window. It builds on [Scheduled upgrades](./scheduled-upgrades.md), which explains the
-`ResourceSetInputProvider` and the `ResourceSet`.
+`ResourceSetInputProvider` and the `ResourceSet`. It creates no cluster: the app goes on the clusters you already
+have.
 
 - [The multicluster directory](#the-multicluster-directory)
 - [List the clusters](#list-the-clusters)
@@ -116,7 +117,7 @@ sets their `spec.inputs`:
     spec:
       inputs: []
     EOF
-    for c in ${MULTICLUSTER_CLUSTERS}; do
+    for c in $(echo "${MULTICLUSTER_CLUSTERS}"); do
       yq -i '.spec.inputs += [{"cluster": "'"${c}"'"}]' ${ORG_DIR}/multicluster/apps/clusters.yaml
     done
     ```
@@ -284,6 +285,8 @@ flux get kustomizations ${MC_NAME}-multicluster-apps-${ORG_NAME} -n default
 kubectl get resourceset hello-world-scheduled -n org-${ORG_NAME}
 flux get helmreleases -n org-${ORG_NAME} | grep hello-world-scheduled
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 If you followed [Scheduled upgrades](./scheduled-upgrades.md) on the same cluster, it keeps its `hello-world-window`
 from there. That one has names, a release and a namespace of its own, so the two `ResourceSet`s never render the same

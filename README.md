@@ -1,12 +1,20 @@
 # GitOps Template
 
 This repository is a template for managing Giant Swarm workload clusters and their apps with GitOps. You describe
-clusters and apps as files in Git, and Flux, which runs on every Giant Swarm management cluster, applies them. Fork
+clusters and apps as files in Git, and Flux, which runs on every Giant Swarm management cluster, applies them. Copy
 it to start your own repository.
 
+Your copy will hold your management cluster's name, your organisations, clusters, regions and node sizes, and your
+encrypted secrets, so you'll usually want it private. A GitHub fork of a public repository is always public, so use
+**Use this template** on GitHub to create a private repository from it instead, or, on another Git host, clone this
+repository and push it to a new private one. To follow the template's changes later, add it as a second remote,
+`git remote add template https://github.com/giantswarm/gitops-template.git`. A plain fork is fine for trying the
+tutorials with placeholder names, or for contributing back to the template. The docs call your copy "your fork"
+either way.
+
 Giant Swarm maintains this template. Its layout has a version, the
-[structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check` tells you when
-your fork has fallen behind it.
+[structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check`, from
+kubectl-gs X.Y.Z on, tells you when your fork has fallen behind it.
 
 ## Get started
 
@@ -21,17 +29,10 @@ After that, the tutorials go further in two more tiers:
 - **Advanced:** out-of-band resources, scheduled upgrades, multicluster apps, application teams and testing the
   repository, starting with [Out-of-band resources](docs/tutorials/advanced/out-of-band.md).
 
-## Guides
+## Documentation
 
-The [documentation home](docs/README.md) lists every tutorial, how-to guide, reference page and explanation.
-
-## Reference
-
-- [Repository structure](docs/reference/repo-structure.md) lists every directory and file, and the rules for them.
-- [SOPS keys](docs/reference/sops-keys.md) explains which key decrypts which files.
-- [Values](docs/reference/values.md) lists the `valuesFrom` layers of clusters and apps, in order.
-- [Tools](docs/reference/tools.md) lists the tools the docs use, and the kubectl-gs version each command needs.
-- [CI checks](docs/reference/ci-checks.md) explains what each CI job and test checks.
+The [documentation home](docs/README.md) lists every tutorial, how-to guide, reference page and explanation. When
+something doesn't get `Ready`, start with [When something isn't Ready](docs/how-to/troubleshooting.md).
 
 ## Checking your changes before you push
 

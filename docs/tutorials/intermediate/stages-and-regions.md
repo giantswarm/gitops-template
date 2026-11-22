@@ -18,10 +18,19 @@ the cluster and its apps. A cluster lists its region and its stage under `compon
 put it in a place and a stage. Why environments are directories rather than branches or repositories is in
 [Directories, branches or repositories](../../explanation/composition.md#directories-branches-or-repositories).
 
+Four real clusters cost real money, and the two prod clusters are sized like production: each asks for ten to fifty
+`m6a.8xlarge` nodes in `nodepool0`, plus the region's `large` pool of one to ten `m6a.2xlarge` in `eu-central` or
+`m6a.4xlarge` in `us-west`. That's more than twenty big
+nodes before a single workload, and your account's vCPU quota may say no first. So this tutorial reads along by
+default: you write the files, commit them on a local branch, and render each cluster with `tools/fake-flux` to see
+what Flux would apply, without pushing. Creating the clusters for real is the second option, at the end of
+[Add clusters to the stages](#add-clusters-to-the-stages), and [Clean up](#clean-up) removes them again.
+
 - [Regions](#regions)
 - [Stages](#stages)
 - [Add clusters to the stages](#add-clusters-to-the-stages)
 - [Promote a change from dev to prod](#promote-a-change-from-dev-to-prod)
+- [Clean up](#clean-up)
 - [Next steps](#next-steps)
 
 The fork already has all of this: the Components in [bases/environments](/bases/environments), and the four clusters
@@ -178,12 +187,14 @@ grep -A1 'renovate:' bases/environments/stages/*/kustomization.yaml
 Export them. Dev runs the newest release, staging one behind it, prod one behind staging:
 
 ```sh
-export DEV_RELEASE=DEV_RELEASE                      # for example the newest release, without the `aws-` prefix
+export DEV_RELEASE=DEV_RELEASE
 export STAGING_RELEASE=STAGING_RELEASE
 export PROD_RELEASE=PROD_RELEASE
-export STAGING_HELLO_WORLD=STAGING_HELLO_WORLD      # a hello-world chart version
+export STAGING_HELLO_WORLD=STAGING_HELLO_WORLD
 export PROD_HELLO_WORLD=PROD_HELLO_WORLD
 ```
+
+The releases are written without the `aws-` prefix, and the two `HELLO_WORLD` variables are hello-world chart versions.
 
 In the commands below, the shell fills in the versions, and `\\\${cluster_name}` writes `\${cluster_name}` into the
 file: the target name escaped for kustomize, which reads it as a regular expression.
@@ -265,11 +276,12 @@ A stage holds versions only. The prod clusters' bigger nodes are their own value
 
 1. The fork's stage files are the same, with a comment on each pin and a `# block end` marker. Once you've compared
    them, put the fork's back, and set only your versions in them. `pin` changes the `value:` under the `# renovate:`
-   comment of one chart in one stage, and leaves every other line, comments included, as it is:
+   comment of one chart in one stage, `pin STAGE CHART VERSION`, and leaves every other line, comments included, as it
+   is:
 
     ```sh
     git checkout -- bases/environments/stages
-    pin() {  # pin STAGE CHART VERSION
+    pin() {
       sed -i "/depName=gsoci.azurecr.io\/charts\/giantswarm\/$2 /{n;s/value: \".*\"/value: \"$3\"/;}" \
         bases/environments/stages/$1/kustomization.yaml
     }
@@ -454,21 +466,52 @@ runs after them, so Flux merges the layers in this order:
     done
     ```
 
-1. List the four in the organisation's clusters, then commit and push:
+1. List the four in the organisation's clusters, and commit them on a branch of their own, without pushing:
 
     ```sh
     for c in DEV_CLUSTER_1 STAGING_CLUSTER_1 PROD_CLUSTER_EU_CENTRAL PROD_CLUSTER_US_WEST; do
       yq -i '.resources += ["HELLO_APP_'"${c}"'.yaml"] | .resources |= unique' ${STAGES_DIR}/kustomization.yaml
     done
+    git switch -c stages-and-regions
     git add bases/environments ${STAGES_DIR}
-    git commit -m "Add hello-app clusters in dev, staging and prod" && git push
+    git commit -m "Add hello-app clusters in dev, staging and prod"
     ```
+
+1. Render each cluster as Flux would apply it. The first command shows the release each stage pins, the second the
+   layers of the prod cluster's values, in the order Flux merges them:
+
+    ```sh
+    for c in dev-1 staging-1 prod-euc prod-usw; do
+      tools/fake-flux build ${MC_NAME}-clusters-hello-app-${c} -M \
+        '. | select(.kind == "OCIRepository" and .metadata.name == "hello-app-'"${c}"'") | .metadata.name + " " + .spec.ref.tag'
+    done
+    tools/fake-flux build ${MC_NAME}-clusters-hello-app-prod-euc -M \
+      '. | select(.kind == "HelmRelease" and .metadata.name == "hello-app-prod-euc") | .spec.valuesFrom[].name'
+    ```
+
+**Check:** each cluster's `OCIRepository` has the release of its stage, and the prod cluster's `valuesFrom` lists the
+five layers above, ending with its `-cluster-userconfig`. If `fake-flux` fails to build one, the message names the file
+and the line, as Flux's would; [When something isn't Ready](../../how-to/troubleshooting.md#a-build-fails) explains the
+usual causes.
+
+### Create the clusters (optional)
+
+If you do want the four clusters, and the bill that comes with them, merge the branch into the branch Flux follows,
+`main` here, and push:
+
+```sh
+git switch main
+git merge stages-and-regions
+git push
+```
 
 **Check:** four clusters come up, each with the release of its stage:
 
 ```sh
 kubectl get ocirepositories -n org-${ORG_NAME} | grep hello-app
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-clusters-kustomization-waits-on-its-health-check).
 
 With `prune: true`, Flux deletes what you delete from a cluster's files, but never the cluster itself: its
 `HelmRelease` and `OCIRepository`, from the CAPA base, have the `kustomize.toolkit.fluxcd.io/prune: disabled`
@@ -507,6 +550,20 @@ release update replaces the cluster's nodes. Merging them in order is the promot
 
 Without Renovate, promote the same way: change the version in the next stage's `kustomization.yaml` and merge it. To
 promote a version other than the newest, change the version in Renovate's pull request before you merge it.
+
+## Clean up
+
+If you only read along, nothing reached the management cluster. Switch back and drop the branch. The fork's own
+regions and stages, which the later tutorials use, are on `main` already:
+
+```sh
+git switch main
+git branch -D stages-and-regions
+```
+
+If you created the clusters, delete each of them as [Delete a workload cluster](../../how-to/delete-cluster.md)
+describes, prod ones included. Their deletion protection is there on purpose, so it takes a few deliberate steps per
+cluster. Keep `bases/environments`: regions and stages cost nothing.
 
 ## Next steps
 
