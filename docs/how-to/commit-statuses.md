@@ -62,7 +62,9 @@ of the two ways below, the same way you keep your other secrets.
 
 External Secrets Operator writes the Secret from your secret manager, see
 [Read secrets from a secret manager](./external-secrets.md). To try it without one, use the
-[secret store for testing](./external-secrets.md#a-secret-store-for-testing).
+[secret store for testing](./external-secrets.md#a-secret-store-for-testing). Its token is a dummy, so ESO writes the
+Secrets but GitHub refuses the statuses: to see them on GitHub, keep a real token
+[encrypted with SOPS](#token-encrypted-with-sops) while you test, never in the test store.
 Store the token in your secret manager, then copy the example:
 
 ```sh
@@ -115,19 +117,25 @@ yq -i '.creation_rules += [{
 }]' .sops.yaml
 ```
 
-Then write the token into the Secrets, and encrypt them. The organisation's names its real namespace,
-`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, so Flux leaves the encrypted file as
-it is: changing it would break its MAC, so Flux couldn't decrypt it:
+Then write the token into the Secrets. `sops` encrypts each on its way into its file, with the rule above, so the
+token never sits in the repository in plain text. It needs the master key's public key in your keyring, which the
+first line imports, and `sops` 3.10.0 or newer, see [Tools](../reference/tools.md#tools). The second line reads the
+token without it landing in your shell history. The organisation's Secret
+names its real namespace, `org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, so Flux
+leaves the encrypted file as it is: changing it would break its MAC, so Flux couldn't decrypt it:
 
 ```sh
+gpg --import ${MC_DIR}/.sops.keys/.sops.master.asc
+read -rs GITHUB_TOKEN
 kubectl create secret generic github-commit-status-token --namespace=default \
-  --from-literal=token=YOUR_GITHUB_TOKEN --dry-run=client -o yaml \
+  --from-literal=token="${GITHUB_TOKEN}" --dry-run=client -o yaml |
+  sops --encrypt --filename-override ${MC_DIR}/notifications/github-commit-status-token.enc.yaml /dev/stdin \
   > ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
 kubectl create secret generic github-commit-status-token --namespace=org-${ORG_NAME} \
-  --from-literal=token=YOUR_GITHUB_TOKEN --dry-run=client -o yaml \
+  --from-literal=token="${GITHUB_TOKEN}" --dry-run=client -o yaml |
+  sops --encrypt --filename-override ${ORG_DIR}/notifications/github-commit-status-token.enc.yaml /dev/stdin \
   > ${ORG_DIR}/notifications/github-commit-status-token.enc.yaml
-sops --encrypt --in-place ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
-sops --encrypt --in-place ${ORG_DIR}/notifications/github-commit-status-token.enc.yaml
+unset GITHUB_TOKEN
 ```
 
 ## Check the statuses

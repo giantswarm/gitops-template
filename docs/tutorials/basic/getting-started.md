@@ -16,8 +16,9 @@ just because a file went missing. For more on the approach, see
 
 A cluster and its apps need secrets, and this repository supports two ways to keep them:
 
-- [SOPS](https://github.com/getsops/sops) encrypts them and keeps them in the repository. Only Flux on the management
-  cluster holds the key that decrypts them.
+- [SOPS](https://github.com/getsops/sops) encrypts them and keeps them in the repository. Flux decrypts them on the
+  management cluster with a private key it keeps in a Secret in `default`, so everyone who can read Secrets there
+  holds that key too. Keep it nowhere else but your password manager.
 - [External Secrets Operator](https://docs.giantswarm.io/overview/security/external-secrets-operator/) (ESO) reads them
   from your secret manager, such as AWS Secrets Manager or Azure Key Vault, and writes them into the management
   cluster. ESO runs on every Giant Swarm management cluster.
@@ -26,7 +27,7 @@ You can use SOPS on its own, ESO on its own, or both. This tutorial uses both, e
 the two secrets Flux needs before it can read anything at all: the key that decrypts the repository, and the token
 that reads it. ESO gives the app its secret values. If you only want one of them:
 
-- **SOPS only:** in step 2, skip the secret store, and leave `../multicluster/secret-stores` out of
+- **SOPS only:** in step 2, skip the secret store, and leave `secret-stores` out of
   `${ORG_DIR}/namespace/kustomization.yaml`. In step 4, skip the `ExternalSecret`, and leave `externalsecret.yaml` out
   of `${APP_DIR}/kustomization.yaml`. Skip the checks of the store and the `ExternalSecret` too, and the
   `kubectl annotate` that makes ESO copy a change in step 5. To give the app secret values, encrypt them in the
@@ -54,7 +55,7 @@ management-clusters/${MC_NAME}/
     ├── kustomization.yaml
     ├── namespace.yaml                     applies namespace/ into org-${ORG_NAME}
     ├── namespace/kustomization.yaml
-    ├── multicluster/secret-stores/        the organisation's SecretStore
+    ├── namespace/secret-stores/           the organisation's SecretStore
     └── workload-clusters/
         ├── kustomization.yaml
         ├── ${WC_NAME}.yaml                applies the cluster                            (step 3)
@@ -80,7 +81,7 @@ You need:
 - the [tools](../../reference/tools.md#tools) this tutorial runs: `git`, `kubectl`,
   [`kubectl gs`](https://docs.giantswarm.io/reference/kubectl-gs/), `flux`, `gpg`, `sops` and `yq`. The
   [kubectl-gs version](../../reference/tools.md#kubectl-gs-version) table says which release each `kubectl gs gitops`
-  command needs,
+  command needs, and `sops` has to be 3.10.0 or newer,
 - access to the management cluster, see
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
@@ -172,22 +173,25 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 
     If it doesn't, go on to the next step and create one. If it does, whatever is already encrypted for this
     management cluster needs that key, and whatever created the Secret, such as another repository, still manages it.
-    So you leave the Secret alone, and import its key only to encrypt with it. The Secret can hold other keys too, such
-    as an organisation's, so take the one whose name has `master` in it, import it, and save its fingerprint for the
-    next commands:
+    So you leave the Secret alone, and take only its public key, which is all you need to encrypt. The Secret can hold
+    other keys too, such as an organisation's, so take the one whose name has `master` in it. The commands import it
+    into a throwaway keyring, copy the public key from there into yours, and delete the throwaway keyring, so the
+    private key never reaches your own. They save its fingerprint for the next commands:
 
     ```sh
-    MASTER_KEY=$(kubectl get secret sops-gpg-master -n default -o yaml |
-      yq '.data | to_entries[] | select(.key | test("master")) | .value' | base64 -d)
-    echo "${MASTER_KEY}" | gpg --import
-    export KEY_FP=$(echo "${MASTER_KEY}" | gpg --show-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
-    unset MASTER_KEY
+    MASTER_KEYRING=$(mktemp -d)
+    kubectl get secret sops-gpg-master -n default -o yaml |
+      yq '.data | to_entries[] | select(.key | test("master")) | .value' | base64 -d |
+      gpg --homedir "${MASTER_KEYRING}" --batch --import
+    export KEY_FP=$(gpg --homedir "${MASTER_KEYRING}" --list-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+    gpg --homedir "${MASTER_KEYRING}" --export --armor "${KEY_FP}" | gpg --import
+    gpgconf --homedir "${MASTER_KEYRING}" --kill gpg-agent
+    rm -rf "${MASTER_KEYRING}"
     ```
 
-    If the key is in your password manager, save it to a file and use that instead:
-    `gpg --import FILE`, then `export KEY_FP=$(gpg --show-keys --with-colons FILE | awk -F: '/^fpr/{print $10; exit}')`.
-    Then skip to sharing the public key: with an imported key, you don't write, apply or list `sops-gpg-master`
-    yourself.
+    If the key is in your password manager, pipe it from there into the same `gpg --homedir` import instead of the
+    `kubectl get` lines. Then skip to sharing the public key: with an existing key, you don't write, apply or list
+    `sops-gpg-master` yourself.
 
     > [!Caution]
     > Never replace an existing `sops-gpg-master` with a new key: Flux could no longer decrypt anything encrypted for
@@ -217,21 +221,7 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     export KEY_FP=$(gpg --list-secret-keys --with-colons "${MC_NAME} Flux Master" | awk -F: '/^fpr/{print $10; exit}')
     ```
 
-    Then write the private key into the `sops-gpg-master` Secret. The first part of the command stops it when
-    `KEY_FP` is empty, so it can never write an empty key:
-
-    ```sh
-    : "${KEY_FP:?set KEY_FP first}" && gpg --export-secret-keys --armor "${KEY_FP}" |
-    kubectl create secret generic sops-gpg-master --namespace=default \
-    --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml \
-    > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
-    ```
-
-    > [!Caution]
-    > Until you encrypt it a few steps below, this file holds the private key in plain text. Don't add it to Git
-    > before then.
-
-1. Share the public key in the repository, so that anyone can encrypt for Flux, but only Flux can decrypt:
+1. Share the public key in the repository, so that anyone can encrypt for Flux without holding the private key:
 
     ```sh
     : "${KEY_FP:?set KEY_FP first}" && gpg --export --armor "${KEY_FP}" > ${MC_DIR}/.sops.keys/.sops.master.asc
@@ -254,6 +244,25 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     }]' .sops.yaml
     ```
 
+1. If you created a new master key, write its private key into the `sops-gpg-master` Secret, and apply the Secret, so
+   that Flux has it before it needs it. `sops` encrypts the Secret on its way into the file, with the first rule
+   above, so the private key never sits in the repository in plain text: `--filename-override` tells `sops` which
+   file it's writing, and so which rule applies, as it reads the Secret from stdin. The first part of the command
+   stops it when `KEY_FP` is empty, so it can never write an empty key:
+
+    ```sh
+    : "${KEY_FP:?set KEY_FP first}" && SECRET_YAML=$(gpg --export-secret-keys --armor "${KEY_FP}" |
+      kubectl create secret generic sops-gpg-master --namespace=default \
+      --from-file=${MC_NAME}.master.asc=/dev/stdin --dry-run=client -o yaml) &&
+      echo "${SECRET_YAML}" | sops --encrypt --filename-override ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml \
+      /dev/stdin > ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml &&
+      echo "${SECRET_YAML}" | kubectl apply -f -
+    unset SECRET_YAML
+    ```
+
+    If `sops` can't encrypt, it says why, and nothing reaches the management cluster. The file it leaves behind holds
+    no secret: fix the error and run the command again.
+
 1. Write Flux's token for the repository into the Secret named in `GIT_SECRET`, `github-https-credentials` unless
    you changed it. Create a GitHub token with read access to the repository's contents, for example a
    [fine-grained personal access token][github-token]. First, check that nobody got there before you:
@@ -270,40 +279,23 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     > export GIT_SECRET=${GITOPS_REPO}-https-credentials
     > ```
 
-    Read the token without it landing in your shell history, and write the Secret:
+    Read the token without it landing in your shell history, then write the Secret, encrypted, and apply it, the same
+    way as the master key:
 
     ```sh
     read -rs GITHUB_TOKEN
-    kubectl create secret generic ${GIT_SECRET} --namespace=default \
-    --from-literal=username=git --from-literal=password="${GITHUB_TOKEN}" --dry-run=client -o yaml \
-    > ${MC_DIR}/secrets/${GIT_SECRET}.enc.yaml
-    unset GITHUB_TOKEN
+    SECRET_YAML=$(kubectl create secret generic ${GIT_SECRET} --namespace=default \
+      --from-literal=username=git --from-literal=password="${GITHUB_TOKEN}" --dry-run=client -o yaml) &&
+      echo "${SECRET_YAML}" | sops --encrypt --filename-override ${MC_DIR}/secrets/${GIT_SECRET}.enc.yaml \
+      /dev/stdin > ${MC_DIR}/secrets/${GIT_SECRET}.enc.yaml &&
+      echo "${SECRET_YAML}" | kubectl apply -f -
+    unset GITHUB_TOKEN SECRET_YAML
     ```
 
-    The same caution applies: the token is in plain text until the next step but one.
-
-1. Apply what's in `${MC_DIR}/secrets`, so that Flux has it before it needs it: the token, and the master key if you
-   created a new one. An imported master key isn't in the directory, so this leaves its Secret as it is:
-
-    ```sh
-    kubectl apply -f ${MC_DIR}/secrets/
-    ```
-
-1. Encrypt the files in place. From now on the repository keeps only the encrypted copies:
-
-    ```sh
-    for f in ${MC_DIR}/secrets/*.enc.yaml; do
-      sops --encrypt --in-place "${f}" || { echo "sops couldn't encrypt ${f}: fix the error above first"; break; }
-    done
-    ```
-
-    The loop stops at the first file `sops` can't encrypt, and says which. Don't go on until every file is
-    encrypted.
-
-    List them in `${MC_DIR}/secrets/kustomization.yaml`. Without them, Flux can neither read nor decrypt the
-    repository, so the annotation keeps Flux from deleting them when their files go, and the label keeps anyone else
-    from deleting them by accident. The loop lists the files that are there, so an imported master key, which you
-    didn't write here, stays out of the list, and with it out of this repository's hands:
+1. List the files in `${MC_DIR}/secrets/kustomization.yaml`. Without them, Flux can neither read nor decrypt the
+   repository, so the annotation keeps Flux from deleting them when their files go, and the label keeps anyone else
+   from deleting them by accident. The loop lists the files that are there, so an existing master key, which you
+   didn't write here, stays out of the list, and with it out of this repository's hands:
 
     ```sh
     cat <<EOF > ${MC_DIR}/secrets/kustomization.yaml
@@ -324,15 +316,19 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     done
     ```
 
-1. (Optional) Print the private key and store it in your password manager, if it isn't there already. You need it
-   whenever you decrypt a file yourself, or add a key, see
-   [Keep a private key in a password manager](../../how-to/sops.md#keep-a-private-key-in-a-password-manager):
+1. (Optional) If you created a new master key, print its private key and store it in your password manager. You need
+   it whenever you decrypt a file yourself, or add a key, see
+   [Keep a private key in a password manager](../../how-to/sops.md#keep-a-private-key-in-a-password-manager). Skip it,
+   and the only copy is the one in `sops-gpg-master`, which you can read back as the step for an existing key does:
 
     ```sh
     : "${KEY_FP:?set KEY_FP first}" && gpg --export-secret-keys --armor "${KEY_FP}"
     ```
 
-    Then remove it from your machine. You can still encrypt with the public key:
+1. If you created a new master key, delete its private key from your keyring, whether you stored it or not. It has
+   no passphrase and decrypts every other key in the repository, so it doesn't belong on a laptop. Flux has its copy
+   in the Secret, and you can still encrypt with the public key. An existing key never reached your keyring, so there
+   is nothing to delete:
 
     ```sh
     : "${KEY_FP:?set KEY_FP first}" && gpg --delete-secret-keys "${KEY_FP}"
@@ -408,10 +404,10 @@ organisation reads its secrets through the organisation's namespace.
 > [Organisation](../../how-to/kubectl-gs.md#organisation) for the command and what to add afterwards.
 
 1. Create the organisation's directory. `${ORG_DIR}/namespace` holds what the organisation keeps in its namespace,
-   `${ORG_DIR}/workload-clusters` its clusters, and `${ORG_DIR}/multicluster` what all of its clusters share:
+   its secret store in `secret-stores` among it, and `${ORG_DIR}/workload-clusters` its clusters:
 
     ```sh
-    mkdir -p ${ORG_DIR}/namespace ${ORG_DIR}/workload-clusters ${ORG_DIR}/multicluster/secret-stores
+    mkdir -p ${ORG_DIR}/namespace/secret-stores ${ORG_DIR}/workload-clusters
     ```
 
 1. Create the `Organization`. organization-operator creates the `org-${ORG_NAME}` namespace for it. Deleting the
@@ -473,16 +469,16 @@ organisation reads its secrets through the organisation's namespace.
     EOF
     ```
 
-    `${ORG_DIR}/namespace/kustomization.yaml` lists what goes into the namespace. Both of its entries live outside
-    `${ORG_DIR}/namespace`, next to what they belong with: the organisation's secret stores, and its list of
-    clusters, empty for now:
+    `${ORG_DIR}/namespace/kustomization.yaml` lists what goes into the namespace: the organisation's secret store,
+    and its list of clusters, empty for now. The list of clusters lives outside `${ORG_DIR}/namespace`, next to the
+    clusters' directories:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/namespace/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
-      - ../multicluster/secret-stores
+      - secret-stores
       - ../workload-clusters
     EOF
     cat <<EOF > ${ORG_DIR}/workload-clusters/kustomization.yaml
@@ -495,11 +491,12 @@ organisation reads its secrets through the organisation's namespace.
 1. Create the organisation's secret store. The app in step 4 reads its secret values through it. Here you use a
    stand-in: the [fake provider](https://external-secrets.io/latest/provider/fake/) of ESO keeps the values in the
    store itself, so you need no secret manager and no credentials to try the whole tutorial. Anyone who can read the
-   repository can read what's in it, so never put a real secret in it. Its name is `SECRET_STORE` from your
-   exports:
+   repository can read what's in it, and so can everyone with read access to the management cluster: a `SecretStore`
+   is a custom resource, not a Secret, and they can read those in every namespace. So never put a real secret in it.
+   Its name is `SECRET_STORE` from your exports:
 
     ```sh
-    cat <<EOF > ${ORG_DIR}/multicluster/secret-stores/secret-store.yaml
+    cat <<EOF > ${ORG_DIR}/namespace/secret-stores/secret-store.yaml
     apiVersion: external-secrets.io/v1
     kind: SecretStore
     metadata:
@@ -513,7 +510,7 @@ organisation reads its secrets through the organisation's namespace.
                 podAnnotations:
                   example.com/source: secret-manager
     EOF
-    cat <<EOF > ${ORG_DIR}/multicluster/secret-stores/kustomization.yaml
+    cat <<EOF > ${ORG_DIR}/namespace/secret-stores/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
     kind: Kustomization
     resources:
@@ -1051,7 +1048,7 @@ kubectl --context ${WC_CONTEXT} get pods -n hello-world
 ```
 
 Secret values don't change in the app's files, so you change them in your secret manager. With the stand-in store
-from step 2, that's `${ORG_DIR}/multicluster/secret-stores/secret-store.yaml`, which you commit and push. ESO copies
+from step 2, that's `${ORG_DIR}/namespace/secret-stores/secret-store.yaml`, which you commit and push. ESO copies
 a change within the `ExternalSecret`'s `refreshInterval`, and Flux upgrades the release as soon as the Secret changes.
 To have ESO copy it straight away:
 
