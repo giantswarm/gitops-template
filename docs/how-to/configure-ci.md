@@ -158,8 +158,10 @@ gives each changed file one of three answers:
 - **Anything else counts:** a real change, however small, a file added, removed or renamed, YAML that doesn't parse.
 
 If no file counts, `validate.yaml` calls [validate-light.yaml](../../.github/workflows/validate-light.yaml) in place
-of the shared workflow. It runs the same `pre-commit` hooks, so Markdown is still linted and READMEs still checked,
-and reports `validate / validate` and `validate / test_on_kind` as skipped. GitHub counts a skipped check as passed,
+of the shared workflow. It runs the same `pre-commit` hooks, so Markdown is still linted and READMEs still checked.
+It also runs the tests in `tests/ats` that need no cluster, as the check `validate / validate / test_without_cluster`:
+some of them read a comment or a doc word for word, so a pull request that only rewords one can still break a test.
+It reports `validate / validate` and `validate / test_on_kind` as skipped. GitHub counts a skipped check as passed,
 so a branch that requires these checks doesn't wait for them. The job summary of `changes` lists every file with its
 answer, so you can see why a pull request got the run it did.
 
@@ -170,4 +172,4 @@ test, however small: it's the only proof that the example still works.
 To add your own files to the light run, such as a directory of notes, add a pattern to `IGNORABLE` in
 `tests/ats/ci_scope.py`. The patterns are `fnmatch` patterns, where `*` matches `/` too, so `notes/*` covers
 everything below `notes/`. Only add what neither test reads: the module can't tell if you're wrong, and a pull
-request that matches skips the kind test.
+request that matches skips the kind test, though not its tests that need no cluster.

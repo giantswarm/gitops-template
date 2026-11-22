@@ -1,8 +1,9 @@
 """Whether a pull request needs the full CI run, or the light one, and why.
 
 The full run is the shared gitops-validate workflow: pre-commit, `tools/test-all-ff validate`
-and the kind test. The light run is pre-commit only. A pull request gets the light run when no
-file it changes can change what `validate` or the kind test sees:
+and the kind test. The light run is pre-commit and the tests of tests/ats that need no cluster,
+which read files as text, comments and Markdown included. A pull request gets the light run when
+no file it changes can change what `validate` builds or the kind test applies:
 
 - a file neither of them reads, one that IGNORABLE names and NOT_IGNORABLE doesn't, unless it's a
   `*.yaml` that test-all-ff reads for its Flux API, see `read_for_flux`;
@@ -41,7 +42,9 @@ FULL = "full"
 IGNORABLE = (
     # Markdown, anywhere. The READMEs under bases/ and management-clusters/ are also read by
     # test-all-ff validate's self-tests of tools/check-directory-readmes, but a README change that
-    # breaks those also fails the check itself, a pre-commit hook that the light run runs too.
+    # breaks those also fails the check itself, a pre-commit hook that the light run runs too. The
+    # tests of tests/ats that need no cluster read some Markdown, such as
+    # docs/how-to/delete-cluster.md, and the light run runs them too.
     "*.md",
     "docs/*",
     # Read by Renovate only.
