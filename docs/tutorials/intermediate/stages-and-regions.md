@@ -166,9 +166,9 @@ that a cluster doesn't have changes nothing, so any CAPA cluster can use any sta
 `valuesFrom`, so where it sits in the `components:` list doesn't matter.
 
 Each stage pins its own release, so a new release reaches dev first, and staging and prod only when you promote it.
-Pick releases from v34.0.0 on, which have a `release-aws` chart, and hello-world versions from its
-[releases](https://github.com/giantswarm/hello-world-app/releases). The fork's stages hold the versions Renovate last
-moved them to, so you can read them there:
+Pick releases from v34.0.0 on, which have a `release-aws` chart, and hello-world versions from 3.2.2 on, the first
+that accepts the cluster values, from its [releases](https://github.com/giantswarm/hello-world-app/releases). The
+fork's stages hold the versions Renovate last moved them to, so you can read them there:
 
 ```sh
 kubectl get releases.release.giantswarm.io
@@ -188,24 +188,27 @@ export PROD_HELLO_WORLD=PROD_HELLO_WORLD
 In the commands below, the shell fills in the versions, and `\\\${cluster_name}` writes `\${cluster_name}` into the
 file: the target name escaped for kustomize, which reads it as a regular expression.
 
-1. Dev doesn't pin hello-world at all: it follows hello-world's development builds, so every build from `3.0.0` on
-   reaches dev as soon as it's published, with no pull request. Dev builds are pre-releases tagged
-   `X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>`. The `-0` on the range makes pre-releases eligible at all, and
-   `semverFilter` keeps only the dev builds. Flux picks the highest matching tag, and for builds of the same version
-   semver orders by the branch hash before the timestamp, so if several branches publish dev builds, put the CRC32 of
-   the branch to follow into the filter instead of `[0-9a-f]{8}`:
+1. Dev doesn't pin hello-world at all: it follows hello-world's development builds, so every build from `3.2.2` on
+   reaches dev as soon as it's published, with no pull request. Development builds are pre-releases, and two fields
+   let them in. A range matches pre-releases only when it has a pre-release comparator itself, which is what the
+   `-0` on `>=3.2.2-0` is for. `semverFilter`, a regular expression, then narrows the matching tags down to the ones
+   you mean. Here that's Giant Swarm's development builds, whose tag format the comment in the Component explains;
+   your own charts tag theirs their own way, so write the filter for that:
 
     ```sh
     mkdir -p bases/environments/stages/dev bases/environments/stages/staging bases/environments/stages/prod
     cat <<EOF > bases/environments/stages/dev/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1alpha1
     kind: Component
+    # Giant Swarm's development builds are tagged X.Y.Z-r<branch-CRC32>t<timestamp>h<sha>.
+    # Builds of the same version are ordered by branch hash before timestamp, so to
+    # follow one branch put its CRC32 into the filter instead of [0-9a-f]{8}.
     patches:
       - patch: |-
           - op: replace
             path: /spec/ref
             value:
-              semver: '>=3.0.0-0'
+              semver: '>=3.2.2-0'
               semverFilter: '-r[0-9a-f]{8}t[0-9]{14}h[0-9a-f]{7}'
         target:
           kind: OCIRepository

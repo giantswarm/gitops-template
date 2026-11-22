@@ -91,7 +91,6 @@ def automation_rbac(
     capi_crds: None,
     external_secrets: None,
     flux_app_deployment: None,
-    workload_cluster_flux_crds: None,
 ) -> Iterator[None]:
     """Give `automation` in GITOPS_INIT_NAMESPACES its management-cluster rights, once every CRD
     of the test is installed. The fixture deletes what it created, also when the setup fails

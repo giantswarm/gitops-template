@@ -310,9 +310,13 @@ replacements keep `org-` and put the name after it, so `org-ORG_NAME` becomes `o
 `demo-gitops`. The replacements win over what the files say, so a hand-written `organization` or namespace that names
 the organisation is updated to the `Organization`'s name.
 
-A SOPS-encrypted Secret in `namespace` must name the real namespace, `org-<name>`, never the placeholder: changing the
-encrypted file breaks its MAC, so Flux couldn't decrypt it. `targetNamespace` sets the same namespace, which keeps the
-MAC intact.
+A SOPS-encrypted Secret in `namespace` names the real namespace, `org-<name>`, never the placeholder, and you write it
+before you encrypt the file. The namespace stays in clear text in the encrypted file, but SOPS covers it with the
+file's MAC all the same. Change the file after encrypting it, by hand or with a search-and-replace when you copy an
+organisation, and the MAC no longer matches: `sops` then refuses to decrypt the file in place to change it, and you
+can't rotate its key either. The only way out is to delete the Secret and create it again. Flux doesn't check the MAC
+when it decrypts, which is why `targetNamespace`, and the labels and annotations kustomize adds while it builds, do no
+harm: they change what Flux applies, not the file in Git.
 
 If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
 `ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the multi-cluster apps
@@ -425,7 +429,8 @@ clusters' Kustomizations are separate.
 
 In the same way, the `kustomization.yaml` in `multicluster` lists only `apps.yaml`, whose Kustomization applies the
 organisation's apps on several clusters in `multicluster/apps`, so the management cluster's Kustomization never applies
-their `ResourceSet`s itself. See [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
+their `ResourceSet`s itself. Like `namespace.yaml`, it depends on `MC_NAME.yaml`'s `Kustomization`, which applies every
+commit first. See [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
 
 A cluster with apps has two Kustomizations:
 
@@ -433,14 +438,23 @@ A cluster with apps has two Kustomizations:
    ones the cluster needs from the start, such as the Gateway API charts of the
    [envoy-gateway](/bases/stacks/envoy-gateway/) stack in the out-of-band examples. Flux applies them with the cluster,
    and their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name
-   the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its `Available`
-   condition is `True`. The Kustomization only gets `Ready` then, so its `timeout` of 30 minutes covers a new cluster
-   coming up. While the cluster isn't `Available`, each reconciliation waits for up to those 30 minutes: a change you
-   push to the cluster's files, such as a fix to its values, is only applied after the wait runs out, and the apps
-   Kustomization reports `DependencyNotReady` all the while.
+   the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its
+   `ControlPlaneAvailable` and `RemoteConnectionProbe` conditions are `True`: the control plane is up and the
+   management cluster can reach it, which is all the apps need to install. The Kustomization only gets `Ready` then,
+   so its `timeout` of 30 minutes covers a new cluster coming up. While the control plane isn't up, each
+   reconciliation waits for up to those 30 minutes: a change you push to the cluster's files, such as a fix to its
+   values, is only applied after the wait runs out, and the apps Kustomization reports `DependencyNotReady` all the
+   while. The check doesn't wait for the cluster's `Available` condition, which also counts every node pool: with it,
+   one node pool short of its minimum would hold back every change to the cluster's apps, including the one that
+   would fix it. Cluster API keeps `ControlPlaneAvailable` `True` through a rolling upgrade of the control plane while
+   enough of it is healthy, and reports `RemoteConnectionProbe` `False` only once the cluster has been unreachable for
+   50 seconds. On a new cluster, the control plane can be up before any worker node has joined, so the secondary apps'
+   pods may wait `Pending`, and a `HelmRelease` may run out its 10-minute `timeout`. The app bases retry a failed
+   install up to 10 times, uninstalling it in between, so it settles by itself once the nodes join. A slower first
+   install is the price of not holding back every later change to the apps while one node pool is short.
 1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps`, which its `kustomization.yaml`
-   lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster is
-   `Available`. Until then, it reports `DependencyNotReady`.
+   lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster's control
+   plane is up. Until then, it reports `DependencyNotReady`.
 
 Name the cluster in `healthChecks` with its name written out, such as `capi-wc-name`, and the namespace as
 `org-${organization}`. Flux doesn't substitute variables in a `Kustomization`'s own spec, but `namespace.yaml`, which
@@ -459,7 +473,8 @@ lists what to change in what they write.
 A change doesn't wait for the `Kustomization` or `HelmRelease` intervals. Flux applies a new commit as soon as the
 `GitRepository` has fetched it, installs a new chart as soon as its `OCIRepository` has, and applies a change to a
 values ConfigMap or Secret at once, as they carry the `reconcile.fluxcd.io/watch: Enabled` label. The intervals set
-how often Flux checks a source for changes, and how often it reapplies what hasn't changed, to undo drift:
+how often Flux checks a source for changes, and how often it reapplies what hasn't changed, to undo drift on the
+management cluster:
 
 | Object | `interval` | `retryInterval` | Why |
 | --- | --- | --- | --- |
@@ -468,7 +483,7 @@ how often Flux checks a source for changes, and how often it reapplies what hasn
 | Organisation namespace `Kustomization`, `namespace.yaml` | 10m | 1m | The retry applies it a minute after organization-operator has created the namespace. |
 | Workload cluster `Kustomization`s, `WC_NAME.yaml`, `WC_NAME-apps.yaml`, `-direct` and `HELLO_APP_*` | 10m | 1m | One to three per cluster, each building and applying its whole directory. |
 | `OCIRepository` | 10m | | How soon a `semver` range picks up a new chart. |
-| `HelmRelease` | 5m | | Checks the Helm release and remediates a failed one, without building anything. |
+| `HelmRelease` | 5m | | Checks the Helm release and remediates a failed one, without building anything. It doesn't undo changes made by hand in the workload cluster unless you set `spec.driftDetection`, see [Correct changes made by hand](../how-to/update-app.md#correct-changes-made-by-hand). |
 
 `retryInterval` retries a failed `Kustomization` after a minute instead of the next `interval`. An apps `Kustomization`
 whose cluster isn't ready yet checks again every 30 seconds whatever its interval, as `dependsOn` does.
@@ -486,6 +501,10 @@ The bases use variables where every cluster needs its own value, such as `${clus
 | `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa` sets it as `global.metadata.organization` in the chart values. `namespace.yaml` fills it in from the organisation's `Organization`, see [The organisation's name](#the-organisations-name). |
 | `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa`. Without it, the `OCIRepository` has no chart version to pull and the cluster doesn't install. |
 | `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa`. |
+
+Each of a cluster's `Kustomization`s sets the variables of what it applies. Only the cluster base uses `release` and
+`cluster_description`, so the cluster's own `Kustomization` sets all four, and the apps and `-direct` ones only
+`cluster_name` and `organization`.
 
 Set every variable the cluster's bases use. Flux replaces a variable that isn't set with an empty string; CI fails on
 it instead, see [Jobs](./ci-checks.md#jobs). CI reads only `spec.postBuild.substitute`, not

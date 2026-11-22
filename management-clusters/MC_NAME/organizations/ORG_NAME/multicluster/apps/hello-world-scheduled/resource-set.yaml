@@ -2,25 +2,20 @@
 # One ResourceSet per app: a ResourceSet deletes what it rendered for an input
 # that is gone, so apps that shared one would go together. The clusters are in
 # ../clusters.yaml, which sets `spec.inputs`; removing a cluster from it
-# uninstalls the app from that cluster.
-#
-# First install: until the provider exports a version, this ResourceSet waits
-# and the app isn't installed. The provider exports none until its first window
-# opens; to install at once, force the provider once:
-#
-#   flux-operator reconcile inputprovider hello-world-scheduled-version -n org-<organization> --force
-#
-# See docs/tutorials/advanced/scheduled-upgrades.md.
+# uninstalls the app from that cluster. Until the provider has a version, the
+# app isn't installed: see the first install in input-provider.yaml.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
   name: hello-world-scheduled
   namespace: org-${organization}
 spec:
-  # Losing the version, because no tag matches the range, the registry can't be
-  # read or the provider is deleted, would render nothing and so uninstall the
-  # app everywhere. Until the provider is Ready with a version, the ResourceSet
-  # leaves what it rendered as it is.
+  # Until the provider is Ready with a version, the ResourceSet leaves what it
+  # rendered as it is. The version goes only when no tag matches the range: a
+  # provider that can't read the registry keeps its last one, and a deleted
+  # provider stalls the ResourceSet. With Permute, a provider without a version
+  # fails the build rather than rendering nothing; the dependsOn holds the
+  # ResourceSet still whatever the cause.
   dependsOn:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSetInputProvider

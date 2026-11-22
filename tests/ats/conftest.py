@@ -24,7 +24,6 @@ from flux_teardown import delete_without_prune
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
 # flux_install have fixtures; external_secrets installs External Secrets Operator;
-# workload_cluster_flux_crds installs Flux's CRDs in the test's workload cluster;
 # notification_objects suspends the notification example's Alert; automation_rbac gives the
 # `automation` ServiceAccounts the rights they have on a management cluster;
 # flux_operator_install installs Flux Operator; organization_operator stands in for
@@ -36,7 +35,6 @@ pytest_plugins = [
     "kyverno_install",
     "flux_install",
     "external_secrets",
-    "workload_cluster_flux_crds",
     "notification_objects",
     "automation_rbac",
     "flux_operator_install",
@@ -82,6 +80,7 @@ VCLUSTER_CHART_REPO = "https://charts.loft.sh"
 VCLUSTER_CHART_VERSION = "0.37.6"
 # The vCluster's Kubernetes: the chart's default for 0.37.6, set here so it doesn't move with the
 # chart. Keep it on the Kubernetes minor version of the kind cluster and the management clusters.
+# renovate: datasource=docker depName=ghcr.io/loft-sh/kubernetes
 VCLUSTER_KUBERNETES_IMAGE_TAG = "v1.36.6"
 VCLUSTER_READY_TIMEOUT_SEC = 300
 WORKLOAD_CLUSTER_KUBECONFIG_NAME = "out-of-band-no-flux-kubeconfig"
@@ -605,7 +604,6 @@ def gitops_environment(
     workload_cluster: pykube.HTTPClient,
     flux_app_deployment: None,
     flux_deployments: list[pykube.Deployment],
-    workload_cluster_flux_crds: None,
     automation_rbac: None,
     organization_objects: list[pykube.objects.APIObject],
 ) -> None:

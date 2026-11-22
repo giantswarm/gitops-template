@@ -65,6 +65,24 @@ def dependency_wait_problems(
     )
 
 
+def left_out_problems(kustomization: dict, left_out: tuple[str, str, str]) -> list[str]:
+    """Why the Kustomization hasn't applied its current spec and dropped the object `left_out`
+    from its inventory, if it hasn't. A Kustomization drops an object it no longer builds from
+    its inventory whether it prunes it or, for one with `kustomize.toolkit.fluxcd.io/prune:
+    disabled`, leaves it."""
+    key = obj_key(kustomization)
+    status = kustomization.get("status") or {}
+    if status.get("observedGeneration") != kustomization["metadata"].get("generation"):
+        return [f"Kustomization '{key}' hasn't applied its spec yet"]
+    conditions = status.get("conditions") or []
+    ready: dict = next((c for c in conditions if c.get("type") == "Ready"), {})
+    if ready.get("status") != "True":
+        return [f"Kustomization '{key}' isn't Ready: {ready.get('reason')}"]
+    if left_out in inventory_keys(kustomization):
+        return [f"Kustomization '{key}' still lists {left_out}"]
+    return []
+
+
 def applied_deployments(
     assertions: list[dict], applied: set[tuple[str, str, str]]
 ) -> list[dict]:

@@ -11,7 +11,8 @@ cluster also shows App Templates, a stack as base apps, and an app that updates 
 Two Flux Kustomizations, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
 the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 
-- `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster Available.
+- `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster's control
+  plane available and reachable.
 - `WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml` then applies this directory, whose `kustomization.yaml` lists only `apps/`.
 
 ## What's here
@@ -29,11 +30,13 @@ the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 - [`apps/hello-world-from-template/`](apps/hello-world-from-template/): hello-world from its App Template.
 - `out-of-band/`: what the workload cluster's own Flux applies. The management cluster never does.
 - `out-of-band/configmaps/`: an example ConfigMap for the `default` namespace of the workload cluster.
+- [`out-of-band/teams/`](out-of-band/teams/): an application team whose Flux runs in the workload cluster.
 
 ## When you copy it
 
-Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` and `release`
-in both, and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml`. Give the cluster its own SOPS key:
+Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` in both, and
+`release` and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml`. Give the cluster its own SOPS
+key:
 
 - add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
 - add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`

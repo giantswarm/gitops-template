@@ -12,5 +12,5 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    tag: 4.1.1
+    tag: 4.3.0
   url: oci://gsoci.azurecr.io/charts/giantswarm/cert-manager-app

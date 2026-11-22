@@ -69,3 +69,89 @@ When that isn't enough, two other ways fit better:
   [sub-charts](https://helm.sh/docs/chart_template_guide/subcharts_and_globals/) and can pass one value to all of them;
 - a Flux Operator `ResourceSet` in the organisation's `multicluster/apps`, which renders the apps for several clusters
   from one set of inputs, see [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
+
+## What goes in a ResourceSet
+
+A `ResourceSet` renders whatever you put in its `resources`, so the question is how much to put there. The template's
+examples put in the whole app: the `OCIRepository` and the `HelmRelease` together, for the
+[scheduled cluster](../tutorials/advanced/scheduled-upgrades.md#schedule-a-clusters-release) and for each
+[multicluster app](../tutorials/advanced/multicluster-apps.md). That's deliberate. The `ResourceSet` is then the unit
+you deliver: one object owns the source and every release made from it, the version is resolved once and every target
+gets the same tag, and a change to the template reaches all of them. It's also the only way to fan out: a `ResourceSet`
+that renders a `HelmRelease` for each cluster has to render the `HelmRelease`.
+
+It isn't always necessary. For one app on one cluster, the window only decides `spec.ref.tag` of an `OCIRepository`.
+A `ResourceSet` that rendered only the `OCIRepository` would leave the `HelmRelease` with the rest of the cluster's
+files, where Components and patches reach it as they reach any other. The price is two owners for one app, the
+`Kustomization` for the `HelmRelease` and the `ResourceSet` for its source, and a `HelmRelease` that reports its source
+missing until the provider's first window. The template doesn't ship that variant, but nothing stops you writing it.
+
+So wrap the whole app when the `ResourceSet` is the thing you're delivering, to several targets or with defaults you
+want in one place. Render only the part that varies when kustomize already looks after the rest well. Wrapping has
+one cost to remember: kustomize no longer sees the `HelmRelease` inside, so a Component or patch aimed at a
+`HelmRelease` matches nothing, without a word. Patches go on the `ResourceSet` instead, as
+[Move a running cluster to scheduled upgrades](../how-to/scheduled-upgrades-existing-cluster.md#the-clusters-own-values)
+shows.
+
+### One template, many targets
+
+A `ResourceSet` takes its inputs from every provider in `spec.inputsFrom`, named one by one or picked by a label
+selector. With the default input strategy, `Flatten`, it renders its `resources` once for each input of each provider.
+A provider's `spec.defaultValues` go into every input it exports, so a provider can say which target it's for as well
+as which version. Adding a target is then adding a provider, with its own range and window, and the template doesn't
+change:
+
+```yaml
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: hello-world
+  namespace: org-${organization}
+spec:
+  inputsFrom:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: hello-world
+  serviceAccountName: automation
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: << inputs.cluster >>-hello-world
+        namespace: << inputs.provider.namespace >>
+      spec:
+        interval: 10m
+        provider: generic
+        ref:
+          tag: << inputs.tag | quote >>
+        url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+    # ...and the HelmRelease for << inputs.cluster >>, as in the multicluster example
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  labels:
+    app.kubernetes.io/name: hello-world
+  name: hello-world-prod-1
+  namespace: org-${organization}
+spec:
+  type: OCIArtifactTag
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+  defaultValues:
+    cluster: prod-1
+  filter:
+    semver: '>=3.0.0 <4.0.0'
+    limit: 1
+  schedule:
+    - cron: "0 9 * * 5"
+      timeZone: Europe/Berlin
+      window: 8h
+```
+
+Two things change with it. A provider that exports nothing takes its own target's objects with it, as `Flatten` drops
+its inputs, where the multicluster example's `Permute` fails the build instead. And the
+[`dependsOn` guard](../tutorials/advanced/scheduled-upgrades.md#keep-the-version) names providers one by one, so each
+provider needs its own entry, and a new one holds the whole `ResourceSet` until it has a version: force it once, as for
+any new provider. The template has no example of this layout, so no test of its runs it.

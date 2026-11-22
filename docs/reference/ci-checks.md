@@ -43,8 +43,12 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
   the management cluster's `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its
   inventory keeps the `Organization` and the organisation's namespace `Kustomization`, and they stay. That one, which
   depends on `mc-name-gitops`, has to report `DependencyNotReady` and prune nothing either: its inventory keeps the
-  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Then it
-  deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
+  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Next it
+  drops the organisation's namespace `Kustomization` from what `mc-name-gitops` builds, with a `$patch: delete` patch
+  in that one's `spec.patches`, as deleting or renaming `namespace.yaml` would. `mc-name-gitops` has to drop it from
+  its inventory, and it has to stay, with the cluster's `Kustomization`s: its `kustomize.toolkit.fluxcd.io/prune:
+  disabled` annotation keeps Flux from deleting it. Once the patch is gone, `mc-name-gitops` has to list it again. Then
+  it deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
   `OCIRepository` have to stay. It deletes what the other tests check, so it runs last and fails if they didn't run
   before it.
 
@@ -139,8 +143,10 @@ shows them. For every `HelmRelease` that creates a workload cluster, the test re
 ConfigMaps from the test cluster, merges the values the way helm-controller does, `spec.values` included, and compares
 the node pools with `EXPECTED_NODE_POOLS` in [node_pools.py](../../tests/ats/node_pools.py). A production cluster gets
 its own `nodepool0` and its region's extra pool. Dev and staging have no pools of their own and get the chart's
-defaults. The test fails for a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or
-change its node pools, update that table.
+defaults. The `scheduled-upgrades` cluster gets `workers` from its own values, which a patch on its `ResourceSet`
+appends, so the test also shows that the patch reaches the `HelmRelease` the `ResourceSet` renders. The test fails for
+a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or change its node pools, update that
+table.
 
 ## Versions
 
@@ -177,12 +183,15 @@ objects are stored in: the CRDs are installed without their conversion webhook, 
 conversion.
 
 The test does that for every cluster whose apps wait for it, as listed in `GATES` in
-[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with `Available` `False`.
-The cluster's `Kustomization` still has to apply the base apps, while the apps `Kustomization` has to report
-`DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization` has to
-get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
-`Kustomization`s only get `Ready` once their `Cluster` is `Available`. When you add a cluster with apps, add it to
-`GATES`: a test without the cluster compares the list with the `Kustomization`s in the repository.
+[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with a node pool short
+of its minimum: `WorkersAvailable` and `Available` stay `False` throughout. First its `ControlPlaneAvailable` and
+`RemoteConnectionProbe` are `False` too. The cluster's `Kustomization` still has to apply the base apps, while the
+apps `Kustomization` has to report `DependencyNotReady` without applying anything. Then it sets both to `True`, and
+the apps `Kustomization` has to get `Ready`, though the cluster still isn't `Available`.
+`test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster `Kustomization`s only
+get `Ready` once their `Cluster`'s control plane is up. When you add a cluster with apps, add it to `GATES`: a test
+without the cluster compares the list with the `Kustomization`s in the repository, and checks that each one's health
+check waits for the control plane and not for `Available`.
 
 The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 
@@ -211,8 +220,12 @@ so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py
 The other checks run after it. The cluster `Kustomization`s are in the organisation's `workload-clusters` directory,
 which its `namespace/kustomization.yaml` lists, so they appear only once the organisation's `Kustomization` is `Ready`,
 and run as `org-org-name/automation`. `tests/ats/test_root_build.py` checks, without a cluster, that the build of
-`MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each organisation's namespace
-`Kustomization` applies into the organisation's namespace. `tests/ats/test_namespace_build.py` checks that the
+`MC_NAME.yaml` holds only `Organization`s and objects in `default`, that each organisation's namespace
+`Kustomization` applies into the organisation's namespace, that every `Kustomization` in it other than `MC_NAME.yaml`'s
+depends on that one, and that every `Kustomization` in it, `MC_NAME.yaml`'s included, has the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, see
+[Deletion protection](../explanation/deletion-protection.md#the-protected-objects).
+`tests/ats/test_namespace_build.py` checks that the
 `Kustomization`s it applies read the repository's `GitRepository` in `default`, depend on it, directly or through
 another of them, and decrypt with a key Secret it applies too.
 
@@ -295,10 +308,6 @@ get `Ready`. The test also creates what they need:
   each comes from, so the test doesn't download them.
 - in the vCluster, the `giantswarm-critical` PriorityClass, which the cluster chart creates in every Giant Swarm
   workload cluster. The `envoy-gateway` Deployment's pods can't be created without it.
-- in the vCluster, Flux's `GitRepository` and `Kustomization` CRDs, copied from the test cluster, where flux-app
-  installed them. The `-direct` Kustomization delivers the `GitRepository` and `Kustomization` of the
-  [application team](../tutorials/advanced/teams.md) `hello-team-wc`, whose Flux runs in the workload cluster. The
-  vCluster runs no Flux: the objects only have to exist.
 
 The vCluster runs CoreDNS, as the apps run pods there.
 
@@ -313,8 +322,6 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
   [application team](../tutorials/advanced/teams.md) `hello-team` delivers from its own repository into its namespace. Its
   `Kustomization` runs as the `automation` ServiceAccount of `org-org-name`, which the organization-operator stand-in
   creates with the rights a Giant Swarm management cluster gives it.
-- The `GitRepository` and `Kustomization` of the application team `hello-team-wc` only have to exist, as nothing in
-  the vCluster reconciles them.
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
   its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
 
@@ -349,7 +356,7 @@ kind job 254 seconds against 237, less than the spread of about 60 seconds betwe
 Kyverno runs on every Giant Swarm management cluster, and the External Secrets Operator chart creates its
 `PolicyException`s only when Kyverno's CRDs are there, so the test installs Kyverno before ESO. It installs Giant
 Swarm's charts, the ones team Shield ships to the management clusters, from `oci://gsoci.azurecr.io/charts/giantswarm`:
-`kyverno-crds` 1.19.2, as the `kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.1, the chart of
+`kyverno-crds` 1.19.2, as the `kyverno` chart leaves the CRDs to it, then `kyverno` 0.26.2, the chart of
 `kyverno-app`. Kyverno's pods use the `giantswarm-critical` PriorityClass and its `PolicyException`s go in the
 `giantswarm` namespace, which every management cluster has, so the test first installs Giant Swarm's
 `priority-classes` 0.3.1 chart and creates the namespace. The charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
@@ -378,10 +385,29 @@ each example's provider once and waits for its `ResourceSet`, before it checks t
   range no tag matches and a deleted provider, and checks that the `ResourceSet` waits and the App stays installed.
 - `test_input_loss_keeps_the_cluster` does the same to the `scheduled-upgrades` cluster, and then deletes its
   `ResourceSet`. The cluster's `HelmRelease` and `OCIRepository` have to stay each time.
+- `test_move_to_scheduled_upgrades` moves the running `capi-wc-name` cluster, the `WC_NAME` example, to the layout of
+  the scheduled-upgrades example, as
+  [Move a running cluster to scheduled upgrades](../how-to/scheduled-upgrades-existing-cluster.md) does, without a
+  commit: it suspends the cluster's `Kustomization`, applies the provider and the `ResourceSet` built from the moved
+  directory, pinned to the release the cluster runs, and forces the provider. The `ResourceSet` has to take the
+  `HelmRelease` and `OCIRepository` over with the same `valuesFrom`, and their specs mustn't change otherwise: the
+  chart reference, the tag and the values are what helm-controller upgrades a release on. The kind test never installs
+  a cluster chart, as `release-aws` can't render without a real management cluster, so the check can't watch for an
+  upgrade itself; that the unchanged specs mean none comes from helm-controller's source, not from the test. Then it
+  deletes the two, takes the `ResourceSet`'s labels off the objects and resumes the `Kustomization`. It doesn't push the
+  move to Git, so it doesn't show that Flux lets go of the objects when their files go; `test_prune` shows that for
+  the `prune: disabled` annotation.
 
 The assertions in `tests/ats/assertions/exists/organizations/workload-clusters/scheduled-upgrades` check that the
 cluster's `ResourceSet`, not its `Kustomization`, renders the cluster's `OCIRepository` and `HelmRelease`, with the
-protection of the cluster base.
+protection of the cluster base and the cluster's own values. `tests/ats/test_cluster_move.py` builds the move of
+`WC_NAME` without a cluster, and fails if the `HelmRelease` the `ResourceSet` renders lacks a `valuesFrom` entry of the
+cluster's own `HelmRelease`, or has them in another order. `tests/ats/test_delete_protection.py` builds the
+scheduled-upgrades example with the patch that [Delete a workload cluster](../how-to/delete-cluster.md) writes for a
+cluster a `ResourceSet` renders, and fails unless the rendered `OCIRepository` and `HelmRelease` have lost the
+`giantswarm.io/prevent-deletion` label and the release's values set `preventDeletion` to `false`. The kind test
+removes the deletion protection of neither kind of cluster: `test_prune` deletes a cluster's `Kustomization`s and
+checks that its `HelmRelease` and `OCIRepository` stay, but doesn't take the protection off or delete the cluster.
 
 They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
 hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
@@ -400,6 +426,14 @@ namespace, with the data of the base in Git, so a change to the base reaches eve
 copy, asks Flux to reconcile the organisation's namespace `Kustomization`, which applied it, and waits for Flux to put
 the copy back.
 `tests/ats/test_shared_objects.py` checks, without a cluster, that the example organisation lists the base.
+
+### Commit statuses
+
+The kind test creates both commit-status `Alert`s suspended, so it posts nothing to GitHub, and
+`tests/ats/assertions/exists/notifications` checks that Flux applied them as the repository has them.
+`tests/ats/test_commit_status.py` checks, without a cluster, that each `Alert`'s `exclusionList` drops the event
+kustomize-controller sends while a `Kustomization` waits for its `dependsOn`, and none of its other events, see
+[Report reconcile status on GitHub commits](../how-to/commit-statuses.md#check-the-statuses).
 
 ### Workload cluster secret stores
 
@@ -431,3 +465,19 @@ are on the management cluster and in the workload cluster. The kind cluster has 
 management cluster; the [workload cluster secret store test](#workload-cluster-secret-stores) relies on it as well.
 CI can't reach a cloud secret manager, so `tools/test-all-ff validate` only builds each base in `bases/secret_stores`
 and checks it against the schemas of its kinds.
+
+### Pulled out-of-band directories
+
+A workload cluster's own Flux pulls the `out-of-band` directory of the
+[`out-of-band-flux-app`](../tutorials/advanced/out-of-band.md#run-flux-in-the-workload-cluster) example, so no
+`Kustomization` in the repository builds it, and the kind test, which runs no Flux in a workload cluster, doesn't
+apply it. `tools/test-all-ff validate` checks the manifests of every such directory against the schemas of their
+kinds. That includes the [application team](../tutorials/advanced/teams.md) `hello-team-wc`, whose Flux runs in the
+workload cluster.
+
+### Object names
+
+A schema doesn't cover an object's name, and the API server refuses one that isn't a lowercase RFC 1123 subdomain.
+`tests/ats/test_object_names.py` checks, without a cluster, the name of every object in the YAML files of `bases/`
+and `management-clusters/`, and of every object a `ResourceSet` there renders, with the variables Flux substitutes
+filled in.

@@ -7,7 +7,7 @@ test creates one for each cluster in cluster_gates.GATES and sets its Available 
 from datetime import UTC, datetime
 
 import pykube
-from cluster_gates import CLUSTERS_NAMESPACE, GATES
+from cluster_gates import CLUSTERS_NAMESPACE, CONTROL_PLANE_CONDITIONS, GATES
 from pykube.objects import NamespacedAPIObject
 
 
@@ -17,15 +17,35 @@ class CAPICluster(NamespacedAPIObject):
     kind = "Cluster"
 
 
-def available_condition(status: str) -> dict:
-    """A v1beta2 `Available` condition. v1beta2 conditions require a message, even an empty one."""
+# the reasons Cluster API v1.14.4 gives each condition, when True and when False
+REASONS = {
+    "Available": ("Available", "NotAvailable"),
+    "WorkersAvailable": ("Available", "NotAvailable"),
+    "ControlPlaneAvailable": ("Available", "NotAvailable"),
+    "RemoteConnectionProbe": ("ProbeSucceeded", "ProbeFailed"),
+}
+
+
+def condition(kind: str, status: str) -> dict:
+    """A v1beta2 condition. v1beta2 conditions require a message, even an empty one."""
+    succeeded, failed = REASONS[kind]
     return {
-        "type": "Available",
+        "type": kind,
         "status": status,
-        "reason": "Available" if status == "True" else "NotAvailable",
+        "reason": succeeded if status == "True" else failed,
         "message": "",
         "lastTransitionTime": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+
+
+def stand_in_conditions(control_plane: str) -> list[dict]:
+    """The conditions of a cluster with a node pool short of its minimum, whose control plane is
+    available and reachable when `control_plane` is "True"."""
+    return [
+        condition("Available", "False"),
+        condition("WorkersAvailable", "False"),
+        *(condition(kind, control_plane) for kind in CONTROL_PLANE_CONDITIONS),
+    ]
 
 
 def stand_in_cluster(api: pykube.HTTPClient, name: str) -> CAPICluster:
@@ -41,10 +61,12 @@ def stand_in_cluster(api: pykube.HTTPClient, name: str) -> CAPICluster:
     )
 
 
-def set_available(cluster: CAPICluster, status: str) -> None:
-    """Set the `Cluster`'s Available condition through the status subresource."""
+def set_control_plane(cluster: CAPICluster, status: str) -> None:
+    """Set the `Cluster`'s conditions through the status subresource: its control plane is
+    available and reachable when `status` is "True", and a node pool is short either way.
+    """
     cluster.patch(
-        {"status": {"conditions": [available_condition(status)]}},
+        {"status": {"conditions": stand_in_conditions(status)}},
         subresource="status",
     )
 

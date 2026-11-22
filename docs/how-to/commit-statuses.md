@@ -1,18 +1,25 @@
 # Report reconcile status on GitHub commits
 
 Flux's notification-controller can tell you on GitHub whether Flux applied a commit. A `Provider` of type `github` posts
-a commit status to the repository, and an `Alert` decides which events it gets. With the example's `Alert`s, this
-repository's Flux `Kustomization`s in the `default` namespace and in the organisation's namespace report on the commit
-they applied: the management cluster's, in `MC_NAME.yaml`, each organisation's namespace `Kustomization`, in
-`namespace.yaml`, and the workload clusters', in the organisations' `workload-clusters` directories. Each
-`Kustomization` shows as its own check on the commit, green once it applied the commit and red when it failed. An event
-source without a `namespace` matches only the `Alert`'s own namespace, and an `Alert` reaches only a `Provider` in its
-own namespace. So the management cluster's `Alert` covers `default`, and each organisation has its own `Alert`,
-`Provider` and token in its namespace. Neither covers `flux-giantswarm`, where Giant Swarm's own `Kustomizations` live,
-so keep that namespace out of them. The organisation's `Alert` names this repository's `Kustomization`s in its
-namespace, the workload clusters', instead of `name: "*"`: an application team's `Kustomization` lives there too, but
-reads the team's repository, see [Give an application team its own repository](../tutorials/advanced/teams.md).
-List each cluster `Kustomization` you add.
+a commit status to the repository, and an `Alert` decides which events it gets. Each of this repository's Flux
+`Kustomization`s shows as its own check on the commit: green once it applied the commit, red when it failed.
+
+An `Alert` only sees its own namespace (an event source without a `namespace` matches only the `Alert`'s, and an `Alert`
+reaches only a `Provider` beside it), so the example has two:
+
+- The management cluster's, in `default`, takes every `Kustomization` there with `name: "*"`: the management cluster's,
+  in `MC_NAME.yaml`, and each organisation's namespace `Kustomization`, in `namespace.yaml`.
+- Each organisation has its own `Alert`, `Provider` and token in its namespace, for the workload clusters'
+  `Kustomization`s in its `workload-clusters` directory. This one names them, instead of `name: "*"`, because an
+  application team's `Kustomization` lives in the same namespace but reads the team's repository (see
+  [Give an application team its own repository](../tutorials/advanced/teams.md)), and GitHub refuses statuses for
+  commits it doesn't know.
+
+> [!Important]
+> List each cluster `Kustomization` you add in the organisation's `Alert`. One that isn't listed reports nothing.
+
+Neither `Alert` covers `flux-giantswarm`, where Giant Swarm's own `Kustomization`s live, so keep that namespace out of
+them.
 
 A `Receiver` does the opposite: GitHub calls it on a push, and Flux fetches the repository at once instead of
 waiting for the `GitRepository`'s interval. It's optional.
@@ -120,9 +127,9 @@ yq -i '.creation_rules += [{
 Then write the token into the Secrets. `sops` encrypts each on its way into its file, with the rule above, so the
 token never sits in the repository in plain text. It needs the master key's public key in your keyring, which the
 first line imports, and `sops` 3.10.0 or newer, see [Tools](../reference/tools.md#tools). The second line reads the
-token without it landing in your shell history. The organisation's Secret
-names its real namespace, `org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, so Flux
-leaves the encrypted file as it is: changing it would break its MAC, so Flux couldn't decrypt it:
+token without it landing in your shell history. The organisation's Secret names its real namespace,
+`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, from the start: changing the
+encrypted file afterwards would break its MAC, and `sops` couldn't decrypt it to change the token or rotate its key:
 
 ```sh
 gpg --import ${MC_DIR}/.sops.keys/.sops.master.asc
@@ -147,20 +154,35 @@ git add ${MC_DIR}/notifications ${ORG_DIR} && git commit -m "Report reconcile st
 ```
 
 The commit after this one shows a check for each `Kustomization` on GitHub, named `kustomization/NAME/...`. If none
-shows up, notification-controller logs why, for example a token without access. On a Giant Swarm management cluster,
-your Flux runs in the `flux-system` namespace, apart from Giant Swarm's own in `flux-giantswarm`, so read the log of
-the notification-controller in `flux-system`:
+shows up, notification-controller logs why, for example a token without access. A Giant Swarm management cluster runs
+one Flux, in the `flux-giantswarm` namespace, for Giant Swarm and for you. You can't write in that namespace, but you
+can read its logs: your read rights cover the whole cluster, pod logs included, and leave out only Secrets and
+ConfigMaps.
 
 ```sh
-kubectl logs -n flux-system deployment/notification-controller | grep github-commit-status
+kubectl logs -n flux-giantswarm deployment/notification-controller | grep github-commit-status
 ```
+
+A `Kustomization` that waits for its `dependsOn` shows no check until it has applied the commit or failed. While it
+waits, kustomize-controller sends an `info` event for the new commit, and GitHub's `Provider` turns every `info` event
+into a green check, so the example's `Alert`s drop that event with their `exclusionList`. If a parent fails on a
+commit, the `Kustomization`s waiting on it show no check on that commit at all, rather than a green one.
+
+A green check vouches for the `Kustomization` and nothing further: where it applies a `ResourceSet`, the check says the
+`ResourceSet` was applied, not that Flux Operator rendered and applied what it describes, and Flux Operator's own
+notifications are switched off on management clusters.
 
 If Kustomizations that read another repository live in the same namespaces, list this repository's by name in the
 `Alert`s' `eventSources`, instead of `name: "*"`: GitHub refuses statuses for commits it doesn't know.
 
 ## Fetch on push (optional)
 
-The `Receiver` needs a secret that GitHub signs its webhook calls with, and GitHub has to reach notification-controller.
+> [!Important]
+> GitHub has to reach notification-controller, and that takes an object in `flux-giantswarm`, which you can't create.
+> Exposing the webhook is Giant Swarm's step. Giant Swarm doesn't expose it on management clusters today, but can be
+> asked to: request it for your management cluster before you start, and set up the rest once they've agreed.
+
+The `Receiver` needs a secret that GitHub signs its webhook calls with, and an address GitHub can call.
 
 1. Create a random secret, for example with `openssl rand -hex 32`. Give it to Flux in the `token` key of the
    `github-webhook-token` Secret in the `default` namespace, the same way as the GitHub token above: copy
@@ -180,11 +202,11 @@ The `Receiver` needs a secret that GitHub signs its webhook calls with, and GitH
     kubectl get receiver github-push -n default -o jsonpath='{.status.webhookPath}'
     ```
 
-1. Make the `webhook-receiver` Service of notification-controller reachable from GitHub, for example with an
-   `Ingress` or `HTTPRoute`, and only for that path. How depends on your management cluster: ask Giant Swarm if
-   you're not sure.
+1. Send Giant Swarm that path, for the request you made at the start of this section. They make the `webhook-receiver`
+   Service of notification-controller reachable from GitHub for that path only, which needs an `Ingress` or similar
+   in `flux-giantswarm`, and tell you the address. You can't do this step yourself.
 
-1. On GitHub, add a webhook to the repository in **Settings** > **Webhooks**: the URL is your address followed by the
+1. On GitHub, add a webhook to the repository in **Settings** > **Webhooks**: the URL is that address followed by the
    path above, the content type `application/json`, the secret the one from the first step, and the events "Just the
    push event".
 
