@@ -436,5 +436,6 @@ workload cluster.
 ### Object names
 
 A schema doesn't cover an object's name, and the API server refuses one that isn't a lowercase RFC 1123 subdomain.
-`tests/ats/test_object_names.py` checks, without a cluster, the name of every object in `bases/` and
-`management-clusters/`, with the variables Flux substitutes filled in.
+`tests/ats/test_object_names.py` checks, without a cluster, the name of every object in the YAML files of `bases/`
+and `management-clusters/`, and of every object a `ResourceSet` there renders, with the variables Flux substitutes
+filled in.

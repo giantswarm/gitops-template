@@ -232,7 +232,10 @@ function test() {
 		done
 
 		# A workload cluster's own Flux pulls its out-of-band directory, so no Kustomization
-		# above builds it and the kind test doesn't apply it. Its manifests are checked here.
+		# above builds it and the kind test doesn't apply it. Its manifests are checked here:
+		# its build, if it has a kustomization.yaml, or else every YAML file in it, as Flux
+		# takes them. A SOPS-encrypted Secret is checked without its `sops` key, which Flux
+		# removes when it decrypts.
 		local out_of_band applied
 		applied=$(printf '%s\n' "${KUSTOMIZATIONS[@]}" | cut -d, -f4 | sed 's|^\./||; s|/$||')
 		for out_of_band in $(find management-clusters -type d -name out-of-band | sort); do
@@ -240,11 +243,22 @@ function test() {
 				continue
 			fi
 			echo -n "kubeconform ${out_of_band}: "
-			mapfile -t manifests < <(find "${out_of_band}" -name '*.yaml' | sort)
-			if [ "${#manifests[@]}" -eq 0 ] || ! kubeconform_check "${manifests[@]}"; then
+			tmp_file="${tmp_dir}/out-of-band.yaml"
+			mapfile -t manifests < <(find "${out_of_band}" -name '*.yaml' -not -name kustomization.yaml | sort)
+			if [ "${#manifests[@]}" -eq 0 ]; then
+				echo "no manifests found"
+				has_validation_errors=1
+			elif [ -f "${out_of_band}/kustomization.yaml" ] &&
+				! build_errors=$(kubectl kustomize "${out_of_band}" 2>&1 >"${tmp_file}"); then
+				echo "${build_errors}"
 				has_validation_errors=1
 			else
-				echo "OK"
+				[ -f "${out_of_band}/kustomization.yaml" ] || yq '.' "${manifests[@]}" >"${tmp_file}"
+				if ! yq 'del(.sops)' "${tmp_file}" | kubeconform_check -; then
+					has_validation_errors=1
+				else
+					echo "OK"
+				fi
 			fi
 			echo ""
 		done

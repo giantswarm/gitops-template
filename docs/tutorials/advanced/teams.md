@@ -297,7 +297,8 @@ would fail on those two kinds and deliver nothing. A cluster whose own Flux alre
     A private repository needs a Secret with read access to it in the team's namespace, named in the
     `GitRepository`'s `spec.secretRef`. Deliver it the same way, in `out-of-band`, encrypted with SOPS, and give the
     `-direct` `Kustomization` the `decryption` that the cluster's other `Kustomization`s have, see
-    [Decrypt a cluster's files](../../how-to/sops.md#decrypt-a-clusters-files).
+    [Decrypt a cluster's files](../../how-to/sops.md#decrypt-a-clusters-files). Where the cluster's own Flux pulls
+    `out-of-band`, that Flux needs the key instead.
 
 1. Commit and push:
 
@@ -350,10 +351,10 @@ good.
 
 **Flux in the workload cluster** takes one push: delete the team's file,
 `${WC_DIR}/out-of-band/teams/${TEAM_NAME}.yaml`, and its entry in `${WC_DIR}/out-of-band/kustomization.yaml` if there
-is one, and push. The `-direct` `Kustomization` deletes the team's objects
-from the workload cluster, and the team's workloads go with its namespace. The team's ServiceAccount is in the workload
-cluster and goes in the same push, and once it's gone, Flux there lets the team's `Kustomization` go without deleting
-its workloads itself, which the namespace's deletion does.
+is one, and push. Whatever applies `out-of-band`, the `-direct` `Kustomization` or the cluster's own Flux, deletes
+the team's objects from the workload cluster, and the team's workloads go with its namespace. The team's
+ServiceAccount is in the workload cluster and goes in the same push, and once it's gone, Flux there lets the team's
+`Kustomization` go without deleting its workloads itself, which the namespace's deletion does.
 
 ## Next steps
 

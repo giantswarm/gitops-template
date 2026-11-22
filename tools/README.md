@@ -61,7 +61,9 @@ add a `-schema-location` for it to the script.
   - It also builds each base in `bases/secret_stores` with `kubectl kustomize` and checks it with `kubeconform`. They
     read cloud secret managers, so no cluster in the repository uses them and no Kustomization builds them.
   - It checks the manifests of every `out-of-band` directory that no Kustomization applies with `kubeconform` too.
-    A workload cluster's own Flux pulls such a directory, so nothing else in the repository builds it.
+    A workload cluster's own Flux pulls such a directory, so nothing else in the repository builds it. A directory
+    with a `kustomization.yaml` is built with `kubectl kustomize` first, and a SOPS-encrypted Secret is checked
+    without its `sops` key.
 - `template` Prints the entire repo manifest
 
 ## `check-directory-readmes`

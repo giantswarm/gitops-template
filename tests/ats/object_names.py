@@ -12,6 +12,10 @@ import yaml
 
 SUBDOMAIN = re.compile(r"[a-z0-9]([-a-z0-9.]*[a-z0-9])?")
 MAX_LENGTH = 253
+# these kinds take a DNS label, which is shorter and has no dots
+LABEL = re.compile(r"[a-z0-9]([-a-z0-9]*[a-z0-9])?")
+MAX_LABEL_LENGTH = 63
+LABEL_KINDS = {"Namespace", "Service"}
 # what Flux substitutes, `${cluster_name}`, and what Flux Operator renders, `<< inputs.cluster >>`:
 #  the examples give both valid values
 PLACEHOLDER = re.compile(r"\$\{[^}]+\}|<<[^>]+>>")
@@ -19,21 +23,38 @@ PLACEHOLDER = re.compile(r"\$\{[^}]+\}|<<[^>]+>>")
 PATH_SEGMENT_KINDS = {"ClusterRole", "ClusterRoleBinding", "Role", "RoleBinding"}
 
 
-def is_valid(name: str) -> bool:
-    """Whether the API server takes `name` as the name of an object, placeholders filled in."""
+def is_valid(name: str, kind: str | None = None) -> bool:
+    """Whether the API server takes `name` as the name of an object of `kind`, placeholders
+    filled in."""
     literal = PLACEHOLDER.sub("x", name)
+    if kind in LABEL_KINDS:
+        return len(literal) <= MAX_LABEL_LENGTH and LABEL.fullmatch(literal) is not None
     return len(literal) <= MAX_LENGTH and SUBDOMAIN.fullmatch(literal) is not None
+
+
+def objects_of(doc: object) -> list[dict]:
+    """`doc` if it's an object, and the objects it renders if it's a ResourceSet."""
+    if not isinstance(doc, dict):
+        return []
+    rendered = []
+    if doc.get("kind") == "ResourceSet":
+        rendered = (doc.get("spec") or {}).get("resources") or []
+    return [doc] + [resource for resource in rendered if isinstance(resource, dict)]
 
 
 def invalid_names_in(manifest: str) -> list[str]:
     """The objects of `manifest` with a name the API server refuses, as `Kind/name`."""
     invalid = []
     for doc in yaml.safe_load_all(manifest):
-        if not isinstance(doc, dict) or doc.get("kind") in PATH_SEGMENT_KINDS:
-            continue
-        name = (doc.get("metadata") or {}).get("name")
-        if isinstance(name, str) and not is_valid(name):
-            invalid.append(f"{doc.get('kind')}/{name}")
+        for obj in objects_of(doc):
+            kind = obj.get("kind")
+            name = (obj.get("metadata") or {}).get("name")
+            if (
+                kind not in PATH_SEGMENT_KINDS
+                and isinstance(name, str)
+                and not is_valid(name, kind)
+            ):
+                invalid.append(f"{kind}/{name}")
     return invalid
 
 

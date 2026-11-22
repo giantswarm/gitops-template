@@ -65,6 +65,33 @@ metadata:
     assert invalid_names_in(manifest) == ["ConfigMap/In-Capitals"]
 
 
+def test_names_a_resource_set_renders() -> None:
+    manifest = """
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: fine
+spec:
+  resources:
+    - kind: HelmRelease
+      metadata:
+        name: << inputs.cluster >>-Hello
+    - kind: OCIRepository
+      metadata:
+        name: << inputs.cluster >>-hello
+"""
+    assert invalid_names_in(manifest) == ["HelmRelease/<< inputs.cluster >>-Hello"]
+
+
+@pytest.mark.parametrize("kind", ["Namespace", "Service"])
+def test_names_that_are_dns_labels(kind: str) -> None:
+    # a label has no dots and at most 63 characters
+    for name in ["a.b", "a" * 64]:
+        manifest = f"kind: {kind}\nmetadata:\n  name: {name}\n"
+        assert invalid_names_in(manifest) == [f"{kind}/{name}"]
+    assert invalid_names_in(f"kind: {kind}\nmetadata:\n  name: {'a' * 63}\n") == []
+
+
 def test_invalid_names_below_a_directory(tmp_path: Path) -> None:
     (tmp_path / "a").mkdir()
     (tmp_path / "a/bad.yaml").write_text("kind: ConfigMap\nmetadata:\n  name: Bad\n")
