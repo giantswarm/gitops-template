@@ -4,36 +4,65 @@ metadata:
   name: kyverno-generate
 spec:
   description: >-
-    The Kyverno policy of the shared-objects example is Ready and has copied its ConfigMap, with
-    the source's data, into the organisation's namespace. The test only reads: the kind test's
-    check_shared_object_copied creates a new organisation namespace and changes the source.
+    The secret-stores example: Kyverno has both NamespacedGeneratingPolicies in its webhook, and
+    they have given the cluster its ExternalSecret and its SecretStore, both Ready. The test
+    only reads.
   timeouts:
     assert: 2m
   steps:
-    - name: the policy is ready
+    - name: Kyverno acts on the policies
       try:
+        # `WebhookConfigured`, not `ready`: a policy's `ready` also needs Kyverno's reports
+        #  controller to read Secrets across the cluster, which has nothing to do with generating
         - assert:
             resource:
-              apiVersion: kyverno.io/v1
-              kind: ClusterPolicy
+              apiVersion: policies.kyverno.io/v1
+              kind: NamespacedGeneratingPolicy
               metadata:
-                name: ($values.sharedObject.policy)
+                name: ($values.secretStores.authPolicy)
+                namespace: ($values.organizationNamespace)
               status:
-                (conditions[?type == 'Ready']):
-                  - status: "True"
-    - name: the organisation has a copy of the source
-      bindings:
-        - name: source
-          value: (x_k8s_get($client, 'v1', 'ConfigMap', $values.sharedObject.namespace, $values.sharedObject.configMap))
+                conditionStatus:
+                  (conditions[?type == 'WebhookConfigured']):
+                    - status: "True"
+        - assert:
+            resource:
+              apiVersion: policies.kyverno.io/v1
+              kind: NamespacedGeneratingPolicy
+              metadata:
+                name: ($values.secretStores.storePolicy)
+                namespace: ($values.organizationNamespace)
+              status:
+                conditionStatus:
+                  (conditions[?type == 'WebhookConfigured']):
+                    - status: "True"
+    - name: the cluster's credentials are written
       try:
         - assert:
             resource:
-              apiVersion: v1
-              kind: ConfigMap
+              apiVersion: external-secrets.io/v1
+              kind: ExternalSecret
               metadata:
-                name: ($values.sharedObject.configMap)
+                name: (join('-', [$values.cluster, 'eso-cluster-auth']))
                 namespace: ($values.organizationNamespace)
                 labels:
                   app.kubernetes.io/managed-by: kyverno
-                  generate.kyverno.io/policy-name: ($values.sharedObject.policy)
-              (data == $source.data): true
+                  generate.kyverno.io/policy-name: ($values.secretStores.authPolicy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the cluster has its store
+      try:
+        - assert:
+            resource:
+              apiVersion: external-secrets.io/v1
+              kind: SecretStore
+              metadata:
+                name: (join('-', [$values.cluster, 'eso-cluster-store']))
+                namespace: ($values.organizationNamespace)
+                labels:
+                  app.kubernetes.io/managed-by: kyverno
+                  generate.kyverno.io/policy-name: ($values.secretStores.storePolicy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"

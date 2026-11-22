@@ -21,9 +21,8 @@ externalSecret:
   key: values
   helmRelease: out-of-band-no-flux-hello-world-standalone
 
-# kyverno-generate: the policy that copies a ConfigMap into every `org-*` namespace, and the
-# source it copies. The test looks for the copy in `organizationNamespace`.
-sharedObject:
-  policy: copy-shared-ca-bundle
-  configMap: shared-ca-bundle
-  namespace: default
+# kyverno-generate: the two Kyverno policies of multicluster/secret-stores. The test looks for
+# what they generate for `cluster` in `organizationNamespace`.
+secretStores:
+  authPolicy: generate-eso-cluster-auth-from-kubeconfig
+  storePolicy: generate-eso-cluster-store-from-cluster-auth
