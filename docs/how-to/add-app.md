@@ -36,21 +36,22 @@ mkdir -p management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clust
 cd management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}/apps/${APP_NAME}
 ```
 
-`APP_NAME` is used in the names of the app's resources, which all get the `${cluster_name}-` prefix, so the same app
-can be deployed to several clusters of an organisation. When you use an App Template, it has to be the app name the
+`APP_NAME` goes into the names of the app's resources. They all get the `${cluster_name}-` prefix, so you can deploy
+the same app to several clusters of an organisation. When you use an App Template, `APP_NAME` has to be the app name the
 template uses, for example `hello-world` for [bases/apps/hello-world](/bases/apps/hello-world/).
 
-`kubectl gs gitops add app` wrote these files once, and `kubectl gs deploy chart --dry-run` prints an `OCIRepository`
-and a `HelmRelease` you can start from. `gitops add app` is deprecated, without a replacement, and what both write
-differs from what this page writes: no cluster values and a literal cluster name instead of `${cluster_name}`.
-[App](./kubectl-gs.md#app) shows what they write and how to get from it to the `HelmRelease` below.
+`kubectl gs gitops add app` used to write these files, and `kubectl gs deploy chart --dry-run` prints an
+`OCIRepository` and a `HelmRelease` you can start from. `gitops add app` is deprecated, with no replacement. Both
+commands write something different from this page: no cluster values, and a literal cluster name instead of
+`${cluster_name}`. [App](./kubectl-gs.md#app) shows what they write and how to get from it to the `HelmRelease` below.
 
 ## Add an app directly
 
-The app's `HelmRelease` reads its values in layers, in `spec.valuesFrom`: the cluster's values, which the management
-cluster creates for every cluster, then two optional layers of your own, the `-user-values` ConfigMap and the
-`-user-secrets` Secret. The cluster values come first so that the chart knows the cluster's `baseDomain`, `provider`
-and the like, and so that your values can override them, see [App values](../reference/values.md#app-values).
+The app's `HelmRelease` reads its values in layers, listed in `spec.valuesFrom`. First come the cluster's values,
+which the management cluster creates for every cluster. Then come two optional layers of your own: the `-user-values`
+ConfigMap and the `-user-secrets` Secret. The cluster values come first so that the chart knows the cluster's
+`baseDomain`, `provider` and the like, and so that your values can override them (see
+[App values](../reference/values.md#app-values)).
 
 1. Set the chart, its version and the namespace it goes into:
 
@@ -142,10 +143,10 @@ and the like, and so that your values can override them, see [App values](../ref
     EOF
     ```
 
-1. Create the app's `kustomization.yaml`. The `configMapGenerator` turns `override_config.yaml` into the
+1. Create the app's `kustomization.yaml`. Its `configMapGenerator` turns `override_config.yaml` into the
    `-user-values` ConfigMap, with the label that makes Flux apply a change at once; leave it out if you didn't create
-   the file. For an app without values, you can skip this file and list the app's files one by one instead, see
-   [List the app in the cluster](#list-the-app-in-the-cluster):
+   the file. An app without values doesn't need this file: you can list its files one by one instead (see
+   [List the app in the cluster](#list-the-app-in-the-cluster)):
 
     ```sh
     cat <<EOF > kustomization.yaml
@@ -167,9 +168,9 @@ and the like, and so that your values can override them, see [App values](../ref
     EOF
     ```
 
-1. For secret values, add the `-user-secrets` Secret: either an `ExternalSecret` that reads it from your secret
-   manager, see [Give an app secret values](./external-secrets.md#give-an-app-secret-values), or a SOPS-encrypted
-   `secret.enc.yaml`, see [Encrypt an app's values](./sops.md#encrypt-an-apps-values).
+1. For secret values, add the `-user-secrets` Secret. It can be an `ExternalSecret` that reads it from your secret
+   manager ([Give an app secret values](./external-secrets.md#give-an-app-secret-values)), or a SOPS-encrypted
+   `secret.enc.yaml` ([Encrypt an app's values](./sops.md#encrypt-an-apps-values)).
 
 1. Continue with [List the app in the cluster](#list-the-app-in-the-cluster).
 
@@ -238,17 +239,18 @@ cluster's directory only lists it and adds what's different for the cluster.
 
     A patch also orders the app after a release of another base it needs. `hello-world` needs the Gateway API CRDs,
     so in a cluster that has the [envoy-gateway](/bases/stacks/envoy-gateway/) stack, add
-    `${cluster_name}-gateway-api-crds` to its `dependsOn`, see
-    [Order it after another release](../tutorials/intermediate/app-templates.md#order-it-after-another-release).
+    `${cluster_name}-gateway-api-crds` to its `dependsOn` (see
+    [Order it after another release](../tutorials/intermediate/app-templates.md#order-it-after-another-release)).
 
 1. Continue with [List the app in the cluster](#list-the-app-in-the-cluster).
 
 ## Make it a base app
 
-The steps above add a secondary app, in `apps`, which the cluster's apps `Kustomization`, `WC_NAME-apps.yaml`,
-applies once the cluster is ready. A base app is one the cluster needs from the start: it goes in `cluster/apps`, and
-the cluster's `Kustomization`, `WC_NAME.yaml`, applies it with the cluster. Its `HelmRelease` installs as soon as the
-cluster can take it. See [Base apps and secondary apps](../explanation/how-it-works.md#base-apps-and-secondary-apps).
+The steps above add a secondary app, in `apps`. The Flux `Kustomization` for the cluster's apps, `WC_NAME-apps.yaml`,
+applies it once the cluster is ready. A base app is one the cluster needs from the start. It goes in `cluster/apps`,
+and the cluster's own `Kustomization`, `WC_NAME.yaml`, applies it with the cluster, so its `HelmRelease` installs as
+soon as the cluster can take it.
+[Base apps and secondary apps](../explanation/how-it-works.md#base-apps-and-secondary-apps) explains the difference.
 
 1. Put the app's directory in `cluster/apps` instead of `apps`. It's one level deeper, so a path to an App Template
    or a stack needs one more `../`:
@@ -278,15 +280,16 @@ cluster can take it. See [Base apps and secondary apps](../explanation/how-it-wo
 Moving an app between `apps` and `cluster/apps` on a running cluster moves it from one `Kustomization` to the other.
 Do both in one commit: the objects keep their names, so Flux updates them in place instead of reinstalling the app.
 
-If the cluster has a single `Kustomization` for its whole directory, split it first, see
-[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+If the cluster has a single `Kustomization` for its whole directory, split it first (see
+[Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations)).
 
 ## Pull the chart from a private registry
 
 Charts from the Giant Swarm catalogue are public. If your chart is in a private registry, give the `OCIRepository`
-credentials to read it, in a Secret in the organisation's namespace, where the `OCIRepository` lives. The Secret holds
-a credential, so keep it out of Git in plain text: encrypt it with the cluster's SOPS key, as below, or write it with
-an `ExternalSecret` from your secret manager, see [Read secrets from a secret manager](./external-secrets.md).
+credentials to read it. They go in a Secret in the organisation's namespace, next to the `OCIRepository`. The Secret
+holds a credential, so keep it out of Git in plain text: encrypt it with the cluster's SOPS key, as the steps below do,
+or have an `ExternalSecret` write it from your secret manager (see
+[Read secrets from a secret manager](./external-secrets.md)).
 
 1. Export the path to a Docker registry config with the credentials:
 
@@ -294,10 +297,10 @@ an `ExternalSecret` from your secret manager, see [Read secrets from a secret ma
     export DOCKER_CONFIG_JSON=PATH
     ```
 
-1. In the app's directory, create the Secret and save it into a file, encrypted with the cluster's key. `sops`
+1. In the app's directory, create the Secret and save it to a file, encrypted with the cluster's key. `sops`
    encrypts it on its way into the file, so the credentials never sit in the repository in plain text. The cluster's
-   rule in `.sops.yaml` picks the key; if the cluster has none yet, add one first, see
-   [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg). For a GPG key, import its public key
+   rule in `.sops.yaml` picks the key. If the cluster has no key yet, add one first (see
+   [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg)). For a GPG key, import its public key
    first; an age key needs nothing:
 
     ```sh

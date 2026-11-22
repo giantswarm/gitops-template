@@ -1,7 +1,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: mc-name-clusters-scheduled-upgrades  # TODO: change 'mc-name' to your Management Cluster name and 'scheduled-upgrades' to your cluster name; must be a correct k8s resource name (DNS-like)
+  name: mc-name-clusters-scheduled-upgrades  # TODO: change 'mc-name' to your management cluster's name and 'scheduled-upgrades' to your cluster name; must be a valid resource name (DNS-like)
 spec:
   # Flux applies a commit here only once the organisation's namespace Kustomization, which
   # applies this one, is Ready at it, so this one's spec is up to date
@@ -15,13 +15,13 @@ spec:
   postBuild:
     substitute:
       cluster_description: "description"
-      cluster_name: "scheduled-upgrades"  # TODO: change 'scheduled-upgrades' to your cluster name; must be a correct k8s resource name (DNS-like)
+      cluster_name: "scheduled-upgrades"  # TODO: change 'scheduled-upgrades' to your cluster name; must be a valid resource name (DNS-like)
       organization: "${organization}"  # the organisation's namespace Kustomization sets it
   prune: true
   retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
     namespace: default  # the namespace of that GitRepository
   timeout: 2m

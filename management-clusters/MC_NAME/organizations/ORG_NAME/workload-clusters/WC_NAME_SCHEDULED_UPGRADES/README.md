@@ -6,7 +6,7 @@ A cluster whose Giant Swarm release upgrades only inside a window you choose, su
 moment someone merges. A Flux Operator `ResourceSet` renders the cluster at the release a provider picks, and the
 provider only looks for a new release inside its window.
 
-The Flux Kustomization `WC_NAME_SCHEDULED_UPGRADES.yaml`, next to this directory in `workload-clusters/`, applies it
+The Flux `Kustomization` `WC_NAME_SCHEDULED_UPGRADES.yaml`, next to this directory in `workload-clusters/`, applies it
 into `org-<name>`. It has no `release` variable: the provider sets it.
 
 ## What's here
@@ -28,7 +28,7 @@ into `org-<name>`. It has no `release` variable: the provider sets it.
 
 ## When you copy it
 
-Set `cluster_name` in the Kustomization, and the version range and window in `release-input-provider.yaml`. Keep the
+Set `cluster_name` in the `Kustomization`, and the version range and window in `release-input-provider.yaml`. Keep the
 `fluxcd.controlplane.io/prune: disabled` annotations and `giantswarm.io/prevent-deletion` labels in
 `cluster-resource-set.yaml`: deleting the `HelmRelease` deletes the cluster. A region's patch targets a `HelmRelease`,
 so it doesn't reach into a `ResourceSet`: the region's `valuesFrom` entry is written out in it. Put the cluster's own

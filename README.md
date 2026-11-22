@@ -5,9 +5,9 @@ clusters and apps as files in Git, and Flux, which runs on every Giant Swarm man
 it to start your own repository.
 
 Your copy will hold your management cluster's name, your organisations, clusters, regions and node sizes, and your
-encrypted secrets, so you'll usually want it private. A GitHub fork of a public repository is always public, so use
-**Use this template** on GitHub to create a private repository from it instead, or, on another Git host, clone this
-repository and push it to a new private one. To follow the template's changes later, add it as a second remote,
+encrypted secrets, so you'll usually want it private. A GitHub fork of a public repository is always public, so create
+a private repository from it with **Use this template** on GitHub instead. On another Git host, clone this repository
+and push it to a new private one. To follow the template's changes later, add it as a second remote:
 `git remote add template https://github.com/giantswarm/gitops-template.git`. A plain fork is fine for trying the
 tutorials with placeholder names, or for contributing back to the template. The docs call your copy "your fork"
 either way.
@@ -36,7 +36,7 @@ something doesn't get `Ready`, start with [When something isn't Ready](docs/how-
 
 ## Checking your changes before you push
 
-The repository has an optional [`pre-commit` config](.pre-commit-config.yaml): see
+The repository has an optional [`pre-commit` config](.pre-commit-config.yaml). To use it, see
 [Run pre-commit](docs/how-to/check-changes.md#run-pre-commit).
 
 ## Contributing

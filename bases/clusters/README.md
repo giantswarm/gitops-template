@@ -6,7 +6,7 @@ Cluster bases: what every workload cluster of one provider has in common, so a c
 what makes it different. There's one directory per provider.
 
 Nothing applies this directory directly. A cluster's `cluster/kustomization.yaml` lists its base under `resources:`,
-and the cluster's Flux Kustomization applies it into the organisation's namespace, `org-<name>`, filling in
+and the cluster's Flux `Kustomization` applies it into the organisation's namespace, `org-<name>`, filling in
 `${cluster_name}`, `${cluster_description}`, `${organization}` and `${release}`.
 
 ## What's here

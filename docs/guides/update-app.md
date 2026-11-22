@@ -28,4 +28,4 @@ See [Change encrypted values](../how-to/sops.md#change-encrypted-values).
 
 ## Apps from an App Set
 
-App Sets are now stacks, see [Stacks](../tutorials/intermediate/stacks.md).
+App Sets are now stacks. See [Stacks](../tutorials/intermediate/stacks.md).

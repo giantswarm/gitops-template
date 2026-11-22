@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 # The region, its extra node pool and the stage. kustomize applies components
-# before this kustomization's own patches, so the cluster's own values come last
+# before the patches in this file, so the cluster's own values come last
 # in `valuesFrom`.
 components:
   - ../../../../../../../bases/environments/regions/us_west

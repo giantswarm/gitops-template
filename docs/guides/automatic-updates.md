@@ -13,8 +13,8 @@ See [Set a version range](../tutorials/intermediate/automatic-updates.md#set-a-v
 
 ## Version range
 
-See [Set a version range](../tutorials/intermediate/automatic-updates.md#set-a-version-range), which also shows `kubectl
-gs gitops add automatic-update`.
+See [Set a version range](../tutorials/intermediate/automatic-updates.md#set-a-version-range), which also shows
+`kubectl gs gitops add automatic-update`.
 
 ## Apps created from an App Template
 
@@ -23,7 +23,7 @@ stack](../tutorials/intermediate/automatic-updates.md#apps-from-an-app-template-
 
 ## Apps from an App Set
 
-App Sets are now stacks, see [Apps from an App Template or a
+App Sets are now stacks. See [Apps from an App Template or a
 stack](../tutorials/intermediate/automatic-updates.md#apps-from-an-app-template-or-a-stack).
 
 ## Checking the installed version

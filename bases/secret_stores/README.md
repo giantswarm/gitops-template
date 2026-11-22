@@ -7,9 +7,9 @@ with a token Kubernetes issues for a ServiceAccount, so there's no access key in
 rotate.
 
 Nothing applies this directory directly. The bases have no namespace: a `kustomization.yaml` in your organisation's
-`namespace/` lists one, and the organisation's namespace Kustomization, `namespace.yaml`, applies it into the
-organisation's namespace, `org-<name>`, next to the `ExternalSecret`s that read through it. A `SecretStore` only serves
-`ExternalSecret`s in its own namespace.
+`namespace/` lists one, and the Flux `Kustomization` for the organisation's namespace, `namespace.yaml`, applies it into
+the organisation's namespace, `org-<name>`, next to the `ExternalSecret`s that read through it. A `SecretStore` only
+serves `ExternalSecret`s in its own namespace.
 
 These are for ESO. You can use ESO, SOPS or both: SOPS keeps secrets encrypted in Git, ESO reads them from a secret
 manager, and neither needs the other.

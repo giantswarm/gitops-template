@@ -6,9 +6,10 @@ one app: hello-world, in `${WC_DIR}/apps/hello-world`, with an `OCIRepository`, 
 copy the directory, and from then on you have two copies of the same app that quietly drift apart, one fix at a time.
 
 An App Template writes the app once, in `bases/apps`, with `${cluster_name}` wherever the cluster goes. Every cluster
-that wants the app lists the template, and adds only what's its own: a value or two, perhaps a version. This tutorial
-turns hello-world into a template, moves your cluster onto it, gives the cluster its own values, and shows how to make
-a template wait for another release. It creates no cluster: everything happens on the one from the basic tutorial.
+that wants the app lists the template, and adds only what's its own: a value or two, perhaps a version. By the end of
+this tutorial, hello-world is a template, your cluster runs it from there with values of its own, and you know how to
+make a template wait for another release. It creates no cluster: everything happens on the one from the basic
+tutorial.
 
 - [Create the App Template](#create-the-app-template)
 - [Deploy it to a cluster](#deploy-it-to-a-cluster)
@@ -177,8 +178,9 @@ build one of your own.
     EOF
     ```
 
-That's the template. On its own it does nothing: no Flux `Kustomization` points at `bases`, so it waits until a cluster
-lists it. That also means you can keep and review an app's configuration before any cluster runs it.
+That's the template. On its own it does nothing: no Flux `Kustomization` points at `bases`, so it isn't part of the
+planting plan until a cluster lists it. That also means you can keep and review an app's configuration before any
+cluster runs it.
 
 The fork's copy of hello-world's template has comments that explain each part, which these steps don't write. Once
 you've compared the two, put the fork's back, so they stay:

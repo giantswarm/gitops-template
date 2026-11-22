@@ -1,8 +1,11 @@
 # Tools
 
+This directory holds the scripts that check the repository: `test-all-ff` and the scripts it runs, and the checks
+pre-commit runs.
+
 ## Requirements
 
-The tools provided here may require the following external tools
+The scripts here need some of these tools:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [yq](https://github.com/mikefarah/yq)
@@ -16,7 +19,7 @@ The tools provided here may require the following external tools
 
 ## Provides
 
-This directory provides the following tools
+This directory provides these scripts:
 
 - [test-all-ff](test-all-ff)
 - [fake-flux](fake-flux)
@@ -26,13 +29,12 @@ This directory provides the following tools
 
 ## `test-all-ff`
 
-You can use this bash tool under a repository based on this template to verify the syntax of your manifests.
+`test-all-ff` is a bash script that checks the syntax of the manifests in a repository based on this template. It runs
+them through `yamllint`, `kubeconform` and `validate-helm-values`, so that what passes all the checks is likely to
+apply on the cluster.
 
-This tool will run through `yamllint`, `kubeconform` and `validate-helm-values` to verify your manifests pass all
-checks and is likely to succeed in the cluster.
-
-It runs `fake-flux` under the hood for each kustomization it finds that applies this repository: one whose source is
-the source of `MC_NAME.yaml`, the Kustomization that applies the directory its file is in, as in
+It runs `fake-flux` for each Flux `Kustomization` it finds that applies this repository: one whose source is the
+source of `MC_NAME.yaml`, the `Kustomization` that applies the directory its file is in, as in
 `check-kustomization-paths`. It skips the others, such as an application team's, whose path is in the team's
 repository, and says so. It fails if it finds none. `fake-flux` runs `flux build` with
 `--strict-substitute`, so a variable that the manifests use but `spec.postBuild.substitute` doesn't set fails the build.
@@ -68,14 +70,14 @@ it again. `validate` checks that the CLI is that version, and that a changed arc
 
 ### test-all-ff usage
 
-- `validate` Tests all found flux kustomizations with `yamllint`, `kubeconform` and `validate-helm-values`
+- `validate` tests every Flux `Kustomization` it finds with `yamllint`, `kubeconform` and `validate-helm-values`.
   - It also builds each base in `bases/secret_stores` with `kubectl kustomize` and checks it with `kubeconform`. They
-    read cloud secret managers, so no cluster in the repository uses them and no Kustomization builds them.
-  - It checks the manifests of every `out-of-band` directory that no Kustomization applies with `kubeconform` too.
+    read cloud secret managers, so no cluster in the repository uses them and no `Kustomization` builds them.
+  - It checks the manifests of every `out-of-band` directory that no `Kustomization` applies with `kubeconform` too.
     A workload cluster's own Flux pulls such a directory, so nothing else in the repository builds it. A directory
     with a `kustomization.yaml` is built with `kubectl kustomize` first, and a SOPS-encrypted Secret is checked
     without its `sops` key.
-- `template` Prints the entire repo manifest
+- `template` prints the manifest of the whole repository.
 
 ## `check-directory-readmes`
 
@@ -182,7 +184,7 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
 Because the stub doesn't set a region, a `release-aws` `HelmRelease` without `global.providerSpecific.region` fails
 with the chart's own error, "Unable to default the region". On a management cluster, `release-aws` would take the
 region of the management cluster's nodes instead, so the cluster would be created where nobody chose. A cluster sets
-its region with a component from `bases/environments/regions`, see [Regions](/docs/guides/environments.md#regions).
+its region with a component from `bases/environments/regions`, see [Regions](/docs/tutorials/intermediate/stages-and-regions.md#regions).
 `test-all-ff validate` checks that the script fails for
 [testdata/release-aws-without-region.yaml](testdata/release-aws-without-region.yaml), and for
 [testdata/resource-set-cluster-without-region.yaml](testdata/resource-set-cluster-without-region.yaml), where a
@@ -202,10 +204,8 @@ errors, but they don't fail the check. An entry that renders without errors fail
 
 ## `fake-flux`
 
-Fake flux is a script that can emulate the behaviour of flux locally before committing your changes to your repository.
-
-Its purpose is to support you in the detection of issues which may arise from syntax errors, failing patches or other
-issues caused by incompatibilities with the flux ecosystem.
+`fake-flux` emulates what Flux does, locally, so you can check your changes before you commit them. It catches syntax
+errors, failing patches and other incompatibilities with Flux.
 
 It builds a Flux `Kustomization` as Flux applies it, not as its file is written. It finds them in the repository's
 YAML files outside `tests` and `tools/testdata`: the kind test's assertions in `tests/ats/assertions` name the
@@ -231,88 +231,87 @@ and its parent if that has one too, and so on up, and takes the `Kustomization` 
 directories that has it. Without one, it reads the file as it is. `test-all-ff validate` checks this with the fixture
 in [testdata/ancestor-replacement](testdata/ancestor-replacement).
 
-For a detailed description of what this tool can do, please see `fake-flux usage` which includes a comprehensive set of
-examples.
+For a full description of what the script can do, with examples, run `fake-flux usage`.
 
 ### fake-flux usage
 
-- `list` Lists all fluxcd kustomizations found in the current repository
-- `build <kustomization> [path] [--use-kustomize] [yqflags] [query]` Build the given kustomization and optionally filter
-   it for specific resources.
+- `list` lists every Flux `Kustomization` in the current repository.
+- `build <kustomization> [path] [--use-kustomize] [yqflags] [query]` builds the given `Kustomization` and optionally
+  filters it for specific resources.
 
 #### Arguments
 
-> Argument order is important. The script will fail if the arguments are not given in the order specified.
+> The arguments must come in the order shown. The script fails if they don't.
 
 - `<kustomization>` May be:
-  - A number. The index provided for a kustomization when running `fake-flux list`
-  - A name. Must be unique to the repository
-  - `name:namespace` To target a specific kustomization in a given namespace. Use a single `:` to separate.
+  - A number: the index `fake-flux list` gives the `Kustomization`.
+  - A name, unique in the repository.
+  - `name:namespace`, to pick the `Kustomization` of that name in that namespace. Separate the two with a single `:`.
 
-#### Optional Arguments
+#### Optional arguments
 
-- `path` The path element is a subpath matching below the path defined in the kustomization you are parsing.
-  For example, if the kustomization 'spec.path' is './management-clusters/example/organizations/dev/workload-clusters/dev'
-  then 'path' must be a relative path below this, e.g. 'apps/athena'
+- `path` is a path below the `spec.path` of the `Kustomization` you build. For example, if its `spec.path` is
+  `./management-clusters/example/organizations/dev/workload-clusters/dev`, `path` is a relative path below it, such as
+  `apps/athena`.
 
-- `--use-kustomize` Use kustomize to build the kustomization and not 'flux build'
+- `--use-kustomize` builds the `Kustomization` with kustomize instead of `flux build`.
 
-- `yqflags` Optional flags to pass to 'yq'. Use -M to turn off output colouring. See `yq --help` for available flags.
-  Does not work with multi-parameter arguments.
+- `yqflags` are flags to pass to `yq`. `-M` turns off output colouring; `yq --help` lists the others. Flags that take
+  several parameters don't work.
 
-- `query` This must be a valid 'yq' query and can be used to filter for specific resources.
-           output colouring can be turned off using -M before the query
+- `query` is a `yq` query that filters for specific resources. Put `-M` before it to turn off output colouring.
 
 - `<kustomization>` May be:
-  - A number from the list given with `fake-flux list`
-  - A name matching a unique kustomization in the set
-  - `name:namespace` targeting a specific kustomization in a given namespace
+  - A number from the list `fake-flux list` gives.
+  - A name that matches one `Kustomization` only.
+  - `name:namespace`, to pick the `Kustomization` of that name in that namespace.
 
 ### Examples
 
-- Build all resources for kustomization by numeric index
+- Build every resource of a `Kustomization`, by its index
 
   ```bash
   fake-flux build 1
   ```
 
-- Build all resources for kustomization by kustomization name
+- Build every resource of a `Kustomization`, by its name
 
   ```bash
   fake-flux build prod-cluster
   ```
 
-- Build the kustomization "prod" in the "org-example" namespace
+- Build the `Kustomization` `prod` in the `org-example` namespace
 
   ```bash
   fake-flux build prod:org-example
   ```
 
-- Build all by index but target the apps/athena subpath
+- Build by index, but only the `apps/athena` path below it
 
   ```bash
   fake-flux build 1 apps/athena
   ```
 
-- Build all by name and select the athena HelmRelease, whose name ends in -athena
+- Build by name and select the athena `HelmRelease`, whose name ends in `-athena`
 
   ```bash
   fake-flux build prod-cluster 'select(.kind == "HelmRelease" and (.metadata.name | test("-athena$")))'
   ```
 
-- Build only the athena app and select its HelmRelease
+- Build only the athena app and select its `HelmRelease`
 
   ```bash
   fake-flux build 1 apps/athena 'select(.kind == "HelmRelease")'
   ```
 
-- Build only the athena app and select its HelmRelease, turning off output colouring
+- Build only the athena app and select its `HelmRelease`, with output colouring turned off
 
   ```bash
   fake-flux build 1 apps/athena -M 'select(.kind == "HelmRelease")'
   ```
 
-- Build only the athena app and select its HelmRelease, turning off output colouring. Use kustomize for rendering, not flux
+- Build only the athena app and select its `HelmRelease`, with output colouring turned off, rendering with kustomize
+  instead of Flux
 
   ```bash
   fake-flux build 1 apps/athena --use-kustomize -M 'select(.kind == "HelmRelease")'
@@ -320,16 +319,16 @@ examples.
 
 ### Caveats
 
-- This script cannot carry out replacements which may come from secrets or configmaps.
-- When running in its default mode which uses `flux build kustomization`, secret data is replaced with the type of
-  encryption used for that secret. To see the full encrypted secret, use the additional flag `--use-kustomize` which
-  changes the build mechanism from `flux` to `kustomize`
-- Secrets cannot be decrypted by this script or the underlying tools even if you have the keys locally. If you wish to
-  see the output with the decrypted secrets, you must decrypt them first.
+- The script can't carry out replacements that come from Secrets or ConfigMaps.
+- In its default mode, which uses `flux build kustomization`, the script replaces a Secret's data with the type of
+  encryption used for it. To see the whole encrypted Secret, add `--use-kustomize`, which builds with `kustomize`
+  instead of `flux`.
+- Neither the script nor the tools it runs decrypt Secrets, even when you have the keys locally. To see the output with
+  decrypted Secrets, decrypt them first.
 
 ### Examples of the differences in behaviour between flux and kustomize for secrets
 
-When running with `flux build` your secret output will look like this:
+With `flux build`, a Secret in the output looks like this:
 
 ```yaml
 apiVersion: v1
@@ -348,13 +347,13 @@ metadata:
   namespace: example
 ```
 
-Decoding the value will show:
+Decoded, the value is:
 
 ```nohighlight
 **SOPS**
 ```
 
-When using `kustomize` as the build engine, the secret will be more verbose and contain encrypted values
+With `kustomize` as the build engine, the Secret is longer and holds the encrypted values:
 
 ```yaml
 apiVersion: v1
@@ -364,7 +363,7 @@ kind: Secret
 metadata:
   annotations:
     config.kubernetes.io/origin: |
-      path: encrytped-secret.enc.yaml
+      path: encrypted-secret.enc.yaml
   creationTimestamp: null
   name: encrypted-secret-user-values
   namespace: example

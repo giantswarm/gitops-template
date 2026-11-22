@@ -21,9 +21,9 @@ metadata:
 spec:
   background: true
   rules:
-    # When a cluster-kubeconfig is created by CAPI, this rule will
-    # generate an ExternalSecret that remaps the kubeconfig to a secret
-    # that ESO can use
+    # When Cluster API creates a cluster's kubeconfig Secret, this rule
+    # generates an ExternalSecret that remaps the kubeconfig into a Secret
+    # ESO can use
     - name: generate-external-secret-from-kubeconfig
       match:
         any:
@@ -62,7 +62,7 @@ spec:
               kind: SecretStore
 
             target:
-              # keep ExternalSecret target name in sync with metadata.name
+              # keep the target's name in sync with the ExternalSecret's `metadata.name`
               name: "{{ regex_replace_all('-kubeconfig$', request.object.metadata.name, '-eso-cluster-auth') }}"
               creationPolicy: Owner
               deletionPolicy: Delete
@@ -89,8 +89,8 @@ spec:
                     # another-<cluster_name>-kubeconfig
                     regexp: "^{{request.object.metadata.name}}$"
 
-    # When the ExternalSecret has synced and written its secret out,
-    # generate a SecretStore that can be used to push into the cluster
+    # Once the ExternalSecret has written its Secret, this rule generates
+    # a SecretStore for pushing into the cluster
     - name: generate-secretstore-from-cluster-auth-secret
       match:
         any:
@@ -116,12 +116,12 @@ spec:
           spec:
             provider:
               kubernetes:
-                # adjust this if you want to read from a different namespace on the target cluster;
-                # it has to exist there: the `org` namespaces exist only on the management cluster
+                # change this to read from another namespace on the target cluster; it has to
+                # exist there, and the `org` namespaces exist only on the management cluster
                 remoteNamespace: default
                 server:
-                  # decode the base64-encoded "server" value from the Secret data
-                  # base64_decode() is the standard Kyverno JMESPath filter for this.
+                  # decode the base64-encoded `server` value of the Secret's data with
+                  # `base64_decode()`, a Kyverno JMESPath function
                   url: "{{ request.object.data.server | base64_decode(@) }}"
                   caProvider:
                     type: Secret

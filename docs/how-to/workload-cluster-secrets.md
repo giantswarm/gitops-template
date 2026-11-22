@@ -1,6 +1,6 @@
 # Put secrets into new workload clusters
 
-Some secrets every workload cluster needs from the moment it exists, such as a registry token or a password for an
+Every workload cluster needs some secrets from the moment it exists, such as a registry token or a password for an
 agent. External Secrets Operator (ESO) on the management cluster can put them into a new cluster for you:
 
 - a secret you keep once in your secret manager, the same for every cluster;
@@ -31,8 +31,8 @@ The example is in the out-of-band-no-flux cluster, in
   cluster that hasn't got one: if the Secret on the management cluster is ever made again, with a new password, the
   workload cluster keeps the one it has.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies the directory once the cluster
-is ready, so the secrets arrive as soon as the cluster can take them. The `PushSecret`s copy them again every
+The cluster's apps Flux `Kustomization`, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies the directory once the
+cluster is ready, so the secrets arrive as soon as the cluster can take them. The `PushSecret`s copy them again every
 `refreshInterval`, so a secret you change in your secret manager reaches the cluster within two hours, one refresh of
 each.
 
@@ -133,13 +133,13 @@ The `out-of-band-no-flux` cluster's apps have an example that uses its generated
 External Secrets Operator's `Password` generator makes a password, so no value is kept in Git, and a `PushSecret` in
 `org-${organization}` writes it through `${cluster_name}-eso-cluster-store` into the Secret `pushed-password`, key
 `password`, in the workload cluster's `default` namespace. `updatePolicy: IfNotExists` keeps the first password there,
-though the generator makes a new one at every refresh. The cluster's apps Kustomization applies the example once the
+though the generator makes a new one at every refresh. The cluster's apps `Kustomization` applies the example once the
 cluster is ready; if Kyverno and ESO haven't made the store yet, ESO retries the `PushSecret` until they have. The same
 cluster also pushes Secrets through a store of its own in Git, which needs no Kyverno, see
 [Push secrets through a store in Git](#push-secrets-through-a-store-in-git).
 
 To push a Secret into another cluster, copy the file into that cluster's `apps/` directory and list it in its
-`apps/kustomization.yaml`: `${cluster_name}` and `${organization}` come from the cluster's apps Kustomization, so the
+`apps/kustomization.yaml`: `${cluster_name}` and `${organization}` come from the cluster's apps `Kustomization`, so the
 store name follows the cluster. To push a Secret you already have instead of a generated one, replace the
 `selector.generatorRef` with `selector.secret.name`, remove the `Password`, and use `updatePolicy: Replace`, ESO's
 default, so that a change to the Secret, such as a rotation, reaches the workload cluster.
@@ -196,7 +196,7 @@ The kind test runs the example, with the vCluster standing in for both clusters,
 
 The example in `common-secret.yaml` reads the [store for testing](./external-secrets.md#a-secret-store-for-testing).
 Point its `ExternalSecret` at a store for your secret manager instead, in the organisation's namespace, as
-[Create a SecretStore for your secret manager](./external-secrets.md#create-a-secretstore-for-your-secret-manager)
+[Create a `SecretStore` for your secret manager](./external-secrets.md#create-a-secretstore-for-your-secret-manager)
 describes. A `SecretStore` only serves the `ExternalSecret`s in its own namespace, so `common-secret.yaml`, in
 `org-ORG_NAME`, needs the store in `org-ORG_NAME`:
 

@@ -28,7 +28,7 @@ generatorOptions:
   labels:
     reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
-namespace: org-${organization} # the org namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
+namespace: org-${organization} # the organisation's namespace: the kubeconfig Secret, cluster values and OCIRepositories live there
 # The `$` of a target name is escaped, as kustomize reads the name as a
 # regular expression.
 patches:

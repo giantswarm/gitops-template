@@ -5,7 +5,7 @@
 Secrets pushed into the workload cluster as soon as it's up, through a store you keep in Git: one secret every cluster
 needs, from your secret manager, and one password generated for this cluster alone.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies these objects into
+The Flux `Kustomization` for the cluster's apps, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies these objects into
 `org-<name>` once the cluster is up. External Secrets Operator on the management cluster then writes the Secrets into
 the workload cluster's `default` namespace.
 

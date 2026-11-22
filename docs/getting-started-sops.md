@@ -1,6 +1,6 @@
 # Getting started with SOPS
 
-This guide moved to [Getting started](./tutorials/basic/getting-started.md), which keeps the bootstrap secrets with
+This page moved to [Getting started](./tutorials/basic/getting-started.md), which keeps the bootstrap secrets with
 SOPS and the app's secret values with External Secrets Operator, and says how to use SOPS on its own. The sections
 below keep old links working.
 

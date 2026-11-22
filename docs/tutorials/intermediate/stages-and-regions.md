@@ -5,9 +5,10 @@ production, and production itself, perhaps in more than one region. They should 
 a few on purpose: dev runs the newest versions, prod the proven ones, and each region has its own location and node
 pools.
 
-This tutorial builds that: four clusters, `hello-app-dev-1` and `hello-app-staging-1` in `eu-central`, and two prod
-clusters, one in `eu-central` and one in `us-west`, all from the [CAPA cluster base](/bases/clusters/capa), all running
-the [hello-web](./stacks.md) stack. What differs between them lives in small pieces under `bases/environments`:
+This tutorial builds that, from pieces you've already met: four clusters, `hello-app-dev-1` and `hello-app-staging-1`
+in `eu-central`, and two prod clusters, one in `eu-central` and one in `us-west`, all from the
+[CAPA cluster base](/bases/clusters/capa), all running the [hello-web](./stacks.md) stack. What differs between them
+lives in small pieces under `bases/environments`:
 
 - a **region** says where a cluster runs, and can add a node pool in the region's zones;
 - a **stage** says which versions its clusters run: the Giant Swarm release and the app versions.
@@ -20,11 +21,11 @@ put it in a place and a stage. Why environments are directories rather than bran
 
 Four real clusters cost real money, and the two prod clusters are sized like production: each asks for ten to fifty
 `m6a.8xlarge` nodes in `nodepool0`, plus the region's `large` pool of one to ten `m6a.2xlarge` in `eu-central` or
-`m6a.4xlarge` in `us-west`. That's more than twenty big
-nodes before a single workload, and your account's vCPU quota may say no first. So this tutorial reads along by
-default: you write the files, commit them on a local branch, and render each cluster with `tools/fake-flux` to see
-what Flux would apply, without pushing. Creating the clusters for real is the second option, at the end of
-[Add clusters to the stages](#add-clusters-to-the-stages), and [Clean up](#clean-up) removes them again.
+`m6a.4xlarge` in `us-west`. That's more than twenty big nodes before a single workload, and your account's vCPU quota
+may say no first. So this tutorial reads along by default: you write the files, commit them on a local branch, and
+render each cluster with `tools/fake-flux` to see what Flux would apply, without pushing. Creating the clusters for
+real is the second option, at the end of [Add clusters to the stages](#add-clusters-to-the-stages), and
+[Clean up](#clean-up) removes them again.
 
 - [Regions](#regions)
 - [Stages](#stages)
@@ -272,7 +273,7 @@ file: the target name escaped for kustomize, which reads it as a regular express
       bases/environments/stages/staging/kustomization.yaml > bases/environments/stages/prod/kustomization.yaml
     ```
 
-A stage holds versions only. The prod clusters' bigger nodes are their own values, below.
+    A stage holds versions only. The prod clusters' bigger nodes are their own values, below.
 
 1. The fork's stage files are the same, with a comment on each pin and a `# block end` marker. Once you've compared
    them, put the fork's back, and set only your versions in them. `pin` changes the `value:` under the `# renovate:`
@@ -303,9 +304,8 @@ picks the release.
 
 Each cluster is built like any other CAPA cluster: the cluster base, the hello-web stack as a base app in
 `${ORG_DIR}/workload-clusters/<cluster>/cluster/apps`, its own values in `cluster_userconfig.yaml`, and its region and
-stage under `components:`. The
-components append to the cluster's `HelmRelease` `valuesFrom` in the order they're listed, and the cluster's own patch
-runs after them, so Flux merges the layers in this order:
+stage under `components:`. The components append to the cluster's `HelmRelease` `valuesFrom` in the order they're
+listed, and the cluster's own patch runs after them, so Flux merges the layers in this order:
 
 1. `cluster-app-installation-values`, the management cluster's values;
 1. `${cluster_name}-config`, the base's;
@@ -313,9 +313,11 @@ runs after them, so Flux merges the layers in this order:
 1. `${cluster_name}-region-node-pool-config`, the region's extra node pool, for the clusters that add it;
 1. `${cluster_name}-cluster-userconfig`, the cluster's own.
 
+Start with dev, and copy the other three from it.
+
 1. Create the dev cluster's directory, `${STAGES_DIR}/HELLO_APP_DEV_CLUSTER_1`. Its `kustomization.yaml` lists only
-   `cluster/`, so the cluster's `Kustomization` never applies an `out-of-band` directory next to it to the management
-   cluster:
+   `cluster/`, so the cluster's Flux `Kustomization` never applies an `out-of-band` directory next to it to the
+   management cluster:
 
     ```sh
     export STAGES_DIR=${ORG_DIR}/workload-clusters
@@ -516,7 +518,7 @@ If it doesn't get there, see [When something isn't Ready](../../how-to/troublesh
 With `prune: true`, Flux deletes what you delete from a cluster's files, but never the cluster itself: its
 `HelmRelease` and `OCIRepository`, from the CAPA base, have the `kustomize.toolkit.fluxcd.io/prune: disabled`
 annotation and the `giantswarm.io/prevent-deletion` label. To delete a cluster, see
-[Delete a cluster](../../how-to/delete-cluster.md).
+[Delete a workload cluster](../../how-to/delete-cluster.md).
 
 With this many layers, it helps to see what Flux will apply before you push. `tools/fake-flux` renders a cluster the
 way Flux does, see [Render what Flux applies](../../how-to/check-changes.md#render-what-flux-applies).

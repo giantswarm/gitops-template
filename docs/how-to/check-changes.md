@@ -12,7 +12,7 @@ that every Flux `Kustomization`'s path exists and builds, see
 [check-directory-readmes](/tools/README.md#check-directory-readmes), fails when a directory you add under `bases/` or
 `management-clusters/` has no README: write one that says what the directory is for. A third,
 [check-sops-encrypted](/tools/README.md#check-sops-encrypted), fails when a `*.enc.yaml` file you've staged isn't
-encrypted with SOPS, before its secret reaches Git's history. CI runs the same hooks. To use it,
+encrypted with SOPS, before its secret reaches Git's history. CI runs the same hooks. To use them,
 [install](https://pre-commit.com/#install) `pre-commit`, then set up the hooks once in your clone:
 
 ```sh
@@ -46,7 +46,7 @@ which leaves out the directory's `kustomization.yaml`. For example, to see what 
 kubectl kustomize management-clusters/MC_NAME/organizations/ORG_NAME
 ```
 
-Building the organisation's `namespace` on its own leaves `${organization}` as it is, as `namespace.yaml` fills it in.
+Building the organisation's `namespace` on its own leaves `${organization}` as it is: `namespace.yaml` fills it in.
 
 [`tools/fake-flux`](/tools/README.md#fake-flux) builds a Flux `Kustomization` as Flux applies it, variables and all,
 in the namespace its parent puts it in. List the `Kustomization`s it finds, then build one by its number or name:

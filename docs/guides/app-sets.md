@@ -1,7 +1,7 @@
 # Creating and using App Sets
 
-App Sets are now stacks: a directory of apps that a cluster takes as one. This page moved to
-[Stacks](../tutorials/intermediate/stacks.md). The sections below keep old links working.
+This page moved to [Stacks](../tutorials/intermediate/stacks.md). App Sets are now stacks: a directory of apps that a
+cluster takes as one. The sections below keep old links working.
 
 ## Limitations
 

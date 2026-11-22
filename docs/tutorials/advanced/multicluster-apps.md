@@ -1,7 +1,7 @@
 # Multicluster apps
 
 An organisation in this repository is usually a department, with many clusters. Some apps belong on all of them, or
-on most: a logging agent, a policy set, a team's service. Listing the app in every cluster's `apps` works, and it's
+on most: a logging agent, a policy set, a team's service. Listing the app in every cluster's `apps` works, but it's
 one more directory to add, and keep in step, for every cluster you create.
 
 A multicluster app is written once, in `${ORG_DIR}/multicluster/apps`, as a Flux Operator `ResourceSet`. The
@@ -29,7 +29,7 @@ its steps add.
 
 ## The multicluster directory
 
-The management cluster's `Kustomization` doesn't apply `${ORG_DIR}/multicluster/apps` itself. It applies one Flux
+The management cluster's Flux `Kustomization` doesn't apply `${ORG_DIR}/multicluster/apps` itself. It applies another
 `Kustomization`, in `${ORG_DIR}/multicluster/apps.yaml`, and that one applies `${ORG_DIR}/multicluster/apps`, with
 `${organization}` filled in. The apps then have a `Kustomization` of their own: a mistake in one of them doesn't stop
 the management cluster's.

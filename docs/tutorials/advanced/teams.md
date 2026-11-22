@@ -2,9 +2,9 @@
 
 This repository belongs to the platform team: it holds the clusters, and the apps that every cluster needs. Application
 teams usually want to deliver their own workloads from their own repository, without a pull request to the platform
-repository for every change, and without being able to touch anything but their own workloads. Think of it as giving a
-team its own allotment: the platform team marks out the plot and the gate, and what grows inside is the team's
-business.
+repository for every change, and without being able to touch anything but their own workloads. So give each team an
+allotment. The platform team marks out the plot and the gate; the team keeps a planting plan of its own, and Flux
+gardens the plot from it.
 
 This tutorial sets that up for one team on the cluster from the [basic tutorial](../basic/getting-started.md). It
 builds on [Out-of-band resources](./out-of-band.md): the team's namespace is an out-of-band object, applied straight to
@@ -24,12 +24,13 @@ Run the commands from the root of your clone, with the variables the basic tutor
 The team gets a namespace in the workload cluster, and Flux applies the team's repository into that namespace, and
 nowhere else. Which Flux does it depends on where Flux runs:
 
-1. **Flux on the management cluster.** The team's `GitRepository` and `Kustomization` live on the management cluster,
-   in the organisation's namespace, and the `Kustomization` reaches the workload cluster through its kubeconfig. In the
-   workload cluster, the platform team gives the organisation's `automation` ServiceAccount the `admin` role in the
-   team's namespace, with a `RoleBinding`. The `Kustomization` has `serviceAccountName: automation`, so Flux
-   impersonates `system:serviceaccount:org-<name>:automation` in the workload cluster, which can write only the
-   namespaces that have such a `RoleBinding`. The workload cluster runs no Flux.
+1. **Flux on the management cluster.** The team's `GitRepository` and Flux `Kustomization` live on the management
+   cluster, in the organisation's namespace, and the `Kustomization` reaches the workload cluster through its
+   kubeconfig. In the workload cluster, the platform team gives the organisation's `automation` ServiceAccount the
+   `admin` role in the team's namespace, with a `RoleBinding`. The `Kustomization` has
+   `serviceAccountName: automation`, so Flux impersonates `system:serviceaccount:org-<name>:automation` in the
+   workload cluster, which can write only the namespaces that have such a `RoleBinding`. The workload cluster runs no
+   Flux.
 1. **Flux in the workload cluster.** The workload cluster runs Flux, as in
    [Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster). The platform team puts the
    team's namespace, a ServiceAccount named after the team, a `RoleBinding` that makes it `admin` there, and the team's
@@ -92,7 +93,7 @@ export TEAM_PATH=./kustomize
 ## Add a team with Flux on the management cluster
 
 The cluster needs its `-direct` `Kustomization`, which applies its `out-of-band` directory to the workload cluster, see
-[Add the -direct Kustomization](./out-of-band.md#add-the--direct-kustomization).
+[Add the -direct `Kustomization`](./out-of-band.md#add-the--direct-kustomization).
 
 1. Create the team's namespace in the workload cluster, and the `RoleBinding` that gives the organisation's
    `automation` ServiceAccount the `admin` role there:
@@ -210,8 +211,8 @@ kubectl --context ${WC_CONTEXT} get all -n ${TEAM_NAME}
 
 If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
-From now on, the team pushes plain manifests, or a `kustomization.yaml`, to its repository, and Flux applies them at
-the next `interval`. It deletes what the team deletes, as the `Kustomization` has `prune: true`.
+From now on, the plot is the team's. It pushes plain manifests, or a `kustomization.yaml`, to its repository, and Flux
+applies them at the next `interval`. It deletes what the team deletes, as the `Kustomization` has `prune: true`.
 
 ## Add a team with Flux in the workload cluster
 
@@ -340,9 +341,8 @@ How you remove a team depends on its mode, and the order matters with Flux on th
     ```
 
 1. Delete the team's directory, `${WC_DIR}/teams/${TEAM_NAME}`, and its entry in `${WC_DIR}/teams/kustomization.yaml`,
-   and push. Flux
-   deletes the team's `Kustomization`, which deletes the team's workloads from the workload cluster. Wait until the
-   `Kustomization` is gone:
+   and push. Flux deletes the team's `Kustomization`, which deletes the team's workloads from the workload cluster.
+   Wait until the `Kustomization` is gone:
 
     ```sh
     kubectl wait --for=delete kustomization/${WC_NAME}-${TEAM_NAME} -n org-${ORG_NAME} --timeout=10m

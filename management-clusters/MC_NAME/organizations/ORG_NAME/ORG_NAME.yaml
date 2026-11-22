@@ -8,6 +8,6 @@ metadata:
   labels:
     # nobody can delete it, Flux included, until this label is removed
     giantswarm.io/prevent-deletion: "true"
-  name: org-name  # TODO: change 'org-name' to your organization name
+  name: org-name  # TODO: change 'org-name' to your organisation's name
 spec: {}
 status: {}

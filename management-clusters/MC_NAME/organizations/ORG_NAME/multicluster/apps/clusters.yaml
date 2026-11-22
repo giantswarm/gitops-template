@@ -4,7 +4,7 @@
 # ResourceSet fails to build and keeps what it installed. To take an app off
 # every cluster, remove it from kustomization.yaml instead. kustomization.yaml
 # applies this to every ResourceSet here: with `inputStrategy: Permute`, each
-# ResourceSet reads the name as `inputs.<its name, with _ for ->.cluster`.
+# ResourceSet reads the name as `inputs.<its name>.cluster`, with `_` for `-` in its name.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:

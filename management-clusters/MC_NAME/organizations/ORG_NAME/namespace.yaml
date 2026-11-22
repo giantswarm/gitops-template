@@ -14,7 +14,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/organization-namespace: "true"
-  name: mc-name-organization-org-name  # TODO: change 'mc-name' to your Management Cluster name and 'org-name' to your organization name; must be a correct k8s resource name (DNS-like)
+  name: mc-name-organization-org-name  # TODO: change 'mc-name' to your management cluster's name and 'org-name' to your organisation's name; must be a valid resource name (DNS-like)
   namespace: default
 spec:
   # The management cluster's Kustomization reads the same GitRepository, so Flux applies a commit
@@ -23,7 +23,7 @@ spec:
   # between the two in one commit moves in that order. That one has no `wait` or health checks,
   # so it never waits for this one.
   dependsOn:
-    - name: mc-name-gitops  # TODO: change "mc-name" to your Management Cluster name, as in MC_NAME.yaml
+    - name: mc-name-gitops  # TODO: change "mc-name" to your management cluster's name, as in MC_NAME.yaml
   # for the organisation's SOPS-encrypted Secrets, if you keep any in namespace/
   decryption:
     provider: sops
@@ -40,7 +40,7 @@ spec:
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
   # Every object in namespace/ goes into the organisation's namespace. `org-ORG_NAME` is a fixed
   # placeholder that ./kustomization.yaml completes with the Organization's name.
   targetNamespace: org-ORG_NAME

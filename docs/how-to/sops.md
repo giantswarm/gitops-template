@@ -35,8 +35,9 @@ behind holds no secret. The [check-sops-encrypted](/tools/README.md#check-sops-e
 ## Add a workload cluster key (GPG)
 
 A key of the cluster's own keeps its secrets apart from other clusters': the cluster's key can decrypt its files, and
-nothing else. Its private key goes into a Secret in the organisation's `namespace/secrets`, in the organisation's
-namespace, with the cluster's `Kustomization`s that decrypt with it. The master key encrypts that Secret.
+nothing else. Its private key goes into a Secret in the organisation's `namespace/secrets` directory, so it lands in the
+organisation's namespace with the cluster's Flux `Kustomization`s that decrypt with it. The master key encrypts that
+Secret.
 
 > [!Note]
 > From kubectl-gs X.Y.Z on, `kubectl gs gitops add encryption --workload-cluster` does most of these steps for you,
@@ -119,7 +120,7 @@ a `Kustomization` reads one Secret, so every key of the cluster goes into the sa
     > ${ORG_SECRETS}/${WC_NAME}.gpgkey.enc.yaml
     ```
 
-1. Add the newly created secret to the resources of `${ORG_SECRETS}/kustomization.yaml`:
+1. Add the new Secret to the resources of `${ORG_SECRETS}/kustomization.yaml`:
 
     ```sh
     yq -i ".resources += \"${WC_NAME}.gpgkey.enc.yaml\" | .resources style=\"\"" \
@@ -155,7 +156,7 @@ a `Kustomization` reads one Secret, so every key of the cluster goes into the sa
 
 1. Commit the encrypted `${WC_NAME}.gpgkey.enc.yaml` in the same commit as the `secrets/kustomization.yaml` that
    lists it, together with the public key and `.sops.yaml`. If the list reaches the repository without the file,
-   the organisation's namespace Kustomization fails to build and stops reconciling:
+   the organisation's namespace `Kustomization` fails to build and stops reconciling:
 
     ```sh
     git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
@@ -289,10 +290,10 @@ key for the same cluster, put both private keys into that one Secret.
 
 ## Add an organisation key
 
-Each management cluster comes with a master key that encrypts the organisation's files already. If you want to keep
-one organisation's secrets apart from another's, give it a key of its own. Its private key goes into the master
-Secret, `sops-gpg-master`, which the organisation's namespace `Kustomization` decrypts with, so it can decrypt the
-files in the organisation's `namespace`.
+The management cluster's master key already encrypts the organisation's files. To keep one organisation's secrets
+apart from another's, give it a key of its own. Its private key goes into the master Secret, `sops-gpg-master`, which
+the organisation's namespace `Kustomization` decrypts with, so it can decrypt the files in the organisation's
+`namespace`.
 
 1. Generate a GPG key with no passphrase (`%no-protection`):
 
@@ -370,10 +371,10 @@ files in the organisation's `namespace`.
 1. Put a Secret into the organisation's `namespace/secrets`, which the organisation's namespace `Kustomization` applies
    into its namespace. Create the directory first if the organisation doesn't have it, as for a
    [workload cluster key](#add-a-workload-cluster-key-gpg), then list the file in its `kustomization.yaml`. Name the
-   real namespace, `org-${ORG_NAME}`, the same one the namespace `Kustomization`'s `targetNamespace` sets, from the
-   start: changing the encrypted file afterwards breaks its MAC, and `sops` can no longer decrypt it to change it or
-   rotate its key. `sops` encrypts it on its way into the file, with the organisation's key, which the rule above
-   picks:
+   real namespace from the start: `org-${ORG_NAME}`, the one the namespace `Kustomization`'s `targetNamespace` sets.
+   Changing the encrypted file afterwards breaks its MAC, and `sops` can then no longer decrypt it to change it or
+   rotate its key. `sops` encrypts the Secret on its way into the file, with the organisation's key, which the rule
+   above picks:
 
     ```sh
     kubectl create secret generic my-secret \
@@ -411,7 +412,7 @@ A `Kustomization` reads the Secret in its own namespace, so the key has to be in
 them, in `namespace/secrets`. A `Kustomization` on the management cluster that applies `out-of-band` to the workload
 cluster through its kubeconfig, such as the template's `-direct` one, decrypts with a key of its own, such as
 `WC_NAME-direct.gpgkey.enc.yaml` in the same directory, made the same way, see
-[Add the -direct Kustomization](../tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
+[Add the -direct `Kustomization`](../tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
 
 ## Encrypt an app's values
 
@@ -524,8 +525,8 @@ Flux has its own copy of every private key, in a Secret on the management cluste
 encrypted files, and to rebuild the Secret if it's lost. Keep it in a password manager, and nowhere else.
 
 For example, with the 1Password CLI, `op`, store a GPG private key as the body of a secure note. The `jq` filter wraps
-the armoured key into the item template, in the `notesPlain` field. Put the vault you keep the keys in for `YOUR_VAULT`.
-For the master key or an organisation key, name the item `(${MC_NAME}, master, Flux)` or
+the armoured key into the item template, in the `notesPlain` field. Replace `YOUR_VAULT` with the vault you keep the
+keys in. For the master key or an organisation key, name the item `(${MC_NAME}, master, Flux)` or
 `(${MC_NAME}, ${ORG_NAME}, Flux)` instead:
 
 ```sh

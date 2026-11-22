@@ -5,9 +5,9 @@
 The building blocks that clusters and organisations share. Write something here once, and every cluster that lists
 it gets it; change it here, and they all get the change.
 
-Nothing applies this directory. A base only reaches a cluster when a `kustomization.yaml` under `management-clusters/`
-lists it by relative path: under `resources:` for a base, under `components:` for a stage or region. For example, a
-cluster's `cluster/kustomization.yaml` has:
+Nothing applies this directory directly. A base only reaches a cluster when a `kustomization.yaml` under
+`management-clusters/` lists it by relative path: under `resources:` for a base, under `components:` for a stage or
+region. For example, a cluster's `cluster/kustomization.yaml` has:
 
 ```yaml
 resources:
@@ -16,7 +16,7 @@ components:
   - ../../../../../../../bases/environments/regions/eu_central
 ```
 
-The variables in a base, such as `${cluster_name}` and `${organization}`, are filled in by the Flux Kustomization
+The variables in a base, such as `${cluster_name}` and `${organization}`, are filled in by the Flux `Kustomization`
 that applies the cluster's directory.
 
 ## What's here

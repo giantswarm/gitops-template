@@ -7,11 +7,11 @@ not the finished article: this page lists, command by command, what it writes an
 files no command writes, see [What kubectl-gs writes](../reference/repo-structure.md#what-kubectl-gs-writes).
 
 The commands below need kubectl-gs X.Y.Z or newer, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version).
-Older releases write structure version 2, with a `mapi` directory, which
-[Bring an older fork up to date](./upgrade-fork.md) moves on. Run them from the root of your clone, and pass
-`--dry-run` to see what a command would write first. `kubectl gs gitops init` creates `.gitops-metadata.yaml` and
-`.sops.yaml` in a new repository, and a Git `pre-commit` hook that refuses `*.enc.yaml` files `sops` hasn't encrypted;
-a fork of this template has the files already.
+Older releases write structure version 2, with a `mapi` directory;
+[Bring an older fork up to date](./upgrade-fork.md) moves a fork on from it. Run the commands from the root of your
+clone, and pass `--dry-run` to see what a command would write first. `kubectl gs gitops init` creates
+`.gitops-metadata.yaml` and `.sops.yaml` in a new repository, and a Git `pre-commit` hook that refuses `*.enc.yaml`
+files `sops` hasn't encrypted; a fork of this template has the files already.
 
 ## Management cluster
 
@@ -21,7 +21,7 @@ kubectl gs gitops add management-cluster --name ${MC_NAME} --repository-name ${G
 
 It writes:
 
-- `management-clusters/MC_NAME/MC_NAME.yaml`, the management cluster's `Kustomization`, `MC_NAME-gitops`, in
+- `management-clusters/MC_NAME/MC_NAME.yaml`, the management cluster's Flux `Kustomization`, `MC_NAME-gitops`, in
   `default`, with `prune: true`, decrypting with `sops-gpg-master`;
 - an empty `management-clusters/MC_NAME/organizations`;
 - with `--gen-master-key`, a new master key: its public key in `.sops.keys/master.FINGERPRINT.asc`, its private key in
@@ -55,8 +55,8 @@ Then:
    encrypted and the key is gone from your keyring, the password manager holds the only copy you can read.
 
 1. Apply the Secret, so that Flux has `sops-gpg-master` in `default` before it needs it, then encrypt the file with
-   the rule kubectl-gs wrote, and delete the private key from your keyring. kubectl-gs writes the file with the
-   private key in plain text, so don't add it to Git until `sops` has encrypted it:
+   the rule kubectl-gs wrote, and delete the private key from your keyring. kubectl-gs writes the private key into the
+   file in plain text, so don't add the file to Git until `sops` has encrypted it.
    [check-sops-encrypted](/tools/README.md#check-sops-encrypted) fails for it until then.
 
     ```sh
@@ -68,7 +68,7 @@ Then:
 `MC_NAME.yaml` has no `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. It applies itself, so renaming it
 would make Flux prune it, and its finalizer would delete everything beneath it, see
 [Deletion protection](../explanation/deletion-protection.md#the-protected-objects). Add the annotation, as the
-template's has it:
+template's `MC_NAME.yaml` has:
 
 ```sh
 yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${MC_DIR}/${MC_NAME}.yaml
@@ -105,8 +105,7 @@ yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' 
   management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace.yaml
 ```
 
-`kubectl gs template organization --name ${ORG_NAME}` prints the `Organization` alone,
-without the protection.
+`kubectl gs template organization --name ${ORG_NAME}` prints the `Organization` alone, without the protection.
 
 ## Workload cluster
 
@@ -119,14 +118,14 @@ kubectl gs gitops add workload-cluster --name ${WC_NAME} --organization ${ORG_NA
 
 The organisation needs its `namespace.yaml`, and its clusters' `Kustomization`s in its namespace: the command refuses
 an organisation that hasn't moved them yet, and links to
-[Move the workload cluster Kustomizations](./upgrade-fork.md#move-the-workload-cluster-kustomizations).
-`--cluster-user-config` takes a file of values, and is optional. It writes:
+[Move the workload cluster `Kustomization`s](./upgrade-fork.md#move-the-workload-cluster-kustomizations).
+`--cluster-user-config` is optional and takes a file of values. The command writes:
 
 - with `--base`, the cluster's two `Kustomization`s, `WC_NAME.yaml`, `MC_NAME-clusters-WC_NAME`, which applies
   `cluster` and waits for the Cluster API `Cluster` to be `Available`, and `WC_NAME-apps.yaml`, which applies the rest
   once it is, and lists both in `workload-clusters/kustomization.yaml`. They have no namespace, so the organisation's
-  namespace `Kustomization` puts them in the organisation's, `prune: true`, and the organisation's namespace
-  `Kustomization` in `dependsOn`, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+  namespace `Kustomization` puts them in the organisation's. They have `prune: true`, and the organisation's namespace
+  `Kustomization` in `dependsOn`, see [Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations).
   Without `--base`, there's only `WC_NAME.yaml`, which applies the apps;
 - `WC_NAME/kustomization.yaml`, which lists `apps/`, and never `cluster` or `out-of-band`;
 - `WC_NAME/cluster/kustomization.yaml`, which lists the base;
@@ -163,7 +162,7 @@ Then:
 
 1. Make the cluster's `Kustomization` wait for the control plane rather than for `Available`, which counts every node
    pool, so that one short node pool doesn't hold back every change to the cluster's apps. Take its health check from
-   the example, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations):
+   the example, see [Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations):
 
     ```sh
     export WC_FILE=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}.yaml
@@ -203,8 +202,8 @@ makes GPG keys only; for an age key, follow
 
 An app's `HelmRelease` in this template reads the cluster's values first, then the optional `-user-values` ConfigMap
 and `-user-secrets` Secret, with `${cluster_name}` in every name, so the same files work for any cluster. The cluster
-values give the chart what only the management cluster knows about the cluster, such as its `baseDomain`, and as the
-first layer, your values can override them, see [App values](../reference/values.md#app-values).
+values give the chart what only the management cluster knows about the cluster, such as its `baseDomain`. They are the
+first layer, so your values can override them, see [App values](../reference/values.md#app-values).
 
 The apps come in two layouts, and [Add an app to a cluster](./add-app.md) describes both:
 
@@ -217,7 +216,7 @@ The apps come in two layouts, and [Add an app to a cluster](./add-app.md) descri
 
 Two commands write an app, and neither writes the `HelmRelease` this template uses.
 
-`kubectl gs gitops add app` is deprecated since kubectl-gs 5.2.0, without a replacement:
+`kubectl gs gitops add app` has been deprecated since kubectl-gs 5.2.0, with no replacement:
 
 ```sh
 kubectl gs gitops add app --name ${APP_NAME} --app ${APP_CHART} --version ${APP_VERSION} \
@@ -247,7 +246,7 @@ With `--base`, it writes a `kustomization.yaml` that lists the base, and a `patc
 `-user-values` ConfigMap to the `HelmRelease`. The App Templates here list that layer already, so leave the patch out.
 
 `kubectl gs deploy chart --dry-run` prints an `OCIRepository` and a `HelmRelease` for one chart, without writing a
-file. Always pass `--dry-run`: without it, the command applies them to the management cluster directly, outside of Git.
+file. Always pass `--dry-run`: without it, the command applies them to the management cluster directly, outside Git.
 It takes the `valuesFrom` entries with `--values-from`, so it can print the template's shape apart from the names:
 
 ```sh

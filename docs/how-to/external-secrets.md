@@ -16,7 +16,7 @@ export WC_NAME=CLUSTER_NAME
 export SECRET_STORE=STORE_NAME
 ```
 
-## Create a SecretStore for your secret manager
+## Create a `SecretStore` for your secret manager
 
 ESO reads a secret manager through a `SecretStore`. A `SecretStore` serves only the `ExternalSecret`s in its own
 namespace, so each namespace that reads secrets needs one: the organisation's, `org-${ORG_NAME}`, for its clusters'
@@ -52,8 +52,8 @@ resources:
 ```
 
 Add `secret-stores` to the `resources` of the organisation's `namespace/kustomization.yaml`: the organisation's
-namespace `Kustomization`, `namespace.yaml`, then applies it into the organisation's namespace, see
-[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+namespace Flux `Kustomization`, `namespace.yaml`, then applies it into the organisation's namespace, see
+[Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations).
 
 For the store in `default`, use the base the same way with `namespace: default`, but only once, in the management
 cluster's directory rather than an organisation's, so that no two organisations apply the same store. Add that
@@ -72,9 +72,9 @@ spec:
 
 For other secret managers, see
 [Using External Secrets Operator](https://docs.giantswarm.io/tutorials/security/external-secrets-operator/) and ESO's
-provider docs. Prefer a way to sign in that stores no credential. If your secret manager needs one, it can't come from
-ESO, which needs it to read anything: keep it in the repository, encrypted with SOPS, next to the store, see
-[Keep secrets in the repository](./sops.md).
+provider docs. Prefer a way to sign in that stores no credential. If your secret manager needs one, ESO can't supply it,
+because ESO needs it before it can read anything: keep it in the repository, encrypted with SOPS, next to the store,
+see [Keep secrets in the repository](./sops.md).
 
 **Check:** the stores are `Ready`:
 
@@ -139,9 +139,9 @@ A dummy token gets you no further than the Secret, though: GitHub refuses commit
 `not-a-github-token`. To try something with a real token, keep the token in the repository, encrypted with SOPS, while
 you test, as in [Token encrypted with SOPS](./commit-statuses.md#token-encrypted-with-sops). Flux's repository token
 comes from SOPS, as in the [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster), or
-from your secret manager's store: never point the `ExternalSecret` of
+from your secret manager's store. Never point the `ExternalSecret` of
 [Keep the repository token in your secret manager](#keep-the-repository-token-in-your-secret-manager) at the test
-store, as it would replace Flux's working token with a dummy, and Flux would stop reading the repository.
+store: it would replace Flux's working token with a dummy, and Flux would stop reading the repository.
 
 When you're done testing, delete the stores:
 

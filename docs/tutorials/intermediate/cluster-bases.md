@@ -7,9 +7,9 @@ chart with a Flux `OCIRepository` and `HelmRelease`, and the chart version is th
 `${release}` variable.
 
 Sooner or later your clusters share more than the chart's defaults: the same node pools, say, on every cluster of a
-team. Writing those into each cluster works, until someone changes three of the five. This tutorial puts them into a
-base of your own instead, next to the CAPA one, and creates a second cluster from it: a real one, with at least three
-`m6i.xlarge` nodes, which [Clean up](#clean-up) deletes again.
+team. Writing those into each cluster works, until someone changes three of the five. By the end of this tutorial
+they live in a base of your own instead, next to the CAPA one, and a second cluster runs from it: a real one, with at
+least three `m6i.xlarge` nodes, which [Clean up](#clean-up) deletes again.
 
 - [Choose a base](#choose-a-base)
 - [Create a base with your own defaults](#create-a-base-with-your-own-defaults)
@@ -125,7 +125,7 @@ give its `HelmRelease` and `OCIRepository` both, see [Deletion protection](../..
 ## Create a cluster from it
 
 A cluster from your base is built like the one in the basic tutorial, with your base where the CAPA one was. This one
-gets no apps, so it needs only the cluster's `Kustomization`.
+gets no apps, so it needs only the cluster's Flux `Kustomization`.
 
 1. Export the new cluster's name, at most 20 characters, and its directory:
 

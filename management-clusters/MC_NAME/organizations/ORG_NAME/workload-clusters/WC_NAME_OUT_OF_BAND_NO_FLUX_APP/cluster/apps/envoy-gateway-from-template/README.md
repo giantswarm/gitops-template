@@ -6,8 +6,8 @@ The [`envoy-gateway`](/bases/stacks/envoy-gateway/) stack as base apps of this c
 values on top. Base apps install with the cluster, so the Gateway is there before the secondary apps that route
 through it.
 
-The cluster's Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml`, applies it into `org-<name>` together with the
-cluster, through `cluster/apps/kustomization.yaml`.
+The cluster's Flux `Kustomization`, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml`, applies it into `org-<name>` together with
+the cluster, through `cluster/apps/kustomization.yaml`.
 
 ## What's here
 

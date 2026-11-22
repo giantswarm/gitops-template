@@ -11,8 +11,9 @@ written as a kustomize base in `bases/stacks`. Its `resources:` lists the `HelmR
 charts, or App Templates and other stacks, which can each still be used on their own, and the stack adds what ties
 them together. A cluster lists the stack like an App Template, and gets all of its apps.
 
-This tutorial adds the hello-web stack, Envoy Gateway and hello-world, to the cluster from the basic tutorial. It
-creates no cluster, though Envoy Gateway's load balancer is a cloud resource of its own.
+By the end of this tutorial, hello-world answers over HTTPS on the cluster from the basic tutorial, installed with
+Envoy Gateway as the hello-web stack. It creates no cluster, though Envoy Gateway's load balancer is a cloud resource
+of its own.
 
 - [When a stack helps](#when-a-stack-helps)
 - [Create a stack](#create-a-stack)

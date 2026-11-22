@@ -1,8 +1,8 @@
 # Create a cluster base for another provider
 
 The template ships one provider's base, [bases/clusters/capa](/bases/clusters/capa/), for AWS. For clusters on another
-provider, such as Azure with CAPZ, create a base for it next to it. `kubectl gs gitops add base` writes most of it; this
-page covers the rest. To build a base with your own defaults on top of a provider's base, see
+provider, such as Azure with CAPZ, create a base for it next to the CAPA one. `kubectl gs gitops add base` writes most
+of it; this page covers the rest. To build a base with your own defaults on top of a provider's base, see
 [Share cluster defaults](../tutorials/intermediate/cluster-bases.md).
 
 ## Write the base
@@ -24,8 +24,9 @@ a provider's base, and the path `kubectl gs gitops add workload-cluster --base` 
   `global.metadata.preventDeletion: true`, so the chart labels the `Cluster` too;
 - `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap.
 
-That's kubectl-gs X.Y.Z and newer. Older releases write the base into `bases/clusters/capz/template`, which you move up
-a level, without the annotation, and before 7.0.0 without the label and `preventDeletion`, which you add:
+That's what kubectl-gs X.Y.Z and newer write. Older releases write the base into `bases/clusters/capz/template`, without
+the annotation, and releases before 7.0.0 also leave out the label and `preventDeletion`. Move the files up a level and
+add what's missing:
 
 ```sh
 mv bases/clusters/capz/template/* bases/clusters/capz/ && rmdir bases/clusters/capz/template
@@ -35,14 +36,14 @@ yq -i '.global.metadata.preventDeletion = true' bases/clusters/capz/cluster_conf
 ```
 
 Compare the result with the [CAPA base](/bases/clusters/capa/), whose [readme](/bases/clusters/capa/readme.md) lists
-where it differs from what the command writes on purpose, and copy the readme, which lists the variables the base
+where it deliberately differs from what the command writes, and copy the readme, which lists the variables the base
 expects.
 
 ## Add the management cluster's values
 
 From kubectl-gs X.Y.Z on, the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`,
-as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, and there's nothing to add. An older release's reads only
-`${cluster_name}-config`: add the entry in front of it, or the chart misses `global.managementCluster` and
+as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, and there's nothing to add. An older release's `HelmRelease`
+reads only `${cluster_name}-config`: add the entry in front of it, or the chart misses `global.managementCluster` and
 `global.connectivity.baseDomain`:
 
 ```yaml
