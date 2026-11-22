@@ -10,6 +10,7 @@ from pathlib import Path
 import yaml
 from cluster_move import EXAMPLE_DIR, RESOURCE_SET_TARGET, copy_cluster, named
 from helm_values import merged_values
+from kind_config import require_example
 from root_build import REPO_DIR, build
 
 HOW_TO = REPO_DIR / "docs" / "how-to" / "delete-cluster.md"
@@ -61,12 +62,14 @@ def labelled(objects: list[dict]) -> list[str]:
 
 
 def test_example_is_protected(tmp_path: Path) -> None:
+    require_example("scheduled-upgrades")
     objects = build(copy_cluster(tmp_path, EXAMPLE_DIR))
     assert labelled(objects) == ["OCIRepository", "HelmRelease"]
     assert prevent_deletion(objects) is True
 
 
 def test_how_to_patch_removes_the_protection(tmp_path: Path) -> None:
+    require_example("scheduled-upgrades")
     cluster_dir = copy_cluster(tmp_path, EXAMPLE_DIR)
     (cluster_dir / PATCH_FILE).write_text(how_to_patch())
     path = cluster_dir / "kustomization.yaml"

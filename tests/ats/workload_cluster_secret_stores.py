@@ -107,8 +107,8 @@ def check_workload_cluster_secret_store(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
     """Wait for the policy's chain for the vCluster, read a Secret through its store, check
-    the examples' PushSecrets wrote through the stores, then check the policy reacts to a new
-    cluster."""
+    the example's PushSecret wrote one through it, then check the policy reacts to a new
+    cluster. check_tools_cluster_push checks the kubeconfig example."""
     wait_ready(
         api,
         SecretStoreCR,
@@ -120,6 +120,13 @@ def check_workload_cluster_secret_store(
     wait_cluster_store(api, CLUSTER, "the existing cluster")
     read_through_store(api, workload_cluster, f"{CLUSTER}-eso-cluster-store")
     check_secret_pushed(api, workload_cluster)
+    check_new_cluster(api)
+
+
+def check_tools_cluster_push(
+    api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
+) -> None:
+    """Wait for the store the policy generates for the tools cluster, then check the example's
+    PushSecret wrote the kubeconfig through it."""
     wait_cluster_store(api, TOOLS_CLUSTER, "the tools cluster")
     check_kubeconfig_pushed(api, workload_cluster)
-    check_new_cluster(api)

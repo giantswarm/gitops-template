@@ -1,5 +1,10 @@
 """The kind test: what Flux applies from the repository has to get ready and match the
-assertions. The checks are in `checks`."""
+assertions. The checks are in `checks`.
+
+The generic tests work on whatever the repository's management clusters apply. The example tests
+check the template's examples: each names its example in kind-test.yaml, and is skipped, saying
+why, when the example isn't there.
+"""
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -21,44 +26,54 @@ from checks.assertions import check_assertions
 from checks.flux_readiness import check_kustomizations, check_sources
 from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
-from cluster_gate import check_cluster_gate
+from cluster_gate import check_cluster_gate, gates
 from conftest import GitOpsTestConfig
+from kind_config import kind_test_config, require_example, skipped_assertions
 from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster
 from node_room import node_room_problems
 from notification_objects import check_notifications
-from organization_operator import ORG_NAMESPACE
 from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from resource_set_cluster_guard import check_cluster_input_loss
 from resource_set_guard import check_input_loss
 from resource_set_move import check_move
+from resource_set_objects import EXAMPLE as RESOURCE_SET_EXAMPLE
 from resource_set_objects import EXAMPLES, install_now
 from resource_set_schedule import check_schedule_window
 from resource_set_upgrade import check_scheduled_cluster_upgrade
 from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
-from workload_cluster_secret_stores import check_workload_cluster_secret_store
+from workload_cluster_kubeconfig_push import EXAMPLE as KUBECONFIG_PUSH_EXAMPLE
+from workload_cluster_secret_stores import (
+    check_tools_cluster_push,
+    check_workload_cluster_secret_store,
+)
 from workload_cluster_secrets import check_secrets_pushed
 
-# Kyverno has to run before gitops_deployment installs External Secrets Operator, and Flux
-#  Operator before it applies the repository: pytest sets up the fixtures of `usefixtures`
-#  before the ones a test requests.
+# Kyverno has to run before gitops_deployment installs External Secrets Operator, and the
+#  platform's admission policies and Flux Operator before it applies the repository: pytest
+#  sets up the fixtures of `usefixtures` before the ones a test requests.
 #  The management cluster's Alert of the notification example has to be suspended before then,
 #  too; organization_operator suspends the organisation's, before Flux can apply it.
-pytestmark = pytest.mark.usefixtures("kyverno", "suspended_alert", "flux_operator")
+pytestmark = pytest.mark.usefixtures(
+    "kyverno", "admission_policies", "suspended_alert", "flux_operator"
+)
 
 
 @pytest.fixture(scope="module")
 def cluster_gate_problems(
-    kube_cluster: Cluster, gitops_deployment: None
+    kube_cluster: Cluster, gitops_deployment: list[str]
 ) -> Iterator[list[str]]:
     # The cluster Kustomizations get ready only once their stand-in Cluster's control plane is
     #  up, so this runs before the Kustomizations are checked; test_apps_wait_for_cluster
     #  reports it.
-    clusters = stand_in_clusters(kube_cluster.kube_client)
-    yield check_cluster_gate(clusters)
+    #  The organisations' Kustomizations have applied the cluster Kustomizations by now.
+    api = kube_cluster.kube_client
+    gated = gates(api)
+    clusters = stand_in_clusters(api, gated)
+    yield check_cluster_gate(api, gated, clusters)
     for cluster in clusters:
         cluster.delete()
 
@@ -79,17 +94,24 @@ def test_kustomizations_successful(check_kustomizations_successful: None) -> Non
 def test_automation_access(
     kube_cluster: Cluster,
     automation_rbac: None,
+    gitops_deployment: list[str],
     check_kustomizations_successful: None,
 ) -> None:
     # the `automation` ServiceAccounts have the rights of a management cluster, no more and no
-    #  less, once the repository is applied and organization_operator has given the
+    #  less, once the repository is applied and organization_operator has given each
     #  organisation's namespace its rights: SubjectAccessReviews also catch what other objects,
     #  such as ones left over from an earlier run, grant them
+    if not gitops_deployment:
+        pytest.skip("The repository's management clusters apply no Organization.")
     review = api_server_review(kube_cluster.kube_client)
     # and Kyverno's background controller has the rights rbac-operator gives it
-    problems = access_problems(
-        review, expected_access(ORG_NAMESPACE) + kyverno_access(ORG_NAMESPACE)
-    )
+    problems = [
+        p
+        for namespace in gitops_deployment
+        for p in access_problems(
+            review, expected_access(namespace) + kyverno_access(namespace)
+        )
+    ]
     assert not problems, "\n".join(problems)
 
 
@@ -98,11 +120,16 @@ def resource_sets_installed(
     kube_cluster: Cluster, check_kustomizations_successful: None
 ) -> None:
     # The ResourceSets render sources and HelmReleases, so the checks of those wait for them.
+    #  A new provider's window is closed, so the example's providers are forced once; without the
+    #  example, there's nothing to force.
+    if kind_test_config().example_skip_reason(RESOURCE_SET_EXAMPLE):
+        return
     for provider, resource_set in EXAMPLES:
         install_now(kube_cluster.kube_client, provider, resource_set)
 
 
 def test_resource_sets_installed(resource_sets_installed: None) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
     # all the checks are done actually in the fixture, which the source and HelmRelease
     #  checks need
     pass
@@ -148,7 +175,10 @@ def test_positive_assertions(
     check_helm_release_successful: dict,
     check_kustomizations_successful: None,
 ) -> None:
-    checked = check_assertions(kube_cluster.kube_client, load_assertions())
+    assertions = load_assertions(skipped=skipped_assertions())
+    if not assertions:
+        pytest.skip(f"No assertion files in '{EXISTS_ASSERTIONS_DIR}' to check.")
+    checked = check_assertions(kube_cluster.kube_client, assertions)
     assert checked > 0, f"No assertions found in '{EXISTS_ASSERTIONS_DIR}'."
 
 
@@ -173,7 +203,7 @@ def test_workload_cluster_assertions(
     # kube_cluster and workload_cluster give a failure workload_diagnostics' report of both
     # The -direct out-of-band Kustomization and the H3a HelmReleases install into the
     #  workload cluster through its kubeconfig Secret; the test's vCluster stands in for it.
-    assertions = load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR)
+    assertions = load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR, skipped_assertions())
     checked = check_assertions(workload_cluster, assertions)
     assert checked > 0, f"No assertions found in '{WORKLOAD_CLUSTER_ASSERTIONS_DIR}'."
 
@@ -198,6 +228,7 @@ def test_secrets_pushed(
     workload_cluster: pykube.HTTPClient,
     check_kustomizations_successful: None,
 ) -> None:
+    require_example("workload-cluster-secrets")
     check_secrets_pushed(workload_cluster)
 
 
@@ -206,8 +237,11 @@ def test_node_pools(
     check_helm_release_successful: dict[str, dict],
     gitops_test_config: GitOpsTestConfig,
 ) -> None:
+    expected = kind_test_config().node_pools()
+    if not expected:
+        pytest.skip("kind-test.yaml lists no nodePools.")
     problems = node_pool_problems_in_cluster(
-        kube_cluster.kube_client, gitops_test_config.ignored_objects
+        kube_cluster.kube_client, gitops_test_config.ignored_objects, expected
     )
     assert not problems, "\n".join(problems)
 
@@ -218,6 +252,7 @@ def test_values_change_applied_at_once(
     check_helm_release_successful: dict[str, dict],
 ) -> None:
     # the release installs into workload_cluster, which workload_diagnostics reports on failure
+    require_example("values-watch")
     check_values_change_applied(kube_cluster.kube_client)
 
 
@@ -225,6 +260,7 @@ def test_shared_object_copied(
     kube_cluster: Cluster,
     check_kustomizations_successful: None,
 ) -> None:
+    require_example("shared-objects")
     check_shared_object_copied(kube_cluster.kube_client)
 
 
@@ -242,7 +278,18 @@ def test_workload_cluster_secret_store(
     workload_cluster: pykube.HTTPClient,
     check_kustomizations_successful: None,
 ) -> None:
+    require_example("secret-store-policy")
     check_workload_cluster_secret_store(kube_cluster.kube_client, workload_cluster)
+
+
+def test_kubeconfig_pushed_to_another_cluster(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    require_example("secret-store-policy")
+    require_example(KUBECONFIG_PUSH_EXAMPLE)
+    check_tools_cluster_push(kube_cluster.kube_client, workload_cluster)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
@@ -251,12 +298,14 @@ def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
 
 
 def test_schedule_window(kube_cluster: Cluster, resource_sets_installed: None) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
     check_schedule_window(kube_cluster.kube_client)
 
 
 def test_scheduled_cluster_upgrade(
     kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
 ) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
     check_scheduled_cluster_upgrade(kube_cluster.kube_client)
 
 
@@ -265,12 +314,14 @@ def test_input_loss_keeps_the_app(
     workload_cluster: pykube.HTTPClient,
     check_helm_release_successful: dict[str, dict],
 ) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
     check_input_loss(kube_cluster.kube_client, workload_cluster)
 
 
 def test_input_loss_keeps_the_cluster(
     kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
 ) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
     check_cluster_input_loss(kube_cluster.kube_client)
 
 
@@ -279,6 +330,8 @@ def test_move_to_scheduled_upgrades(
     tmp_path: Path,
     check_helm_release_successful: dict[str, dict],
 ) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    require_example("capi-wc-name")
     check_move(kube_cluster.kube_client, tmp_path)
 
 
@@ -289,4 +342,5 @@ def test_prune(
     workload_cluster: pykube.HTTPClient,
     check_helm_release_successful: dict[str, dict],
 ) -> None:
+    require_example("prune")
     check_prune(request, kube_cluster.kube_client, workload_cluster)

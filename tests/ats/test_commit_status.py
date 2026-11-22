@@ -13,6 +13,7 @@ from commit_status import (
     suspended_alerts,
     token_problems,
 )
+from kind_config import require_example
 from notification_objects import ALERT_FILE, ORG_ALERT_FILE, organization_alerts
 
 ALERT_FILES = (ALERT_FILE, ORG_ALERT_FILE)
@@ -128,6 +129,7 @@ OTHER_MESSAGES = (
 
 @pytest.mark.parametrize("alert_file", ALERT_FILES, ids=ALERT_IDS)
 def test_alert_drops_the_dependency_wait(alert_file: Path) -> None:
+    require_example("notifications")
     alert = yaml.safe_load(alert_file.read_text())
     assert excluded(alert, DEPENDENCY_WAIT)
     # any --requeue-dependency interval
@@ -137,6 +139,7 @@ def test_alert_drops_the_dependency_wait(alert_file: Path) -> None:
 @pytest.mark.parametrize("alert_file", ALERT_FILES, ids=ALERT_IDS)
 @pytest.mark.parametrize("message", OTHER_MESSAGES)
 def test_alert_forwards_everything_else(alert_file: Path, message: str) -> None:
+    require_example("notifications")
     assert not excluded(yaml.safe_load(alert_file.read_text()), message)
 
 

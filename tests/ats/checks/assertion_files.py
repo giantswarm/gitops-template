@@ -2,6 +2,7 @@
 
 import logging
 import os
+from collections.abc import Mapping
 from pathlib import Path
 
 import yaml
@@ -14,14 +15,29 @@ WORKLOAD_CLUSTER_ASSERTIONS_DIR = str(ASSERTIONS_DIR / "exists-in-workload-clust
 logger = logging.getLogger(__name__)
 
 
+def skip_reason(path: Path, skipped: Mapping[str, str]) -> str | None:
+    """Why the assertion file `path` is left out: it's, or is in, one of the files or
+    directories `skipped` names, with the reason."""
+    for prefix, reason in skipped.items():
+        if path == Path(prefix) or Path(prefix) in path.parents:
+            return reason
+    return None
+
+
 def load_assertions(
     assertions_dir: str = EXISTS_ASSERTIONS_DIR,
+    skipped: Mapping[str, str] | None = None,
 ) -> dict[str, list[dict]]:
-    """The objects in each `.yaml` file under `assertions_dir`, by file."""
+    """The objects in each `.yaml` file under `assertions_dir`, by file, but for the files of
+    the examples that are `skipped`, by file or directory, with the reason."""
     assertions = {}
     for dir_path, _, filenames in os.walk(assertions_dir):
         for file in filenames:
             path = Path(dir_path) / file
+            reason = skip_reason(path, skipped or {})
+            if reason:
+                logger.info(f"Leaving out '{path}': {reason}")
+                continue
             if path.suffix != ".yaml":
                 logger.debug(
                     f"Ignoring file '{path}' in '{assertions_dir}' as it's not a file or it"

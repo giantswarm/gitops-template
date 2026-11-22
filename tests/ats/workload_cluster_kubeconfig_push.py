@@ -17,6 +17,8 @@ from eso_kinds import PushSecretCR
 from eso_ready import wait_ready
 from workload_cluster_secret_read import NAMESPACE, REMOTE_NAMESPACE
 
+# the example's binding in kind-test.yaml
+EXAMPLE = "pushed-kubeconfig"
 # the cluster apps/pushed-kubeconfig pushes to
 TOOLS_CLUSTER = "tools-cluster"
 CLUSTER_NAME_LABEL = "cluster.x-k8s.io/cluster-name"

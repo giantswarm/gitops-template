@@ -11,8 +11,10 @@ from pathlib import Path
 import external_secrets
 import pytest
 import yaml
-from fake_store import STORE_NAME, secret_stores
+from fake_store import secret_stores, store_values
+from kind_config import require_example
 from store_refs import store_kinds
+from workload_cluster_secrets import COMMON
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 # the directories of manifests whose store references the check reads
@@ -21,14 +23,26 @@ MANIFEST_DIRS = ["management-clusters", "bases"]
 
 def test_a_namespaced_store_in_each_namespace_that_reads_it() -> None:
     # customers can't create a ClusterSecretStore, only SecretStores in `default` and `org-*`
-    stores = secret_stores()
+    stores = secret_stores(["default", "org-acme"])
     assert [
         (s["kind"], s["metadata"]["namespace"], s["metadata"]["name"]) for s in stores
     ] == [
-        ("SecretStore", "default", STORE_NAME),
-        ("SecretStore", "org-org-name", STORE_NAME),
+        ("SecretStore", "default", "gitops-test"),
+        ("SecretStore", "org-acme", "gitops-test"),
     ]
     assert stores[0]["spec"] == stores[1]["spec"]
+
+
+def test_the_stand_in_store_holds_what_the_example_checks_read() -> None:
+    require_example("workload-cluster-secrets")
+    require_example("notifications")
+    values = store_values()
+    assert values["workload-clusters-common-token"] == COMMON.value
+    assert {
+        "gitops/hello-world-values",
+        "gitops/github-commit-status-token",
+        "gitops/github-webhook-token",
+    } <= values.keys()
 
 
 def repository_store_refs() -> list[tuple[str, str]]:
@@ -48,7 +62,8 @@ def repository_store_refs() -> list[tuple[str, str]]:
 
 def test_examples_read_namespaced_stores() -> None:
     refs = repository_store_refs()
-    assert refs
+    if not refs:
+        pytest.skip("Nothing in the repository reads a secret store.")
     assert [r for r in refs if r[1] != "SecretStore"] == []
 
 
@@ -60,5 +75,6 @@ def test_create_store_fails_at_once_without_its_namespace(
         external_secrets, "apply", lambda obj: pytest.fail("applied the store")
     )
     with pytest.raises(external_secrets.MissingNamespaceError) as e:
-        external_secrets.create_store(None, secret_stores()[1], 120)  # type: ignore[arg-type]
-    assert "org-org-name" in str(e.value)
+        store = secret_stores(["org-acme"])[0]
+        external_secrets.create_store(None, store, 120)  # type: ignore[arg-type]
+    assert "org-acme" in str(e.value)

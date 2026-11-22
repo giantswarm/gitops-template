@@ -7,23 +7,29 @@ import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
 import time
 import urllib.request
-from typing import Iterable, Any, NamedTuple
+from typing import Any, Iterable, NamedTuple
 
 import pykube
 import pytest
 import requests
 import validators
 import yaml
+from ci_context import GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME
+from flux_teardown import delete_without_prune
+from kind_config import kind_test_config, require_example
 from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.utils import wait_for_objects_condition
-
-from ci_context import master_gpg_key
-from flux_teardown import delete_without_prune
+from repository_objects import (
+    credentials_secret,
+    credentials_secret_name,
+    decryption_secrets,
+)
 
 # ci_context's hooks skip cluster tests on a fork's pull request; kyverno_install and
-# flux_install have fixtures; external_secrets installs External Secrets Operator;
+# flux_install have fixtures; admission_policies applies the platform's Flux admission
+# policies; external_secrets installs External Secrets Operator;
 # notification_objects suspends the notification example's Alert; automation_rbac gives the
 # `automation` ServiceAccounts the rights they have on a management cluster;
 # flux_operator_install installs Flux Operator; organization_operator stands in for
@@ -33,6 +39,7 @@ from flux_teardown import delete_without_prune
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
+    "admission_policies",
     "flux_install",
     "external_secrets",
     "notification_objects",
@@ -43,10 +50,9 @@ pytest_plugins = [
     "pytester",
 ]
 
-FLUX_GIT_REPO_NAME = "your-repo"
-
 FLUX_OBJECTS_NAMESPACE = "default"
-FLUX_SOPS_MASTER_KEY_SECRET_NAME = "sops-gpg-master"  # nosec B105 - not a secret here
+# the variable of the workflow's token, which reads the repository when it's private
+REPOSITORY_READER_ENV_VAR_NAME = "GITHUB_TOKEN"
 
 # The test cluster has the Cluster API core CRDs (cluster.x-k8s.io and its
 # addons, ipam and runtime groups), and nothing else of Cluster API: no
@@ -68,11 +74,13 @@ GS_CRDS_URLS = [
     "https://raw.githubusercontent.com/giantswarm/apiextensions/master/helm/crds-common/templates/"
     + "security.giantswarm.io_organizations.yaml"
 ]
-GITOPS_TOP_DIR = "../../management-clusters"
+GITOPS_REPO_DIR = "../.."
 
 HELM_URL = "https://helm.sh/docs/intro/install/"
 # A vCluster inside the test cluster stands in for the workload cluster the -direct out-of-band
 # example targets. The Secret is the one its Kustomization reads through `spec.kubeConfig.secretRef`.
+# The example is the binding of this name in kind-test.yaml: without it, there is no vCluster.
+WORKLOAD_CLUSTER_EXAMPLE = "out-of-band-no-flux"
 WORKLOAD_CLUSTER_VCLUSTER_NAME = "out-of-band-no-flux"
 WORKLOAD_CLUSTER_VCLUSTER_NAMESPACE = "vcluster-out-of-band-no-flux"
 VCLUSTER_CHART_REPO = "https://charts.loft.sh"
@@ -162,7 +170,9 @@ class GitOpsTestConfig:
             namespaces = ["default"]
         self.init_namespaces = namespaces
 
-        self.master_private_key = master_gpg_key(os.environ)
+        # needed only when a root Kustomization decrypts, see repository_objects
+        self.master_private_key = os.environ.get(GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME, "")
+        self.github_token = os.environ.get(REPOSITORY_READER_ENV_VAR_NAME, "")
 
         self.gitops_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
         if not validators.url(self.gitops_repo_url):
@@ -313,26 +323,24 @@ def init_namespaces(
 @pytest.fixture(scope="module")
 def gpg_master_key(
     kube_cluster: Cluster, gitops_test_config: GitOpsTestConfig
-) -> Iterable[Secret]:
-    # create the master gpg secret used to unlock all encrypted values
-    gpg_master_key = pykube.Secret(
-        kube_cluster.kube_client,
-        {
-            "metadata": {
-                "name": FLUX_SOPS_MASTER_KEY_SECRET_NAME,
-                "namespace": FLUX_OBJECTS_NAMESPACE,
-            },
-            "type": "Opaque",
-            "data": {
-                "mc-name.master.asc": gitops_test_config.master_private_key,
-            },
-        },
-    )
-    gpg_master_key.create()
+) -> Iterable[list[Secret]]:
+    """Create the Secret each root Kustomization decrypts with, from GITOPS_MASTER_GPG_KEY, as you
+    apply it by hand on a new management cluster. Flux keeps it up to date afterwards.
+    """
+    secrets = [
+        pykube.Secret(kube_cluster.kube_client, s)
+        for s in decryption_secrets(
+            kind_test_config().decryption_secrets(),
+            gitops_test_config.master_private_key,
+        )
+    ]
+    for secret in secrets:
+        secret.create()
 
-    yield gpg_master_key
+    yield secrets
 
-    gpg_master_key.delete()
+    for secret in secrets:
+        secret.delete()
 
 
 def run_tool(name: str, url: str, *args: str) -> str:
@@ -372,10 +380,11 @@ class VCluster(NamedTuple):
 
 
 @pytest.fixture(scope="module")
-def vcluster(
+def optional_vcluster(
     kube_cluster: Cluster, kube_config: str, init_namespaces: Any
-) -> Iterable[VCluster]:
-    """A vCluster in the test cluster, standing in for the workload cluster of the out-of-band examples.
+) -> Iterable[VCluster | None]:
+    """A vCluster in the test cluster, standing in for the workload cluster of the out-of-band
+    examples, or None when the repository doesn't have the example, so the setup goes on without it.
 
     `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload
     cluster, and the cluster's HelmReleases install their apps there, through the kubeconfig
@@ -386,6 +395,11 @@ def vcluster(
     need. kustomize-controller and helm-controller reach the vCluster API server through its
     Service; the runner reaches it on the Service's node port.
     """
+    reason = kind_test_config().example_skip_reason(WORKLOAD_CLUSTER_EXAMPLE)
+    if reason:
+        logger.info(f"No vCluster: {reason}")
+        yield None
+        return
     node = next(iter(pykube.Node.objects(kube_cluster.kube_client)))
     node_ip = next(
         a["address"]
@@ -483,6 +497,22 @@ def vcluster(
         )
     finally:
         remove_workload_cluster(kube_config, values_file.name)
+
+
+class NoVClusterError(RuntimeError):
+    """The example is there, but optional_vcluster created no vCluster."""
+
+    def __init__(self) -> None:
+        super().__init__("The example is there, but there is no vCluster.")
+
+
+@pytest.fixture(scope="module")
+def vcluster(optional_vcluster: VCluster | None) -> VCluster:
+    """The vCluster; a test that needs it is skipped, saying why, without the example."""
+    require_example(WORKLOAD_CLUSTER_EXAMPLE)
+    if optional_vcluster is None:
+        raise NoVClusterError
+    return optional_vcluster
 
 
 @pytest.fixture(scope="module")
@@ -599,9 +629,9 @@ def gitops_environment(
     gs_crds: None,
     capi_crds: None,
     init_namespaces: Any,
-    gpg_master_key: Secret,
+    gpg_master_key: list[Secret],
     external_secrets: None,
-    workload_cluster: pykube.HTTPClient,
+    optional_vcluster: VCluster | None,
     flux_app_deployment: None,
     flux_deployments: list[pykube.Deployment],
     automation_rbac: None,
@@ -618,23 +648,34 @@ def gitops_root(
     git_repository_factory: GitRepositoryFactoryFunc,
     gitops_test_config: GitOpsTestConfig,
 ) -> Iterable[Any]:
-    """Apply the root Kustomization of every management cluster in the repository, with the
-    GitRepository it reads."""
-    git_repository_factory(
-        FLUX_GIT_REPO_NAME,
-        FLUX_OBJECTS_NAMESPACE,
-        "60s",
-        gitops_test_config.gitops_repo_url,
-        gitops_test_config.gitops_repo_branch,
-    )
-    applied_manifests: list[str] = []
-    for dir_entry in os.scandir(GITOPS_TOP_DIR):
-        if dir_entry.is_dir():
-            manifest_path = os.path.join(
-                GITOPS_TOP_DIR, dir_entry.name, dir_entry.name + ".yaml"
+    """Apply the root Kustomization of every management cluster the test applies, with the
+    GitRepositories they read, pointed at the branch under test. With the workflow's token, the
+    GitRepositories read the repository with it, so a private one works too."""
+    config = kind_test_config()
+    for ref in config.git_repositories():
+        secret_name = None
+        if gitops_test_config.github_token:
+            secret = pykube.Secret(
+                kube_cluster.kube_client,
+                credentials_secret(ref, gitops_test_config.github_token),
             )
-            kube_cluster.kubectl(f"apply -f {manifest_path} --wait=true")
-            applied_manifests.append(manifest_path)
+            if not secret.exists():
+                secret.create()
+            secret_name = credentials_secret_name(ref[1])
+        git_repository_factory(
+            ref[1],
+            ref[0],
+            "60s",
+            gitops_test_config.gitops_repo_url,
+            gitops_test_config.gitops_repo_branch,
+            secret_ref_name=secret_name,
+        )
+    applied_manifests: list[str] = []
+    for root in config.roots():
+        manifest_path = os.path.join(GITOPS_REPO_DIR, root.file)
+        logger.info(f"Applying {root.file}, {root.namespace}/{root.name}")
+        kube_cluster.kubectl(f"apply -f {manifest_path} --wait=true")
+        applied_manifests.append(manifest_path)
 
     yield None
 

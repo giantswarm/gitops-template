@@ -75,7 +75,8 @@ def create_store(
 
 
 def organization_store(api: pykube.HTTPClient, namespace: str) -> list[SecretStoreCR]:
-    """Create the test's store in the organisation's `namespace`, as the customer does."""
+    """Create the test's stand-in store, if there is one, in the organisation's `namespace`, as
+    the customer does."""
     return [
         create_store(api, s, STORE_CREATE_TIMEOUT_SEC)
         for s in secret_stores([namespace])
@@ -90,7 +91,8 @@ def helm(kube_config: str, *args: str) -> None:
 def external_secrets(
     kube_cluster: Cluster, kube_config: str, init_namespaces: object
 ) -> Iterator[None]:
-    """Install ESO and create the fake store in `default`; remove them again in the end."""
+    """Install ESO and create the stand-in store, if there is one, in `default`; remove them
+    again in the end."""
     helm(
         kube_config,
         "upgrade",

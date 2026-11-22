@@ -54,6 +54,8 @@ CLUSTER_NAME = "scheduled-upgrades"
 APP_KUSTOMIZATION = ("default", "mc-name-multicluster-apps-org-name")
 CLUSTER_KUSTOMIZATION = (NAMESPACE, "mc-name-clusters-scheduled-upgrades")
 EXAMPLES = [(APP_PROVIDER, APP_RESOURCE_SET), (CLUSTER_PROVIDER, CLUSTER_RESOURCE_SET)]
+# their binding in kind-test.yaml
+EXAMPLE = "scheduled-upgrades"
 
 
 def get(api: pykube.HTTPClient, kind: type[APIObject], name: str) -> APIObject:

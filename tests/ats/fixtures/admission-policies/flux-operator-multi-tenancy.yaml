@@ -1,0 +1,35 @@
+# Copied from giantswarm/management-cluster-bases at 54ec7bdb049a14d343999107abe7174cb65fd9f2,
+# bases/flux-operator/clusterpolicy.yaml, indented for yamllint. See README.md.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: flux-operator-multi-tenancy
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: serviceAccountNameMustBeSet
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - ResourceSet
+      validate:
+        message: "the .spec.serviceAccountName field is required"
+        anyPattern:
+          - spec:
+              serviceAccountName: "?*"
+    - name: fluxInstanceMustBeSingleton
+      match:
+        resources:
+          kinds:
+            - FluxInstance
+      validate:
+        message: "FluxInstances allowed only in the `flux-giantswarm` namespace"
+        pattern:
+          metadata:
+            namespace: "flux-giantswarm"
