@@ -29,7 +29,8 @@ from flux_teardown import delete_without_prune
 # `automation` ServiceAccounts the rights they have on a management cluster;
 # flux_operator_install installs Flux Operator; organization_operator stands in for
 # organization-operator, which creates the organisation's namespace once Flux has applied its
-# Organization.
+# Organization. workload_diagnostics adds the state of the workload cluster and the kind node
+# to the report of a test of the workload cluster that fails; pytester tests that hook.
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
@@ -40,6 +41,8 @@ pytest_plugins = [
     "automation_rbac",
     "flux_operator_install",
     "organization_operator",
+    "workload_diagnostics",
+    "pytester",
 ]
 
 FLUX_GIT_REPO_NAME = "your-repo"
@@ -404,6 +407,9 @@ def vcluster(
             "statefulSet": {
                 "image": {"repository": "loft-sh/vcluster-oss"},
                 "persistence": {"volumeClaim": {"enabled": False}},
+                # 50m CPU instead of the chart's 200m: the vCluster's apps run on the one kind
+                #  node next to it, see node_room.py. It can still use up to its limits.
+                "resources": {"requests": {"cpu": "50m"}},
             },
             # CoreDNS stays on, the chart's default: the H3a releases run pods in the vCluster.
             #  Without it, gateway-api-crds and the hello-world of hello-world-from-template

@@ -154,7 +154,9 @@ The test installs Flux with helm, from Giant Swarm's `flux-app` chart in `oci://
 It doesn't install the app platform (app-operator and chart-operator), as the template uses no `App` CRs.
 [tests/ats/fixtures/flux-app-values.yaml](../../tests/ats/fixtures/flux-app-values.yaml) turns off the objects whose
 CRDs the kind cluster doesn't have: the `PodMonitor`s, and the chart's kube-state-metrics with its `ServiceMonitor`
-and `CiliumNetworkPolicy`. The shared workflow still installs `apptestctl`, at its own default version, but nothing
+and `CiliumNetworkPolicy`. It also lowers the CPU requests of the image automation, image reflector and notification
+controllers, which the test gives little to do, to 10m, so that the vCluster's apps fit on the kind node. The shared
+workflow still installs `apptestctl`, at its own default version, but nothing
 uses it.
 
 The shared workflow doesn't take a node image, so the Kubernetes patch version is whatever the kind release defaults
@@ -314,6 +316,22 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
   its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
 
+The kind cluster is one node on a CI runner, so the vCluster's pods take their CPU requests from the same 4 CPUs as
+everything else. After the `HelmRelease`s are `Ready`, `test_kind_node_has_room` checks that the node can still take
+what the apps will add: each `HorizontalPodAutoscaler` scaling its `Deployment` up to `minReplicas`, and the largest
+rollout surge, as `test_values_change_applied_at_once` rolls out one app. It counts the requests of every pod but a
+`Job`'s, scheduled or not, and fails with the numbers unless 200m CPU stay free. Without that room one app's pods stay
+`Pending` with "Insufficient cpu", and which app changes from run to run
+([#368](https://github.com/giantswarm/gitops-template/issues/368)). So the fixtures lower the CPU requests of the
+test's own infrastructure: the vCluster, Kyverno, Flux Operator, ESO, and the Flux controllers the test gives little to
+do. Requests only decide where a pod fits; each can still use up to its limits. A new app in the vCluster that doesn't
+fit fails this test: lower another fixture's requests, not the example's.
+
+When a test that uses the vCluster fails, its report has a `workload cluster diagnostics` section: the `HelmRelease`s
+that install into the vCluster, what the pods on the kind node request against what it can give, and in the vCluster
+the Helm history, `Deployment`s, `ReplicaSet`s, `HorizontalPodAutoscaler`s, `PodDisruptionBudget`s, pods, events and
+the logs of the pods that aren't ready.
+
 To run the test on your machine, see [Run the kind test locally](../tutorials/advanced/testing.md#run-the-kind-test-locally):
 pytest has to reach the vCluster on the kind node's network.
 
@@ -334,8 +352,9 @@ Swarm's charts, the ones team Shield ships to the management clusters, from `oci
 `giantswarm` namespace, which every management cluster has, so the test first installs Giant Swarm's
 `priority-classes` 0.3.1 chart and creates the namespace. The charts are pinned in `tests/ats/kyverno_install.py`. [tests/ats/fixtures/kyverno-values.yaml](../../tests/ats/fixtures/kyverno-values.yaml)
 turns off the objects whose CRDs the kind cluster doesn't have: the `CiliumNetworkPolicy`s, `PodLogs`,
-`VerticalPodAutoscaler`s and `ServiceMonitor`s. It also lowers the background and reports controllers' requests from
-the chart's 500m CPU and 1Gi, sized for a management cluster, so that Flux still fits on the single kind node.
+`VerticalPodAutoscaler`s and `ServiceMonitor`s. It also lowers the controllers' CPU requests, and the background and
+reports controllers' memory from the chart's 1Gi, which are sized for a management cluster, so that the vCluster's apps
+still fit on the single kind node.
 
 ## Flux Operator
 
@@ -344,8 +363,8 @@ The [upgrade window examples](../tutorials/advanced/scheduled-upgrades.md) are F
 It installs Giant Swarm's `flux-operator` chart 0.9.0 (Flux Operator v0.62.1), the version management-cluster-bases
 deploys, from `oci://gsoci.azurecr.io/charts/giantswarm`, into `flux-giantswarm`. The chart is pinned in
 `tests/ats/flux_operator_install.py`. [tests/ats/fixtures/flux-operator-values.yaml](../../tests/ats/fixtures/flux-operator-values.yaml)
-has the chart install the CRDs, which a management cluster gets from management-cluster-bases, and turns off the
-`VerticalPodAutoscaler` and the `ServiceMonitor`.
+has the chart install the CRDs, which a management cluster gets from management-cluster-bases, turns off the
+`VerticalPodAutoscaler` and the `ServiceMonitor`, and lowers its CPU request to 10m.
 
 A new provider whose window is closed exports no version, so once the `Kustomization`s are `Ready`, the test forces
 each example's provider once and waits for its `ResourceSet`, before it checks the sources and `HelmRelease`s. Then:
