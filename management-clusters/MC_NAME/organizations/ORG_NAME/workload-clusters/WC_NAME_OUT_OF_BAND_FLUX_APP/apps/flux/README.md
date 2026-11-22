@@ -22,6 +22,11 @@ Change the source in `configmap.yaml` to your repository and its credentials, an
 cluster's `out-of-band/` directory. Don't keep credentials in plain text there: put them in a SOPS-encrypted
 `${cluster_name}-flux-app-user-secrets` Secret, which the `HelmRelease` reads too.
 
+The example pins flux-app 1.12.2, the version on the management clusters, which runs Flux 2.7.5. A new cluster needs
+nothing more. A cluster that already runs flux-app older than 1.11.0 has to migrate its Flux objects on the way up:
+the [flux-app changelog](https://github.com/giantswarm/flux-app/blob/main/CHANGELOG.md) for 1.11.0 says how, and
+`migration.run: true` in the values does it in-line.
+
 ## Read more
 
 - [Run Flux in the workload cluster](/docs/tutorials/advanced/out-of-band.md#run-flux-in-the-workload-cluster)

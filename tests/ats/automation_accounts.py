@@ -16,7 +16,8 @@ from rbac_manifests import (
 
 DEFAULT_NAMESPACE = "default"
 # a RoleBinding from a RoleBindingTemplate in it keeps only subjects of its own namespace and
-#  flux-system: rolebindingtemplate/resource/rolebinding/create.go cleanSubjects
+#  `flux-system`: rolebindingtemplate/resource/rolebinding/create.go cleanSubjects, after
+#  pkg/key FluxNamespaceName. Flux itself runs in `flux-giantswarm`
 PROTECTED_NAMESPACE = "org-giantswarm"
 GIANTSWARM_FLUX_NAMESPACE = "flux-giantswarm"
 CLUSTER_ADMIN = role_ref("ClusterRole", "cluster-admin")

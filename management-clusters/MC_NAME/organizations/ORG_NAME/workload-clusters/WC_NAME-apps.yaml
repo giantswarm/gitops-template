@@ -15,11 +15,8 @@ spec:
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME"
   postBuild:
     substitute:
-      cluster_description: "description"
       cluster_name: "capi-wc-name"  # TODO: change 'capi-wc-name' to your cluster name; must be a correct k8s resource name (DNS-like)
       organization: "${organization}"  # the organisation's namespace Kustomization sets it
-      # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
-      release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
   prune: true
   retryInterval: 1m
   serviceAccountName: automation

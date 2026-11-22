@@ -9,5 +9,5 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    tag: 1.10.3
+    tag: 1.10.5
   url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway

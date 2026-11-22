@@ -1,14 +1,8 @@
 # The whole cluster: its OCIRepository and its HelmRelease, as the cluster base
 # has them, at the release the provider in release-input-provider.yaml picks.
-# The HelmRelease upgrades the cluster when the tag changes.
-#
-# First install: until the provider exports a version, this ResourceSet waits
-# and the cluster isn't created. The provider exports none until its first
-# window opens; to create the cluster at once, force the provider once:
-#
-#   flux-operator reconcile inputprovider <cluster name>-release -n org-<organization> --force
-#
-# See docs/tutorials/advanced/scheduled-upgrades.md.
+# The HelmRelease upgrades the cluster when the tag changes. Until the provider
+# has a version, the cluster isn't created: see the first install in
+# release-input-provider.yaml.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
@@ -17,10 +11,11 @@ metadata:
   name: ${cluster_name}
   namespace: org-${organization}
 spec:
-  # Losing the version, because no release matches the range, the registry
-  # can't be read or the provider is deleted, would render nothing and delete
-  # the cluster. Until the provider is Ready with a version, the ResourceSet
-  # leaves what it rendered as it is.
+  # Until the provider is Ready with a version, the ResourceSet leaves what it
+  # rendered as it is. The version goes only when no release matches the range:
+  # a provider that can't read the registry keeps its last one, and a deleted
+  # provider stalls the ResourceSet. Without a version the ResourceSet would
+  # render nothing and let go of both objects; prune: disabled keeps them.
   dependsOn:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSetInputProvider
@@ -58,8 +53,10 @@ spec:
         timeout: 1m0s
         url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
     # Flux merges the `valuesFrom` entries in order, as for the cluster base, see
-    # bases/clusters/capa/cluster.yaml. A component's patch doesn't reach
-    # into a ResourceSet, so the region's entry is listed here, after the base's.
+    # bases/clusters/capa/cluster.yaml. A component's patch targets a HelmRelease,
+    # which kustomize doesn't see inside a ResourceSet, so the region's entry is
+    # written out here, after the base's. patch_cluster_userconfig.yaml appends
+    # the cluster's own values after it.
     - apiVersion: helm.toolkit.fluxcd.io/v2
       kind: HelmRelease
       metadata:

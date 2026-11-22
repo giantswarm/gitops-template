@@ -138,13 +138,17 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     ```
 
 1. Create the `Kustomization` that applies the management cluster's directory. Its `decryption` field names the
-   Secret that will hold the master key, so Flux can decrypt what it applies:
+   Secret that will hold the master key, so Flux can decrypt what it applies. It applies itself too, as part of that
+   directory, so the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation keeps a rename from making it delete
+   itself, and everything it applied with it, see [Deletion protection](../../explanation/deletion-protection.md):
 
     ```sh
     cat <<EOF > ${MC_DIR}/${MC_NAME}.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
+      annotations:
+        kustomize.toolkit.fluxcd.io/prune: disabled
       name: ${MC_NAME}-gitops
       namespace: default
     spec:
@@ -437,15 +441,18 @@ organisation reads its secrets through the organisation's namespace.
    the directory `${ORG_DIR}/namespace` into `org-${ORG_NAME}`. It fails until organization-operator has created
    the namespace, and succeeds on its next retry. Its `dependsOn` names your management cluster's `Kustomization`, so
    that one always applies a commit first. Its `decryption` field is there for the SOPS keys you may give your
-   clusters later, which go in `${ORG_DIR}/namespace/secrets`. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
-   organisation's `kustomization.yaml` fills in, see
-   [Flux Kustomizations](../../reference/repo-structure.md#flux-kustomizations):
+   clusters later, which go in `${ORG_DIR}/namespace/secrets`. It has the `kustomize.toolkit.fluxcd.io/prune: disabled`
+   annotation, like the `Organization`: everything of the organisation's clusters hangs off it, so Flux mustn't delete
+   it when its file goes. `ORG_NAME` and `org-ORG_NAME` are placeholders that the organisation's `kustomization.yaml`
+   fills in, see [Flux Kustomizations](../../reference/repo-structure.md#flux-kustomizations):
 
     ```sh
     cat <<EOF > ${ORG_DIR}/namespace.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
+      annotations:
+        kustomize.toolkit.fluxcd.io/prune: disabled
       labels:
         giantswarm.io/organization-namespace: "true"
       name: ${MC_NAME}-organization-${ORG_NAME}
@@ -696,7 +703,9 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
    directory. The organisation's namespace `Kustomization` applies it into `org-${ORG_NAME}`, where it runs as that
    namespace's `automation` ServiceAccount and reads your `GitRepository` in `default`. Its `dependsOn` names the
    organisation's namespace `Kustomization`, so that one always applies a commit first. Its health check waits until
-   Cluster API reports the cluster `Available`, which can take up to its `timeout` of 30 minutes.
+   Cluster API reports the cluster's control plane available and reachable, which can take up to its `timeout` of 30
+   minutes. It doesn't wait for every node pool: the apps only need the control plane, and a node pool that's short
+   of machines later on shouldn't hold back a change to them.
 
     It doesn't name the organisation: it writes `${organization}`, and the organisation's namespace `Kustomization`
     fills that in from the `Organization` when it applies the file, so the name stays set in one place. The
@@ -720,7 +729,9 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
       healthCheckExprs:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
-          current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
+          current: >-
+            status.conditions.exists(c, c.type == 'ControlPlaneAvailable' && c.status == 'True')
+            && status.conditions.exists(c, c.type == 'RemoteConnectionProbe' && c.status == 'True')
       healthChecks:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
@@ -747,7 +758,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     ```
 
 1. Create the apps' `Kustomization`. It names the cluster's `Kustomization` in `dependsOn`, so Flux applies none of it
-   until the cluster's is `Ready`. It takes the organisation's name the same way:
+   until the cluster's is `Ready`. It takes the organisation's name the same way. It needs only `cluster_name` and
+   `organization`: the release and the description are the cluster's business, not the apps':
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml
@@ -762,11 +774,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
       path: ./${WC_DIR}
       postBuild:
         substitute:
-          cluster_description: "${WC_NAME} managed by GitOps"
           cluster_name: "${WC_NAME}"
           organization: "\${organization}"
-          # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
-          release: "${RELEASE_VERSION}"
       prune: true
       retryInterval: 1m
       serviceAccountName: automation
@@ -848,9 +857,9 @@ Git and one secret value from the organisation's store.
     mkdir -p ${APP_DIR}
     ```
 
-1. Create the `OCIRepository`, which names the chart and its version. `3.2.2` is the version this repository's
-   examples pin as this is written; any published version works. Renovate finds a `tag` in an `OCIRepository` by
-   itself, if your fork uses it:
+1. Create the `OCIRepository`, which names the chart and its version. `3.2.2` is the oldest hello-world that takes
+   the cluster values, which leaves a newer one for step 5 to upgrade to; earlier versions have a values schema that
+   refuses them. Renovate finds a `tag` in an `OCIRepository` by itself, if your fork uses it:
 
     ```sh
     cat <<'EOF' > ${APP_DIR}/oci-repository.yaml
