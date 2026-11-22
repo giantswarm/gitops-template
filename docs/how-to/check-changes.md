@@ -10,7 +10,9 @@ The repository has a [`pre-commit` config](/.pre-commit-config.yaml) that checks
 that every Flux `Kustomization`'s path exists and builds, see
 [check-kustomization-paths](../reference/ci-checks.md#check-kustomization-paths). Another hook,
 [check-directory-readmes](/tools/README.md#check-directory-readmes), fails when a directory you add under `bases/` or
-`management-clusters/` has no README: write one that says what the directory is for. CI runs the same hooks. To use it,
+`management-clusters/` has no README: write one that says what the directory is for. A third,
+[check-sops-encrypted](/tools/README.md#check-sops-encrypted), fails when a `*.enc.yaml` file you've staged isn't
+encrypted with SOPS, before its secret reaches Git's history. CI runs the same hooks. To use it,
 [install](https://pre-commit.com/#install) `pre-commit`, then set up the hooks once in your clone:
 
 ```sh

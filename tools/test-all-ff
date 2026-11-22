@@ -663,6 +663,61 @@ function test() {
 		done
 	fi
 
+	if [ "${mode}" == "validate" ]; then
+		# check-sops-encrypted, in a git repository of its own that has one encrypted file committed:
+		#  it must pass as it is, with no *.enc.yaml file at all, and with a plain-text one git
+		#  doesn't track. It must fail for a *.enc.yaml file git tracks or that's staged, and that has
+		#  no top-level sops key: one in plain text, an empty one, one with `sops:` only below the top
+		#  level, one of two documents where only the first is encrypted, and one staged in plain
+		#  text and encrypted since, but not staged again. An empty message means the check must pass.
+		sops_path=$(realpath "$(dirname $0)/check-sops-encrypted")
+		fixture_dir="${tmp_dir}/sops"
+		contents_dir="${tmp_dir}/sops-contents"
+		mkdir -p "${contents_dir}"
+		printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: plain\nstringData:\n  token: not-a-secret\n' \
+			>"${contents_dir}/plain.yaml"
+		printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: encrypted\nsops:\n  version: 3.10.0\n' \
+			>"${contents_dir}/encrypted.yaml"
+		printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: nested\n  sops:\n    version: 3.10.0\n' \
+			>"${contents_dir}/nested.yaml"
+		{
+			cat "${contents_dir}/encrypted.yaml"
+			echo "---"
+			cat "${contents_dir}/plain.yaml"
+		} >"${contents_dir}/two-documents.yaml"
+		new=secrets/new.enc.yaml
+		sops_cases=(
+			"only encrypted files|true|"
+			"no file to check|git rm -qf secrets/committed.enc.yaml|"
+			"a plain-text file git doesn't track|cp ${contents_dir}/plain.yaml ${new}|"
+			"a staged plain-text file|cp ${contents_dir}/plain.yaml ${new} && git add ${new}|${new} isn't encrypted"
+			"a tracked file rewritten in plain text|cp ${contents_dir}/plain.yaml secrets/committed.enc.yaml|secrets/committed.enc.yaml isn't encrypted"
+			"a staged empty file|touch ${new} && git add ${new}|${new} isn't encrypted"
+			"a file with sops below the top level|cp ${contents_dir}/nested.yaml ${new} && git add ${new}|${new} isn't encrypted"
+			"a file of two documents, one not encrypted|cp ${contents_dir}/two-documents.yaml ${new} && git add ${new}|${new} isn't encrypted"
+			"a file staged in plain text and encrypted since|cp ${contents_dir}/plain.yaml ${new} && git add ${new} && cp ${contents_dir}/encrypted.yaml ${new}|${new} is encrypted, but the copy you staged isn't"
+		)
+		for c in "${sops_cases[@]}"; do
+			IFS='|' read -r description change message <<<"${c}"
+			echo -n "check-sops-encrypted, ${description}: "
+			rm -rf "${fixture_dir}"
+			mkdir -p "${fixture_dir}/secrets"
+			cp "${contents_dir}/encrypted.yaml" "${fixture_dir}/secrets/committed.enc.yaml"
+			status=0
+			output=$(cd "${fixture_dir}" && git init -q && git add -A && bash -c "${change}" &&
+				"${sops_path}" 2>&1) || status=$?
+			if [ -z "${message}" ] && [ "${status}" -eq 0 ]; then
+				echo "OK, passed"
+			elif [ -n "${message}" ] && [ "${status}" -ne 0 ] && grep -qF "${message}" <<<"${output}"; then
+				echo "OK, reported"
+			else
+				echo "not as expected:"
+				echo "${output}"
+				has_validation_errors=1
+			fi
+		done
+	fi
+
 	if [[ ${has_validation_errors} -ne 0 ]]; then
 		echo "There are validation errors, please check the above output!"
 		exit 2

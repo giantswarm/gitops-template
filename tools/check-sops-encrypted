@@ -1,0 +1,71 @@
+#!/bin/bash
+set -euo pipefail
+
+function help() {
+	echo -e "
+Check that every *.enc.yaml file git tracks, staged ones included, is encrypted with SOPS.
+Must be run from the repository root, or from the directory given as the only argument.
+
+Usage: $0 [dir]
+
+sops adds a top-level \`sops\` key to every YAML document it encrypts, so a document without one
+holds its values in plain text. The check fails for a file whose copy in the working tree, or whose
+staged copy, has a document without that key, and for an empty file. A file git doesn't know
+about yet isn't checked until you stage it.
+"
+	exit 1
+}
+
+[ $# -gt 1 ] && help
+cd "${1:-.}" || help
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	echo "$(pwd) isn't in a git repository: run this in one."
+	exit 1
+fi
+
+##
+# Whether the YAML on stdin is encrypted: every document in it that has any content has a
+#  top-level `sops` key, and there's at least one such document.
+function encrypted() {
+	awk '
+		function end_document() {
+			if (content) {
+				documents++
+				if (!sops) unencrypted = 1
+			}
+			content = 0
+			sops = 0
+		}
+		/^---/ { end_document(); next }
+		/^sops:/ { sops = 1 }
+		/^[^#[:space:]]/ { content = 1 }
+		END {
+			end_document()
+			exit (documents == 0 || unencrypted)
+		}
+	'
+}
+
+failed=0
+# Works with bash 3.2, as on macOS: no mapfile.
+while IFS= read -r -d '' file; do
+	if [ -f "${file}" ]; then
+		if ! encrypted <"${file}"; then
+			echo "${file} isn't encrypted: a YAML document in it has no top-level sops key. Encrypt it with" \
+				"sops before you commit it, and unstage it until then with \`git restore --staged ${file}\`."
+			failed=1
+			continue
+		fi
+	fi
+	if ! git show ":${file}" | encrypted; then
+		if [ -f "${file}" ]; then
+			echo "${file} is encrypted, but the copy you staged isn't: stage it again with \`git add ${file}\`."
+		else
+			echo "${file} isn't encrypted in the copy you staged: a YAML document in it has no top-level sops key."
+		fi
+		failed=1
+	fi
+done < <(git ls-files -z -- '*.enc.yaml')
+
+exit ${failed}
