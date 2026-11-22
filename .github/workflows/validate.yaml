@@ -21,37 +21,58 @@ permissions:
   pull-requests: write
 
 jobs:
-  # Whether a pull request changes only Markdown files. A file renamed to or
-  # from another type counts as both. If GitHub lists fewer files than the pull
-  # request changes, the answer is no, so the full run happens.
+  # Whether a pull request needs the full run, or only the light one because
+  # it changes nothing validate or the kind test reads: tests/ats/ci_scope.py
+  # decides, and the job summary says why. It compares the pull request's head
+  # with its merge base, as GitHub's list of its files does. Any failure on the
+  # way leaves the scope empty, which means the full run, as on a push.
   changes:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
     outputs:
-      markdown_only: ${{ steps.files.outputs.markdown_only }}
+      scope: ${{ steps.scope.outputs.scope }}
     steps:
-      - name: list the changed files
-        id: files
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: github.event_name == 'pull_request'
+        with:
+          persist-credentials: false
+          # Both commits of the comparison, and the history between them.
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: github.event_name == 'pull_request'
+        with:
+          # renovate: datasource=python-version depName=python versioning=python
+          python-version: "3.12"
+      - name: decide the scope
+        id: scope
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # The version in tests/ats/Pipfile.lock.
+          # renovate: datasource=pypi depName=pyyaml
+          PYYAML_VERSION: "6.0.3"
         run: |
-          markdown_only="$(gh api --paginate --slurp "repos/${REPO}/pulls/${PR_NUMBER}/files" |
-            jq --argjson changed "${CHANGED_FILES}" '
-              add // [] |
-              length > 0 and length == $changed and
-              all(.[]; (.filename | endswith(".md")) and ((.previous_filename // ".md") | endswith(".md")))')"
-          echo "markdown_only=${markdown_only}" >> "${GITHUB_OUTPUT}"
+          work="${RUNNER_TEMP}/ci-scope"
+          mkdir -p "${work}"
+          gh api --paginate --slurp "repos/${REPO}/pulls/${PR_NUMBER}/files" > "${work}/files.json"
+          git worktree add --detach "${work}/base" "$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")"
+          git worktree add --detach "${work}/head" "${HEAD_SHA}"
+          python -m pip install --quiet "pyyaml==${PYYAML_VERSION}"
+          python tests/ats/ci_scope.py --files "${work}/files.json" --changed "${CHANGED_FILES}" \
+            --base "${work}/base" --head "${work}/head"
 
-  # Everything but a pull request that changes only Markdown.
+  # Everything but a pull request that needs only the light run.
   validate:
     needs: changes
-    if: needs.changes.outputs.markdown_only != 'true'
+    if: needs.changes.outputs.scope != 'light'
     uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@d928b86e68e050d9f9e96f9a8066d44ce9353915 # main
     with:
       # Matches [requires] python_version in tests/ats/Pipfile.
@@ -83,16 +104,16 @@ jobs:
       # that need the kind cluster.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
 
-  # A pull request that changes only Markdown. A skipped caller job reports a
+  # A pull request that needs only the light run. A skipped caller job reports a
   # single check with its own name, not the checks of its jobs, so the
   # required checks would wait for a run that never comes. This caller has the
-  # same name, and validate-markdown.yaml has jobs with the names of the
+  # same name, and validate-light.yaml has jobs with the names of the
   # shared workflow's, so the same checks report: check-pre-commit runs the
   # pre-commit hooks, validate and test_on_kind are skipped, which passes.
-  validate-markdown:
+  validate-light:
     name: validate
     needs: changes
-    if: needs.changes.outputs.markdown_only == 'true'
+    if: needs.changes.outputs.scope == 'light'
     permissions:
       contents: read
-    uses: ./.github/workflows/validate-markdown.yaml
+    uses: ./.github/workflows/validate-light.yaml
