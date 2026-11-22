@@ -42,6 +42,10 @@ clusters, and the copy becomes the repository their production clusters are appl
 template or in a copy of it, the rules below hold. They differ from what upstream Flux documentation assumes, so
 don't fall back on that.
 
+The [`giantswarm-gitops` skill](.agents/skills/giantswarm-gitops/SKILL.md) gives the reasons behind these rules and
+the cases where upstream advice doesn't apply. Load it before you change a manifest. If your agent doesn't find skills
+in `.agents/skills` or `.claude/skills` by itself, read that file.
+
 ### Read first
 
 - [Repository structure](docs/reference/repo-structure.md): the layout, the Flux `Kustomization`s, the variables, and
