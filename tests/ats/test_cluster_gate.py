@@ -1,9 +1,10 @@
-"""Checks that the clusters cluster_gates lists match the repository, and of the stand-in
-`Cluster`'s condition; they need no cluster."""
+"""Checks of the gates of the template's example organisation, and of the stand-in `Cluster`'s
+condition; they need no cluster."""
 
 import re
 
-from cluster_gates import CLUSTER_HEALTH_EXPR, CONTROL_PLANE_CONDITIONS, GATES
+from cluster_gates import CLUSTER_HEALTH_EXPR, CONTROL_PLANE_CONDITIONS
+from kind_config import kind_test_config, require_example
 from repository_gates import cluster_health_exprs, gates_in_repository, gates_of
 from stand_in_clusters import stand_in_conditions
 
@@ -32,10 +33,12 @@ def test_cluster_health_expr_waits_for_the_control_plane_only() -> None:
 
 
 def test_cluster_kustomizations_wait_for_the_control_plane() -> None:
-    # every Kustomization that health-checks a Cluster counts it as healthy once its control
-    #  plane is available and reachable, not once every node pool is
+    # every Kustomization of the example organisation that health-checks a Cluster counts it as
+    #  healthy once its control plane is available and reachable, not once every node pool is
+    require_example("organisation")
     exprs = cluster_health_exprs()
-    assert set(exprs) == {gate.cluster_kustomization for gate in GATES.values()}
+    gates, _ = gates_in_repository()
+    assert set(exprs) == {kustomizations[0][0] for kustomizations in gates.values()}
     assert {name: e for name, e in exprs.items() if e != [CLUSTER_HEALTH_EXPR]} == {}
 
 
@@ -51,8 +54,7 @@ def test_gates_of_reports_a_dependency_without_a_cluster_health_check() -> None:
         {},
         [
             "Kustomization 'wc-apps' depends on 'wc', which doesn't health-check a Cluster: "
-            "give it the cluster's health check, and add the cluster to GATES in "
-            "cluster_gates.py"
+            "give it the cluster's health check"
         ],
     )
 
@@ -82,15 +84,13 @@ def test_gates_of_leaves_out_the_organisation_namespace_kustomization() -> None:
 
 
 def test_gates_match_the_repository() -> None:
+    require_example("organisation")
     gates, problems = gates_in_repository()
     assert not problems, "\n".join(problems)
-    assert {
-        cluster: [name for name, _ in kustomizations]
-        for cluster, kustomizations in gates.items()
-    } == {
-        cluster: [gate.cluster_kustomization, gate.apps_kustomization]
-        for cluster, gate in GATES.items()
-    }
     # the cluster's Kustomization applies cluster/, the apps one the cluster's directory
     for (_, cluster_path), (_, apps_path) in gates.values():
         assert cluster_path == apps_path + "/cluster"
+    # every cluster with base apps in kind-test.yaml has a gate
+    assert {
+        key.split("/")[1] for key in kind_test_config().cluster_base_apps()
+    } <= gates.keys()

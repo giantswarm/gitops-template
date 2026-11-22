@@ -13,6 +13,7 @@ from cluster_move import (
     spec_changes,
     values_from_problems,
 )
+from kind_config import require_example
 from root_build import build
 
 ENTRY_A = {"kind": "ConfigMap", "name": "a", "valuesKey": "values"}
@@ -37,6 +38,8 @@ def test_values_from_problems_other_order() -> None:
 
 
 def test_move_keeps_the_cluster_values(tmp_path: Path) -> None:
+    require_example("capi-wc-name")
+    require_example("scheduled-upgrades")
     cluster_dir = copy_cluster(tmp_path)
     before = base_values_from(build(cluster_dir))
     move(cluster_dir)
@@ -46,6 +49,8 @@ def test_move_keeps_the_cluster_values(tmp_path: Path) -> None:
 
 
 def test_move_without_retargeting_loses_the_cluster_values(tmp_path: Path) -> None:
+    require_example("capi-wc-name")
+    require_example("scheduled-upgrades")
     # what the how-to did before: a patch aimed at the HelmRelease matches nothing once the
     #  ResourceSet renders it, and kustomize builds without a word
     cluster_dir = copy_cluster(tmp_path)

@@ -26,6 +26,8 @@ PRUNE_IGNORE = "\n".join(
         "/management-clusters/MC_NAME/organizations/ORG_NAME/ORG_NAME.yaml",
     ]
 )
+# the example's management cluster, whose GitRepository test_prune changes
+MANAGEMENT_CLUSTER = "MC_NAME"
 # the Kustomization of the management cluster, which applies the organization
 ROOT_KUSTOMIZATION = (FLUX_OBJECTS_NAMESPACE, "mc-name-gitops")
 # the organisation's namespace Kustomization, which applies the cluster's Kustomizations
