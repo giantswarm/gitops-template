@@ -178,6 +178,15 @@ def test_workload_cluster_assertions(
     ), f"Deployments in the workload cluster aren't available: {unavailable}"
 
 
+def test_evidence_368_after_w1(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    # temporary: fails on purpose, so the report shows the state of a run that passes (#368)
+    pytest.fail("temporary evidence for #368: the state after W1")
+
+
 def test_secrets_pushed(
     workload_cluster: pykube.HTTPClient,
     check_kustomizations_successful: None,
@@ -203,6 +212,15 @@ def test_values_change_applied_at_once(
 ) -> None:
     # the release installs into workload_cluster, which workload_diagnostics reports on failure
     check_values_change_applied(kube_cluster.kube_client)
+
+
+def test_evidence_368_after_values_change(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    # temporary: fails on purpose, so the report shows the state of a run that passes (#368)
+    pytest.fail("temporary evidence for #368: the state after the values change")
 
 
 def test_shared_object_copied(
