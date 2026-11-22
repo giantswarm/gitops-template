@@ -132,6 +132,7 @@ SOPS and External Secrets Operator are both supported, alone or together. Don't 
 
 ### When you work on the template itself
 
-[CONTRIBUTING.md](CONTRIBUTING.md) applies. Every example has to get `Ready` in CI, documentation is in British
-English, and the layout's [structure version](docs/reference/repo-structure.md#structure-version) has to stay in
-step with `kubectl gs gitops`, which is another team's tool: report what it needs, don't assume a change there.
+[CONTRIBUTING.md](CONTRIBUTING.md) applies. Every example has to get `Ready` in CI, and everything a reader sees, the
+docs, the READMEs and the comments in the examples, follows [Voice](docs/contributing/voice.md). The layout's
+[structure version](docs/reference/repo-structure.md#structure-version) has to stay in step with `kubectl gs gitops`,
+which is another team's tool: report what it needs, don't assume a change there.
