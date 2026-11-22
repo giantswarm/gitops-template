@@ -163,6 +163,44 @@ def _waiting(api: pykube.HTTPClient, namespace: str) -> list[dict]:
     return waiting_kustomizations(list(_kustomizations(api).values()), namespace)
 
 
+def _waiting_problems(api: pykube.HTTPClient, namespace: str) -> list[str]:
+    return [p for k in _waiting(api, namespace) for p in waiting_problems(k, namespace)]
+
+
+def _recovery_problems(api: pykube.HTTPClient, namespace: str) -> list[str]:
+    return [p for k in _waiting(api, namespace) for p in ready_problems(k, obj_key(k))]
+
+
+def stand_in_for(
+    api: pykube.HTTPClient,
+    namespace: str,
+    setups: list[NamespaceSetup],
+    created: list[pykube.objects.APIObject],
+) -> None:
+    """Wait for the Kustomizations that apply into the organisation's `namespace` to fail for
+    want of it, create it with what `setups` create in it, and wait for them to get ready on
+    their own retry."""
+    wait_until(
+        lambda: _waiting_problems(api, namespace),
+        WAITING_TIMEOUT_SEC,
+        f"the Kustomizations of '{namespace}' don't wait for it",
+    )
+    waiting = [obj_key(k) for k in _waiting(api, namespace)]
+    logger.info(f"Kustomizations {waiting} wait for namespace '{namespace}'")
+
+    started = time.monotonic()
+    create_namespace(api, namespace, setups, created)
+    wait_until(
+        lambda: _recovery_problems(api, namespace),
+        RECOVERY_TIMEOUT_SEC,
+        f"the Kustomizations of '{namespace}' didn't recover on their own retry",
+    )
+    logger.info(
+        f"Kustomizations {waiting} got ready {time.monotonic() - started:.0f} s after "
+        f"namespace '{namespace}' was created"
+    )
+
+
 @pytest.fixture(scope="module")
 def organization_operator(
     kube_cluster: Cluster,
@@ -184,34 +222,8 @@ def organization_operator(
     namespaces = [organization_namespace(o) for o in _organizations(api)]
     logger.info(f"The roots applied the Organizations of {namespaces}")
     for namespace in namespaces:
-        wait_until(
-            lambda: [
-                p
-                for k in _waiting(api, namespace)
-                for p in waiting_problems(k, namespace)
-            ],
-            WAITING_TIMEOUT_SEC,
-            f"the Kustomizations of '{namespace}' don't wait for it",
-        )
-        waiting = [obj_key(k) for k in _waiting(api, namespace)]
-        logger.info(f"Kustomizations {waiting} wait for namespace '{namespace}'")
-
-        started = time.monotonic()
-        create_namespace(
+        stand_in_for(
             api, namespace, organization_namespace_setups, organization_objects
-        )
-        wait_until(
-            lambda: [
-                p
-                for k in _waiting(api, namespace)
-                for p in ready_problems(k, obj_key(k))
-            ],
-            RECOVERY_TIMEOUT_SEC,
-            f"the Kustomizations of '{namespace}' didn't recover on their own retry",
-        )
-        logger.info(
-            f"Kustomizations {waiting} got ready {time.monotonic() - started:.0f} s after "
-            f"namespace '{namespace}' was created"
         )
     yield namespaces
 

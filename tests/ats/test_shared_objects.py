@@ -4,6 +4,7 @@ cluster."""
 from pathlib import Path
 
 import yaml
+from kind_config import require_example
 from shared_objects import (
     CONFIG_MAP,
     COPY_DIR,
@@ -13,7 +14,6 @@ from shared_objects import (
     copy_problems,
     source_config_map,
 )
-from kind_config import require_example
 
 SOURCE = {"data": {"ca.crt": "pem"}}
 

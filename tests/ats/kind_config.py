@@ -43,6 +43,40 @@ class ConfigError(Exception):
     """The repository or kind-test.yaml doesn't say what the test needs to know."""
 
 
+class UnknownKeysError(ConfigError):
+    def __init__(self, file: str, unknown: list[str]) -> None:
+        super().__init__(f"{file}: unknown keys {unknown}; the keys are {sorted(KEYS)}")
+
+
+class NoManagementClusterError(ConfigError):
+    def __init__(self) -> None:
+        super().__init__(
+            f"No management cluster in {MANAGEMENT_CLUSTERS_DIR}/: the test applies each "
+            "directory <name> with a <name>/<name>.yaml"
+        )
+
+
+class MissingManagementClustersError(ConfigError):
+    def __init__(self, missing: list[str]) -> None:
+        files = ", ".join(f"{MANAGEMENT_CLUSTERS_DIR}/{mc}/{mc}.yaml" for mc in missing)
+        super().__init__(f"managementClusters names {missing}, but there is no {files}")
+
+
+class NoRootError(ConfigError):
+    def __init__(self, file: Path) -> None:
+        super().__init__(
+            f"{file} has no Flux Kustomization that applies ./{file.parent}, the "
+            "management cluster's root"
+        )
+
+
+class NoExamplePathsError(ConfigError):
+    def __init__(self, name: str) -> None:
+        super().__init__(
+            f"examples: the binding of '{name}' needs the paths of the example"
+        )
+
+
 @dataclass(frozen=True)
 class RootKustomization:
     """A management cluster's root Kustomization: the one in `<name>/<name>.yaml` that applies
@@ -66,9 +100,7 @@ def load_config(path: Path = CONFIG_FILE) -> dict:
         settings = yaml.safe_load(f) or {}
     unknown = sorted(set(settings) - KEYS)
     if unknown:
-        raise ConfigError(
-            f"{path.name}: unknown keys {unknown}; the keys are {sorted(KEYS)}"
-        )
+        raise UnknownKeysError(path.name, unknown)
     return settings
 
 
@@ -81,17 +113,11 @@ def management_clusters(repo_dir: Path, configured: list[str] | None) -> list[st
     )
     if configured is None:
         if not found:
-            raise ConfigError(
-                f"No management cluster in {MANAGEMENT_CLUSTERS_DIR}/: the test applies "
-                f"each directory <name> with a <name>/<name>.yaml"
-            )
+            raise NoManagementClusterError
         return found
     missing = [mc for mc in configured if mc not in found]
     if missing:
-        raise ConfigError(
-            f"managementClusters names {missing}, but there is no "
-            + ", ".join(f"{MANAGEMENT_CLUSTERS_DIR}/{mc}/{mc}.yaml" for mc in missing)
-        )
+        raise MissingManagementClustersError(missing)
     return list(configured)
 
 
@@ -124,10 +150,7 @@ def root_kustomization(repo_dir: Path, mc: str) -> RootKustomization:
                 (spec.get("decryption") or {}).get("secretRef") or {}, namespace
             ),
         )
-    raise ConfigError(
-        f"{file} has no Flux Kustomization that applies ./{file.parent}, the management "
-        "cluster's root"
-    )
+    raise NoRootError(file)
 
 
 class KindTestConfig:
@@ -139,11 +162,8 @@ class KindTestConfig:
         self.examples: dict[str, dict] = settings.get("examples") or {}
         for name, binding in self.examples.items():
             if not (binding or {}).get("paths"):
-                raise ConfigError(
-                    f"examples: the binding of '{name}' needs the paths of the example"
-                )
+                raise NoExamplePathsError(name)
 
-    @cache  # noqa: B019 - one instance per session, see `kind_test_config`
     def management_clusters(self) -> list[str]:
         return management_clusters(
             self.repo_dir, self.settings.get("managementClusters")

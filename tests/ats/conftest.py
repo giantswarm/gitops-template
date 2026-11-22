@@ -7,21 +7,20 @@ import subprocess  # nosec B404 - we need to invoke processes
 import tempfile
 import time
 import urllib.request
-from typing import Iterable, Any, NamedTuple
+from typing import Any, Iterable, NamedTuple
 
 import pykube
 import pytest
 import requests
 import validators
 import yaml
+from ci_context import GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME
+from flux_teardown import delete_without_prune
+from kind_config import kind_test_config, require_example
 from pykube import Secret
 from pytest_helm_charts.clusters import Cluster
 from pytest_helm_charts.flux.git_repository import GitRepositoryFactoryFunc
 from pytest_helm_charts.utils import wait_for_objects_condition
-
-from ci_context import GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME
-from flux_teardown import delete_without_prune
-from kind_config import kind_test_config, require_example
 from repository_objects import (
     credentials_secret,
     credentials_secret_name,
@@ -52,8 +51,8 @@ pytest_plugins = [
 ]
 
 FLUX_OBJECTS_NAMESPACE = "default"
-# the workflow's token, which reads the repository when it's private
-GITHUB_TOKEN_ENV_VAR_NAME = "GITHUB_TOKEN"  # nosec B105 - the name of a variable
+# the variable of the workflow's token, which reads the repository when it's private
+REPOSITORY_READER_ENV_VAR_NAME = "GITHUB_TOKEN"
 
 # The test cluster has the Cluster API core CRDs (cluster.x-k8s.io and its
 # addons, ipam and runtime groups), and nothing else of Cluster API: no
@@ -172,7 +171,7 @@ class GitOpsTestConfig:
 
         # needed only when a root Kustomization decrypts, see repository_objects
         self.master_private_key = os.environ.get(GITOPS_MASTER_GPG_KEY_ENV_VAR_NAME, "")
-        self.github_token = os.environ.get(GITHUB_TOKEN_ENV_VAR_NAME, "")
+        self.github_token = os.environ.get(REPOSITORY_READER_ENV_VAR_NAME, "")
 
         self.gitops_repo_url = os.environ[self._GITOPS_REPO_URL_ENV_VAR_NAME]
         if not validators.url(self.gitops_repo_url):
@@ -499,11 +498,19 @@ def optional_vcluster(
         remove_workload_cluster(kube_config, values_file.name)
 
 
+class NoVClusterError(RuntimeError):
+    """The example is there, but optional_vcluster created no vCluster."""
+
+    def __init__(self) -> None:
+        super().__init__("The example is there, but there is no vCluster.")
+
+
 @pytest.fixture(scope="module")
 def vcluster(optional_vcluster: VCluster | None) -> VCluster:
     """The vCluster; a test that needs it is skipped, saying why, without the example."""
     require_example(WORKLOAD_CLUSTER_EXAMPLE)
-    assert optional_vcluster is not None  # nosec B101 - require_example skips otherwise
+    if optional_vcluster is None:
+        raise NoVClusterError
     return optional_vcluster
 
 

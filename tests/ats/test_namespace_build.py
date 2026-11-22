@@ -6,6 +6,7 @@ only kubectl."""
 
 import pytest
 import yaml
+from kind_config import RootKustomization, kind_test_config, require_example
 from repository_gates import ORG_DIR, WORKLOAD_CLUSTERS_DIR
 from root_build import (
     REPO_DIR,
@@ -15,7 +16,6 @@ from root_build import (
     namespace_dependency_problems,
     source_problems,
 )
-from kind_config import RootKustomization, kind_test_config, require_example
 
 
 def organization_kustomization() -> dict:

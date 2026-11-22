@@ -34,11 +34,11 @@ def test_a_root_that_decrypts_needs_the_key() -> None:
 
 
 def test_credentials_for_a_private_repository() -> None:
-    token = "not-a-token"  # nosec B105 - a stand-in
-    secret = credentials_secret(("default", "gitops"), token)
+    stand_in = "not-a-token"
+    secret = credentials_secret(("default", "gitops"), stand_in)
     assert secret == {
         "metadata": {"name": credentials_secret_name("gitops"), "namespace": "default"},
         "type": "Opaque",
-        "stringData": {"username": "x-access-token", "password": token},
+        "stringData": {"username": "x-access-token", "password": stand_in},
     }
     assert credentials_secret_name("gitops") == "gitops-kind-test-credentials"

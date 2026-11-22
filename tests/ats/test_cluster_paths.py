@@ -4,8 +4,8 @@ docs/reference/repo-structure.md; needs no cluster."""
 from pathlib import Path
 
 import yaml
-from repository_gates import WORKLOAD_CLUSTERS_DIR
 from kind_config import require_example
+from repository_gates import WORKLOAD_CLUSTERS_DIR
 
 # the directory each Kustomization applies, relative to the organisation's workload-clusters/:
 #  the cluster's applies `cluster/`, the apps one the cluster root, a -direct one `out-of-band/`

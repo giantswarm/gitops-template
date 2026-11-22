@@ -14,7 +14,7 @@ from kind_config import Ref
 # Flux imports every `.asc` key of the Secret
 MASTER_KEY_DATA_KEY = "master.asc"
 # the user a GitHub token authenticates as over HTTPS
-TOKEN_USERNAME = "x-access-token"  # nosec B105 - a user name, not a password
+HTTPS_USERNAME = "x-access-token"
 
 
 def decryption_secrets(refs: list[Ref], key: str) -> list[dict]:
@@ -43,5 +43,5 @@ def credentials_secret(ref: Ref, token: str) -> dict:
     return {
         "metadata": {"name": credentials_secret_name(name), "namespace": namespace},
         "type": "Opaque",
-        "stringData": {"username": TOKEN_USERNAME, "password": token},
+        "stringData": {"username": HTTPS_USERNAME, "password": token},
     }

@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from kind_config import RootKustomization, kind_test_config, require_example
 from root_build import (
-    REPO_DIR,
     ORGANIZATION_NAMESPACE_LABEL,
+    REPO_DIR,
     build,
     generated_resources,
     misplaced_objects,
