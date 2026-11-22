@@ -26,8 +26,8 @@ resources:
   - namespace.yaml
   - multicluster
 replacements:
-  # Without the kustomize replacements, change every `org-ORG_NAME` and `ORG_NAME` in these
-  # files by hand:
+  # If you do not want to use kustomize replacements, you must update all references to
+  # `org-ORG_NAME` (and `ORG_NAME`) in the following files:
   #   - multicluster/apps.yaml
   #   - namespace.yaml
   # The files in namespace/ get the name from namespace.yaml's `targetNamespace` and
