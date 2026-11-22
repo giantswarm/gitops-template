@@ -505,3 +505,55 @@ repository.
 | ConfigMap `cluster-app-installation-values`, key `values.yaml`, in every `org-*` namespace | Giant Swarm creates it in the `giantswarm` namespace. The Kyverno policy `sync-cluster-app-configmap-to-org-namespaces`, in `kyverno-policies-ux` 0.14.0 and newer, copies it into every organisation namespace and keeps the copies in sync. With an older `kyverno-policies-ux` it is missing, and every cluster `HelmRelease` fails because Flux can't resolve that `valuesFrom` entry. See [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster) | The first `valuesFrom` entry of a cluster's `HelmRelease`. On management clusters with `kyverno-policies-ux` 0.15.1 or newer, the `prepend-cluster-app-config-map-hr` policy adds the same entry to a cluster `HelmRelease` that lacks it; the explicit entry is for management clusters without that policy and does no harm next to it |
 | ConfigMap `${cluster_name}-cluster-values` | cluster-apps-operator, once the cluster exists | The `valuesFrom` of the apps of a cluster |
 | Secret `${cluster_name}-kubeconfig` | Cluster API, once the cluster exists | The `kubeConfig` of the apps' `HelmRelease`s and of `WC_NAME-direct.yaml` |
+
+## What you can do, and what Giant Swarm does
+
+On a management cluster you and Giant Swarm share one Flux, in the `flux-giantswarm` namespace, and Giant Swarm's
+[rbac-operator](https://github.com/giantswarm/rbac-operator) decides who may do what. Everything in this repository
+stays inside these rules.
+[The rights of the `automation` ServiceAccounts](./ci-checks.md#the-rights-of-the-automation-serviceaccounts) lists
+them rule by rule, with the commits they come from.
+
+What you can write:
+
+- anything namespaced in `default` and in your organisations' `org-*` namespaces;
+- two cluster-scoped kinds, which the platform grants on purpose: `Organization`, and `AWSClusterRoleIdentity` on CAPA
+  management clusters. Nothing else cluster-scoped: no `Namespace`, `ClusterRole` or `ClusterPolicy`.
+
+What you can read: every resource in every namespace, except `Secret`s and `ConfigMap`s outside the namespaces you write
+in. That includes pod logs, so `kubectl logs -n flux-giantswarm deployment/kustomize-controller` works for you.
+
+Flux applies the repository as one of two `automation` ServiceAccounts, which rbac-operator creates. A `Kustomization`,
+`HelmRelease` or `ResourceSet` names one with `serviceAccountName: automation`, and gets that account's rights in its
+own namespace:
+
+| ServiceAccount | What it may do |
+| --- | --- |
+| `default/automation` | Everything in `default` and in every `org-*` namespace except `org-giantswarm`; create `Organization`s and `AWSClusterRoleIdentity`s; read what you can read |
+| `org-ORG_NAME/automation` | Everything in its own organisation's namespace. Elsewhere, only the few things the cluster charts need, such as reading `Release`s and `Node`s |
+
+So `default`'s account reaches every organisation, and an organisation's reaches only itself. Anything that runs as
+`default/automation`, such as a `Kustomization` in `default`, can change any organisation. The repository keeps that
+account's work small: the management cluster's `Kustomization`, `MC_NAME.yaml`, applies only `Organization`s and
+objects in `default`, and each organisation's objects are applied from its own namespace, as its own account, so a
+mistake in one organisation's files can't reach another.
+
+Two Kyverno policies on the management cluster check Flux objects as they're created, outside Giant Swarm's own
+namespaces, and refuse the ones that break these rules:
+
+- A `Kustomization` or `HelmRelease` needs `spec.serviceAccountName`, or `spec.kubeConfig` when it applies to a
+  workload cluster. One copied from upstream Flux documentation usually has neither, and is refused.
+- Its source, `spec.sourceRef` or the chart's, has to be in its own namespace or in `default`. Its `targetNamespace`
+  and `storageNamespace` have to be its own namespace (`targetNamespace` may also be another `org-*`), unless it has
+  `kubeConfig`. An `Alert`, `Receiver` or `ImagePolicy` may only refer to objects in its own namespace.
+- A `ResourceSet` needs `spec.serviceAccountName`.
+
+Some things are always Giant Swarm's to do:
+
+- install, upgrade and configure Flux, Flux Operator, Kyverno, External Secrets Operator and the other platform apps,
+  and anything in `flux-giantswarm`, `giantswarm` and the other namespaces you can't write, such as exposing Flux's
+  webhook receiver;
+- give the `automation` ServiceAccounts more rights, or create any other cluster-scoped object;
+- the [objects the management cluster provides](#objects-the-management-cluster-provides).
+
+Ask Giant Swarm when a step needs one of these. Everything else in this repository is yours.

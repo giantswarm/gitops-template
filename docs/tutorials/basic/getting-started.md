@@ -84,7 +84,8 @@ You need:
 - access to the management cluster, see
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
-  is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces,
+  is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces, which is what Giant Swarm
+  gives customers, see [What you can do, and what Giant Swarm does](../../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does),
 - a fork of this repository, cloned locally. Run every command from the root of the clone.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
@@ -92,6 +93,10 @@ them where they are, as complete examples to check your own files against.
 
 `kubectl gs gitops` can write most of the files in this tutorial for you, and each step names the command that does.
 You write them by hand here, so that you know what each one is for when you come to change it.
+
+Every Flux object you write here says `serviceAccountName: automation`. Giant Swarm creates an `automation`
+ServiceAccount in `default` and in every organisation's namespace, and Flux applies your files with its rights, which
+is also why the management cluster refuses a `Kustomization` or `HelmRelease` without it.
 
 Export the names the commands use:
 
