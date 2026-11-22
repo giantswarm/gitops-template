@@ -1,4 +1,4 @@
-"""P1-P3: what test_prune removes from what Flux applies, and the objects in it."""
+"""P1-P4: what test_prune removes from what Flux applies, and the objects in it."""
 
 import pykube
 from checks.kinds import REFERENCED_KINDS
@@ -79,6 +79,11 @@ KEPT_BY_FAILED_BUILD = [
 KEPT_BY_WAITING_ORGANIZATION = [
     ("Kustomization", namespace, name) for namespace, name in CLUSTER_KUSTOMIZATIONS
 ]
+# P4: the organisation's namespace Kustomization, which leaves the management cluster's build,
+#  and what `kustomize.toolkit.fluxcd.io/prune: disabled` on it keeps: itself, and so the
+#  cluster's Kustomizations its finalizer would delete
+LEFT_OUT_KUSTOMIZATION = ("Kustomization", *ORGANIZATION_KUSTOMIZATION)
+KEPT_BY_GUARD = [LEFT_OUT_KUSTOMIZATION, *KEPT_BY_WAITING_ORGANIZATION]
 # the app's workload in the workload cluster, which goes when its HelmRelease is deleted
 PRUNED_WORKLOAD = ("hello-world", "hello-world")
 # the cluster's HelmRelease and OCIRepository, which deleting the cluster's Kustomization leaves

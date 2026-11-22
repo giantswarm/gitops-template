@@ -15,6 +15,16 @@ class Gate(NamedTuple):
     base_apps: list[str]
 
 
+# What a cluster Kustomization's health check waits for, as Cluster API v1.14.4 names the
+#  conditions of a v1beta2 `Cluster`: an available control plane that it can reach. The secondary
+#  apps need no more. `Available` would also wait for every node pool, so one node pool short of
+#  its minimum would hold back every change to the cluster's apps.
+CONTROL_PLANE_CONDITIONS = ("ControlPlaneAvailable", "RemoteConnectionProbe")
+# the CEL expression of that health check, in each cluster Kustomization's `healthCheckExprs`
+CLUSTER_HEALTH_EXPR = " && ".join(
+    f"status.conditions.exists(c, c.type == '{condition}' && c.status == 'True')"
+    for condition in CONTROL_PLANE_CONDITIONS
+)
 # the namespace of the clusters, and of their Kustomizations
 CLUSTERS_NAMESPACE = "org-org-name"
 # the base apps of the out-of-band clusters: the Gateway API stack of bases/stacks/envoy-gateway
@@ -61,7 +71,7 @@ def held_problems(key: str, obj: dict | None) -> list[str]:
     applied = sorted(inventory_keys(obj))
     if applied:
         problems.append(
-            f"Kustomization '{key}' applied {applied} before the cluster was Available"
+            f"Kustomization '{key}' applied {applied} before the cluster's control plane was up"
         )
     return problems
 
@@ -74,7 +84,7 @@ def opened_problems(key: str, obj: dict | None) -> list[str]:
     if ready.get("status") == "True":
         return []
     return [
-        f"Kustomization '{key}' isn't ready after the cluster was Available: "
+        f"Kustomization '{key}' isn't ready after the cluster's control plane was up: "
         f"{ready.get('reason')}: {ready.get('message', '')}"
     ]
 
@@ -90,7 +100,7 @@ def base_app_problems(gate: Gate, hrs: dict[str, dict]) -> list[str]:
         if owner != gate.cluster_kustomization:
             problems.append(
                 f"base app HelmRelease '{key}' isn't applied by "
-                f"'{gate.cluster_kustomization}' while the cluster isn't Available: "
+                f"'{gate.cluster_kustomization}' while the cluster's control plane isn't up: "
                 f"its owner is {owner}"
             )
     return problems

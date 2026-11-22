@@ -1,4 +1,4 @@
-"""P1-P3: what Flux deletes when files are deleted from Git, and what it keeps.
+"""P1-P4: what Flux deletes when files are deleted from Git, and what it keeps.
 
 test_prune removes objects the other kind tests check, so it has to run after them, and it
 needs their environment, which is module-scoped like every pytest-helm-charts fixture. So it is
@@ -18,6 +18,7 @@ from prune_cluster import (
 )
 from prune_objects import (
     KEPT_BY_FAILED_BUILD,
+    KEPT_BY_GUARD,
     KEPT_BY_WAITING_ORGANIZATION,
     PROTECTED_CLUSTER,
     PRUNE_IGNORE,
@@ -29,7 +30,13 @@ from prune_objects import (
     kept_problems,
 )
 from prune_patches import delete_patches
-from prune_source import recover_source, remove_from_source, restore_source
+from prune_source import (
+    leave_out_of_root,
+    put_back_into_root,
+    recover_source,
+    remove_from_source,
+    restore_source,
+)
 
 
 def tests_not_run_before(request: pytest.FixtureRequest) -> list[str]:
@@ -82,6 +89,20 @@ def check_removed_files(
     recover_source(api)
 
 
+def check_removed_parent(api: pykube.HTTPClient) -> None:
+    """P4: dropping the organisation's namespace Kustomization from the management cluster's
+    build, as deleting or renaming its file does, leaves it. Its `kustomize.toolkit.fluxcd.io/
+    prune: disabled` annotation keeps the management cluster's Kustomization from deleting it,
+    and so its finalizer from deleting the cluster's Kustomizations. Once it's back in the build,
+    the management cluster's Kustomization applies it again."""
+    leave_out_of_root(api)
+    fail_on_problems(
+        kept_problems(api, KEPT_BY_GUARD),
+        "the organisation's namespace Kustomization wasn't kept",
+    )
+    put_back_into_root(api)
+
+
 def check_removed_cluster(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
@@ -111,7 +132,7 @@ def check_prune(
     api: pykube.HTTPClient,
     workload_cluster: pykube.HTTPClient,
 ) -> None:
-    """P1-P3 on the out-of-band-no-flux cluster, whose apps run in the test's vCluster."""
+    """P1-P4 on the out-of-band-no-flux cluster, whose apps run in the test's vCluster."""
     not_run = tests_not_run_before(request)
     if not_run:
         pytest.fail(
@@ -120,6 +141,7 @@ def check_prune(
         )
     try:
         check_removed_files(api, workload_cluster)
+        check_removed_parent(api)
         check_removed_cluster(api, workload_cluster)
     finally:
         restore_source(api)

@@ -41,8 +41,12 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
   the management cluster's `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its
   inventory keeps the `Organization` and the organisation's namespace `Kustomization`, and they stay. That one, which
   depends on `mc-name-gitops`, has to report `DependencyNotReady` and prune nothing either: its inventory keeps the
-  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Then it
-  deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
+  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Next it
+  drops the organisation's namespace `Kustomization` from what `mc-name-gitops` builds, with a `$patch: delete` patch
+  in that one's `spec.patches`, as deleting or renaming `namespace.yaml` would. `mc-name-gitops` has to drop it from
+  its inventory, and it has to stay, with the cluster's `Kustomization`s: its `kustomize.toolkit.fluxcd.io/prune:
+  disabled` annotation keeps Flux from deleting it. Once the patch is gone, `mc-name-gitops` has to list it again. Then
+  it deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
   `OCIRepository` have to stay. It deletes what the other tests check, so it runs last and fails if they didn't run
   before it.
 
@@ -175,12 +179,15 @@ objects are stored in: the CRDs are installed without their conversion webhook, 
 conversion.
 
 The test does that for every cluster whose apps wait for it, as listed in `GATES` in
-[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with `Available` `False`.
-The cluster's `Kustomization` still has to apply the base apps, while the apps `Kustomization` has to report
-`DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization` has to
-get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
-`Kustomization`s only get `Ready` once their `Cluster` is `Available`. When you add a cluster with apps, add it to
-`GATES`: a test without the cluster compares the list with the `Kustomization`s in the repository.
+[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with a node pool short
+of its minimum: `WorkersAvailable` and `Available` stay `False` throughout. First its `ControlPlaneAvailable` and
+`RemoteConnectionProbe` are `False` too. The cluster's `Kustomization` still has to apply the base apps, while the
+apps `Kustomization` has to report `DependencyNotReady` without applying anything. Then it sets both to `True`, and
+the apps `Kustomization` has to get `Ready`, though the cluster still isn't `Available`.
+`test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster `Kustomization`s only
+get `Ready` once their `Cluster`'s control plane is up. When you add a cluster with apps, add it to `GATES`: a test
+without the cluster compares the list with the `Kustomization`s in the repository, and checks that each one's health
+check waits for the control plane and not for `Available`.
 
 The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 
@@ -209,8 +216,12 @@ so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py
 The other checks run after it. The cluster `Kustomization`s are in the organisation's `workload-clusters` directory,
 which its `namespace/kustomization.yaml` lists, so they appear only once the organisation's `Kustomization` is `Ready`,
 and run as `org-org-name/automation`. `tests/ats/test_root_build.py` checks, without a cluster, that the build of
-`MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each organisation's namespace
-`Kustomization` applies into the organisation's namespace. `tests/ats/test_namespace_build.py` checks that the
+`MC_NAME.yaml` holds only `Organization`s and objects in `default`, that each organisation's namespace
+`Kustomization` applies into the organisation's namespace, that every `Kustomization` in it other than `MC_NAME.yaml`'s
+depends on that one, and that every `Kustomization` in it, `MC_NAME.yaml`'s included, has the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, see
+[Deletion protection](../explanation/deletion-protection.md#the-protected-objects).
+`tests/ats/test_namespace_build.py` checks that the
 `Kustomization`s it applies read the repository's `GitRepository` in `default`, depend on it, directly or through
 another of them, and decrypt with a key Secret it applies too.
 

@@ -1,4 +1,4 @@
-"""P1, P2: removing files from what the kind test applies, without a push.
+"""P1, P2, P4: removing files from what the kind test applies, without a push.
 
 The kind test reads a branch it can't push to. The GitRepository's `spec.ignore` leaves the
 files out of the artifact Flux applies instead, as if they were deleted from Git. A file that a
@@ -6,7 +6,9 @@ kustomization.yaml lists can't be left out that way, as the list would name a fi
 `$patch: delete` patches in the Kustomization's `spec.patches` drop its objects instead. P2
 leaves out the Organization, which the organisation's kustomization.yaml lists, on purpose: the
 management cluster's Kustomization then fails to build and prunes nothing, and the organisation's
-namespace Kustomization, which depends on it, waits and prunes nothing either.
+namespace Kustomization, which depends on it, waits and prunes nothing either. P4 drops the
+organisation's namespace Kustomization from what the management cluster's Kustomization builds,
+with a patch in its own `spec.patches`: it applies itself, but leaves the field the test sets.
 """
 
 import pykube
@@ -16,6 +18,7 @@ from flux_inventory import (
     build_failure_problems,
     dependency_wait_problems,
     inventory_keys,
+    left_out_problems,
 )
 from flux_reconcile import repo_problems, request_reconcile, wait_until
 from organization_operator import ready_problems
@@ -24,11 +27,13 @@ from prune_objects import (
     CLUSTER_KUSTOMIZATIONS,
     KEPT_BY_FAILED_BUILD,
     KEPT_BY_WAITING_ORGANIZATION,
+    LEFT_OUT_KUSTOMIZATION,
     ORGANIZATION_KUSTOMIZATION,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
     ROOT_KUSTOMIZATION,
 )
+from prune_patches import delete_patches
 from pykube.objects import APIObject
 from pytest_helm_charts.flux.git_repository import GitRepositoryCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
@@ -115,6 +120,49 @@ def remove_from_source(
     )
 
 
+def leave_out_of_root(api: pykube.HTTPClient) -> None:
+    """P4: drop the organisation's namespace Kustomization from what the management cluster's
+    Kustomization builds, as deleting or renaming namespace.yaml does, and wait until the
+    management cluster's has applied that."""
+    root = kustomization(api, ROOT_KUSTOMIZATION)
+    root.patch({"spec": {"patches": delete_patches([LEFT_OUT_KUSTOMIZATION], {})}})
+    request_reconcile(root)
+
+    def problems() -> list[str]:
+        root.reload()
+        return left_out_problems(root.obj, LEFT_OUT_KUSTOMIZATION)
+
+    wait_until(
+        problems,
+        PRUNE_TIMEOUT_SEC,
+        "the management cluster's Kustomization hasn't left out the organisation's",
+    )
+
+
+def put_back_into_root(api: pykube.HTTPClient) -> None:
+    """Undo leave_out_of_root, and wait until the management cluster's Kustomization lists the
+    organisation's namespace Kustomization again, and both are Ready."""
+    root = kustomization(api, ROOT_KUSTOMIZATION)
+    organization = kustomization(api, ORGANIZATION_KUSTOMIZATION)
+    root.patch({"spec": {"patches": None}})
+    request_reconcile(root)
+
+    def problems() -> list[str]:
+        found = recovered_problems([root, organization])
+        if LEFT_OUT_KUSTOMIZATION not in inventory_keys(root.obj):
+            found.append(
+                f"Kustomization '{obj_key(root.obj)}' doesn't list "
+                f"{LEFT_OUT_KUSTOMIZATION} again"
+            )
+        return found
+
+    wait_until(
+        problems,
+        PRUNE_TIMEOUT_SEC,
+        "the management cluster's Kustomization didn't apply the organisation's again",
+    )
+
+
 def recovered_problems(kustomizations: list[APIObject]) -> list[str]:
     """The `kustomizations` that aren't Ready."""
     problems = []
@@ -144,12 +192,14 @@ def recover_source(api: pykube.HTTPClient) -> None:
 
 
 def restore_source(api: pykube.HTTPClient) -> None:
-    """Put the files remove_from_source left out back into the artifact. It doesn't bring back
+    """Put the files remove_from_source left out back into the artifact, and what
+    leave_out_of_root left out back into the management cluster's build. It doesn't bring back
     the cluster Kustomizations check_removed_cluster deletes, which is why test_prune runs last.
     """
     repo = git_repository(api)
     repo.patch({"spec": {"ignore": None}})
     request_reconcile(repo)
+    kustomization(api, ROOT_KUSTOMIZATION).patch({"spec": {"patches": None}})
     namespace, name = APPS_KUSTOMIZATION
     apps = (
         KustomizationCR.objects(api).filter(namespace=namespace).get_or_none(name=name)

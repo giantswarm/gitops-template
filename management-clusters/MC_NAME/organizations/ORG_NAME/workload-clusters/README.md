@@ -13,7 +13,8 @@ the cluster keys in `../namespace/secrets/`.
 
 - `kustomization.yaml`: the list of cluster Kustomizations. Add a cluster's files here, or Flux never sees them.
 - `<cluster>.yaml`: the cluster's Kustomization. It applies the cluster and its base apps, in `<cluster>/cluster/`.
-  Where the cluster has an apps Kustomization, it's Ready only once Cluster API reports the cluster Available.
+  Where the cluster has an apps Kustomization, it's Ready only once Cluster API reports the cluster's control plane
+  available and reachable.
 - `<cluster>-apps.yaml`: the cluster's apps Kustomization. It applies the secondary apps, in `<cluster>/apps/`, once
   the cluster's Kustomization is Ready. Only a cluster with secondary apps has one.
 - `<cluster>-direct.yaml`: applies `<cluster>/out-of-band/` straight to the workload cluster, through its kubeconfig.

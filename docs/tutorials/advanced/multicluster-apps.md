@@ -51,18 +51,24 @@ the management cluster's.
     ```
 
 1. Create the `Kustomization` that applies `${ORG_DIR}/multicluster/apps`. It lives in `default`, as the management
-   cluster's `Kustomization` applies it, and runs as the `automation` ServiceAccount there. `ORG_NAME` is a
-   placeholder that the organisation's `kustomization.yaml` replaces with the `Organization`'s name, as it does for
-   `namespace.yaml`:
+   cluster's `Kustomization` applies it, and runs as the `automation` ServiceAccount there. Like `namespace.yaml`, it
+   depends on the management cluster's `Kustomization`, which applies every commit first, and has the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation: if Flux deleted it, it would take every `ResourceSet` in
+   the directory with it, and their apps from every cluster. `ORG_NAME` is a placeholder that the organisation's
+   `kustomization.yaml` replaces with the `Organization`'s name, as it does for `namespace.yaml`:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/multicluster/apps.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
+      annotations:
+        kustomize.toolkit.fluxcd.io/prune: disabled
       name: ${MC_NAME}-multicluster-apps-${ORG_NAME}
       namespace: default
     spec:
+      dependsOn:
+        - name: ${MC_NAME}-gitops
       interval: 10m
       path: "./${ORG_DIR}/multicluster/apps"
       postBuild:
@@ -286,7 +292,7 @@ retries until then. That dependency is the example app's own, and needs envoy-ga
 
 Nothing fails meanwhile. The `ResourceSet` applies the `HelmRelease` without waiting for it, and the multicluster
 `Kustomization` applies only the `ResourceSet` and its provider. Unlike a cluster's apps `Kustomization`, it doesn't
-wait for the Cluster API `Cluster` to be `Available`. A `HelmRelease` can only depend on other `HelmRelease`s, so an
+wait for the Cluster API `Cluster`'s control plane. A `HelmRelease` can only depend on other `HelmRelease`s, so an
 app of your own without such a dependency would only wait for the cluster's kubeconfig Secret: it fails, and retries,
 until the Secret exists. That's harmless, but noisy; give your app a `dependsOn` on a release the cluster installs with
 itself if you'd rather it waited quietly.
