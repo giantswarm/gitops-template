@@ -33,8 +33,9 @@ nowhere else. Which Flux does it depends on where Flux runs:
 1. **Flux in the workload cluster.** The workload cluster runs Flux, as in
    [Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster). The platform team puts the
    team's namespace, a ServiceAccount named after the team, a `RoleBinding` that makes it `admin` there, and the team's
-   `GitRepository` and `Kustomization` into the cluster's `out-of-band` directory. The cluster's `-direct`
-   `Kustomization` delivers them, and Flux in the workload cluster reconciles them, as the team's ServiceAccount.
+   `GitRepository` and `Kustomization` into the cluster's `out-of-band` directory. Whatever applies that directory
+   delivers them: the cluster's `-direct` `Kustomization`, or the cluster's own Flux where it pulls the directory
+   itself. Flux in the workload cluster then reconciles them, as the team's ServiceAccount.
 
 Pick Flux on the management cluster when the workload cluster doesn't run Flux: there's nothing to install or upgrade
 in it, and the platform team sees every team's `Kustomization` on the management cluster. Pick Flux in the workload
@@ -64,15 +65,16 @@ kustomize-controller or helm-controller, with the rights of a cluster admin. The
 helm-controller with `--default-service-account`, so that Flux applies such an object as that ServiceAccount of the
 object's namespace instead.
 
-The fork has a team in each mode on the `out-of-band-no-flux` example cluster, and the kind test reconciles them:
-`hello-team`, with Flux on the management cluster, in
+The fork has a team in each mode, each on the example cluster that suits it. `hello-team`, with Flux on the
+management cluster, is on `out-of-band-no-flux`, which runs no Flux of its own, in
 [out-of-band/teams/hello-team.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams/hello-team.yaml)
 and
-[teams/hello-team](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams/hello-team/),
-and `hello-team-wc`, with Flux in the workload cluster, in
-[out-of-band/teams/hello-team-wc.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band/teams/hello-team-wc.yaml).
-The test's workload cluster runs no Flux, so for `hello-team-wc` it checks that the objects get there, not that they
-reconcile. Both use [podinfo](https://github.com/stefanprodan/podinfo), Flux's demo app, as the team's repository: its
+[teams/hello-team](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams/hello-team/).
+The kind test reconciles it. `hello-team-wc`, with Flux in the workload cluster, is on `out-of-band-flux-app`, whose
+own Flux pulls it, in
+[out-of-band/teams/hello-team-wc.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/out-of-band/teams/hello-team-wc.yaml).
+The kind test runs no Flux in a workload cluster, so `hello-team-wc` is checked against the schemas of its kinds, not
+reconciled. Both use [podinfo](https://github.com/stefanprodan/podinfo), Flux's demo app, as the team's repository: its
 `kustomize` directory holds a `Deployment`, a `Service` and a `HorizontalPodAutoscaler`.
 
 Export the team's name, its repository, the branch Flux delivers from and the directory in it. With podinfo, as below,
@@ -214,7 +216,9 @@ Install flux-app with steps 2 and 3 of
 [Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster), with
 `FLUX_WC_DIR=${WC_DIR}`, and none of the others: the `-direct` `Kustomization` already applies `out-of-band` to this
 cluster, and Flux in the workload cluster mustn't apply it as well. Flux brings its CRDs with it, which the `-direct`
-`Kustomization` needs before it can apply a `GitRepository` or a `Kustomization`.
+`Kustomization` needs before it can apply a `GitRepository` or a `Kustomization`: on a cluster without Flux, it
+would fail on those two kinds and deliver nothing. A cluster whose own Flux already pulls `out-of-band`, such as the
+`out-of-band-flux-app` example, needs neither: the steps below are the same, and that Flux delivers the file.
 
 1. If you added a team with Flux on the management cluster above, give this one another name, so that the two don't
    share a namespace:

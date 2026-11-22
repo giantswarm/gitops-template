@@ -206,7 +206,7 @@ function test() {
 		# The secret stores in bases/secret_stores read cloud secret managers, which CI can't
 		# reach, so no cluster of the repository uses them and no Kustomization above builds
 		# them. Each base is built here and its manifests checked.
-		local secret_store_bases
+		local secret_store_bases manifests
 		secret_store_bases=$(find bases/secret_stores -name kustomization.yaml -printf '%h\n' | sort)
 		if [ -z "${secret_store_bases}" ]; then
 			echo "No secret store bases found in bases/secret_stores."
@@ -224,6 +224,24 @@ function test() {
 			echo "OK"
 			echo -n "kubeconform: "
 			if ! kubeconform_check "${tmp_file}"; then
+				has_validation_errors=1
+			else
+				echo "OK"
+			fi
+			echo ""
+		done
+
+		# A workload cluster's own Flux pulls its out-of-band directory, so no Kustomization
+		# above builds it and the kind test doesn't apply it. Its manifests are checked here.
+		local out_of_band applied
+		applied=$(printf '%s\n' "${KUSTOMIZATIONS[@]}" | cut -d, -f4 | sed 's|^\./||; s|/$||')
+		for out_of_band in $(find management-clusters -type d -name out-of-band | sort); do
+			if grep -qxF "${out_of_band}" <<<"${applied}"; then
+				continue
+			fi
+			echo -n "kubeconform ${out_of_band}: "
+			mapfile -t manifests < <(find "${out_of_band}" -name '*.yaml' | sort)
+			if [ "${#manifests[@]}" -eq 0 ] || ! kubeconform_check "${manifests[@]}"; then
 				has_validation_errors=1
 			else
 				echo "OK"
