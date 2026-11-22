@@ -8,11 +8,13 @@ and leaves `suspend` alone, as the test's own field manager owns it. The asserti
 assertions/exists/notifications prove that Flux applied the objects and that each Alert names
 its Provider and stays suspended. notification_objects.py waits until External Secrets Operator
 has written each token Secret's `token` from the test's fake store and the Receiver is Ready,
-both of which this module judges.
+both of which this module judges. It also judges which event messages an Alert drops, which
+test_commit_status.py checks against the example's Alerts.
 """
 
 import base64
 import copy
+import re
 
 from checks.conditions import is_ready, not_ready_reason, obj_key
 
@@ -27,6 +29,14 @@ def suspended(alert: dict) -> dict:
 def suspended_alerts(manifests: list[dict | None]) -> list[dict]:
     """A suspended copy of every Alert among `manifests`, such as the documents of a build."""
     return [suspended(m) for m in manifests if m and m.get("kind") == "Alert"]
+
+
+def excluded(alert: dict, message: str) -> bool:
+    """Whether the Alert `alert` drops an event with `message`: as notification-controller does,
+    whether any pattern of its `exclusionList` matches anywhere in the message. Go's and
+    Python's regular expressions agree on the patterns the example uses."""
+    patterns = alert["spec"].get("exclusionList") or []
+    return any(re.search(pattern, message) for pattern in patterns)
 
 
 def receiver_problems(receiver: dict | None) -> list[str]:

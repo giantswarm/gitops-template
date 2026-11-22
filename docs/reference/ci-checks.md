@@ -399,6 +399,14 @@ copy, asks Flux to reconcile the organisation's namespace `Kustomization`, which
 the copy back.
 `tests/ats/test_shared_objects.py` checks, without a cluster, that the example organisation lists the base.
 
+### Commit statuses
+
+The kind test creates both commit-status `Alert`s suspended, so it posts nothing to GitHub, and
+`tests/ats/assertions/exists/notifications` checks that Flux applied them as the repository has them.
+`tests/ats/test_commit_status.py` checks, without a cluster, that each `Alert`'s `exclusionList` drops the event
+kustomize-controller sends while a `Kustomization` waits for its `dependsOn`, and none of its other events, see
+[Report reconcile status on GitHub commits](../how-to/commit-statuses.md#check-the-statuses).
+
 ### Workload cluster secret stores
 
 `test_workload_cluster_secret_store` checks the

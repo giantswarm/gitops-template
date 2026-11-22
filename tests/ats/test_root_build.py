@@ -130,7 +130,7 @@ def test_root_dependency_problems_without_the_root() -> None:
 
 def test_root_dependency_problems_in_another_namespace() -> None:
     k = organization_kustomization("org-acme")
-    k["spec"]["dependsOn"] = [{"name": "mc-gitops", "namespace": "flux-system"}]
+    k["spec"]["dependsOn"] = [{"name": "mc-gitops", "namespace": "flux-giantswarm"}]
     assert root_dependency_problems([k], "mc-gitops") == [
         "Kustomization 'default/mc-organization-acme' doesn't depend on 'mc-gitops'"
     ]

@@ -15,6 +15,12 @@ spec:
   providerRef:
     name: github-commit-status
   eventSeverity: info
+  # While a Kustomization waits for its `dependsOn`, kustomize-controller sends an `info` event for
+  # the new commit, and GitHub's notifier posts every `info` event but `Progressing` as `success`:
+  # without this exclusion, the commit would go green before the Kustomization applied anything, and
+  # stay green if its parent then failed. The pattern drops that one message and nothing else.
+  exclusionList:
+    - "^Dependencies do not meet ready condition, retrying in "
   eventSources:
     - kind: Kustomization
       name: "*"

@@ -1,6 +1,6 @@
 # N1: the notification example. Each Provider names its token Secret, and each Alert names its
-# Provider and stays suspended, so the test posts nothing to GitHub. The management cluster's
-# Alert covers the Kustomizations in `default`; the organisation's, in its namespace, where the
+# Provider, drops the event of a Kustomization waiting for its `dependsOn`, and stays suspended,
+# so the test posts nothing to GitHub. The management cluster's Alert covers the Kustomizations in `default`; the organisation's, in its namespace, where the
 # organisation's namespace Kustomization applies it, covers the repository's Kustomizations in
 # `org-org-name`, the workload clusters', and not the application team's.
 # notification_objects.py waits until ESO has written the token Secrets' `token` from the fake
@@ -24,6 +24,8 @@ spec:
   providerRef:
     name: github-commit-status
   eventSeverity: info
+  exclusionList:
+    - "^Dependencies do not meet ready condition, retrying in "
   eventSources:
     - kind: Kustomization
       name: "*"
@@ -48,6 +50,8 @@ spec:
   providerRef:
     name: github-commit-status
   eventSeverity: info
+  exclusionList:
+    - "^Dependencies do not meet ready condition, retrying in "
   eventSources:
     - kind: Kustomization
       name: mc-name-clusters-capi-wc-name
