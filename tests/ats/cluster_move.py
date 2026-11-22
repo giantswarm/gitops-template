@@ -69,12 +69,19 @@ def move(cluster_dir: Path, retarget: bool = True) -> None:
     path.write_text(yaml.safe_dump(kustomization, sort_keys=False))
 
 
+class NotOneError(LookupError):
+    """The build has no object, or more than one, where the move needs exactly one."""
+
+    def __init__(self, count: int, what: str) -> None:
+        super().__init__(f"{count} {what} in the build, not one")
+
+
 def named(objects: list[dict], kind: str, name: str = CLUSTER_NAME) -> dict:
     found = [
         o for o in objects if o.get("kind") == kind and o["metadata"]["name"] == name
     ]
     if len(found) != 1:
-        raise LookupError(f"{len(found)} {kind} objects named '{name}' in the build")
+        raise NotOneError(len(found), f"{kind} objects named '{name}'")
     return found[0]
 
 
@@ -90,7 +97,7 @@ def rendered_values_from(objects: list[dict]) -> list[dict]:
         r for r in resource_set["spec"]["resources"] if r.get("kind") == "HelmRelease"
     ]
     if len(releases) != 1:
-        raise LookupError(f"the ResourceSet renders {len(releases)} HelmReleases")
+        raise NotOneError(len(releases), "HelmReleases in the ResourceSet")
     return releases[0]["spec"].get("valuesFrom") or []
 
 
