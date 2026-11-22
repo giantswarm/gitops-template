@@ -9,6 +9,18 @@ A customer reads from the first tutorial to the reference pages, and should hear
 plain-spoken who has done this before and is showing you how. GitOps is a dull subject by design. Learning it needn't
 be.
 
+## Why this page exists
+
+People learn best when they enjoy the read, and this template is how many customers first meet GitOps. So the
+tutorials tell a story, and the reference stays out of your way.
+
+Many people change the template, and more and more of them do it through a coding agent. Each has a style of their
+own. Without something to work from, the voice shifts a little with every pull request, until the tutorials and the
+reference read as if they belonged to different products.
+
+This page is that something. It's a guide, not a gate: it's here so your change sounds like the page it lands in, not
+to turn contributions away.
+
 ## The short version
 
 - Second person. Say "you". Never "we", "our" or "let's". Giant Swarm is "Giant Swarm".
