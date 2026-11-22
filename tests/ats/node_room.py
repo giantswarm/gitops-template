@@ -22,7 +22,9 @@ from resource_requests import (
 ROOM_MARGIN_CPU = 200
 
 
-def _objects(api: pykube.HTTPClient, kind: type[pykube.objects.APIObject]) -> list[dict]:
+def _objects(
+    api: pykube.HTTPClient, kind: type[pykube.objects.APIObject]
+) -> list[dict]:
     query = kind.objects(api)
     if issubclass(kind, pykube.objects.NamespacedAPIObject):
         query = query.filter(namespace=pykube.all)
@@ -34,7 +36,9 @@ def node_room_problems(
 ) -> list[str]:
     """Why the kind cluster can't take the planned scale-ups of the workload cluster's apps."""
     allocatable = sum(
-        cpu_millicores(((n.get("status") or {}).get("allocatable") or {}).get("cpu", "0"))
+        cpu_millicores(
+            ((n.get("status") or {}).get("allocatable") or {}).get("cpu", "0")
+        )
         for n in _objects(api, pykube.Node)
     )
     planned = planned_cpu(
