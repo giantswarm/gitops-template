@@ -57,10 +57,13 @@ The versions are variables at the top of `test-all-ff`. If you add a resource wh
 add a `-schema-location` for it to the script.
 
 `fake-flux` builds with the Flux CLI of the same version, whatever `flux` you have installed: `test-all-ff` downloads
-`v2.7.5` for Linux or macOS on amd64 or arm64 once, checks its SHA-256 against the one at the top of the script and keeps
-it under `${TMPDIR:-/tmp}/gitops-template-schemas`, first in the `PATH` it runs `fake-flux` with. `validate` checks that
-the CLI is that version. When you move `FLUX_VERSION`, move the CLI checksums and `FLUX_CRD_SCHEMAS_SHA256` with it,
-from the release's `flux_<version>_checksums.txt` and `crd-schemas.tar.gz`.
+the `v2.7.5` release archive for Linux or macOS on amd64 or arm64 once and keeps it under
+`${TMPDIR:-/tmp}/gitops-template-schemas`. Every run checks the archive's SHA-256 against the one at the top of the
+script, unpacks the CLI into the run's own temporary directory and puts it first in the `PATH` it runs `fake-flux`
+with, so a cached CLI is never run unchecked. A cached archive that doesn't match fails the run: delete it to download
+it again. `validate` checks that the CLI is that version, and that a changed archive is refused. When you move
+`FLUX_VERSION`, move the CLI checksums and `FLUX_CRD_SCHEMAS_SHA256` with it, from the release's
+`flux_<version>_checksums.txt` and `crd-schemas.tar.gz`.
 
 ### test-all-ff usage
 
