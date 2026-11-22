@@ -31,6 +31,8 @@ ALERT_FILE = MC_DIR / "notifications/commit-status-alert.yaml"
 #  namespace: the organisation's namespace Kustomization puts it in the organisation's, and so
 #  does the test
 ORG_NAMESPACE_DIR = MC_DIR / "organizations/ORG_NAME/namespace"
+# the organisation's Alert itself
+ORG_ALERT_FILE = ORG_NAMESPACE_DIR / "notifications/commit-status-alert.yaml"
 KUBECTL_URL = "https://kubernetes.io/docs/tasks/tools/"
 # not starting with `kubectl`: Flux removes the fields of those managers when it applies
 FIELD_MANAGER = "gitops-template-test"

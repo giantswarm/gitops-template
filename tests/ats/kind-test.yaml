@@ -89,7 +89,8 @@ examples:
 # The node pools of every workload cluster's HelmRelease, by namespace. In a namespace
 # listed here, every cluster has to be listed; a namespace that isn't listed isn't
 # checked. Production clusters get their own nodepool0 and their region's extra pool;
-# dev, staging and scheduled-upgrades have none of their own and get the chart's.
+# dev and staging have none of their own and get the chart's. scheduled-upgrades gets
+# `workers` from its own values, which a patch on its ResourceSet adds.
 nodePools:
   org-org-name:
     hello-app-prod-euc: [nodepool0, large]
@@ -99,7 +100,7 @@ nodePools:
     capi-wc-name: [workers]
     out-of-band-flux-app: [workers]
     out-of-band-no-flux: [workers]
-    scheduled-upgrades: []
+    scheduled-upgrades: [workers]
 
 # The HelmReleases a cluster's Kustomization applies while its Cluster isn't Available,
 # by the Cluster's namespace/name: the Gateway API stack of bases/stacks/envoy-gateway.

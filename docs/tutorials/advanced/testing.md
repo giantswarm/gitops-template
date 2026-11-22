@@ -178,7 +178,7 @@ uses the existing `default` namespace and neither creates nor deletes one.
 
 | Test | What it checks |
 | --- | --- |
-| `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster` is `Available`, the cluster's `Kustomization` health-checks it and waits for it to be `Available`, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
+| `readiness-ordering` | Along the `out-of-band-no-flux` cluster's chain, each object is linked to the one before it and is `Ready`: the `Cluster`'s control plane is available and reachable, the cluster's `Kustomization` health-checks it and waits for its control plane, the apps `Kustomization` depends on that one, and the `hello-world-standalone` `HelmRelease` depends on `gateway-api-crds`. The test checks the links and the state the objects end in, not the order they got `Ready` in. A failure names the first object of the chain that isn't `Ready` or isn't linked. |
 | `kyverno-generate` | The [shared-objects](../../how-to/share-objects.md) policy is `Ready`, and the organisation's namespace has its copy of the ConfigMap, with the source's data and Kyverno's labels. |
 | `external-secrets` | The example's `ExternalSecret`, which gives an app secret values as in the [basic tutorial](../basic/getting-started.md#4-deploy-an-app), has synced, the Secret it writes has the `reconcile.fluxcd.io/watch` label and the values, and the `HelmRelease` that reads the values from that key is `Ready`. |
 

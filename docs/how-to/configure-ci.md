@@ -25,7 +25,10 @@ as inputs, each with a comment that says why it has the value it has:
 | `gitops_ignored_objects` | empty |
 | `gitops_init_namespaces` | `default` |
 
-Renovate keeps the versions up to date through the `# renovate:` comment above each.
+Renovate keeps the versions up to date through the `# renovate:` comment above each. `kind_ver` follows the
+management clusters, not kind's releases: an `allowedVersions` bound in `renovate.json5` keeps it, and the other pins
+that stand for what the management clusters run, at the versions they run. When the management clusters move, raise
+the bound there.
 
 ## The kind test in your fork
 

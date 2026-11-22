@@ -1,17 +1,45 @@
 """Checks of the gates of the template's example organisation, and of the stand-in `Cluster`'s
 condition; they need no cluster."""
 
+import re
+
+from cluster_gates import CLUSTER_HEALTH_EXPR, CONTROL_PLANE_CONDITIONS
 from kind_config import kind_test_config, require_example
-from repository_gates import gates_in_repository, gates_of
-from stand_in_clusters import available_condition
+from repository_gates import cluster_health_exprs, gates_in_repository, gates_of
+from stand_in_clusters import stand_in_conditions
 
 
-def test_available_condition_has_a_message() -> None:
+def test_stand_in_conditions_have_a_message() -> None:
     # v1beta2 conditions require `message`, even an empty one
-    condition = available_condition("False")
-    assert condition["type"] == "Available"
-    assert condition["status"] == "False"
-    assert condition["message"] == ""
+    for condition in stand_in_conditions("False"):
+        assert condition["message"] == ""
+
+
+def test_stand_in_cluster_is_short_of_workers_either_way() -> None:
+    # a node pool below its minimum: Cluster API reports the cluster not Available, and the gate
+    #  has to open all the same once the control plane is up
+    for control_plane in ("False", "True"):
+        statuses = {c["type"]: c["status"] for c in stand_in_conditions(control_plane)}
+        assert statuses["Available"] == "False"
+        assert statuses["WorkersAvailable"] == "False"
+        for condition in CONTROL_PLANE_CONDITIONS:
+            assert statuses[condition] == control_plane
+
+
+def test_cluster_health_expr_waits_for_the_control_plane_only() -> None:
+    assert re.findall(r"c\.type == '(\w+)'", CLUSTER_HEALTH_EXPR) == list(
+        CONTROL_PLANE_CONDITIONS
+    )
+
+
+def test_cluster_kustomizations_wait_for_the_control_plane() -> None:
+    # every Kustomization of the example organisation that health-checks a Cluster counts it as
+    #  healthy once its control plane is available and reachable, not once every node pool is
+    require_example("organisation")
+    exprs = cluster_health_exprs()
+    gates, _ = gates_in_repository()
+    assert set(exprs) == {kustomizations[0][0] for kustomizations in gates.values()}
+    assert {name: e for name, e in exprs.items() if e != [CLUSTER_HEALTH_EXPR]} == {}
 
 
 def test_gates_of_reports_a_dependency_without_a_cluster_health_check() -> None:

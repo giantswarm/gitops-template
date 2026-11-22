@@ -4,8 +4,8 @@ without a cluster.
 A gate is a Kustomization that health-checks a Cluster API `Cluster`, and the Kustomizations that
 depend on it. The test finds them in the cluster once the organisations' Kustomizations have
 applied them, so it needs no list of the repository's clusters: a fork's own clusters get their
-stand-in `Cluster`s too. The base apps a cluster's Kustomization applies before the cluster is
-Available are `clusterBaseApps` in kind-test.yaml.
+stand-in `Cluster`s too. The base apps a cluster's Kustomization applies before the cluster's
+control plane is up are `clusterBaseApps` in kind-test.yaml.
 """
 
 from typing import NamedTuple
@@ -13,6 +13,16 @@ from typing import NamedTuple
 from flux_inventory import DEPENDENCY_NOT_READY, inventory_keys
 
 CLUSTER_KIND = "Cluster"
+# What a cluster Kustomization's health check waits for, as Cluster API v1.14.4 names the
+#  conditions of a v1beta2 `Cluster`: an available control plane that it can reach. The secondary
+#  apps need no more. `Available` would also wait for every node pool, so one node pool short of
+#  its minimum would hold back every change to the cluster's apps.
+CONTROL_PLANE_CONDITIONS = ("ControlPlaneAvailable", "RemoteConnectionProbe")
+# the CEL expression of that health check, in each cluster Kustomization's `healthCheckExprs`
+CLUSTER_HEALTH_EXPR = " && ".join(
+    f"status.conditions.exists(c, c.type == '{condition}' && c.status == 'True')"
+    for condition in CONTROL_PLANE_CONDITIONS
+)
 
 
 class Gate(NamedTuple):
@@ -86,7 +96,7 @@ def held_problems(key: str, obj: dict | None) -> list[str]:
     applied = sorted(inventory_keys(obj))
     if applied:
         problems.append(
-            f"Kustomization '{key}' applied {applied} before the cluster was Available"
+            f"Kustomization '{key}' applied {applied} before the cluster's control plane was up"
         )
     return problems
 
@@ -99,7 +109,7 @@ def opened_problems(key: str, obj: dict | None) -> list[str]:
     if ready.get("status") == "True":
         return []
     return [
-        f"Kustomization '{key}' isn't ready after the cluster was Available: "
+        f"Kustomization '{key}' isn't ready after the cluster's control plane was up: "
         f"{ready.get('reason')}: {ready.get('message', '')}"
     ]
 
@@ -115,7 +125,7 @@ def base_app_problems(gate: Gate, hrs: dict[str, dict]) -> list[str]:
         if owner != gate.cluster_kustomization:
             problems.append(
                 f"base app HelmRelease '{key}' isn't applied by "
-                f"'{gate.cluster_kustomization}' while the cluster isn't Available: "
+                f"'{gate.cluster_kustomization}' while the cluster's control plane isn't up: "
                 f"its owner is {owner}"
             )
     return problems

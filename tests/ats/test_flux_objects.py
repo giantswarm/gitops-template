@@ -7,6 +7,7 @@ why, when the example isn't there.
 """
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pykube
 import pytest
@@ -36,6 +37,7 @@ from prune_checks import check_prune
 from pytest_helm_charts.clusters import Cluster
 from resource_set_cluster_guard import check_cluster_input_loss
 from resource_set_guard import check_input_loss
+from resource_set_move import check_move
 from resource_set_objects import EXAMPLE as RESOURCE_SET_EXAMPLE
 from resource_set_objects import EXAMPLES, install_now
 from resource_set_schedule import check_schedule_window
@@ -60,8 +62,9 @@ pytestmark = pytest.mark.usefixtures(
 def cluster_gate_problems(
     kube_cluster: Cluster, gitops_deployment: list[str]
 ) -> Iterator[list[str]]:
-    # The cluster Kustomizations get ready only once their stand-in Cluster is Available, so
-    #  this runs before the Kustomizations are checked; test_apps_wait_for_cluster reports it.
+    # The cluster Kustomizations get ready only once their stand-in Cluster's control plane is
+    #  up, so this runs before the Kustomizations are checked; test_apps_wait_for_cluster
+    #  reports it.
     #  The organisations' Kustomizations have applied the cluster Kustomizations by now.
     api = kube_cluster.kube_client
     gated = gates(api)
@@ -276,7 +279,7 @@ def test_workload_cluster_secret_store(
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
-    # G1: a cluster's apps Kustomizations apply nothing until the cluster is Available
+    # G1: a cluster's apps Kustomizations apply nothing until the cluster's control plane is up
     assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
 
 
@@ -306,6 +309,16 @@ def test_input_loss_keeps_the_cluster(
 ) -> None:
     require_example(RESOURCE_SET_EXAMPLE)
     check_cluster_input_loss(kube_cluster.kube_client)
+
+
+def test_move_to_scheduled_upgrades(
+    kube_cluster: Cluster,
+    tmp_path: Path,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    require_example("capi-wc-name")
+    check_move(kube_cluster.kube_client, tmp_path)
 
 
 # must stay last: it deletes what the tests above check

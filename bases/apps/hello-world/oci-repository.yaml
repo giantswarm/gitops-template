@@ -9,5 +9,5 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    tag: 3.2.2
+    tag: 3.2.4
   url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

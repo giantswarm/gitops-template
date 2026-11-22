@@ -52,13 +52,31 @@ def gates_of(
     return gates, problems
 
 
-def gates_in_repository() -> tuple[Gates, list[str]]:
-    """The gates of the workload cluster Kustomizations in the repository."""
+def _workload_cluster_kustomizations() -> list[dict]:
     kustomizations = []
     for file in sorted(WORKLOAD_CLUSTERS_DIR.glob("*.yaml")):
         if file.name != "kustomization.yaml":
             with file.open() as f:
                 kustomizations.append(yaml.safe_load(f))
+    return kustomizations
+
+
+def cluster_health_exprs() -> dict[str, list[str]]:
+    """The `current` expressions each workload cluster Kustomization that health-checks a
+    `Cluster` has for the kind `Cluster`, by its name."""
+    return {
+        k["metadata"]["name"]: [
+            e["current"]
+            for e in k["spec"].get("healthCheckExprs") or []
+            if e["kind"] == "Cluster"
+        ]
+        for k in _workload_cluster_kustomizations()
+        if any(c["kind"] == "Cluster" for c in k["spec"].get("healthChecks") or [])
+    }
+
+
+def gates_in_repository() -> tuple[Gates, list[str]]:
+    """The gates of the workload cluster Kustomizations in the repository."""
     with ORGANIZATION_KUSTOMIZATION_FILE.open() as f:
         organization_kustomization = yaml.safe_load(f)["metadata"]["name"]
-    return gates_of(kustomizations, organization_kustomization)
+    return gates_of(_workload_cluster_kustomizations(), organization_kustomization)

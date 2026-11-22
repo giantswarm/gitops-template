@@ -20,9 +20,10 @@ organisation's namespace Kustomization applies [`secret-stores/`](secret-stores/
 
 ## When you copy it
 
-Change the `TODO` name in `apps.yaml` to your management cluster and organisation. Leave `organization: "ORG_NAME"`
-as it is: the organisation's `kustomization.yaml` fills it in. Delete `secret-stores/`, and its line in
-`../namespace/kustomization.yaml`, if you don't push secrets into your clusters with ESO.
+Change the `TODO` names in `apps.yaml`: its own, and that of the management cluster's Kustomization it depends on.
+Leave `organization: "ORG_NAME"` as it is: the organisation's `kustomization.yaml` fills it in. Delete
+`secret-stores/`, and its line in `../namespace/kustomization.yaml`, if you don't push secrets into your clusters with
+ESO.
 
 ## Read more
 

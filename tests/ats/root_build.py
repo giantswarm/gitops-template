@@ -21,6 +21,9 @@ DEFAULT_NAMESPACE = "default"
 CLUSTER_SCOPED_KINDS = {"Organization"}
 KUBECTL_URL = "https://kubernetes.io/docs/tasks/tools/"
 KUSTOMIZATION_FILE = "kustomization.yaml"
+# the annotation, and its value, that keep Flux from pruning an object it applied
+PRUNE_ANNOTATION = "kustomize.toolkit.fluxcd.io/prune"
+PRUNE_DISABLED = "disabled"
 
 
 def generated_resources(directory: Path) -> list[Path]:
@@ -127,10 +130,13 @@ def namespace_build_problems(objects: list[dict], namespace: str) -> list[str]:
 
 
 def root_dependency_problems(objects: list[dict], root: str) -> list[str]:
-    """The namespace Kustomizations in `objects` that don't depend on the root Kustomization
-    `root`, in their own namespace. With it, the root applies every commit first."""
+    """The Kustomizations in `objects`, other than the root Kustomization `root`, that don't
+    depend on it, in their own namespace. With it, the root applies every commit first.
+    """
     problems = []
-    for k in (o for o in objects if _labelled(o)):
+    for k in _kustomizations(objects):
+        if k["metadata"]["name"] == root:
+            continue
         namespace = k["metadata"].get("namespace", DEFAULT_NAMESPACE)
         depends_on = k["spec"].get("dependsOn") or []
         if not any(
@@ -143,6 +149,18 @@ def root_dependency_problems(objects: list[dict], root: str) -> list[str]:
 
 def _kustomizations(objects: list[dict]) -> list[dict]:
     return [o for o in objects if o.get("kind") == "Kustomization"]
+
+
+def unguarded_kustomizations(objects: list[dict]) -> list[str]:
+    """The Kustomizations in `objects` without the PRUNE_ANNOTATION that keeps Flux from
+    deleting them, and with them everything they applied, when they leave their parent's build.
+    """
+    return [
+        describe(k)
+        for k in _kustomizations(objects)
+        if ((k["metadata"].get("annotations") or {}).get(PRUNE_ANNOTATION))
+        != PRUNE_DISABLED
+    ]
 
 
 def source_problems(objects: list[dict], parent: dict) -> list[str]:

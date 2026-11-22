@@ -16,6 +16,7 @@ from root_build import (
     namespace_builds,
     organization_namespace_problems,
     root_dependency_problems,
+    unguarded_kustomizations,
 )
 
 ORGANIZATION = {
@@ -133,9 +134,30 @@ def test_root_dependency_problems_without_the_root() -> None:
     ]
 
 
+def test_root_dependency_problems_of_another_kustomization() -> None:
+    # every Kustomization the root applies follows it, not only the organisations' namespace
+    #  ones; the root itself is in its own build and depends on nothing
+    root = kustomization("mc-gitops")
+    apps = kustomization("mc-multicluster-apps-acme")
+    assert root_dependency_problems([root, apps], "mc-gitops") == [
+        "Kustomization 'default/mc-multicluster-apps-acme' doesn't depend on 'mc-gitops'"
+    ]
+
+
+def test_unguarded_kustomizations() -> None:
+    guarded = kustomization("mc-gitops")
+    guarded["metadata"]["annotations"] = {
+        "kustomize.toolkit.fluxcd.io/prune": "disabled"
+    }
+    unguarded = organization_kustomization("org-acme")
+    assert unguarded_kustomizations([ORGANIZATION, guarded, unguarded]) == [
+        "Kustomization 'default/mc-organization-acme'"
+    ]
+
+
 def test_root_dependency_problems_in_another_namespace() -> None:
     k = organization_kustomization("org-acme")
-    k["spec"]["dependsOn"] = [{"name": "mc-gitops", "namespace": "flux-system"}]
+    k["spec"]["dependsOn"] = [{"name": "mc-gitops", "namespace": "flux-giantswarm"}]
     assert root_dependency_problems([k], "mc-gitops") == [
         "Kustomization 'default/mc-organization-acme' doesn't depend on 'mc-gitops'"
     ]
@@ -180,13 +202,24 @@ def test_root_build_applies_each_organisation_namespace(
     assert not problems, "\n".join(problems)
 
 
-def test_organisation_namespace_kustomizations_follow_the_root(
+def test_root_build_kustomizations_follow_the_root(
     root: RootKustomization, root_build: list[dict]
 ) -> None:
     # the root applies every commit first, so an object that moves between the root and an
     #  organisation's namespace/ moves in that order
     problems = root_dependency_problems(root_build, root.name)
     assert not problems, "\n".join(problems)
+
+
+def test_root_build_guards_its_kustomizations(root_build: list[dict]) -> None:
+    # A Kustomization that leaves the root's build, renamed or deleted, would be deleted, and
+    #  its finalizer would delete everything it applied, every app of an organisation's clusters
+    #  among it. The annotation leaves it, the root itself included, as the root applies itself.
+    unguarded = unguarded_kustomizations(root_build)
+    assert not unguarded, (
+        "Give these Kustomizations the `kustomize.toolkit.fluxcd.io/prune: disabled` "
+        f"annotation, see docs/explanation/deletion-protection.md: {unguarded}"
+    )
 
 
 def test_organisation_namespace_builds_stay_in_the_namespace(

@@ -10,14 +10,16 @@ once the cluster is up. The `HelmRelease` installs into the workload cluster's `
 
 ## What's here
 
-- `oci-repository.yaml`: the chart, with `spec.ref.semver: '>=3.0.0-0'` instead of a fixed tag. The `-0` suffix
-  lets pre-releases in.
+- `oci-repository.yaml`: the chart, with `spec.ref.semver: '>=3.2.2 <4.0.0'` instead of a fixed tag: stable releases
+  from 3.2.2, the first that accepts the cluster values, up to the next major version.
 - `helm-release.yaml`: installs it, once the cluster's Gateway API CRDs are ready.
 
 ## When you copy it
 
-Change the chart `url` and the range. Drop the `-0` if you want stable releases only, and cap the range below the
-next major version, such as `>=3.0.0 <4.0.0`, if a major version may break you.
+Change the chart `url` and the range. Keep the upper bound unless you're happy to get the next major version
+unasked. A range takes pre-releases only with a `-0` suffix; on `gsoci.azurecr.io` a pre-release is a build of an
+unmerged branch, so leave them to a dev stage, see
+[Stages and regions](/docs/tutorials/intermediate/stages-and-regions.md).
 
 ## Read more
 

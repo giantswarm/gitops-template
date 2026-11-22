@@ -5,6 +5,7 @@ Every change to an app is a change to one of its files, pushed to Git. The trick
 | To change | Edit | Resource |
 | --- | --- | --- |
 | the chart version | `oci-repository.yaml` | the `OCIRepository` |
+| the chart version of a [scheduled](../tutorials/advanced/scheduled-upgrades.md) or [multicluster](../tutorials/advanced/multicluster-apps.md) app | `spec.filter.semver` in its `input-provider.yaml` | the `ResourceSetInputProvider` |
 | how the chart is installed, such as the target namespace, timeouts or retries | `helm-release.yaml` | the `HelmRelease` |
 | plain values | `override_config.yaml` | the `-user-values` ConfigMap the app's `kustomization.yaml` generates |
 | secret values | your secret manager, or `secret.enc.yaml` | the `-user-secrets` Secret |
@@ -47,6 +48,39 @@ stage's patch wins: change the version there, see
 To have Flux pick up new versions by itself, use a version range instead, see
 [Let Flux install new chart versions](../tutorials/intermediate/automatic-updates.md).
 
+A scheduled or multicluster app has no `oci-repository.yaml`: its `ResourceSet` renders the `OCIRepository` at the
+version its provider exports. Change the provider's range, `spec.filter.semver` in `input-provider.yaml`, instead. A new
+range reaches the app at the provider's next window, like a new version, see
+[How the window works](../tutorials/advanced/scheduled-upgrades.md#how-the-window-works).
+
+## Back out a version
+
+Flux rolls back an upgrade that fails, on its own. This is for one that succeeded and then misbehaved.
+
+For an app with an `oci-repository.yaml`, set the last good version as the tag, as in
+[Change the chart version](#change-the-chart-version), then commit and push.
+
+For a scheduled or multicluster app, pin the provider to the last good version, then make it read the registry at
+once, as a pin waits for the window too. In the app's directory, `multicluster/apps/APP_NAME` for a multicluster app,
+with `PROVIDER_NAME` the provider's `metadata.name`, `${cluster_name}` filled in:
+
+1. Pin the range, then commit and push:
+
+    ```sh
+    yq -i '.spec.filter.semver = "LAST_GOOD_VERSION"' input-provider.yaml
+    git commit -am "Back out ${APP_NAME} to LAST_GOOD_VERSION" && git push
+    ```
+
+1. Wait until Flux has applied the pin, which this prints, then force the provider. It exports the pinned version,
+   and the `ResourceSet` moves every cluster it renders for back to it:
+
+    ```sh
+    kubectl get resourcesetinputprovider PROVIDER_NAME -n org-${ORG_NAME} -o jsonpath='{.spec.filter.semver}'
+    flux-operator reconcile inputprovider PROVIDER_NAME -n org-${ORG_NAME} --force
+    ```
+
+Put the range back once a fixed version is out; it reaches the app at the next window.
+
 ## Change how the chart is installed
 
 Edit `helm-release.yaml`. The [HelmRelease documentation](https://fluxcd.io/flux/components/helm/helmreleases/)
@@ -55,6 +89,31 @@ lists every field. Two need care on a running app:
 - `releaseName`, `targetNamespace` and `storageNamespace` name the Helm release. Changing one installs a new release
   next to the old one, rather than moving it.
 - `kubeConfig` points the release at the workload cluster. Without it, the chart installs into the management cluster.
+
+## Correct changes made by hand
+
+Flux sets back what someone changes by hand in what its `Kustomization`s apply, the `HelmRelease` and its values
+included. What the chart installs in the workload cluster is helm-controller's, and by default it doesn't look at it
+again once it's installed: a `kubectl edit` on the app's Deployment stays until the chart or its values change. To have
+helm-controller compare the release with what runs in the cluster, set `spec.driftDetection` in `helm-release.yaml`:
+
+```yaml
+spec:
+  driftDetection:
+    # `warn` only reports what differs; `enabled` sets it back
+    mode: enabled
+    ignore:
+      # the HorizontalPodAutoscaler sets the replica count
+      - paths: ["/spec/replicas"]
+        target:
+          kind: Deployment
+```
+
+It's off in the bases on purpose. With it on, helm-controller checks every object of the release against the workload
+cluster at each `interval`, and sets back anything that differs, including what something in the cluster changes on
+purpose: an autoscaler's replica count, a field an operator or a webhook fills in. Each of those needs an `ignore` rule,
+or helm-controller and the other party take turns at it for ever. Start with `warn`, read what it reports in the
+`HelmRelease`'s events, add the rules, then switch to `enabled`.
 
 ## Change the values
 

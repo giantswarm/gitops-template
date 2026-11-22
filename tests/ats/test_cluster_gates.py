@@ -31,7 +31,7 @@ def test_held_problems() -> None:
     ]
     assert held_problems(KEY, kustomization("DependencyNotReady", inventory=True)) == [
         "Kustomization 'default/apps' applied [('HelmRelease', 'org-org-name', 'wc-app')] "
-        "before the cluster was Available"
+        "before the cluster's control plane was up"
     ]
 
 
@@ -39,7 +39,7 @@ def test_opened_problems() -> None:
     ready = kustomization("ReconciliationSucceeded", "True", inventory=True)
     assert opened_problems(KEY, ready) == []
     assert opened_problems(KEY, kustomization("DependencyNotReady")) == [
-        "Kustomization 'default/apps' isn't ready after the cluster was Available: "
+        "Kustomization 'default/apps' isn't ready after the cluster's control plane was up: "
         "DependencyNotReady: "
     ]
 
@@ -62,12 +62,12 @@ def test_base_app_problems() -> None:
     }
     assert base_app_problems(gate, hrs) == [
         "base app HelmRelease 'org-org-name/wc-gateway' isn't applied by 'cluster' while "
-        "the cluster isn't Available: its owner is None"
+        "the cluster's control plane isn't up: its owner is None"
     ]
     hrs["org-org-name/wc-gateway"] = owned_by("apps")
     assert base_app_problems(gate, hrs) == [
         "base app HelmRelease 'org-org-name/wc-gateway' isn't applied by 'cluster' while "
-        "the cluster isn't Available: its owner is apps"
+        "the cluster's control plane isn't up: its owner is apps"
     ]
 
 
