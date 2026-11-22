@@ -447,7 +447,10 @@ A cluster with apps has two Kustomizations:
    one node pool short of its minimum would hold back every change to the cluster's apps, including the one that
    would fix it. Cluster API keeps `ControlPlaneAvailable` `True` through a rolling upgrade of the control plane while
    enough of it is healthy, and reports `RemoteConnectionProbe` `False` only once the cluster has been unreachable for
-   50 seconds.
+   50 seconds. On a new cluster, the control plane can be up before any worker node has joined, so the secondary apps'
+   pods may wait `Pending`, and a `HelmRelease` may run out its 10-minute `timeout`. The app bases retry a failed
+   install up to 10 times, uninstalling it in between, so it settles by itself once the nodes join. A slower first
+   install is the price of not holding back every later change to the apps while one node pool is short.
 1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps`, which its `kustomization.yaml`
    lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster's control
    plane is up. Until then, it reports `DependencyNotReady`.

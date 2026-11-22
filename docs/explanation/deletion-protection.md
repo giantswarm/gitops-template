@@ -49,7 +49,7 @@ it as not ready. To delete it on purpose, remove the label with a push first, th
   every cluster that uses it. The keys are encrypted, so each directory's `kustomization.yaml` adds the annotation and
   the label instead: changing an encrypted file by hand breaks its SOPS checksum.
 - The `Kustomization`s that everything else hangs off: the management cluster's own, in `MC_NAME.yaml`, and each
-  organisation's namespace `Kustomization`, in `namespace.yaml`, and multi-cluster apps `Kustomization`, in
+  organisation's namespace `Kustomization`, in `namespace.yaml`, and multicluster apps `Kustomization`, in
   `multicluster/apps.yaml`. These carry the annotation only. When Flux prunes a `Kustomization`, its finalizer
   deletes everything it applied, and the `Kustomization`s among that do the same, all the way down. So a rename, a
   dropped line in a `kustomization.yaml` or a `git rm` of an organisation's directory would uninstall every app on

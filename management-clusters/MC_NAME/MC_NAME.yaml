@@ -3,7 +3,7 @@ kind: Kustomization
 metadata:
   # It applies itself, so renaming it would make it prune itself, and its
   # finalizer would delete everything it applied. The annotation leaves it, as
-  # it does each organisation's namespace and multi-cluster apps Kustomizations.
+  # it does each organisation's namespace and multicluster apps Kustomizations.
   # See docs/explanation/deletion-protection.md.
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled

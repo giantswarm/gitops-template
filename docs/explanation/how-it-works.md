@@ -130,7 +130,10 @@ soon as the cluster can take it.
 
 A secondary app goes into `apps`, which the cluster's apps `Kustomization`, `WC_NAME-apps.yaml`, applies once the
 cluster's control plane is up, because its `dependsOn` waits for the cluster's `Kustomization`. Most apps are
-secondary: they install into a cluster that can take them, and they don't report errors while it comes up.
+secondary. On a new cluster they start installing as soon as the control plane is up, which can be before any worker
+node has joined: their pods wait `Pending`, and a `HelmRelease` may run out its 10-minute `timeout`, be uninstalled and
+installed again, up to 10 times. It settles by itself once the nodes join. That's the price of not waiting for every
+node pool, which would hold back every later change to the apps while one node pool is short.
 
 Both kinds are the same files, an `OCIRepository` and a `HelmRelease`, in a directory of their own. To move an app from
 one kind to the other, move its directory and its entry in the `kustomization.yaml` that lists it, see
