@@ -8,11 +8,13 @@ chart with a Flux `OCIRepository` and `HelmRelease`, and the chart version is th
 
 Sooner or later your clusters share more than the chart's defaults: the same node pools, say, on every cluster of a
 team. Writing those into each cluster works, until someone changes three of the five. This tutorial puts them into a
-base of your own instead, next to the CAPA one, and creates a second cluster from it.
+base of your own instead, next to the CAPA one, and creates a second cluster from it: a real one, with at least three
+`m6i.xlarge` nodes, which [Clean up](#clean-up) deletes again.
 
 - [Choose a base](#choose-a-base)
 - [Create a base with your own defaults](#create-a-base-with-your-own-defaults)
 - [Create a cluster from it](#create-a-cluster-from-it)
+- [Clean up](#clean-up)
 - [Next steps](#next-steps)
 
 A cluster's values come in layers, in the order of its `HelmRelease`'s `valuesFrom`, and later layers win: the
@@ -212,6 +214,13 @@ To give one cluster values of its own on top of the base, see
 [Give a cluster its own values](../../how-to/cluster-values.md#write-the-clusters-values-configmap). To give it
 apps, add an `apps` directory and an apps `Kustomization`, as in the basic tutorial's
 [step 3](../basic/getting-started.md#3-create-a-workload-cluster).
+
+## Clean up
+
+Delete the second cluster when you've seen it come up, as [Delete a workload cluster](../../how-to/delete-cluster.md)
+describes, with `WC_NAME` set to `${WC2_NAME}`. It has no apps, keys or out-of-band resources of its own, so you only
+need the steps for its deletion protection and its files. Your base, in `bases/clusters/${BASE_NAME}`, costs nothing
+and can stay.
 
 ## Next steps
 

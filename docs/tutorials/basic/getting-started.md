@@ -86,7 +86,11 @@ You need:
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
   is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces, which is what Giant Swarm
   gives customers, see [What you can do, and what Giant Swarm does](../../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does),
-- a fork of this repository, cloned locally. Run every command from the root of the clone.
+- your own copy of this repository, cloned locally. Run every command from the root of the clone. Your copy will hold
+  your management cluster's name, your organisations and your encrypted secrets, so make it private: create it with
+  **Use this template** on GitHub, as the [README](../../README.md) explains, because a GitHub fork of this public
+  repository can't be made private. A public fork is fine for following along with placeholder names. The docs call
+  your copy "your fork" either way.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
 them where they are, as complete examples to check your own files against.
@@ -101,20 +105,33 @@ is also why the management cluster refuses a `Kustomization` or `HelmRelease` wi
 Export the names the commands use:
 
 ```sh
-export MC_NAME=MC_CODENAME           # management cluster codename
-export ORG_NAME=ORGANISATION         # organisation name, without the `org-` prefix
-export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits, at most 20 characters
-export GITOPS_REPO=REPO_NAME         # name for the Flux GitRepository, for example `gitops`
+export MC_NAME=MC_CODENAME
+export ORG_NAME=ORGANISATION
+export WC_NAME=CLUSTER_NAME
+export GITOPS_REPO=REPO_NAME
 export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
-export GIT_SECRET=github-https-credentials  # the Secret Flux reads the repository with, see step 1
-export SECRET_STORE=gitops-test             # the organisation's SecretStore, see step 2
+export GIT_SECRET=github-https-credentials
+export SECRET_STORE=gitops-test
 
 export MC_DIR=management-clusters/${MC_NAME}
 export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 export APP_DIR=${WC_DIR}/apps/hello-world
-export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert  # the context `kubectl gs login` creates in step 3
+export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert
 ```
+
+| Variable | What to put in it |
+| --- | --- |
+| `MC_NAME` | The management cluster's codename. |
+| `ORG_NAME` | The organisation's name, without the `org-` prefix. |
+| `WC_NAME` | The new workload cluster's name: lowercase letters and digits, at most 20 characters. |
+| `GITOPS_REPO` | A name for the Flux `GitRepository`, for example `gitops`. |
+| `GITOPS_REPO_URL` | Your copy of this repository, over HTTPS. This tutorial reads it from GitHub with a personal access token; on another Git host, use its HTTPS URL, and the username and token that host gives you in step 1. |
+| `GIT_SECRET` | The Secret Flux reads the repository with, see step 1. |
+| `SECRET_STORE` | The organisation's `SecretStore`, see step 2. |
+| `WC_CONTEXT` | The context `kubectl gs login` creates for the workload cluster in step 3. |
+
+The rest are the directories the steps write into.
 
 The variables live only in your current shell. If you open a new one, run the exports again, with any you changed
 along the way.
@@ -1071,7 +1088,9 @@ example, `semver: 3.2.x` installs every new patch version. See
 
 ## 6. Delete the cluster (optional)
 
-Skip this step to keep the cluster. Deleting a cluster is deliberately awkward, and this step shows you why.
+Skip this step to keep the cluster. Every intermediate and advanced tutorial carries on from this organisation, this
+cluster and this app, so if you mean to follow them, keep it, and come back here when you've finished with it.
+Deleting a cluster is deliberately awkward, and this step shows you why.
 
 When you delete the cluster's files, Flux deletes its `Kustomization`s, its apps and its configuration, but not the
 cluster itself. Its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so Flux leaves it

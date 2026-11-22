@@ -3,6 +3,12 @@
 The commands in these docs use the tools below. You don't need all of them: the table says which part of the docs
 needs each one.
 
+The snippets are written for `bash` and tested in it. They also work in `zsh`, the default shell on macOS: they keep
+comments off the command lines, because an interactive `zsh` doesn't treat `#` as a comment unless
+`setopt interactivecomments` is set. The few lines that are only a comment, such as `# edit values.tmp.yaml`, mark
+where you do something by hand, and `zsh` answers them with `command not found: #`, which you can ignore. In any
+other shell, start `bash` first.
+
 ## Tools
 
 | Tool | Used for | Needed by |
@@ -12,7 +18,7 @@ needs each one.
 | [`yq`](https://github.com/mikefarah/yq/), the Go version by Mike Farah | changing YAML files from the command line. The Python `yq` takes other arguments | everything |
 | `kubectl` | applying the first objects to the management cluster, and creating manifests with `--dry-run=client` | everything |
 | [`kubectl gs`](https://github.com/giantswarm/kubectl-gs), 6.0.0 or newer | logging in, and the shortcuts that write files for you, see [kubectl-gs version](#kubectl-gs-version) | everything |
-| [`flux`](https://github.com/fluxcd/flux2) | inspecting and reconciling Flux objects, and rendering what Flux applies | everything |
+| [`flux`](https://github.com/fluxcd/flux2), the same minor version as the management cluster's Flux, 2.7 today | inspecting and reconciling Flux objects, and rendering what Flux applies | everything |
 | `gpg` of [GnuPG](https://gnupg.org/) | creating and handling GPG keys | [SOPS](../how-to/sops.md) |
 | [`sops`](https://github.com/getsops/sops) | encrypting and decrypting Secrets in the repository | [SOPS](../how-to/sops.md) |
 | `age-keygen` of [age](https://github.com/FiloSottile/age) | creating an age key | [Add a workload cluster key (age)](../how-to/sops.md#add-a-workload-cluster-key-age) |
@@ -24,6 +30,7 @@ needs each one.
 | `curl`, `sha256sum` and `tar` | fetching the Flux CRD schemas, see [tools](/tools/README.md#test-all-ff) for the sources and versions | [Validate with test-all-ff](../how-to/check-changes.md#validate-with-test-all-ff) |
 | [`helm`](https://helm.sh/docs/intro/install/) | rendering the chart of every `HelmRelease` with its values | [Validate with test-all-ff](../how-to/check-changes.md#validate-with-test-all-ff) |
 | [`kustomize`](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/) | building directories as Flux does; `kubectl kustomize` stands in for it in most places | [Render what Flux applies](../how-to/check-changes.md#render-what-flux-applies) |
+| Docker, [kind](https://kind.sigs.k8s.io/), Python 3.12 with [pipenv](https://pipenv.pypa.io/), and [Chainsaw](https://kyverno.github.io/chainsaw/) | running the tests yourself, see [Testing the repository](../tutorials/advanced/testing.md) for the versions | [Testing the repository](../tutorials/advanced/testing.md), optional |
 
 ## kubectl-gs version
 

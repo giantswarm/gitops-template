@@ -13,12 +13,13 @@ created the same way.
 
 ## Before you start
 
-Export the names the commands use, and run them from the root of your clone:
+Export the names the commands use, and run them from the root of your clone. `WC_NAME` is the cluster's name, which
+is also the name of its directory and files:
 
 ```sh
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
-export WC_NAME=CLUSTER_NAME          # the cluster's name, and the name of its directory and files
+export WC_NAME=CLUSTER_NAME
 export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 ```

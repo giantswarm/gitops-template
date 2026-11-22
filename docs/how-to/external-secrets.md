@@ -6,13 +6,14 @@ repository holds only `ExternalSecret`s that say which secret goes where, so no 
 every Giant Swarm management cluster. For when to use it rather than SOPS, or alongside it, see
 [Secrets](../explanation/secrets.md).
 
-Export the names the commands use:
+Export the names the commands use. `SECRET_STORE` is the name of the `SecretStore`s in `default` and
+`org-${ORG_NAME}`:
 
 ```sh
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export SECRET_STORE=STORE_NAME       # name of the SecretStores in `default` and `org-${ORG_NAME}`
+export SECRET_STORE=STORE_NAME
 ```
 
 ## Create a SecretStore for your secret manager
@@ -94,10 +95,11 @@ the values in the store object itself, so it needs no secret manager and no extr
 > done.
 
 Create a store with the values the docs and examples read, first in `default`, then again in `org-${ORG_NAME}` once
-the organisation's namespace exists. Put your GitHub token in place of `YOUR_GITHUB_TOKEN`:
+the organisation's namespace exists, with `STORE_NAMESPACE=org-${ORG_NAME}`. Put your GitHub token in place of
+`YOUR_GITHUB_TOKEN`:
 
 ```sh
-export STORE_NAMESPACE=default  # then org-${ORG_NAME}
+export STORE_NAMESPACE=default
 cat <<'EOF' | kubectl apply -n "${STORE_NAMESPACE}" -f -
 apiVersion: external-secrets.io/v1
 kind: SecretStore

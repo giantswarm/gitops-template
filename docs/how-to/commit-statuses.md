@@ -17,15 +17,17 @@ List each cluster `Kustomization` you add.
 A `Receiver` does the opposite: GitHub calls it on a push, and Flux fetches the repository at once instead of
 waiting for the `GitRepository`'s interval. It's optional.
 
-Export the names the commands use:
+Export the names the commands use: the management cluster's codename, the name of the Flux `GitRepository`, the
+repository on GitHub, and the organisation whose clusters report, without the `org-` prefix. `ORG_DIR` is the
+organisation's `namespace` directory:
 
 ```sh
-export MC_NAME=MC_CODENAME           # management cluster codename
-export GITOPS_REPO=REPO_NAME         # name of the Flux GitRepository, for example `gitops`
+export MC_NAME=MC_CODENAME
+export GITOPS_REPO=REPO_NAME
 export GITHUB_REPO=YOUR_ORG/YOUR_REPO
 export MC_DIR=management-clusters/${MC_NAME}
-export ORG_NAME=ORG_NAME             # organisation whose clusters report, without the `org-` prefix
-export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}/namespace   # the organisation's namespace directory
+export ORG_NAME=ORG_NAME
+export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}/namespace
 ```
 
 ## Example

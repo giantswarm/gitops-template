@@ -158,8 +158,10 @@ a `Kustomization` reads one Secret, so every key of the cluster goes into the sa
     git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
     management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc \
     .sops.yaml
-    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
+    git status --short management-clusters/${MC_NAME}
     ```
+
+    `git status` should list no untracked file, marked `??`, under the management cluster.
 
 Then tell the cluster's `Kustomization`s to use it, see [Decrypt a cluster's files](#decrypt-a-clusters-files).
 
@@ -169,11 +171,14 @@ A cluster's `Kustomization`s read one key Secret, so a second key, for example o
 encrypted with, goes into the cluster's existing `WC_NAME.gpgkey.enc.yaml`, next to the first. Don't repeat the steps
 above for it: they would replace the Secret and list it twice.
 
-1. Generate the key as in the first two steps above, with a name of its own, and keep its fingerprint:
+1. Give the key a name of its own, generate it as in the first two steps above, with `gpg --batch --full-generate-key`
+   and `Name-Real: ${KEY_NAME}`, and keep its fingerprint:
 
     ```sh
     export KEY_NAME="${WC_NAME}-APP_NAME"
-    # gpg --batch --full-generate-key as above, with Name-Real: ${KEY_NAME}
+    ```
+
+    ```sh
     export KEY_FP=$(gpg --list-secret-keys --with-colons "${KEY_NAME}" | awk -F: '/^fpr/{print $10; exit}')
     ```
 
@@ -269,8 +274,10 @@ it encrypts the age key like it encrypts the GPG keys of other clusters. The exa
     git add ${ORG_SECRETS} management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace/kustomization.yaml \
     management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.agekey.pub \
     .sops.yaml
-    git status --short management-clusters/${MC_NAME}  # nothing should be left untracked (??)
+    git status --short management-clusters/${MC_NAME}
     ```
+
+    `git status` should list no untracked file, marked `??`, under the management cluster.
 
 The cluster's `Kustomization`s name `sops-age-${WC_NAME}` in `decryption.secretRef`, see
 [Decrypt a cluster's files](#decrypt-a-clusters-files). A `Kustomization` reads one Secret: to use a GPG and an age
@@ -517,11 +524,13 @@ Flux has its own copy of every private key, in a Secret on the management cluste
 encrypted files, and to rebuild the Secret if it's lost. Keep it in a password manager, and nowhere else.
 
 For example, with the 1Password CLI, `op`, store a GPG private key as the body of a secure note. The `jq` filter wraps
-the armoured key into the item template, in the `notesPlain` field. Put the vault you keep the keys in for `YOUR_VAULT`:
+the armoured key into the item template, in the `notesPlain` field. Put the vault you keep the keys in for `YOUR_VAULT`.
+For the master key or an organisation key, name the item `(${MC_NAME}, master, Flux)` or
+`(${MC_NAME}, ${ORG_NAME}, Flux)` instead:
 
 ```sh
 export VAULT=YOUR_VAULT
-export ITEM="GPG private key (${MC_NAME}, ${WC_NAME}, Flux)"   # or (${MC_NAME}, master, Flux), (${MC_NAME}, ${ORG_NAME}, Flux)
+export ITEM="GPG private key (${MC_NAME}, ${WC_NAME}, Flux)"
 eval $(op signin)
 gpg --export-secret-keys --armor "${KEY_FP}" |
 jq -Rs '{"fields": [{"id": "notesPlain", "type": "STRING", "purpose": "NOTES", "label": "notesPlain", "value": .}]}' |

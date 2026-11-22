@@ -13,6 +13,8 @@ cluster reports the version it installed.
 A range upgrades the app whenever a new version is published, at any time of day. To hold upgrades back until an
 upgrade window instead, see [Scheduled upgrades](../advanced/scheduled-upgrades.md).
 
+This tutorial gives hello-world on the cluster from the basic tutorial a version range. It creates no cluster.
+
 - [Set a version range](#set-a-version-range)
 - [Apps from an App Template or a stack](#apps-from-an-app-template-or-a-stack)
 - [Check the installed version](#check-the-installed-version)

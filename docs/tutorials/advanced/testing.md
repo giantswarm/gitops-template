@@ -12,6 +12,9 @@ This repository tests itself in two ways, and you can use either or both in your
 - **Chainsaw**, `tests/chainsaw`: tests in YAML that you run against a real management cluster that Flux reconciles
   from your repository. They check what's running, after the merge.
 
+Neither creates anything on your management cluster: the kind test runs in a throwaway cluster, and Chainsaw only
+reads what Flux applied.
+
 - [What the kind test does](#what-the-kind-test-does)
 - [Run the kind test locally](#run-the-kind-test-locally)
 - [Test with Chainsaw](#test-with-chainsaw)
@@ -69,7 +72,7 @@ CI is the usual place for the kind test, but a local run is quicker when you're 
 
     ```sh
     export KUBECONFIG="${TMPDIR:-/tmp}/gitops-test.kubeconfig"
-    export GITOPS_REPO_URL                                # your fork, from the basic tutorial's exports
+    export GITOPS_REPO_URL
     export GITOPS_REPO_BRANCH=$(git branch --show-current)
     export GITOPS_FLUX_APP_VERSION=$(yq '.jobs.validate.with.gitops_flux_app_version' .github/workflows/validate.yaml)
     export GITOPS_INIT_NAMESPACES=default

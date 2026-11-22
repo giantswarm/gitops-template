@@ -11,6 +11,9 @@ written as a kustomize base in `bases/stacks`. Its `resources:` lists the `HelmR
 charts, or App Templates and other stacks, which can each still be used on their own, and the stack adds what ties
 them together. A cluster lists the stack like an App Template, and gets all of its apps.
 
+This tutorial adds the hello-web stack, Envoy Gateway and hello-world, to the cluster from the basic tutorial. It
+creates no cluster, though Envoy Gateway's load balancer is a cloud resource of its own.
+
 - [When a stack helps](#when-a-stack-helps)
 - [Create a stack](#create-a-stack)
 - [Use it in a cluster](#use-it-in-a-cluster)
@@ -237,6 +240,17 @@ hello-world's `HTTPRoute` is attached to the Gateway:
 ```sh
 kubectl --context ${WC_CONTEXT} get httproute -n hello-world
 ```
+
+And the point of the whole exercise: hello-world answers over HTTPS, at the hostname in its route. Open it in a
+browser, or ask from the shell:
+
+```sh
+export HELLO_URL=https://$(kubectl --context ${WC_CONTEXT} get httproute -n hello-world -o jsonpath='{.items[0].spec.hostnames[0]}')
+echo ${HELLO_URL}
+curl -s ${HELLO_URL} | head
+```
+
+The DNS record and the certificate follow the Gateway, so give them a few minutes after the releases are `Ready`.
 
 Your cluster installs the stack as a secondary app, from `${WC_DIR}/apps`, once the cluster is up. A cluster can also
 install a stack with the cluster, as a base app, by listing it in `${WC_DIR}/cluster/apps/kustomization.yaml`, as the

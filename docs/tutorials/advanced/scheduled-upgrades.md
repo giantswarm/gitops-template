@@ -14,7 +14,8 @@ Flux Operator, which runs on every Giant Swarm management cluster, does that wit
   the version goes.
 
 This tutorial schedules the upgrades of an app on the cluster from the [basic tutorial](../basic/getting-started.md),
-then creates a cluster whose Giant Swarm release moves only in a window.
+then creates a cluster whose Giant Swarm release moves only in a window: a real one, with the CAPA base's default node
+pools, which [Clean up](#clean-up) deletes again.
 
 - [When to use it](#when-to-use-it)
 - [Schedule an app's upgrades](#schedule-an-apps-upgrades)
@@ -22,6 +23,7 @@ then creates a cluster whose Giant Swarm release moves only in a window.
 - [Install before the first window](#install-before-the-first-window)
 - [How the window works](#how-the-window-works)
 - [Keep the version](#keep-the-version)
+- [Clean up](#clean-up)
 - [Next steps](#next-steps)
 
 Run the commands from the root of your clone, with the variables the basic tutorial exported still set: those from
@@ -42,8 +44,12 @@ to several clusters from one list, see [Multicluster apps](./multicluster-apps.m
 
 The app is a second copy of hello-world, `hello-world-window`, in its own namespace, which upgrades only from Monday
 to Thursday, 09:00 to 17:00 in Berlin. Its Ingress is switched off, as in the basic tutorial, so that it doesn't claim
-the host of the cluster's other hello-world. It waits for the Gateway API CRDs of the cluster's envoy-gateway, so it needs
-the [hello-web](../intermediate/stacks.md) stack, or envoy-gateway, on the cluster.
+the host of the cluster's other hello-world. Its `dependsOn` names the cluster's `gateway-api-crds` release. The chart
+doesn't need the CRDs with its route switched off: the dependency is a readiness gate, so that the app installs only
+once the cluster is up and running its base apps, as [Multicluster apps](./multicluster-apps.md#clusters-that-arent-ready-yet)
+explains. It does mean the cluster has to have that release, from the [hello-web](../intermediate/stacks.md) stack or
+envoy-gateway. Without it, the app waits in `DependencyNotReady` for good, with no error; leave the `dependsOn` out on
+such a cluster.
 
 1. Create the app's directory:
 
@@ -412,12 +418,11 @@ the provider once, below.
 
 A new provider whose window is closed reports `Ready`, but exports no version until the window opens. Until then its
 `ResourceSet` waits, so the app isn't installed and the cluster isn't created. To install at once, force the provider
-once, after Flux has applied it. It then reads the registry outside its schedule, this one time:
+once, after Flux has applied it. It then reads the registry outside its schedule, this one time. The first command
+forces the app's provider, the second the cluster's, which is named after the cluster:
 
 ```sh
-# the app
 flux-operator reconcile inputprovider ${WC_NAME}-hello-world-window-version -n org-${ORG_NAME} --force
-# the cluster: its provider is named after it
 flux-operator reconcile inputprovider ${SU_NAME}-release -n org-${ORG_NAME} --force
 ```
 
@@ -475,6 +480,14 @@ explains how they work together.
 The kind test takes the version away in each of the three ways and checks that the app stays installed, in
 `tests/ats/resource_set_guard.py`, and that the cluster's `HelmRelease` and `OCIRepository` stay, also when the
 `ResourceSet` is deleted, in `tests/ats/resource_set_cluster_guard.py`.
+
+## Clean up
+
+Delete the cluster from [Schedule a cluster's release](#schedule-a-clusters-release) as
+[Delete a workload cluster](../../how-to/delete-cluster.md) describes, with `WC_NAME` set to `${SU_NAME}`. Its
+`ResourceSet` renders the cluster's `HelmRelease` and `OCIRepository` with the same protection as the base, under Flux
+Operator's annotation, and they stay when the `ResourceSet` goes, so the steps are the same. The app's schedule, on
+the basic tutorial's cluster, can stay.
 
 ## Next steps
 
