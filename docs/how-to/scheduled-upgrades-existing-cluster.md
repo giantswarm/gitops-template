@@ -135,6 +135,8 @@ flux get helmreleases ${WC_NAME} -n org-${ORG_NAME}
 kubectl get helmrelease ${WC_NAME} -n org-${ORG_NAME} -o jsonpath='{.status.history[0].version}'
 ```
 
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md).
+
 The repository's tests make the same move on the `WC_NAME` example: `tests/ats/test_cluster_move.py` builds it without
 a cluster and fails if a `valuesFrom` entry goes missing, and the kind test moves the cluster and checks that
 the `ResourceSet` takes it over with the same values, chart and tag, see [The kind test](../reference/ci-checks.md#flux-operator).

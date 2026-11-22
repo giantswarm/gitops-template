@@ -85,8 +85,13 @@ You need:
 - access to the management cluster, see
   [Access to the platform API](https://docs.giantswarm.io/getting-started/access-to-platform-api/). Log in with
   `kubectl gs login API_URL`, where `API_URL` is the management cluster's Kubernetes API URL. After that, the context
-  is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces,
-- a fork of this repository, cloned locally. Run every command from the root of the clone.
+  is named `gs-MC_NAME`. You need write access to the `default` and `org-*` namespaces, which is what Giant Swarm
+  gives customers, see [What you can do, and what Giant Swarm does](../../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does),
+- your own copy of this repository, cloned locally. Run every command from the root of the clone. Your copy will hold
+  your management cluster's name, your organisations and your encrypted secrets, so make it private: create it with
+  **Use this template** on GitHub, as the [README](../../README.md) explains, because a GitHub fork of this public
+  repository can't be made private. A public fork is fine for following along with placeholder names. The docs call
+  your copy "your fork" either way.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
 them where they are, as complete examples to check your own files against. CI's kind test doesn't ignore them, though:
@@ -96,23 +101,40 @@ pull request.
 `kubectl gs gitops` can write most of the files in this tutorial for you, and each step names the command that does.
 You write them by hand here, so that you know what each one is for when you come to change it.
 
+Every Flux object you write here says `serviceAccountName: automation`. Giant Swarm creates an `automation`
+ServiceAccount in `default` and in every organisation's namespace, and Flux applies your files with its rights, which
+is also why the management cluster refuses a `Kustomization` or `HelmRelease` without it.
+
 Export the names the commands use:
 
 ```sh
-export MC_NAME=MC_CODENAME           # management cluster codename
-export ORG_NAME=ORGANISATION         # organisation name, without the `org-` prefix
-export WC_NAME=CLUSTER_NAME          # name of the new workload cluster, lowercase letters and digits, at most 20 characters
-export GITOPS_REPO=REPO_NAME         # name for the Flux GitRepository, for example `gitops`
+export MC_NAME=MC_CODENAME
+export ORG_NAME=ORGANISATION
+export WC_NAME=CLUSTER_NAME
+export GITOPS_REPO=REPO_NAME
 export GITOPS_REPO_URL=https://github.com/YOUR_ORG/YOUR_REPO
-export GIT_SECRET=github-https-credentials  # the Secret Flux reads the repository with, see step 1
-export SECRET_STORE=gitops-test             # the organisation's SecretStore, see step 2
+export GIT_SECRET=github-https-credentials
+export SECRET_STORE=gitops-test
 
 export MC_DIR=management-clusters/${MC_NAME}
 export ORG_DIR=${MC_DIR}/organizations/${ORG_NAME}
 export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 export APP_DIR=${WC_DIR}/apps/hello-world
-export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert  # the context `kubectl gs login` creates in step 3
+export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert
 ```
+
+| Variable | What to put in it |
+| --- | --- |
+| `MC_NAME` | The management cluster's codename. |
+| `ORG_NAME` | The organisation's name, without the `org-` prefix. |
+| `WC_NAME` | The new workload cluster's name: lowercase letters and digits, at most 20 characters. |
+| `GITOPS_REPO` | A name for the Flux `GitRepository`, for example `gitops`. |
+| `GITOPS_REPO_URL` | Your copy of this repository, over HTTPS. This tutorial reads it from GitHub with a personal access token; on another Git host, use its HTTPS URL, and the username and token that host gives you in step 1. |
+| `GIT_SECRET` | The Secret Flux reads the repository with, see step 1. |
+| `SECRET_STORE` | The organisation's `SecretStore`, see step 2. |
+| `WC_CONTEXT` | The context `kubectl gs login` creates for the workload cluster in step 3. |
+
+The rest are the directories the steps write into.
 
 The variables live only in your current shell. If you open a new one, run the exports again, with any you changed
 along the way.
@@ -127,11 +149,10 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 
 > **Shortcut:** [`kubectl gs gitops add management-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-mc/)
 > writes the management cluster's directory and its `Kustomization`. With `--gen-master-key`, it also writes a new
-> master key in `${MC_DIR}/secrets`, its public key in `${MC_DIR}/.sops.keys` and the first `.sops.yaml` rule. It
-> doesn't write the
-> repository token or the second rule, and its `Kustomization` doesn't prune. See
-> [Management cluster](../../how-to/kubectl-gs.md#management-cluster) for the command and what to change
-> afterwards.
+> master key in `${MC_DIR}/secrets`, protected by its `kustomization.yaml`, its public key in `${MC_DIR}/.sops.keys`
+> and both `.sops.yaml` rules. It doesn't create the `GitRepository` or the repository token, and it leaves the
+> private key for you to encrypt. See [Management cluster](../../how-to/kubectl-gs.md#management-cluster) for the
+> command and what's left to do.
 
 1. Create the management cluster's directory. `${MC_DIR}/.sops.keys` holds public keys, `${MC_DIR}/secrets` the
    encrypted secrets Flux needs, and `${MC_DIR}/organizations` the organisations you add in the next step:
@@ -392,6 +413,8 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 flux get sources git ${GITOPS_REPO} -n default
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#the-source-cant-be-fetched).
+
 So is the `Kustomization`:
 
 ```sh
@@ -405,9 +428,9 @@ exists, these steps bring it under GitOps. You'll also give it a secret store he
 organisation reads its secrets through the organisation's namespace.
 
 > **Shortcut:** [`kubectl gs gitops add organization`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-org/)
-> writes the `Organization`, without its annotation and label, and the organisation's empty list of clusters. It
-> doesn't write the organisation's `kustomization.yaml`, the namespace `Kustomization` or the secret store. See
-> [Organisation](../../how-to/kubectl-gs.md#organisation) for the command and what to add afterwards.
+> writes the protected `Organization`, the organisation's `kustomization.yaml`, the namespace `Kustomization` and
+> its `namespace` directory, and the organisation's empty list of clusters. It doesn't write the secret store. See
+> [Organisation](../../how-to/kubectl-gs.md#organisation) for the command.
 
 1. Create the organisation's directory. `${ORG_DIR}/namespace` holds what the organisation keeps in its namespace,
    its secret store in `secret-stores` among it, and `${ORG_DIR}/workload-clusters` its clusters:
@@ -593,6 +616,8 @@ organisation reads its secrets through the organisation's namespace.
 kubectl get namespace org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 The namespace `Kustomization` is `Ready` once it has applied into it:
 
 ```sh
@@ -616,10 +641,9 @@ A cluster gets two `Kustomization`s, which fill in variables such as `${cluster_
 the rest of `${WC_DIR}`, but only after that, so the apps never try to install into a cluster that isn't there yet.
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> writes the cluster's directory from a base, and its `Kustomization`, which it lists in
-> `${ORG_DIR}/workload-clusters`. It still writes a `mapi` directory, no region, and one `Kustomization` for the whole cluster,
-> in `default`, instead of the two below. See [Workload cluster](../../how-to/kubectl-gs.md#workload-cluster) for
-> the command and how to bring its files in line with the ones below.
+> writes the cluster's directory from a base, and the two `Kustomization`s below, which it lists in
+> `${ORG_DIR}/workload-clusters`. It doesn't add the region or the app. See
+> [Workload cluster](../../how-to/kubectl-gs.md#workload-cluster) for the command and what's left to do.
 
 1. List the Giant Swarm releases and pick an AWS one from v34.0.0 on. These have a `release-aws` chart:
 
@@ -663,7 +687,7 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     ```
 
     The cluster runs with the base's defaults. To give it values of its own, see
-    [Give a cluster its own values](../../how-to/cluster-values.md#give-a-cluster-its-own-values). Don't set
+    [Give a cluster its own values](../../how-to/cluster-values.md#write-the-clusters-values-configmap). Don't set
     `global.release.version` in them, because the chart sets it. For another provider, see
     [Create a cluster base for a provider other than CAPA](../../how-to/cluster-base-provider.md).
 
@@ -808,6 +832,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
 ```sh
 kubectl gs get clusters -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-clusters-kustomization-waits-on-its-health-check).
 
 Once it's up, the cluster's `Kustomization` is `Ready`, and the apps' `Kustomization` follows:
 
@@ -1005,6 +1031,8 @@ Git and one secret value from the organisation's store.
 kubectl get externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
+
 The release is `Ready` on the management cluster:
 
 ```sh
@@ -1052,6 +1080,8 @@ fi
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 At least two pods run:
 
 ```sh
@@ -1074,15 +1104,16 @@ example, `semver: 3.2.x` installs every new patch version. See
 
 ## 6. Delete the cluster (optional)
 
-Skip this step to keep the cluster. Deleting a cluster is deliberately awkward, and this step shows you why.
+Skip this step to keep the cluster. Every intermediate and advanced tutorial carries on from this organisation, this
+cluster and this app, so if you mean to follow them, keep it, and come back here when you've finished with it.
+Deleting a cluster is deliberately awkward, and this step shows you why.
 
 When you delete the cluster's files, Flux deletes its `Kustomization`s, its apps and its configuration, but not the
 cluster itself. Its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so Flux leaves it
 in place, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label is gone. Its
 `OCIRepository` has both too, and its `Cluster` has the label. So you take the labels off first, and delete the
 `HelmRelease` and the `OCIRepository` yourself at the end. If kubectl-gs wrote your cluster's files, check what it
-protects first: kubectl-gs 7.0.0 and newer label the cluster's `HelmRelease` and `OCIRepository`, but no release
-writes the annotation or protects the `Organization`, see
+protects first: kubectl-gs X.Y.Z and newer write both the annotation and the label, older releases less, see
 [What kubectl-gs writes](../../explanation/deletion-protection.md#what-kubectl-gs-writes).
 
 These steps delete the cluster this tutorial created. A cluster with its own SOPS key in `${ORG_DIR}/namespace/secrets`,

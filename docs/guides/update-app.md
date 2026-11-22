@@ -25,3 +25,7 @@ See [Change the values](../how-to/update-app.md#change-the-values).
 ### Updating Secret-based user values
 
 See [Change encrypted values](../how-to/sops.md#change-encrypted-values).
+
+## Apps from an App Set
+
+App Sets are now stacks, see [Stacks](../tutorials/intermediate/stacks.md).

@@ -8,11 +8,13 @@ chart with a Flux `OCIRepository` and `HelmRelease`, and the chart version is th
 
 Sooner or later your clusters share more than the chart's defaults: the same node pools, say, on every cluster of a
 team. Writing those into each cluster works, until someone changes three of the five. This tutorial puts them into a
-base of your own instead, next to the CAPA one, and creates a second cluster from it.
+base of your own instead, next to the CAPA one, and creates a second cluster from it: a real one, with at least three
+`m6i.xlarge` nodes, which [Clean up](#clean-up) deletes again.
 
 - [Choose a base](#choose-a-base)
 - [Create a base with your own defaults](#create-a-base-with-your-own-defaults)
 - [Create a cluster from it](#create-a-cluster-from-it)
+- [Clean up](#clean-up)
 - [Next steps](#next-steps)
 
 A cluster's values come in layers, in the order of its `HelmRelease`'s `valuesFrom`, and later layers win: the
@@ -79,8 +81,7 @@ never inside the provider's directory, which holds that one base and nothing els
     ```
 
     Copy values, not the whole ConfigMap: it also has the cluster's name and organisation, which the base fills in
-    from variables, and, depending on the kubectl-gs version, its own `global.metadata.preventDeletion`. Keep the
-    base's `preventDeletion: true`.
+    from variables, and its own `global.metadata.preventDeletion`. Keep the base's `preventDeletion: true`.
 
 1. Create the `kustomization.yaml`. It lists the provider's base and replaces its ConfigMap with one generated from
    your `cluster_config.yaml`. The quoted `'EOF'` keeps the variables in the file, and `sed` fills in the provider:
@@ -206,14 +207,23 @@ kubectl gs get clusters -n org-${ORG_NAME}
 kubectl get configmap ${WC2_NAME}-config -n org-${ORG_NAME} -o jsonpath='{.data.values}'
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-clusters-kustomization-waits-on-its-health-check).
+
 You can move your first cluster onto the base too: change `bases/clusters/capa` to `bases/clusters/${BASE_NAME}` in
 `${WC_DIR}/cluster/kustomization.yaml`. Its node pools then change to the base's at the next reconciliation, and
 its nodes are replaced, so pick your moment.
 
 To give one cluster values of its own on top of the base, see
-[Give a cluster its own values](../../how-to/cluster-values.md#give-a-cluster-its-own-values). To give it apps, add an
-`apps` directory and an apps `Kustomization`, as in the basic tutorial's
+[Give a cluster its own values](../../how-to/cluster-values.md#write-the-clusters-values-configmap). To give it
+apps, add an `apps` directory and an apps `Kustomization`, as in the basic tutorial's
 [step 3](../basic/getting-started.md#3-create-a-workload-cluster).
+
+## Clean up
+
+Delete the second cluster when you've seen it come up, as [Delete a workload cluster](../../how-to/delete-cluster.md)
+describes, with `WC_NAME` set to `${WC2_NAME}`. It has no apps, keys or out-of-band resources of its own, so you only
+need the steps for its deletion protection and its files. Your base, in `bases/clusters/${BASE_NAME}`, costs nothing
+and can stay.
 
 ## Next steps
 

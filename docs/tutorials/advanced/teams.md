@@ -8,7 +8,7 @@ business.
 
 This tutorial sets that up for one team on the cluster from the [basic tutorial](../basic/getting-started.md). It
 builds on [Out-of-band resources](./out-of-band.md): the team's namespace is an out-of-band object, applied straight to
-the workload cluster.
+the workload cluster. It creates no cluster.
 
 - [Two modes](#two-modes)
 - [Add a team with Flux on the management cluster](#add-a-team-with-flux-on-the-management-cluster)
@@ -41,10 +41,12 @@ Pick Flux on the management cluster when the workload cluster doesn't run Flux: 
 in it, and the platform team sees every team's `Kustomization` on the management cluster. Pick Flux in the workload
 cluster when it runs Flux anyway, when the team should see its `Kustomization` and its errors in the cluster it deploys
 to, when delivery should go on while the management cluster is unavailable, or when the teams on a cluster must be kept
-apart from each other. With Flux on the management cluster, every team on the same workload cluster has the same
-identity there, the organisation's `automation` ServiceAccount, which is `admin` in every team's namespace, so one
-team's repository can write into another team's namespace. With Flux in the workload cluster, each team has a
-ServiceAccount of its own.
+apart from each other.
+
+> [!Caution]
+> With Flux on the management cluster, every team on the same workload cluster has the same identity there, the
+> organisation's `automation` ServiceAccount, which is `admin` in every team's namespace. One team's repository can
+> write into another team's namespace. With Flux in the workload cluster, each team has a ServiceAccount of its own.
 
 Who owns what:
 
@@ -206,19 +208,27 @@ flux get kustomizations ${WC_NAME}-${TEAM_NAME} -n org-${ORG_NAME}
 kubectl --context ${WC_CONTEXT} get all -n ${TEAM_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 From now on, the team pushes plain manifests, or a `kustomization.yaml`, to its repository, and Flux applies them at
 the next `interval`. It deletes what the team deletes, as the `Kustomization` has `prune: true`.
 
 ## Add a team with Flux in the workload cluster
 
 The cluster needs its `-direct` `Kustomization`, which pushes the team's objects, and Flux, which reconciles them.
-Install flux-app with steps 2 and 3 of
-[Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster), with
-`FLUX_WC_DIR=${WC_DIR}`, and none of the others: the `-direct` `Kustomization` already applies `out-of-band` to this
-cluster, and Flux in the workload cluster mustn't apply it as well. Flux brings its CRDs with it, which the `-direct`
-`Kustomization` needs before it can apply a `GitRepository` or a `Kustomization`: on a cluster without Flux, it
-would fail on those two kinds and deliver nothing. A cluster whose own Flux already pulls `out-of-band`, such as the
-`out-of-band-flux-app` example, needs neither: the steps below are the same, and that Flux delivers the file.
+Point the flux-app steps at this cluster:
+
+```sh
+export FLUX_WC_DIR=${WC_DIR}
+```
+
+Then install flux-app with steps 2 and 3 of
+[Run Flux in the workload cluster](./out-of-band.md#run-flux-in-the-workload-cluster), and none of the others: the
+`-direct` `Kustomization` already applies `out-of-band` to this cluster, and Flux in the workload cluster mustn't apply
+it as well. Flux brings its CRDs with it, which the `-direct` `Kustomization` needs before it can apply a
+`GitRepository` or a `Kustomization`: on a cluster without Flux, it would fail on those two kinds and deliver nothing.
+A cluster whose own Flux already pulls `out-of-band`, such as the `out-of-band-flux-app` example, needs neither: the
+steps below are the same, and that Flux delivers the file.
 
 1. If you added a team with Flux on the management cluster above, give this one another name, so that the two don't
    share a namespace:
@@ -312,6 +322,8 @@ would fail on those two kinds and deliver nothing. A cluster whose own Flux alre
 flux --context ${WC_CONTEXT} get kustomizations ${TEAM_NAME} -n ${TEAM_NAME}
 kubectl --context ${WC_CONTEXT} get all -n ${TEAM_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 ## Remove a team
 

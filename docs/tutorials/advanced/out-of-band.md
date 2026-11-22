@@ -9,12 +9,14 @@ packaging for a two-line object.
 Those go into the cluster's `out-of-band` directory, and get applied straight to the workload cluster. This tutorial
 adds one to the cluster from the [basic tutorial](../basic/getting-started.md), and has Flux on the management cluster
 push it there. Then it shows the other way round, where the workload cluster's own Flux pulls its `out-of-band`
-directory, on a cluster of its own.
+directory, on a cluster of its own. That second half creates a second workload cluster, the same size as the first,
+which [Clean up](#clean-up) deletes again.
 
 - [When to apply directly](#when-to-apply-directly)
 - [Add the out-of-band directory](#add-the-out-of-band-directory)
 - [Add the -direct Kustomization](#add-the--direct-kustomization)
 - [Run Flux in the workload cluster](#run-flux-in-the-workload-cluster)
+- [Clean up](#clean-up)
 - [Next steps](#next-steps)
 
 Run the commands from the root of your clone, with the variables the basic tutorial exported still set: those from
@@ -141,6 +143,8 @@ other two: the organisation's namespace `Kustomization` applies it into `org-${O
 flux get kustomizations ${MC_NAME}-clusters-${WC_NAME}-direct -n org-${ORG_NAME}
 kubectl --context ${WC_CONTEXT} get configmap hello-from-out-of-band -n default -o jsonpath='{.data.values}'
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 Until the cluster is up, its kubeconfig Secret doesn't exist and the `-direct` `Kustomization` reports that it can't
 read it. It retries every `retryInterval`, and gets `Ready` once the Secret is there.
@@ -299,27 +303,59 @@ below, and none of the others.
     yq -i '.resources += ["flux/configmap.yaml"]' ${FLUX_WC_DIR}/apps/kustomization.yaml
     ```
 
-    The source needs credentials that can read your repository, which flux-app writes into a Secret next to its
-    `GitRepository`. They belong in the `${cluster_name}-flux-app-user-secrets` Secret, which the `HelmRelease` reads
-    last, with these values:
+1. Give Flux in the workload cluster a way into your repository. flux-app takes the list of `sources` from its values,
+   and the source needs credentials, so it belongs in the `${cluster_name}-flux-app-user-secrets` Secret, which the
+   `HelmRelease` reads last. Create a GitHub token for it, as you did for the management cluster in
+   [step 1](../basic/getting-started.md#1-connect-the-management-cluster) of the basic tutorial, with one more
+   permission: flux-app also writes a GitHub `Provider` and an `Alert` from the same credentials, which report each of
+   its `Kustomization`s as a commit status. So the token needs read access to the repository's contents, and read and
+   write access to commit statuses if you want those statuses; without it, the `Alert` logs errors and Flux carries on.
 
-    ```yaml
-    sources:
-      - name: gitops
-        interval: 1m
-        branch: main
-        url: https://github.com/YOUR_ORG/YOUR_REPO
-        provider: github
-        credentials:
-          username: git
-          password: YOUR_TOKEN
+   This tutorial keeps the Secret in the repository, encrypted with SOPS, which needs a key for the cluster and its
+   apps `Kustomization` set to decrypt with it. Add an age key, as
+   [Add a workload cluster key (age)](../../how-to/sops.md#add-a-workload-cluster-key-age) describes, and give both of
+   the cluster's `Kustomization`s the `decryption` of
+   [Decrypt a cluster's files](../../how-to/sops.md#decrypt-a-clusters-files), with `sops-age-${FLUX_WC_NAME}`. Those
+   pages use `WC_NAME`, so run them with `WC_NAME=${FLUX_WC_NAME}`, in the shell you created the cluster in, for
+   example, and come back to this one. If you keep your secrets in a secret
+   manager instead, write the same Secret with an `ExternalSecret`, see
+   [Read secrets from a secret manager](../../how-to/external-secrets.md). The basic tutorial's stand-in store keeps its
+   data in plain text in Git, so it can't hold a real token.
+
+1. Write the Secret, encrypted on its way to the file, so the token never lands in the working tree in plain text.
+   Read the token without it landing in your shell history:
+
+    ```sh
+    read -rs FLUX_WC_TOKEN
+    cat <<EOF | sops --encrypt --filename-override ${FLUX_DIR}/secret.enc.yaml --input-type yaml --output-type yaml \
+      /dev/stdin > ${FLUX_DIR}/secret.enc.yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+      name: \${cluster_name}-flux-app-user-secrets
+      namespace: org-\${organization}
+    stringData:
+      values: |
+        sources:
+          - name: gitops
+            interval: 1m
+            branch: main
+            url: ${GITOPS_REPO_URL}
+            provider: github
+            credentials:
+              username: git
+              password: ${FLUX_WC_TOKEN}
+    EOF
+    unset FLUX_WC_TOKEN
+    yq -i '.resources += ["flux/secret.enc.yaml"]' ${FLUX_WC_DIR}/apps/kustomization.yaml
     ```
 
-    Write that Secret from your own secret manager with an `ExternalSecret`, as the basic tutorial's app does, or
-    encrypt it with SOPS, see [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values), and list it in
-    the cluster's apps. The basic tutorial's stand-in store keeps its data in plain text in Git, so it can't hold a
-    real token. The example keeps a made-up source in its ConfigMap instead, which is fine for an example and nothing
-    else. Until the Secret exists, flux-app has no source, and its `Kustomization` waits for one.
+    `--filename-override` needs `sops` 3.9.0 or newer, and makes `sops` pick the rule for the file's path in
+    `.sops.yaml`. If `sops` finds no rule, it fails and leaves the file empty, never in plain text. The source's
+    `name` is the `source_name` of the `Kustomization` in the ConfigMap above. The example cluster keeps a made-up
+    source in its ConfigMap instead, which is fine for an example and nothing else.
 
 1. Commit and push:
 
@@ -336,7 +372,16 @@ flux --context FLUX_WC_CONTEXT check -n flux-app
 flux --context FLUX_WC_CONTEXT get kustomizations -n flux-app
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 `FLUX_WC_CONTEXT` is that cluster's context, from `kubectl gs login`, as in the basic tutorial.
+
+## Clean up
+
+Delete the second cluster, the one that runs Flux, as [Delete a workload cluster](../../how-to/delete-cluster.md)
+describes, with `WC_NAME` set to `${FLUX_WC_NAME}`. It has a SOPS key and out-of-band resources, so follow the whole
+page, including [Remove out-of-band resources](../../how-to/delete-cluster.md#remove-out-of-band-resources). Keep the
+first cluster if you're going on to [Teams](./teams.md): it uses that cluster's `-direct` `Kustomization`.
 
 ## Next steps
 

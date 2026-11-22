@@ -129,6 +129,8 @@ If the app has no `override_config.yaml` yet, create it and add the `configMapGe
 flux get helmreleases ${WC_NAME}-${APP_NAME} -n org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md).
+
 ## Change secret values
 
 Where you change them depends on where they come from:

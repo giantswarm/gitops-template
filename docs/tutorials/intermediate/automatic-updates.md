@@ -13,6 +13,8 @@ cluster reports the version it installed.
 A range upgrades the app whenever a new version is published, at any time of day. To hold upgrades back until an
 upgrade window instead, see [Scheduled upgrades](../advanced/scheduled-upgrades.md).
 
+This tutorial gives hello-world on the cluster from the basic tutorial a version range. It creates no cluster.
+
 - [Set a version range](#set-a-version-range)
 - [Apps from an App Template or a stack](#apps-from-an-app-template-or-a-stack)
 - [Check the installed version](#check-the-installed-version)
@@ -95,14 +97,13 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
     ```
 
     > **Shortcut:** [`kubectl gs gitops add automatic-update`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-update/)
-    > makes the same change, and only that one, to the app's `oci-repository.yaml`. It needs kubectl-gs 6.0.0 or newer,
-    > see [kubectl-gs version](../../reference/tools.md#kubectl-gs-version). Run it from the repository root, with
-    > `--skip-mapi`: without it, kubectl-gs looks for the app under a `mapi` directory, which this repository doesn't
-    > have:
+    > makes the same change, and only that one, to the app's `oci-repository.yaml`. On this repository's layout it
+    > needs kubectl-gs X.Y.Z or newer, see [kubectl-gs version](../../reference/tools.md#kubectl-gs-version). Run it
+    > from the repository root:
     >
     > ```sh
     > kubectl gs gitops add automatic-update --management-cluster ${MC_NAME} --organization ${ORG_NAME} \
-    >   --workload-cluster ${WC_NAME} --app hello-world-auto --version-range '>=3.2.2 <4.0.0' --skip-mapi
+    >   --workload-cluster ${WC_NAME} --app hello-world-auto --version-range '>=3.2.2 <4.0.0'
     > ```
     >
     > The `--workload-cluster` is the name of the cluster's directory, and `--app` the name of the app's. Nothing

@@ -8,7 +8,7 @@ copy the directory, and from then on you have two copies of the same app that qu
 An App Template writes the app once, in `bases/apps`, with `${cluster_name}` wherever the cluster goes. Every cluster
 that wants the app lists the template, and adds only what's its own: a value or two, perhaps a version. This tutorial
 turns hello-world into a template, moves your cluster onto it, gives the cluster its own values, and shows how to make
-a template wait for another release.
+a template wait for another release. It creates no cluster: everything happens on the one from the basic tutorial.
 
 - [Create the App Template](#create-the-app-template)
 - [Deploy it to a cluster](#deploy-it-to-a-cluster)
@@ -29,11 +29,14 @@ build one of your own.
    fork's template pins the one Renovate last moved it to, in its `oci-repository.yaml`:
 
     ```sh
-    export APP_NAME=hello-world          # used in the resource names and as the Helm release name
-    export APP_CHART=hello-world         # the chart's name in the registry
+    export APP_NAME=hello-world
+    export APP_CHART=hello-world
     export APP_VERSION=$(yq '.spec.ref.tag' bases/apps/hello-world/oci-repository.yaml)
-    export APP_NAMESPACE=hello-world     # the namespace in the workload cluster the app goes into
+    export APP_NAMESPACE=hello-world
     ```
+
+    `APP_NAME` goes into the resource names and is the Helm release name, `APP_CHART` is the chart's name in the
+    registry, and `APP_NAMESPACE` is the namespace in the workload cluster the app goes into.
 
     The chart comes from the Giant Swarm catalog, `oci://gsoci.azurecr.io/charts/giantswarm`. For a chart in another
     registry, change the `url` below.
@@ -252,6 +255,8 @@ one, applies both. So Flux updates the release in place, rather than uninstallin
 ```sh
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 The cluster now runs the version the template pins. If it ran another one before, such as the basic tutorial's
 `3.2.3`, helm-controller has just moved the release to the template's chart, `3.2.4` when this was written.
