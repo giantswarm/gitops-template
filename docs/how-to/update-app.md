@@ -56,6 +56,31 @@ lists every field. Two need care on a running app:
   next to the old one, rather than moving it.
 - `kubeConfig` points the release at the workload cluster. Without it, the chart installs into the management cluster.
 
+## Correct changes made by hand
+
+Flux sets back what someone changes by hand in what its `Kustomization`s apply, the `HelmRelease` and its values
+included. What the chart installs in the workload cluster is helm-controller's, and by default it doesn't look at it
+again once it's installed: a `kubectl edit` on the app's Deployment stays until the chart or its values change. To have
+helm-controller compare the release with what runs in the cluster, set `spec.driftDetection` in `helm-release.yaml`:
+
+```yaml
+spec:
+  driftDetection:
+    # `warn` only reports what differs; `enabled` sets it back
+    mode: enabled
+    ignore:
+      # the HorizontalPodAutoscaler sets the replica count
+      - paths: ["/spec/replicas"]
+        target:
+          kind: Deployment
+```
+
+It's off in the bases on purpose. With it on, helm-controller checks every object of the release against the workload
+cluster at each `interval`, and sets back anything that differs, including what something in the cluster changes on
+purpose: an autoscaler's replica count, a field an operator or a webhook fills in. Each of those needs an `ignore` rule,
+or helm-controller and the other party take turns at it for ever. Start with `warn`, read what it reports in the
+`HelmRelease`'s events, add the rules, then switch to `enabled`.
+
 ## Change the values
 
 Edit `override_config.yaml`, then commit and push. Only the keys you set change; the rest comes from the earlier layers,

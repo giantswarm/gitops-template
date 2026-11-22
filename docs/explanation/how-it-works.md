@@ -40,13 +40,19 @@ Think of it as a relay. Each Flux `Kustomization` runs one leg, then hands the b
    `HelmRelease`, which installs it. Both stay on the management cluster, in the `org-demoorg` namespace. The
    `HelmRelease` uses the `demowc-kubeconfig` Secret to install the chart into the workload cluster. A second
    Kustomization, `demowc-apps.yaml`, applies `apps` once `demowc.yaml` is `Ready`, which is when Cluster API reports
-   the cluster `Available`.
+   the cluster's control plane available and reachable.
 
 [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) has the details of each leg: the fields,
 the order and what happens when one of them fails.
 
-Flux keeps doing this. When a file changes in Git, it applies the change. When someone changes a field that Git sets,
+Flux keeps doing this. When a file changes in Git, it applies the change. When someone changes a field that Git sets
+on an object a Flux `Kustomization` applies, such as a `HelmRelease` or a values ConfigMap on the management cluster,
 Flux sets it back at its next run. Fields added by hand stay.
+
+What a chart installs in a workload cluster is another matter. helm-controller installs and upgrades it, and by default
+doesn't look at it again until the next upgrade, so a `kubectl edit` on an app's Deployment stays until the chart or
+its values change. [Correct changes made by hand](../how-to/update-app.md#correct-changes-made-by-hand) shows how to
+have helm-controller set those back as well, and what it costs.
 
 The Kustomizations in this repository have `prune: true`. When you delete a file in Git, or take it out of a
 `kustomization.yaml`, Flux deletes what the file created at its next run. Delete an app's directory and Flux deletes its
@@ -61,7 +67,9 @@ its own failures:
   before any organisation's namespace exists, and it never waits for an organisation.
 - Each organisation's `namespace.yaml` lives in `default` and runs as `default/automation`. It applies the
   organisation's `namespace` directory into the organisation's namespace with `targetNamespace`, and a mistake in one
-  organisation's files stops only that organisation.
+  organisation's `namespace` directory stops only that organisation. The organisation's top-level files, such as
+  `namespace.yaml` itself, are in the management cluster's `Kustomization`, so a mistake there stops every
+  organisation until it's fixed.
 - Each cluster gets its own `Kustomization`s, with its own variables, so one base works for every cluster, and a
   mistake in one cluster's directory doesn't stop the others. They live in the organisation's namespace and run as
   `org-<organisation>/automation`, which may write only in that namespace, so one organisation's clusters can't
@@ -121,8 +129,8 @@ the cluster. Its `HelmRelease` exists before the cluster does, fails while there
 soon as the cluster can take it.
 
 A secondary app goes into `apps`, which the cluster's apps `Kustomization`, `WC_NAME-apps.yaml`, applies once the
-cluster is `Available`, because its `dependsOn` waits for the cluster's `Kustomization`. Most apps are secondary: they
-install into a cluster that's ready for them, and they don't report errors while it comes up.
+cluster's control plane is up, because its `dependsOn` waits for the cluster's `Kustomization`. Most apps are
+secondary: they install into a cluster that can take them, and they don't report errors while it comes up.
 
 Both kinds are the same files, an `OCIRepository` and a `HelmRelease`, in a directory of their own. To move an app from
 one kind to the other, move its directory and its entry in the `kustomization.yaml` that lists it, see

@@ -464,7 +464,8 @@ lists what to change in what they write.
 A change doesn't wait for the `Kustomization` or `HelmRelease` intervals. Flux applies a new commit as soon as the
 `GitRepository` has fetched it, installs a new chart as soon as its `OCIRepository` has, and applies a change to a
 values ConfigMap or Secret at once, as they carry the `reconcile.fluxcd.io/watch: Enabled` label. The intervals set
-how often Flux checks a source for changes, and how often it reapplies what hasn't changed, to undo drift:
+how often Flux checks a source for changes, and how often it reapplies what hasn't changed, to undo drift on the
+management cluster:
 
 | Object | `interval` | `retryInterval` | Why |
 | --- | --- | --- | --- |
@@ -473,7 +474,7 @@ how often Flux checks a source for changes, and how often it reapplies what hasn
 | Organisation namespace `Kustomization`, `namespace.yaml` | 10m | 1m | The retry applies it a minute after organization-operator has created the namespace. |
 | Workload cluster `Kustomization`s, `WC_NAME.yaml`, `WC_NAME-apps.yaml`, `-direct` and `HELLO_APP_*` | 10m | 1m | One to three per cluster, each building and applying its whole directory. |
 | `OCIRepository` | 10m | | How soon a `semver` range picks up a new chart. |
-| `HelmRelease` | 5m | | Checks the Helm release and remediates a failed one, without building anything. |
+| `HelmRelease` | 5m | | Checks the Helm release and remediates a failed one, without building anything. It doesn't undo changes made by hand in the workload cluster unless you set `spec.driftDetection`, see [Correct changes made by hand](../how-to/update-app.md#correct-changes-made-by-hand). |
 
 `retryInterval` retries a failed `Kustomization` after a minute instead of the next `interval`. An apps `Kustomization`
 whose cluster isn't ready yet checks again every 30 seconds whatever its interval, as `dependsOn` does.
