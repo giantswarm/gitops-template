@@ -158,7 +158,7 @@ Then change:
 
 1. With `--cluster-user-config`, give the values ConfigMap the `reconcile.fluxcd.io/watch` label, which CI requires,
    and use the variables for its name and namespace, as
-   [Give a cluster its own values](./cluster-values.md#give-a-cluster-its-own-values) does:
+   [Give a cluster its own values](./cluster-values.md#write-the-clusters-values-configmap) does:
 
     ```sh
     yq -i '.metadata.labels["reconcile.fluxcd.io/watch"] = "Enabled" |

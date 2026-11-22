@@ -67,9 +67,9 @@ ConfigMap, which every Giant Swarm management cluster has:
 - A [Kyverno](https://kyverno.io/) policy, `sync-cluster-app-configmap-to-org-namespaces`, copies it into every `org-*`
   namespace, where the cluster's `HelmRelease` can read it. The policy is a
   [generate rule](https://kyverno.io/docs/policy-types/cluster-policy/generate/) that clones the ConfigMap from the
-  `giantswarm` namespace with `synchronize: true`, so Kyverno creates the copy in every new organization namespace and
+  `giantswarm` namespace with `synchronize: true`, so Kyverno creates the copy in every new organisation namespace and
   updates the copies when the original changes. Giant Swarm ships the policy with `kyverno-policies-ux` 0.14.0 and
-  newer. On a management cluster with an older `kyverno-policies-ux`, the organization namespaces don't have the
+  newer. On a management cluster with an older `kyverno-policies-ux`, the organisation namespaces don't have the
   ConfigMap, and every cluster `HelmRelease` made from this base fails. Flux reports
   `could not resolve ConfigMap chart values reference '<namespace>/cluster-app-installation-values' with key
   'values.yaml': configmaps "cluster-app-installation-values" not found`. The entry is required on purpose: a cluster
@@ -120,5 +120,5 @@ directory and keep the deletion protection in `cluster.yaml` and `cluster-app-in
 ## Read more
 
 - [Cluster bases tutorial](/docs/tutorials/intermediate/cluster-bases.md)
-- [Give a cluster its own values](/docs/how-to/cluster-values.md#give-a-cluster-its-own-values)
+- [Give one cluster its own values](/docs/how-to/cluster-values.md#write-the-clusters-values-configmap)
 - [Cluster values](/docs/reference/values.md#cluster-values)

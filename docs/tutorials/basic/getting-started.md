@@ -657,7 +657,7 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     ```
 
     The cluster runs with the base's defaults. To give it values of its own, see
-    [Give a cluster its own values](../../how-to/cluster-values.md#give-a-cluster-its-own-values). Don't set
+    [Give a cluster its own values](../../how-to/cluster-values.md#write-the-clusters-values-configmap). Don't set
     `global.release.version` in them, because the chart sets it. For another provider, see
     [Create a cluster base for a provider other than CAPA](../../how-to/cluster-base-provider.md).
 

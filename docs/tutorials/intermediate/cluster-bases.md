@@ -209,8 +209,8 @@ You can move your first cluster onto the base too: change `bases/clusters/capa` 
 its nodes are replaced, so pick your moment.
 
 To give one cluster values of its own on top of the base, see
-[Give a cluster its own values](../../how-to/cluster-values.md#give-a-cluster-its-own-values). To give it apps, add an
-`apps` directory and an apps `Kustomization`, as in the basic tutorial's
+[Give a cluster its own values](../../how-to/cluster-values.md#write-the-clusters-values-configmap). To give it
+apps, add an `apps` directory and an apps `Kustomization`, as in the basic tutorial's
 [step 3](../basic/getting-started.md#3-create-a-workload-cluster).
 
 ## Next steps

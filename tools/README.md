@@ -17,10 +17,10 @@ The tools provided here may require the following external tools
 
 This directory provides the following tools
 
-- [test-all-ff](https://github.com/giantswarm/gitops-template/blob/main/tools/test-all-ff)
-- [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
-- [validate-helm-values](https://github.com/giantswarm/gitops-template/blob/main/tools/validate-helm-values)
-- [check-directory-readmes](https://github.com/giantswarm/gitops-template/blob/main/tools/check-directory-readmes)
+- [test-all-ff](test-all-ff)
+- [fake-flux](fake-flux)
+- [validate-helm-values](validate-helm-values)
+- [check-directory-readmes](check-directory-readmes)
 
 ## `test-all-ff`
 

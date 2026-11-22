@@ -77,7 +77,7 @@ management-clusters
                 ├── [WC_NAME-direct.yaml]
                 └── WC_NAME                             managed from WC_NAME.yaml and WC_NAME-apps.yaml
 -----------------------------------------------------------------------------------
-                    ├── kustomization.yaml                WC_NAME.yaml responsibility
+                    ├── kustomization.yaml                WC_NAME-apps.yaml responsibility
                     ├── apps
                     ├── cluster
                     ├── [out-of-band]
