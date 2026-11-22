@@ -22,7 +22,9 @@ in this directory and below it, and builds a directory that has a `kustomization
 
 Rename the directory and change the `TODO`s in `MC_NAME.yaml`: the Kustomization's name, `spec.path` and the
 `GitRepository` it reads. Give the new cluster its own master key, not a copy of another cluster's. Keep
-`prune: true`: the objects whose deletion would delete a cluster are protected one by one instead.
+`prune: true`: the objects whose deletion would delete a cluster are protected one by one instead. Keep the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation on `MC_NAME.yaml` too: without it, renaming the Kustomization
+would make it prune itself, and everything it applied with it.
 
 ## Read more
 

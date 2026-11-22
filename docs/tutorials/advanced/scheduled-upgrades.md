@@ -23,6 +23,7 @@ pools, which [Clean up](#clean-up) deletes again.
 - [Install before the first window](#install-before-the-first-window)
 - [How the window works](#how-the-window-works)
 - [Keep the version](#keep-the-version)
+- [When it doesn't upgrade](#when-it-doesnt-upgrade)
 - [Clean up](#clean-up)
 - [Next steps](#next-steps)
 
@@ -38,7 +39,9 @@ A plain `HelmRelease` is enough when:
 
 Use a `ResourceSetInputProvider` and a `ResourceSet` when upgrades have to wait for a window: the release of a
 production cluster, or an app that should only restart in working hours. A `ResourceSet` can also roll the same app out
-to several clusters from one list, see [Multicluster apps](./multicluster-apps.md).
+to several clusters from one list, see [Multicluster apps](./multicluster-apps.md). The examples put the whole app in
+the `ResourceSet`, its `OCIRepository` and its `HelmRelease`; why, and when rendering less would do, is in
+[What goes in a ResourceSet](../../explanation/composition.md#what-goes-in-a-resourceset).
 
 ## Schedule an app's upgrades
 
@@ -71,7 +74,7 @@ such a cluster.
       type: OCIArtifactTag
       url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
       filter:
-        semver: '>=3.0.0 <4.0.0'
+        semver: '>=3.2.2 <4.0.0'
         limit: 1
       schedule:
         - cron: "0 9 * * 1-4"
@@ -207,7 +210,8 @@ instead.
 
 The cluster is still built from the [CAPA cluster base](/bases/clusters/capa) and a region, which give it its values.
 Its `ResourceSet` renders the `OCIRepository` and the `HelmRelease` as the base has them, at the version its provider
-picks, and a patch drops the base's two.
+picks, and a patch drops the base's two. Another patch appends the cluster's own values to the `HelmRelease` the
+`ResourceSet` renders.
 
 1. Export the cluster's name, at most 20 characters, and its directory:
 
@@ -247,7 +251,8 @@ picks, and a patch drops the base's two.
 
 1. Create the `ResourceSet`. Both objects carry the `fluxcd.controlplane.io/prune: disabled` annotation and the
    `giantswarm.io/prevent-deletion` label, as the base's do. The `HelmRelease` lists the region's values itself,
-   after the base's, because a Component's patch doesn't reach into a `ResourceSet`:
+   after the base's: a Component's patch targets a `HelmRelease`, and kustomize doesn't see the one inside a
+   `ResourceSet`:
 
     ```sh
     cat <<'EOF' > ${SU_DIR}/cluster/cluster-resource-set.yaml
@@ -334,6 +339,40 @@ picks, and a patch drops the base's two.
     EOF
     ```
 
+1. Create the cluster's own values, and the patch that appends them to the `HelmRelease` in the `ResourceSet`. The
+   patch targets the `ResourceSet`, as a patch aimed at a `HelmRelease` would match nothing here, and kustomize says
+   nothing about a patch that matches nothing. It's a JSON 6902 patch on the second of the `resources`, the
+   `HelmRelease`, and its `test` fails the build if that ever stops being true:
+
+    ```sh
+    cat <<'EOF' > ${SU_DIR}/cluster/cluster_userconfig.yaml
+    apiVersion: v1
+    data:
+      values: |
+        global:
+          nodePools:
+            workers:
+              instanceType: m6i.4xlarge
+    kind: ConfigMap
+    metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+      name: ${cluster_name}-cluster-userconfig
+      namespace: org-${organization}
+    EOF
+    cat <<'EOF' > ${SU_DIR}/cluster/patch_cluster_userconfig.yaml
+    - op: test
+      path: /spec/resources/1/kind
+      value: HelmRelease
+    - op: add
+      path: /spec/resources/1/spec/valuesFrom/-
+      value:
+        kind: ConfigMap
+        name: ${cluster_name}-cluster-userconfig
+        valuesKey: values
+    EOF
+    ```
+
 1. Create the patch that drops the base's `OCIRepository` and `HelmRelease`, and the cluster's `kustomization.yaml`:
 
     ```sh
@@ -363,10 +402,16 @@ picks, and a patch drops the base's two.
           giantswarm.io/managed-by: flux
     patches:
       - path: patch_delete_base_cluster.yaml
+      - path: patch_cluster_userconfig.yaml
+        target:
+          group: fluxcd.controlplane.io
+          kind: ResourceSet
+          name: \${cluster_name}
     resources:
       - ../../../../../../../bases/clusters/capa
       - release-input-provider.yaml
       - cluster-resource-set.yaml
+      - cluster_userconfig.yaml
     EOF
     cat <<'EOF' > ${SU_DIR}/kustomization.yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
@@ -446,6 +491,12 @@ With a `window`, the provider looks at the registry only while the window is ope
 10 minutes. Outside it, nothing moves the version: not a new release, and not a change to the range in Git either.
 Both wait for the next window. A window has to be at least twice the timeout, so at least `4m`.
 
+The window holds back the version, and only the version. A change to the `ResourceSet` itself, or to a ConfigMap in a
+`HelmRelease`'s `valuesFrom`, reaches the app or the cluster as soon as it's merged, at any hour, as it would without a
+`ResourceSet`; merge those in the window too. And the window decides when an upgrade starts, not when it ends: a
+provider that picks a new version two minutes before the window closes starts an upgrade that runs as long as it
+takes, which for a cluster release means replacing every node.
+
 `window` defaults to `0s`, which Flux Operator's API documents as "no window is applied". That doesn't turn the
 schedule off, and it doesn't hold upgrades back either: the provider looks at the `cron` time, and also whenever
 something asks it to, such as a change to its spec or a restart of Flux Operator. It only stops looking every 10
@@ -455,10 +506,18 @@ The kind test checks this behaviour, in `tests/ats/resource_set_schedule.py`.
 
 ## Keep the version
 
-Without a version, a `ResourceSet` renders nothing and deletes what it rendered before, which uninstalls the app or
-deletes the cluster. That's the one way this setup can really hurt. The version goes when no tag matches the range,
-when the registry can't be read, or when the provider is deleted. Both `ResourceSet`s above guard against it with the
-`dependsOn` on their provider:
+A `ResourceSet` renders its `resources` once for each input. If its provider exports nothing, it renders nothing, and
+deletes what it rendered before: for the app above, that's an uninstall. In Flux Operator v0.62.1 a provider stops
+exporting a version in one case, when no tag matches its range, after a typo in it or a pin to a version the registry
+doesn't have. The other ways the version might seem to go don't take it away:
+
+- A provider that can't read the registry keeps the version it exported last, and reports `Ready` `False` until it
+  can.
+- A deleted provider can't be read at all, so the `ResourceSet` stops with `BuildFailed` rather than rendering nothing.
+- With `inputStrategy: Permute`, as in [Multicluster apps](./multicluster-apps.md), a provider without a version
+  fails the build too.
+
+Both `ResourceSet`s above guard against the one case with the `dependsOn` on their provider:
 
 ```yaml
 dependsOn:
@@ -473,22 +532,54 @@ dependsOn:
 ```
 
 Until the provider is `Ready` with a version, the `ResourceSet` reports `DependencyNotReady` and leaves what it rendered
-as it is. The cluster's `OCIRepository` and `HelmRelease` also have the `fluxcd.controlplane.io/prune: disabled`
+as it is, whatever the reason. It's cheap, and it doesn't rely on how a later Flux Operator treats the other cases.
+The cluster's `OCIRepository` and `HelmRelease` also have the `fluxcd.controlplane.io/prune: disabled`
 annotation, so the `ResourceSet` never deletes them, not even when the `ResourceSet` itself is deleted or its file is
 deleted from Git, and the `giantswarm.io/prevent-deletion` label, as in the cluster base. Keep both whenever you write
 a `ResourceSet` that renders a cluster. [Deletion protection](../../explanation/deletion-protection.md#resourcesets)
 explains how they work together.
 
-The kind test takes the version away in each of the three ways and checks that the app stays installed, in
-`tests/ats/resource_set_guard.py`, and that the cluster's `HelmRelease` and `OCIRepository` stay, also when the
-`ResourceSet` is deleted, in `tests/ats/resource_set_cluster_guard.py`.
+The kind test tries all three, an unreadable registry, a range no tag matches and a deleted provider, and checks that
+the app stays installed, in `tests/ats/resource_set_guard.py`, and that the cluster's `HelmRelease` and `OCIRepository`
+stay, also when the `ResourceSet` is deleted, in `tests/ats/resource_set_cluster_guard.py`.
+
+## When it doesn't upgrade
+
+The `Kustomization` that applies a `ResourceSet` is `Ready`, and its commit status green, once the `ResourceSet` and
+its provider are on the management cluster. What the `ResourceSet` does after that is its own business. A green
+`Kustomization` doesn't vouch for it: a typo in a `<< inputs.* >>` expression gives you a green commit and an app that
+never upgrades again. So when a new version doesn't arrive, look at the two Flux Operator objects:
+
+```sh
+kubectl get resourcesetinputproviders,resourcesets -n org-${ORG_NAME} \
+  -o 'custom-columns=KIND:.kind,NAME:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,REASON:.status.conditions[?(@.type=="Ready")].reason'
+kubectl describe resourceset ${WC_NAME}-hello-world-window -n org-${ORG_NAME}
+```
+
+The reason of the `Ready` condition tells you which of these you have:
+
+| Object | Reason | What it means |
+| --- | --- | --- |
+| provider | `SkippedDueToSchedule` | It's new and hasn't read the registry yet, as its window hasn't opened: no version until `status.nextSchedule.when`, see [Install before the first window](#install-before-the-first-window). After its first read, a provider between windows keeps `ReconciliationSucceeded`. |
+| provider | `ReconciliationFailed` | It couldn't read the registry. It keeps its last version and tries again; the message says why. |
+| `ResourceSet` | `DependencyNotReady` | The `dependsOn` is holding it: its provider isn't `Ready`, or has no version. Look at the provider. |
+| `ResourceSet` | `BuildFailed` | The template doesn't render, or a provider it reads is missing. It's stalled and doesn't retry on a timer: fix it in Git, and the change to the `ResourceSet`, or a new version from its provider, starts it again. |
+| `ResourceSet` | `ReconciliationFailed` | It rendered, but couldn't apply what it rendered. The message names the object, and it retries. |
+
+To try a template before you push it, `flux-operator build rset` renders a `ResourceSet` on your machine. It reads
+inputs from a file, with `--inputs-from`, or from a provider of type `Static`, with `--inputs-from-provider`, so you
+give it the version yourself.
+
+Once the `ResourceSet` is `Ready`, what it rendered is ordinary Flux: the `OCIRepository` and the `HelmRelease` report
+their own state, as any app's do.
 
 ## Clean up
 
 Delete the cluster from [Schedule a cluster's release](#schedule-a-clusters-release) as
 [Delete a workload cluster](../../how-to/delete-cluster.md) describes, with `WC_NAME` set to `${SU_NAME}`. Its
 `ResourceSet` renders the cluster's `HelmRelease` and `OCIRepository` with the same protection as the base, under Flux
-Operator's annotation, and they stay when the `ResourceSet` goes, so the steps are the same. The app's schedule, on
+Operator's annotation, and they stay when the `ResourceSet` goes. The steps are the same, except that the patches that
+remove the protection target the `ResourceSet`, as that page shows. The app's schedule, on
 the basic tutorial's cluster, can stay.
 
 ## Next steps

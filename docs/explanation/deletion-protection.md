@@ -20,7 +20,9 @@ Some objects delete a whole cluster when they go, so they carry two markers:
 - The `kustomize.toolkit.fluxcd.io/prune: disabled` annotation: Flux doesn't delete them, even when their files
   disappear from what it renders, for example because a mistake in a template drops them.
 - The `giantswarm.io/prevent-deletion: "true"` label: the `kyverno-policies-ux` policies on a Giant Swarm management
-  cluster refuse to delete them, whoever asks, `kubectl` and Flux included, until the label is removed.
+  cluster refuse to delete them, whoever asks, `kubectl` and Flux included, until the label is removed. The policy
+  covers a `HelmRelease` and an `OCIRepository` in `kyverno-policies-ux` 0.16.0 and newer; with an older one, the
+  label on the cluster's `HelmRelease` and `OCIRepository` stops nothing.
 
 The two do different jobs. The annotation keeps Flux from trying, so a pruned file doesn't turn into a failing
 `Kustomization`. The label stops everyone else, including a person with `kubectl delete` and the wrong context. You
@@ -48,14 +50,38 @@ it as not ready. To delete it on purpose, remove the label with a push first, th
   `namespace/secrets/`, such as a workload cluster's key. Flux decrypts with them, so deleting one stops GitOps for
   every cluster that uses it. The keys are encrypted, so each directory's `kustomization.yaml` adds the annotation and
   the label instead: changing an encrypted file by hand breaks its SOPS checksum.
+- The `Kustomization`s that everything else hangs off: the management cluster's own, in `MC_NAME.yaml`, and each
+  organisation's namespace `Kustomization`, in `namespace.yaml`, and multicluster apps `Kustomization`, in
+  `multicluster/apps.yaml`. These carry the annotation only. When Flux prunes a `Kustomization`, its finalizer
+  deletes everything it applied, and the `Kustomization`s among that do the same, all the way down. So a rename, a
+  dropped line in a `kustomization.yaml` or a `git rm` of an organisation's directory would uninstall every app on
+  every cluster of the organisation, or of the management cluster, and remove their values and secrets. The clusters
+  would keep running, empty. The management cluster's `Kustomization` applies itself, so a rename would make it prune
+  itself. With the annotation, Flux leaves the `Kustomization` where it is; with its path gone, it fails to build and
+  prunes nothing.
 
 The rest of the cluster's objects, such as its values ConfigMaps and its apps, don't delete the cluster, so Flux
 deletes them. Add the annotation and the label to anything else that must outlive its file, such as the cluster
 `HelmRelease` and `OCIRepository` of a cluster base you write yourself: without them on the `OCIRepository`, Flux
 deletes it and the `HelmRelease` it keeps loses its chart.
 
+The cluster's own `Kustomization`s don't have the annotation: deleting them is how you remove a cluster's apps, see
+[Delete a workload cluster](../how-to/delete-cluster.md).
+
+Removing an organisation on purpose takes a little longer than deleting its directory, which is the point:
+
+1. Delete its clusters first, as [Delete a workload cluster](../how-to/delete-cluster.md) describes. Otherwise the
+   last step uninstalls their apps and leaves the clusters running, empty: their `HelmRelease`s stay whatever happens.
+1. Take the annotation off `namespace.yaml` and `multicluster/apps.yaml`, and push. Flux now manages them like any
+   other object.
+1. Delete the organisation's directory, and push. Flux deletes the two `Kustomization`s and what they applied,
+   except the keys. The `Organization` stays, with its own annotation and label: delete it by hand once you've pushed
+   the label's removal, as for any protected object, and its namespace goes with it, keys and all.
+
 The kind test checks this, see [Jobs](../reference/ci-checks.md#jobs): it deletes a cluster's `Kustomization`s and
-expects everything they applied to go, except the cluster's `HelmRelease` and `OCIRepository`.
+expects everything they applied to go, except the cluster's `HelmRelease` and `OCIRepository`. It also drops the
+organisation's namespace `Kustomization` from the management cluster's build, and expects it and the cluster's
+`Kustomization`s to stay.
 
 ## What kubectl-gs writes
 
@@ -82,8 +108,9 @@ With an older kubectl-gs, or with `kubectl gs template`, add what's missing by h
 A Flux Operator `ResourceSet` can render a cluster's `OCIRepository` and `HelmRelease` instead of a `Kustomization`, as
 the scheduled-upgrades example does, see
 [Hold upgrades for a window](../tutorials/advanced/scheduled-upgrades.md). It prunes too: when its input goes, it
-deletes what it rendered for it. Its input is a version, and the version goes when no tag matches the range, when the
-registry can't be read or when the provider is deleted. Two guards cover it:
+deletes what it rendered for it. Its input is a version, which in Flux Operator v0.62.1 goes only when no tag matches
+the range: a provider that can't read the registry keeps its last version, and a deleted provider stalls the
+`ResourceSet` rather than emptying it. Two guards cover it all the same:
 
 - The `ResourceSet` has its provider in `dependsOn`, with a `readyExpr` that needs exported inputs. Until the provider
   is `Ready` with a version, the `ResourceSet` reports `DependencyNotReady` and leaves what it rendered as it is.
@@ -93,4 +120,5 @@ registry can't be read or when the provider is deleted. Two guards cover it:
   base.
 
 [Keep the version](../tutorials/advanced/scheduled-upgrades.md#keep-the-version) shows the guard, and the kind test
-takes the version away in each of the three ways and checks that the cluster stays.
+tries all three, an unreadable registry, a range no tag matches and a deleted provider, and checks that the cluster
+stays.

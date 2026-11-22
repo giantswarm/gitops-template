@@ -375,8 +375,9 @@ files in the organisation's `namespace`.
 1. Put a Secret into the organisation's `namespace/secrets`, which the organisation's namespace `Kustomization` applies
    into its namespace. Create the directory first if the organisation doesn't have it, as for a
    [workload cluster key](#add-a-workload-cluster-key-gpg), then list the file in its `kustomization.yaml`. Name the
-   real namespace, `org-${ORG_NAME}`, the same one the namespace `Kustomization`'s `targetNamespace` sets, so Flux
-   leaves the encrypted file as it is and can decrypt it:
+   real namespace, `org-${ORG_NAME}`, the same one the namespace `Kustomization`'s `targetNamespace` sets, before you
+   encrypt it: changing the file afterwards breaks its MAC, and `sops` can no longer decrypt it to change it or rotate
+   its key:
 
     ```sh
     kubectl create secret generic my-secret \

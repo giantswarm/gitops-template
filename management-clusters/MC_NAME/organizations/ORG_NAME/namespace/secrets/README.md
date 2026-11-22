@@ -21,8 +21,9 @@ decrypts the keys with the master key.
 ## When you copy it
 
 Replace the keys with your own clusters' keys, one file per key, and add each to `resources:` in `kustomization.yaml`
-in the same commit. Write `metadata.namespace: org-<name>` with the real name before you encrypt a key: you can't change
-an encrypted file afterwards. Keep the annotation and the label.
+in the same commit. Write `metadata.namespace: org-<name>` with the real name before you encrypt a key: changing an
+encrypted file afterwards breaks its MAC, and `sops` can no longer decrypt it to change it or rotate its key. Keep the
+annotation and the label.
 
 ## Read more
 

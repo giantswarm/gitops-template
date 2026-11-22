@@ -118,6 +118,39 @@
       "matchDepNames": ["gsoci.azurecr.io/charts/giantswarm/release-aws"],
       "automerge": false,
     },
+    // The pins below stand for what the management clusters run, not for the
+    // newest upstream release: the Kubernetes and Flux schemas in
+    // `tools/test-all-ff`, the Cluster API CRDs and the vCluster's Kubernetes
+    // in `tests/ats/conftest.py`, and `kind_ver` in `validate.yaml`, whose
+    // default node image sets the kind cluster's Kubernetes. Their `# renovate:`
+    // comments name the upstream releases, so `allowedVersions` holds each one
+    // where the management clusters are. When the platform moves, raise the
+    // bound here and Renovate proposes the new version. Flux and Cluster API
+    // are bounded at the exact version that flux-app and cluster-api-app ship;
+    // Kubernetes and kind at the minor version, as a patch release changes no
+    // schema the checks use.
+    {
+      "description": "Flux: the version flux-app ships on the management clusters (flux-app 1.12.2)",
+      "matchDepNames": ["fluxcd/flux2"],
+      "allowedVersions": "<=2.7.5",
+      // The schemas' checksum is set by hand.
+      "automerge": false,
+    },
+    {
+      "description": "Cluster API: the version cluster-api-app ships on the management clusters (v9.0.4)",
+      "matchDepNames": ["kubernetes-sigs/cluster-api"],
+      "allowedVersions": "<=1.14.4",
+    },
+    {
+      "description": "Kubernetes: the minor version of the management clusters",
+      "matchDepNames": ["kubernetes/kubernetes", "ghcr.io/loft-sh/kubernetes"],
+      "allowedVersions": "<1.37.0",
+    },
+    {
+      "description": "kind: the release whose default node image runs the management clusters' Kubernetes minor version",
+      "matchDepNames": ["kubernetes-sigs/kind"],
+      "allowedVersions": "<0.33.0",
+    },
     {
       // `.github/workflows/chainsaw.yaml` pins Chainsaw's version next to the
       // checksum of its archive, which Renovate doesn't update. Nothing in CI

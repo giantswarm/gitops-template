@@ -164,7 +164,9 @@ gets no apps, so it needs only the cluster's `Kustomization`.
       healthCheckExprs:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster
-          current: status.conditions.exists(c, c.type == 'Available' && c.status == 'True')
+          current: >-
+            status.conditions.exists(c, c.type == 'ControlPlaneAvailable' && c.status == 'True')
+            && status.conditions.exists(c, c.type == 'RemoteConnectionProbe' && c.status == 'True')
       healthChecks:
         - apiVersion: cluster.x-k8s.io/v1beta2
           kind: Cluster

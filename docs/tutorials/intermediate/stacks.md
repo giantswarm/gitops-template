@@ -151,7 +151,7 @@ bases/stacks/hello-web
           - op: replace
             path: /spec/ref/tag
             # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/envoy-gateway versioning=docker
-            value: "1.10.3"
+            value: "1.10.5"
         target:
           kind: OCIRepository
           name: \${cluster_name}-envoy-gateway
@@ -159,7 +159,7 @@ bases/stacks/hello-web
           - op: replace
             path: /spec/ref/tag
             # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-config versioning=docker
-            value: "1.11.3"
+            value: "1.13.1"
         target:
           kind: OCIRepository
           name: \${cluster_name}-gateway-api-config
@@ -167,7 +167,7 @@ bases/stacks/hello-web
           - op: replace
             path: /spec/ref/tag
             # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
-            value: "3.2.2"
+            value: "3.2.4"
         target:
           kind: OCIRepository
           name: \${cluster_name}-hello-world

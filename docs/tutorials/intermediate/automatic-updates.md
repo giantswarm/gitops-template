@@ -31,9 +31,10 @@ A range goes on an app with an `oci-repository.yaml` of its own. If you followed
 and [Stacks](./stacks.md), your cluster's hello-world gets its `OCIRepository` from the stack now, so add a small app
 of its own to try the range on: hello-world once more, as `hello-world-auto`, in a namespace of its own.
 
-1. Create the app with a fixed version, as in the basic tutorial. `3.2.2` is a version the repository's examples pin;
-   any published version from `3.0.0` on works. Its Ingress is switched off, as in the basic tutorial, so that it
-   doesn't claim the host of the cluster's other hello-world:
+1. Create the app with a fixed version, as in the basic tutorial. `3.2.2` is the oldest hello-world that takes the
+   cluster values: earlier versions have a values schema that refuses them. Starting there leaves the range something
+   to do. Its Ingress is switched off, as in the basic tutorial, so that it doesn't claim the host of the cluster's
+   other hello-world:
 
     ```sh
     export APP_DIR=${WC_DIR}/apps/hello-world-auto
@@ -88,11 +89,11 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
     yq -i '.resources += ["hello-world-auto"]' ${WC_DIR}/apps/kustomization.yaml
     ```
 
-1. Replace the fixed version with a range: here, every release from `3.0.0` on, but below the next major version,
+1. Replace the fixed version with a range: here, every release from `3.2.2` on, but below the next major version,
    which might bring breaking changes:
 
     ```sh
-    yq -i '.spec.ref = {"semver": ">=3.0.0 <4.0.0"}' ${APP_DIR}/oci-repository.yaml
+    yq -i '.spec.ref = {"semver": ">=3.2.2 <4.0.0"}' ${APP_DIR}/oci-repository.yaml
     ```
 
     > **Shortcut:** [`kubectl gs gitops add automatic-update`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-update/)
@@ -102,7 +103,7 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
     >
     > ```sh
     > kubectl gs gitops add automatic-update --management-cluster ${MC_NAME} --organization ${ORG_NAME} \
-    >   --workload-cluster ${WC_NAME} --app hello-world-auto --version-range '>=3.0.0 <4.0.0'
+    >   --workload-cluster ${WC_NAME} --app hello-world-auto --version-range '>=3.2.2 <4.0.0'
     > ```
     >
     > The `--workload-cluster` is the name of the cluster's directory, and `--app` the name of the app's. Nothing
@@ -120,7 +121,7 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
     spec:
       interval: 10m
       ref:
-        semver: '>=3.0.0 <4.0.0'
+        semver: '>=3.2.2 <4.0.0'
       url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
     ```
 
@@ -130,11 +131,12 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
     git add ${WC_DIR}/apps && git commit -m "Update hello-world-auto on ${WC_NAME} automatically" && git push
     ```
 
-A range only matches pre-release tags, such as `3.1.0-rc.1`, if it has a pre-release comparator itself: `>=3.0.0-0`
-matches every release and pre-release from `3.0.0` on. To narrow the matching tags down further, add a regular
-expression in `spec.ref.semverFilter`. The [dev stage](./stages-and-regions.md#stages) uses both to follow hello-world's
-development builds. The [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/) have all the
-options.
+A range only matches pre-release tags, the ones with a `-` after the version, if it has a pre-release comparator
+itself, such as `>=3.2.2-0`. Don't reach for one to get releases sooner. On `gsoci.azurecr.io` a pre-release isn't a
+release candidate: it's a build of a branch that hasn't been merged, and semver sorts those by a hash of the branch
+name, so "the newest pre-release" is whichever branch hash sorts last, not the latest build. The
+[dev stage](./stages-and-regions.md#stages) is where pre-releases belong, with `spec.ref.semverFilter` to say which
+ones. The [OCIRepository docs](https://fluxcd.io/flux/components/source/ocirepositories/) have all the options.
 
 ## Apps from an App Template or a stack
 
@@ -149,7 +151,7 @@ patches:
       - op: replace
         path: /spec/ref
         value:
-          semver: '>=3.0.0 <4.0.0'
+          semver: '>=3.2.2 <4.0.0'
     target:
       kind: OCIRepository
       name: \${cluster_name}-hello-world

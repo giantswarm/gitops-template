@@ -10,9 +10,11 @@
 #   files it applies name no namespace, and use `${organization}` where they need the name, which
 #   that Kustomization's `postBuild` sets.
 # `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
-# the name after it. A SOPS-encrypted Secret in namespace/ must name the real namespace,
-# `org-<name>`, never the placeholder: changing an encrypted file breaks its MAC, so Flux
-# couldn't decrypt it. `targetNamespace` sets the same namespace, so it keeps the MAC.
+# the name after it. A SOPS-encrypted Secret in namespace/ names the real namespace,
+# `org-<name>`, never the placeholder, written before you encrypt it. Changing an encrypted
+# file afterwards, by hand or by search-and-replace, breaks its MAC: `sops` can't decrypt it
+# in place to change it or rotate its key, and the Secret has to be created again. Flux
+# doesn't check the MAC, so `targetNamespace` setting the namespace at build time is harmless.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # The management cluster's Kustomization applies these: only the Organization and objects in

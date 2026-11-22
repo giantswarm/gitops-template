@@ -28,7 +28,7 @@ metadata:
 spec:
   provider: generic
   ref:
-    tag: "1.10.3"
+    tag: "1.10.5"
   url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -44,7 +44,7 @@ metadata:
 spec:
   provider: generic
   ref:
-    tag: "1.11.3"
+    tag: "1.13.1"
   url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -61,7 +61,7 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    semver: '>=3.0.0-0'
+    semver: '>=3.2.2-0'
     semverFilter: -r[0-9a-f]{8}t[0-9]{14}h[0-9a-f]{7}
   url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
 ---

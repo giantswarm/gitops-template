@@ -12,16 +12,17 @@ are in the organisation's namespace, `org-<name>`, and so is what they render.
 ## What's here
 
 - `clusters.yaml`: the clusters every app here goes to. A patch that `kustomization.yaml` applies to every
-  `ResourceSet`. Add a cluster's name to roll the apps out to it; remove it to uninstall them there.
+  `ResourceSet`. Add a cluster's name to roll the apps out to it; remove it to uninstall them there. Removing the last
+  name doesn't uninstall anything: the `ResourceSet`s fail to build and keep what they installed.
 - `kustomization.yaml`: lists each app's files and applies `clusters.yaml` to them.
 - [`hello-world-scheduled/`](hello-world-scheduled/): the example app.
   - `input-provider.yaml`: a `ResourceSetInputProvider` that picks the newest hello-world version in a range, only
     inside its upgrade window.
-  - `resource-set.yaml`: the `ResourceSet` that installs that version on each cluster. It waits for the provider to
-    have a version, so a registry outage never renders nothing and uninstalls the app everywhere.
+  - `resource-set.yaml`: the `ResourceSet` that installs that version on each cluster. It waits until the provider is
+    `Ready` with a version.
 
 A new provider has no version until its first window opens. To install at once, force it, as the comment in
-`input-provider.yaml` shows.
+`input-provider.yaml` shows. Every listed cluster upgrades in the same window, from the same provider.
 
 ## When you copy it
 
@@ -29,7 +30,9 @@ Put your clusters' names in `clusters.yaml`. For a new app, copy `hello-world-sc
 it, change the chart, the version range, the window and the names, and list both files in `kustomization.yaml`. Keep
 one `ResourceSet` per app: a `ResourceSet` deletes what it rendered for an input that's gone, so apps that shared one
 would go together. To give one app its own list of clusters, add a patch after `clusters.yaml` that targets its
-`ResourceSet` by name.
+`ResourceSet` by name. To take an app off every cluster, remove it from `kustomization.yaml`. To upgrade production
+later than the rest, see
+[Upgrade production later](/docs/tutorials/advanced/multicluster-apps.md#upgrade-production-later).
 
 ## Read more
 

@@ -6,8 +6,9 @@ apps and its configuration, but the cluster's `HelmRelease` and `OCIRepository` 
 label, so nobody can delete them until the label is removed. The cluster's `Cluster` has the label too. See
 [Deletion protection](../explanation/deletion-protection.md) for why.
 
-So deleting a cluster takes a few deliberate steps, in this order: remove the protection, remove what the cluster
-applies to the workload cluster directly, remove its keys and its files, and only then delete the cluster by hand.
+So deleting a cluster takes a few deliberate steps, in this order: remove the protection, take the cluster out of the
+organisation's multicluster apps, remove what the cluster applies to the workload cluster directly, remove its keys and
+its files, and only then delete the cluster by hand.
 The [basic tutorial](../tutorials/basic/getting-started.md#6-delete-the-cluster-optional) deletes the cluster it
 created the same way.
 
@@ -42,8 +43,9 @@ Check what you're about to delete:
 - **Application teams are gone.** If an application team delivers to the cluster with Flux on the management cluster,
   remove the team from the cluster first, see [Remove a team](../tutorials/advanced/teams.md#remove-a-team).
 - **A cluster from a `ResourceSet`**, as in the scheduled-upgrades example, has `fluxcd.controlplane.io/prune:
-  disabled` instead of Flux's annotation, and its `ResourceSet` renders it. The steps are the same; its `HelmRelease`
-  and `OCIRepository` stay when the `ResourceSet` goes.
+  disabled` instead of Flux's annotation, and its `ResourceSet` renders it. Its `HelmRelease` and `OCIRepository` stay
+  when the `ResourceSet` goes. The steps are the same, except for the patches that remove the protection, which have
+  to target the `ResourceSet`, see below.
 
 ## Remove the deletion protection
 
@@ -61,6 +63,43 @@ deleting them with the files later.
     The second patch targets only the cluster's `HelmRelease`, named `${cluster_name}`, not the base apps in
     `cluster/apps`. kustomize reads the target name as a regular expression, hence the escaped `$`.
 
+    For a cluster a `ResourceSet` renders, those two patches match nothing, and kustomize says nothing about a patch
+    that matches nothing: the `HelmRelease` and the `OCIRepository` are entries in the `ResourceSet`'s `resources`,
+    not objects kustomize sees. Patch the `ResourceSet` instead, the way its `patch_cluster_userconfig.yaml` does: the
+    `OCIRepository` is the first resource and the `HelmRelease` the second, and a `test` before each change fails the
+    build if that isn't so. The `HelmRelease` in the example has no `spec.values`, so the patch adds them; if yours
+    has some, add `global.metadata.preventDeletion` under them instead of replacing them:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/cluster/patch_remove_protection.yaml
+    - op: test
+      path: /spec/resources/0/kind
+      value: OCIRepository
+    - op: remove
+      path: /spec/resources/0/metadata/labels/giantswarm.io~1prevent-deletion
+    - op: test
+      path: /spec/resources/1/kind
+      value: HelmRelease
+    - op: remove
+      path: /spec/resources/1/metadata/labels/giantswarm.io~1prevent-deletion
+    - op: add
+      path: /spec/resources/1/spec/values
+      value:
+        global:
+          metadata:
+            preventDeletion: false
+    EOF
+    yq -i '.patches += [{"path": "patch_remove_protection.yaml", "target": {"group": "fluxcd.controlplane.io", "kind": "ResourceSet", "name": "\\${cluster_name}"}}]' ${WC_DIR}/cluster/kustomization.yaml
+    ```
+
+    Check that the patch took, before you push: neither rendered object may carry the label any more, so this has to
+    print `OCIRepository: null` and `HelmRelease: null`:
+
+    ```sh
+    kubectl kustomize ${WC_DIR}/cluster |
+      yq 'select(.kind == "ResourceSet") | .spec.resources[] | .kind + ": " + (.metadata.labels."giantswarm.io/prevent-deletion" // "null")'
+    ```
+
 1. Commit and push, and make Flux read the change right away:
 
     ```sh
@@ -68,11 +107,49 @@ deleting them with the files later.
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
     ```
 
+    For a cluster a `ResourceSet` renders, Flux applies the changed `ResourceSet`, and Flux Operator applies what it
+    renders at once, without waiting for the upgrade window, as long as its provider is `Ready` with a version. Its
+    server-side apply takes the label off the live `HelmRelease` and `OCIRepository`, as Flux Operator is the only
+    field manager that set it there. A label someone added by hand, with `kubectl label`, stays; remove that by hand.
+    Check the live objects too, the `PREVENT-DELETION` column has to be empty:
+
+    ```sh
+    kubectl get helmrelease,ocirepository ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
+    ```
+
 1. Wait until the `Cluster` has lost the label, which takes an upgrade of the chart. The `PREVENT-DELETION` column has
    to be empty:
 
     ```sh
     kubectl get clusters.cluster.x-k8s.io ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
+    ```
+
+## Take the cluster out of multicluster apps
+
+Skip this if the cluster isn't in `${ORG_DIR}/multicluster/apps/clusters.yaml`, or in a list of its own that a patch in
+`${ORG_DIR}/multicluster/apps/kustomization.yaml` gives one app, see
+[Multicluster apps](../tutorials/advanced/multicluster-apps.md). The organisation's `ResourceSet`s install those apps on
+every listed cluster, and the cluster's own files don't know about them. Left in the list, they keep rendering a
+`HelmRelease` for a cluster that's gone, which fails for good.
+
+1. Take the cluster out of the list, then commit and push:
+
+    ```sh
+    yq -i 'del(.spec.inputs[] | select(.cluster == strenv(WC_NAME)))' ${ORG_DIR}/multicluster/apps/clusters.yaml
+    git commit -am "Take workload cluster ${WC_NAME} out of the multicluster apps" && git push
+    flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
+    flux reconcile kustomization ${MC_NAME}-multicluster-apps-${ORG_NAME} -n default
+    ```
+
+    Do the same in any list of its own. If the cluster is the last one in a list, the `ResourceSet` can't build
+    without it and uninstalls nothing: remove that app from `kustomization.yaml` instead.
+
+1. Wait until the `ResourceSet`s have uninstalled the apps from the cluster:
+
+    ```sh
+    until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
+        -l "resourceset.fluxcd.controlplane.io/name,giantswarm.io/cluster=${WC_NAME}" \
+        --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
 ## Remove out-of-band resources
@@ -206,6 +283,15 @@ Don't commit yet: the next section commits the keys together with the cluster's 
     git rm -rq ${WC_DIR}
     ```
 
+1. If the organisation sends [commit statuses](./commit-statuses.md), take the cluster's `Kustomization`s, the
+   `-direct` one included, out of the `eventSources` of its `Alert`:
+
+    ```sh
+    export ALERT=${ORG_DIR}/namespace/notifications/commit-status-alert.yaml
+    [ -f ${ALERT} ] && yq -i 'del(.spec.eventSources[] |
+      select(.name | test("^'"${MC_NAME}-clusters-${WC_NAME}"'(-apps|-direct)?$")))' ${ALERT}
+    ```
+
 1. If your [kind test](../reference/ci-checks.md#the-kind-test) knows the cluster, take it out of
    `EXPECTED_NODE_POOLS` in `tests/ats/node_pools.py`, out of `GATES` in `tests/ats/cluster_gates.py`, and remove its
    assertions under `tests/ats/assertions`.
@@ -227,7 +313,9 @@ Don't commit yet: the next section commits the keys together with the cluster's 
     ```
 
 1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
-   uninstalled them from the workload cluster, and it needs the cluster to do that, so wait for them:
+   uninstalled them from the workload cluster. Wait for them: the uninstall is what removes what the apps created
+   outside the cluster, such as load balancers, volumes and DNS records, and deleting the cluster may leave those
+   behind. Once the cluster's kubeconfig Secret has gone, helm-controller skips the uninstall rather than wait for it:
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \

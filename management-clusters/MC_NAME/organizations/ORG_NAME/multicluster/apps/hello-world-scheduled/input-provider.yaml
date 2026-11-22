@@ -19,8 +19,9 @@ spec:
   type: OCIArtifactTag
   url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
   filter:
-    # every release below the next major version, which might bring breaking changes
-    semver: '>=3.0.0 <4.0.0'
+    # every release from 3.2.2, the first that accepts the cluster values, below the
+    # next major version, which might bring breaking changes
+    semver: '>=3.2.2 <4.0.0'
     # only the highest tag: each exported tag would be installed as a release of its own
     limit: 1
   schedule:
