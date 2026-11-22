@@ -1,158 +1,26 @@
 # Add a CAPx (CAPI) Workload Cluster base
 
-- [Example](#example)
-- [Choose a base](#choose-a-base)
-- [Create a base for another provider (optional)](#create-a-base-for-another-provider-optional)
-- [Create a base with your own defaults (optional)](#create-a-base-with-your-own-defaults-optional)
-- [Recommended next steps](#recommended-next-steps)
-
-A cluster base holds what many workload clusters share, so each cluster only adds what's different. A base deploys
-the cluster's `release-<provider>` chart with a Flux `OCIRepository` and `HelmRelease`. The chart version is the Giant
-Swarm release, set by the `${release}` variable.
-
-The values come in layers. Flux merges the entries of the `HelmRelease`'s `valuesFrom` in order, and later entries win:
-
-- the `cluster-app-installation-values` ConfigMap holds the values of the management cluster, such as its name and
-  base domain. You don't create it: a Kyverno policy on the management cluster copies it into every organization
-  namespace, see [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster)
-- the base's `${cluster_name}-config` ConfigMap holds the defaults of every cluster made from the base
-- the `${cluster_name}-region-config` ConfigMap holds the cluster's region. The base doesn't read it: every cluster
-  adds a region component, which creates the ConfigMap and appends it, see [Regions](environments.md#regions). A cluster
-  without a region would be created in the region of its management cluster, so CI fails for a `release-aws` cluster
-  without one
-- optionally more layers from components, such as a region's extra node pool
-- a cluster appends its own ConfigMap last, see
-  [Creating a cluster from the CAPA cluster base](../add_wc_instance.md#creating-a-cluster-from-the-capa-cluster-base)
-
-The instructions respect the [repository structure](../reference/repo-structure.md). The `kubectl gs` commands in this
-guide need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../appendices.md#kubectl-gs-version).
+This page moved to [Cluster bases](../tutorials/intermediate/cluster-bases.md). The sections below keep old links
+working.
 
 ## Example
 
-[bases/clusters/capa](/bases/clusters/capa) is the base for CAPA clusters. It has the files
-`kubectl gs gitops add base --provider capa` writes, described [below](#create-a-base-for-another-provider-optional),
-with deliberate differences: its `HelmRelease` also reads `cluster-app-installation-values`, and in
-`cluster_config.yaml` it sets `global.metadata.description` from
-`${cluster_description}` and leaves out the empty `nodepool0` node pool. The base's
-[readme](/bases/clusters/capa/readme.md#differences-to-kubectl-gs-gitops-add-base) explains why.
+See [Choose a base](../tutorials/intermediate/cluster-bases.md#choose-a-base).
 
 ## Choose a base
 
-Go to the [bases](/bases/clusters) directory and pick a base, then export its path:
-
-```sh
-export CLUSTER_PATH=bases/clusters/capa
-```
-
-The `release-aws` chart exists for every release from v34.0.0 on. Older releases and Release CRs created by hand have
-no `release-<provider>` chart. They need the `cluster-<provider>` chart as an App CR, which this repository no longer
-supports, see the [App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
+See [Choose a base](../tutorials/intermediate/cluster-bases.md#choose-a-base).
 
 ## Create a base for another provider (optional)
 
-[`kubectl gs gitops add base`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-base/) creates a base for
-a provider. For example, for CAPZ:
-
-```sh
-kubectl gs gitops add base --provider capz
-```
-
-It writes `bases/clusters/capz` with three files:
-
-- `cluster.yaml` with the `OCIRepository` of the `release-azure` chart and the `HelmRelease`
-- `cluster_config.yaml` with the default values
-- `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap
-
-The `HelmRelease` it writes only reads `${cluster_name}-config`. Add the `cluster-app-installation-values` entry in front
-of it, as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, or the chart misses
-`global.managementCluster` and `global.connectivity.baseDomain`. On management clusters that run
-`kyverno-policies-ux` 0.15.1 or newer, its `prepend-cluster-app-config-map-hr` policy prepends the same entry to a
-`HelmRelease` that lacks it. The explicit entry is for management clusters without that policy, and it does no harm
-next to it: the policy only adds the entry when it is missing. Leave the region out of the base: each cluster adds it
-with a [region component](environments.md#regions). `release-azure` reads the region from
-`global.providerSpecific.location` instead, and the regions in this repository only set the AWS region, so create a
-region component that sets the location for your Azure clusters.
-
-```yaml
-  valuesFrom:
-    - kind: ConfigMap
-      name: cluster-app-installation-values
-      valuesKey: values.yaml
-    - kind: ConfigMap
-      name: ${cluster_name}-config
-      valuesKey: values
-```
+See [Create a cluster base for another provider](../how-to/cluster-base-provider.md).
 
 ## Create a base with your own defaults (optional)
 
-If many clusters share settings, such as their node pools, put them in a base of their own. It's an overlay of a base
-that replaces the `${cluster_name}-config` ConfigMap.
-
-1. Export the name of the new base:
-
-    ```sh
-    export BASE_NAME=my-defaults
-    ```
-
-1. Create its directory:
-
-    ```sh
-    mkdir -p bases/clusters/${BASE_NAME}
-    ```
-
-1. Copy the `cluster_config.yaml` of the base below. Your file replaces the base's values as a whole, so start from
-   a copy and change only what you need. A value you leave out is lost, such as `global.metadata.preventDeletion`,
-   which gives the cluster's `Cluster` the `giantswarm.io/prevent-deletion` label:
-
-    ```sh
-    cp bases/clusters/capa/cluster_config.yaml bases/clusters/${BASE_NAME}/cluster_config.yaml
-    ```
-
-1. Add your defaults to the copy. They follow the `values.yaml` schema of the cluster chart. For example, a node pool:
-
-    ```sh
-    yq -i '.global.nodePools.nodepool0 = {"instanceType": "m6i.xlarge", "maxSize": 10, "minSize": 3}' \
-      bases/clusters/${BASE_NAME}/cluster_config.yaml
-    ```
-
-    To find more values to set, run
-    [`kubectl gs template cluster`](https://docs.giantswarm.io/reference/kubectl-gs/template-cluster/) with
-    `--provider capa` and a release, and copy the ones you need from the ConfigMap it prints.
-
-1. Create the `kustomization.yaml`. It replaces the base's ConfigMap with one generated from `cluster_config.yaml`:
-
-    ```sh
-    cat <<'EOF' > bases/clusters/${BASE_NAME}/kustomization.yaml
-    apiVersion: kustomize.config.k8s.io/v1beta1
-    configMapGenerator:
-      - behavior: replace
-        files:
-          - values=cluster_config.yaml
-        name: ${cluster_name}-config
-        namespace: org-${organization}
-    generatorOptions:
-      disableNameSuffixHash: true
-      labels:
-        reconcile.fluxcd.io/watch: Enabled
-    kind: Kustomization
-    resources:
-      - ../capa
-    EOF
-    ```
-
-1. Copy the `readme.md` of the base below, which lists the variables the base expects:
-
-    ```sh
-    cp bases/clusters/capa/readme.md bases/clusters/${BASE_NAME}/readme.md
-    ```
-
-1. Export the path of the new base:
-
-    ```sh
-    export CLUSTER_PATH=bases/clusters/${BASE_NAME}
-    ```
+See [Create a base with your own
+defaults](../tutorials/intermediate/cluster-bases.md#create-a-base-with-your-own-defaults) and [Create a cluster from
+it](../tutorials/intermediate/cluster-bases.md#create-a-cluster-from-it).
 
 ## Recommended next steps
 
-- [Prepare multiple environments](./environments.md)
-- [Add a new Workload Cluster repository structure](../add_wc_structure.md)
+See [Next steps](../tutorials/intermediate/cluster-bases.md#next-steps).

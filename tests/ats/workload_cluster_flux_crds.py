@@ -1,10 +1,10 @@
 """Flux's CRDs in the test's workload cluster, for an application team whose Flux runs there.
 
-In the second mode of docs/guides/app-teams.md, Flux runs in the workload cluster, and Flux on
-the management cluster delivers the team's GitRepository and Kustomization there. A workload
-cluster that runs Flux has its CRDs. The test's vCluster runs no Flux: the team's objects only
-have to exist there, so the fixture copies just the CRDs of their kinds from the test cluster,
-where flux-app installed them, at the version GITOPS_FLUX_APP_VERSION names.
+In the second mode of docs/tutorials/advanced/teams.md, Flux runs in the workload cluster, and
+Flux on the management cluster delivers the team's GitRepository and Kustomization there. A
+workload cluster that runs Flux has its CRDs. The test's vCluster runs no Flux: the team's
+objects only have to exist there, so the fixture copies just the CRDs of their kinds from the
+test cluster, where flux-app installed them, at the version GITOPS_FLUX_APP_VERSION names.
 """
 
 import tempfile
