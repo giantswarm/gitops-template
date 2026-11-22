@@ -91,15 +91,18 @@ on macOS.
 
 Some leaves are copies of one shape, such as the stages, the regions or an example cluster's `cluster/` and `apps/`.
 One README in the parent covers them, and the `COVERED` list at the top of the script names each one with its parent.
-The check fails for an entry whose directory is gone, and for a parent README that doesn't name a leaf it covers in
-backticks, as its path relative to the parent followed by a slash, such as `` `dev/` ``. A longer path doesn't count:
-`` `apps/cert-manager/` `` doesn't name `apps/`.
+The check fails for an entry whose directory is gone while its parent is still there, and for a parent README that
+doesn't name a leaf it covers in backticks, as its path relative to the parent followed by a slash, such as
+`` `dev/` ``. A longer path doesn't count: `` `apps/cert-manager/` `` doesn't name `apps/`.
 
 When you add a directory to the template's examples, give it a README. If it's a base, also list it in `SHIPPED`, or the
 check skips it. If it's another copy of a shape a parent README already describes, list it in `COVERED` and name it in
 that README instead.
 
-`test-all-ff validate` checks that the script fails in each of those cases, and passes for a customer's own directories.
+An entry whose parent is gone too went with its example, so a fork that deletes `management-clusters/MC_NAME` passes.
+`test-all-ff validate` checks that the script fails in each of those cases, and passes for a customer's own directories
+and in a fork without the examples. Those cases change the examples, so a fork that deleted them skips them, and says
+so.
 
 ### check-directory-readmes usage
 
