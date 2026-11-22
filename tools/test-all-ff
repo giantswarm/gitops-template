@@ -37,6 +37,14 @@ FLUX_VERSION="2.7.5"
 FLUX_CRD_SCHEMAS_SHA256="63ec8f87d7bbc05c7eb7b75e36540b2897a150cb50c7ee1f28e1e3016dff31a2"
 FLUX_CRD_SCHEMAS_URL="https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/crd-schemas.tar.gz"
 
+# The Flux CLI that builds the Kustomizations, of FLUX_VERSION, so the build and the schemas are of
+# the same Flux. The script downloads it once and checks its SHA-256, from the release's
+# flux_<version>_checksums.txt. Move these with FLUX_VERSION.
+FLUX_CLI_SHA256_LINUX_AMD64="1e92141e8498289e4b27411385aeb18396053176cf297b0cb99abd6ca8293e75"
+FLUX_CLI_SHA256_LINUX_ARM64="89d3ebb47ee5f7a0def33217e8dcb885e0bec41d01d0e23fc84e9aba0416c24e"
+FLUX_CLI_SHA256_DARWIN_AMD64="2058b49ef38b5773b9aa87b3db83d68cbaf5082ecf908cbd8952a17f6af0e2e8"
+FLUX_CLI_SHA256_DARWIN_ARM64="79faae964badc0b08f61ef6228f636bea99c6750537634855fa8b84f75b006d8"
+
 # Giant Swarm CRDs, such as Organization.
 GS_SCHEMA_REF="108ad92b6114d12bb84d20a3e9740bea5b2afbf0"
 GS_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/giantswarm/json-schema/${GS_SCHEMA_REF}/master"
@@ -47,6 +55,7 @@ CRDS_CATALOG_REPOSITORY="https://raw.githubusercontent.com/datreeio/CRDs-catalog
 
 SCHEMA_CACHE="${TMPDIR:-/tmp}/gitops-template-schemas"
 FLUX_SCHEMA_DIR="${SCHEMA_CACHE}/flux-v${FLUX_VERSION}"
+FLUX_CLI_DIR="${SCHEMA_CACHE}/flux-v${FLUX_VERSION}-cli"
 
 fakeflux="$(dirname $0)/fake-flux"
 
@@ -67,6 +76,47 @@ function fetch_flux_schemas() {
 	mkdir -p "${FLUX_SCHEMA_DIR}"
 	tar -xzf "${archive}" -C "${FLUX_SCHEMA_DIR}"
 	rm -f "${archive}"
+}
+
+##
+# Download and unpack the Flux CLI of FLUX_VERSION for this machine once, checking the archive's
+# checksum, and put it first in the PATH, so fake-flux builds with it.
+function fetch_flux_cli() {
+	if [ ! -x "${FLUX_CLI_DIR}/flux" ]; then
+		local os arch sha archive url
+		os=$(uname -s | tr '[:upper:]' '[:lower:]')
+		case "$(uname -m)" in
+		x86_64 | amd64) arch=amd64 ;;
+		aarch64 | arm64) arch=arm64 ;;
+		*) arch=$(uname -m) ;;
+		esac
+		case "${os}_${arch}" in
+		linux_amd64) sha="${FLUX_CLI_SHA256_LINUX_AMD64}" ;;
+		linux_arm64) sha="${FLUX_CLI_SHA256_LINUX_ARM64}" ;;
+		darwin_amd64) sha="${FLUX_CLI_SHA256_DARWIN_AMD64}" ;;
+		darwin_arm64) sha="${FLUX_CLI_SHA256_DARWIN_ARM64}" ;;
+		*)
+			echo "No Flux CLI checksum for ${os}_${arch}: add one at the top of $0" >&2
+			exit 1
+			;;
+		esac
+		url="https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/flux_${FLUX_VERSION}_${os}_${arch}.tar.gz"
+		archive=$(mktemp "${tmp_dir}/flux-cli.XXXXXX")
+		echo "Downloading the Flux ${FLUX_VERSION} CLI" >&2
+		curl -sSfL -o "${archive}" "${url}"
+		if ! echo "${sha}  ${archive}" | sha256sum -c --status; then
+			echo "Checksum mismatch for ${url}" >&2
+			rm -f "${archive}"
+			exit 1
+		fi
+		# unpacked next to the archive and moved, so an unpacking that fails leaves no flux behind
+		tar -xzf "${archive}" -C "${tmp_dir}" flux
+		rm -f "${archive}"
+		mkdir -p "${FLUX_CLI_DIR}"
+		mv "${tmp_dir}/flux" "${FLUX_CLI_DIR}/flux"
+	fi
+	PATH="${FLUX_CLI_DIR}:${PATH}"
+	export PATH
 }
 
 ##
@@ -151,9 +201,18 @@ function test() {
 	tmp_dir=$(mktemp -d)
 	trap 'rm -rf "${tmp_dir}"' EXIT
 
+	fetch_flux_cli
 	if [ "${mode}" == "validate" ]; then
 		fetch_flux_schemas
 		mkdir -p "${SCHEMA_CACHE}/http"
+		# The build and the schemas have to be of the same Flux.
+		echo -n "flux CLI: "
+		if flux version --client 2>/dev/null | grep -qx "flux: v${FLUX_VERSION}"; then
+			echo "OK, v${FLUX_VERSION}"
+		else
+			echo "not v${FLUX_VERSION}: $(flux version --client 2>&1)"
+			has_validation_errors=1
+		fi
 	fi
 
 	for kustomization in "${KUSTOMIZATIONS[@]}"; do
@@ -311,11 +370,11 @@ function test() {
 
 	if [ "${mode}" == "validate" ]; then
 		# validate-helm-values must leave out, not fail for, a ResourceSet's OCIRepository
-		# that keeps a template in more than its tag.
+		# that keeps a template in more than its tag, and say so.
 		echo -n "helm values, ResourceSet OCIRepository with a templated name: "
 		status=0
 		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/resource-set-templated-name.yaml" 2>&1) || status=$?
-		if [ "${status}" -eq 0 ]; then
+		if [ "${status}" -eq 0 ] && grep -qF "ResourceSet org-demo/rset-templated-name: OCIRepository app-<< inputs.name >> left out" <<<"${output}"; then
 			echo "OK, left out"
 		else
 			echo "not left out:"

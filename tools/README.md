@@ -9,7 +9,8 @@ The tools provided here may require the following external tools
 - [yamllint](https://github.com/adrienverge/yamllint)
 - [kubeconform](https://github.com/yannh/kubeconform); CI uses 0.8.0
 - `curl`, `sha256sum` and `tar`, to fetch the Flux CRD schemas
-- [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli)
+- [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli), for `fake-flux` on its own: `test-all-ff` brings its
+  own, see below
 - [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/)
 - [helm](https://helm.sh/docs/intro/install/), for `validate-helm-values`
 
@@ -54,6 +55,12 @@ this order:
 
 The versions are variables at the top of `test-all-ff`. If you add a resource whose kind is in none of these sources,
 add a `-schema-location` for it to the script.
+
+`fake-flux` builds with the Flux CLI of the same version, whatever `flux` you have installed: `test-all-ff` downloads
+`v2.7.5` for Linux or macOS on amd64 or arm64 once, checks its SHA-256 against the one at the top of the script and keeps
+it under `${TMPDIR:-/tmp}/gitops-template-schemas`, first in the `PATH` it runs `fake-flux` with. `validate` checks that
+the CLI is that version. When you move `FLUX_VERSION`, move the CLI checksums and `FLUX_CRD_SCHEMAS_SHA256` with it,
+from the release's `flux_<version>_checksums.txt` and `crd-schemas.tar.gz`.
 
 ### test-all-ff usage
 
@@ -121,7 +128,8 @@ also fails for a `ResourceSet` without a namespace, or one that renders with `sp
 it can't render, as [testdata/resource-set-unsupported.yaml](testdata/resource-set-unsupported.yaml) checks. The
 provider's namespace, `<< inputs.provider.namespace >>` or `<< inputs.SOURCE.provider.namespace >>` with `Permute`,
 is the `ResourceSet`'s own. Rendered objects that still have a `<< ... >>` template in them, such as the ones named
-after an entry of the `ResourceSet`'s `spec.inputs`, are left out.
+after an entry of the `ResourceSet`'s `spec.inputs`, are left out, and the script names each one it leaves out, as
+`ResourceSet <namespace>/<name>: <kind> <name> left out`. Only the kind test checks them.
 
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values

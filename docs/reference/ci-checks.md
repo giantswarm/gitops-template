@@ -17,10 +17,13 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
   [check-directory-readmes](../../tools/README.md#check-directory-readmes), which fails when a directory under
   `bases/` or `management-clusters/` has no README, unless a parent README covers it.
 - `validate` runs `tools/test-all-ff validate`. It builds every Flux `Kustomization` that applies this repository, as
-  Flux applies it, and passes the output through `yamllint` and `kubeconform`, so it fails on YAML that isn't valid
-  and on objects that don't match their schemas. It also renders the chart of every `HelmRelease` with its merged
-  values (see [validate-helm-values](../../tools/README.md#validate-helm-values)), so values the chart's schema
-  rejects fail the job. A variable that a `Kustomization`'s manifests use but its `spec.postBuild.substitute` doesn't
+  Flux applies it, with the Flux CLI of the management clusters' Flux, which `test-all-ff` downloads, and passes the
+  output through `yamllint` and `kubeconform`, so it fails on YAML that isn't valid and on objects that don't match
+  their schemas. It also renders the chart of every `HelmRelease` with its merged values (see
+  [validate-helm-values](../../tools/README.md#validate-helm-values)), so values the chart's schema rejects fail the
+  job. An object a `ResourceSet` renders that keeps a `<< ... >>` template, such as one named after an entry of its
+  `spec.inputs`, can't be checked without Flux Operator: the report names it as left out, and only the kind test checks
+  it. A variable that a `Kustomization`'s manifests use but its `spec.postBuild.substitute` doesn't
   set fails the job, where Flux would replace it with an empty string. `flux build` doesn't read
   `spec.postBuild.substituteFrom`, so a variable set only there fails the job too, although Flux sets it on the
   cluster. It reads each `Kustomization` as Flux applies it: from the build of the Flux `Kustomization` that applies
