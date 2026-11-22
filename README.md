@@ -13,8 +13,8 @@ tutorials with placeholder names, or for contributing back to the template. The 
 either way.
 
 Giant Swarm maintains this template. Its layout has a version, the
-[structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check` tells you when
-your fork has fallen behind it.
+[structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check`, from
+kubectl-gs X.Y.Z on, tells you when your fork has fallen behind it.
 
 ## Get started
 

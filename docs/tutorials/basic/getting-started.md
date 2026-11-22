@@ -146,11 +146,10 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 
 > **Shortcut:** [`kubectl gs gitops add management-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-mc/)
 > writes the management cluster's directory and its `Kustomization`. With `--gen-master-key`, it also writes a new
-> master key in `${MC_DIR}/secrets`, its public key in `${MC_DIR}/.sops.keys` and the first `.sops.yaml` rule. It
-> doesn't write the
-> repository token or the second rule, and its `Kustomization` doesn't prune. See
-> [Management cluster](../../how-to/kubectl-gs.md#management-cluster) for the command and what to change
-> afterwards.
+> master key in `${MC_DIR}/secrets`, protected by its `kustomization.yaml`, its public key in `${MC_DIR}/.sops.keys`
+> and both `.sops.yaml` rules. It doesn't create the `GitRepository` or the repository token, and it leaves the
+> private key for you to encrypt. See [Management cluster](../../how-to/kubectl-gs.md#management-cluster) for the
+> command and what's left to do.
 
 1. Create the management cluster's directory. `${MC_DIR}/.sops.keys` holds public keys, `${MC_DIR}/secrets` the
    encrypted secrets Flux needs, and `${MC_DIR}/organizations` the organisations you add in the next step:
@@ -427,9 +426,9 @@ exists, these steps bring it under GitOps. You'll also give it a secret store he
 organisation reads its secrets through the organisation's namespace.
 
 > **Shortcut:** [`kubectl gs gitops add organization`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-org/)
-> writes the `Organization`, without its annotation and label, and the organisation's empty list of clusters. It
-> doesn't write the organisation's `kustomization.yaml`, the namespace `Kustomization` or the secret store. See
-> [Organisation](../../how-to/kubectl-gs.md#organisation) for the command and what to add afterwards.
+> writes the protected `Organization`, the organisation's `kustomization.yaml`, the namespace `Kustomization` and
+> its `namespace` directory, and the organisation's empty list of clusters. It doesn't write the secret store. See
+> [Organisation](../../how-to/kubectl-gs.md#organisation) for the command.
 
 1. Create the organisation's directory. `${ORG_DIR}/namespace` holds what the organisation keeps in its namespace,
    `${ORG_DIR}/workload-clusters` its clusters, and `${ORG_DIR}/multicluster` what all of its clusters share:
@@ -636,10 +635,9 @@ A cluster gets two `Kustomization`s, which fill in variables such as `${cluster_
 the rest of `${WC_DIR}`, but only after that, so the apps never try to install into a cluster that isn't there yet.
 
 > **Shortcut:** [`kubectl gs gitops add workload-cluster`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-wc/)
-> writes the cluster's directory from a base, and its `Kustomization`, which it lists in
-> `${ORG_DIR}/workload-clusters`. It still writes a `mapi` directory, no region, and one `Kustomization` for the whole cluster,
-> in `default`, instead of the two below. See [Workload cluster](../../how-to/kubectl-gs.md#workload-cluster) for
-> the command and how to bring its files in line with the ones below.
+> writes the cluster's directory from a base, and the two `Kustomization`s below, which it lists in
+> `${ORG_DIR}/workload-clusters`. It doesn't add the region or the app. See
+> [Workload cluster](../../how-to/kubectl-gs.md#workload-cluster) for the command and what's left to do.
 
 1. List the Giant Swarm releases and pick an AWS one from v34.0.0 on. These have a `release-aws` chart:
 
@@ -1107,8 +1105,7 @@ cluster itself. Its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: di
 in place, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label is gone. Its
 `OCIRepository` has both too, and its `Cluster` has the label. So you take the labels off first, and delete the
 `HelmRelease` and the `OCIRepository` yourself at the end. If kubectl-gs wrote your cluster's files, check what it
-protects first: kubectl-gs 7.0.0 and newer label the cluster's `HelmRelease` and `OCIRepository`, but no release
-writes the annotation or protects the `Organization`, see
+protects first: kubectl-gs X.Y.Z and newer write both the annotation and the label, older releases less, see
 [What kubectl-gs writes](../../explanation/deletion-protection.md#what-kubectl-gs-writes).
 
 These steps delete the cluster this tutorial created. A cluster with its own SOPS key in `${ORG_DIR}/namespace/secrets`,

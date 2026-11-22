@@ -385,7 +385,7 @@ Before you start:
 - The organisation's `namespace.yaml` runs and is `Ready`. `kubectl gs gitops upgrade` writes it, see
   [Check and upgrade the structure version](#check-and-upgrade-the-structure-version).
 - `MC_NAME.yaml` needs `prune: true` by the second commit, so that Flux deletes the old `Kustomization`s in
-  `default`. With `prune: false`, as in `main` and in what `kubectl gs gitops add management-cluster` writes, they
+  `default`. With `prune: false`, as in `main` and in what kubectl-gs before X.Y.Z writes, they
   stay, and the old and the new `Kustomization`s both reconcile the same clusters. The first commit sets it.
 - kustomize-controller supports `spec.deletionPolicy`: `kubectl explain kustomization.spec.deletionPolicy` describes
   it. The Flux of Giant Swarm management clusters does.

@@ -101,14 +101,14 @@ same, but the `HelmRelease` reads more values, see below. `cluster_config.yaml` 
   [node pool components](/bases/environments/regions/eu_central/node_pool/) and the `WC_NAME` examples do, would get
   an extra `nodepool0` as well.
 
-The `HelmRelease` differs as well. `kubectl gs gitops add base` (6.0.0 and newer) only reads
-`${cluster_name}-config`, so a cluster made from its base gets no `global.managementCluster` or
-`global.connectivity.baseDomain`, which `release-aws` requires. This base adds `cluster-app-installation-values`
-before it, with the [values from the management cluster](#values-from-the-management-cluster). The region isn't
-in the base: each cluster adds it with a component.
-
-If you create a base with `kubectl gs gitops add base`, add the entry to its `HelmRelease`, see
-[Create a cluster base for another provider](/docs/how-to/cluster-base-provider.md#write-the-base).
+From kubectl-gs X.Y.Z on, the `OCIRepository` and the `HelmRelease` are the same as this base's, comments aside: both
+have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, and
+the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`, with the
+[values from the management cluster](#values-from-the-management-cluster). Older releases leave out the annotation
+and that entry, and before 7.0.0 the label, so a cluster made from their base gets no `global.managementCluster` or
+`global.connectivity.baseDomain`, which `release-aws` requires: add them, see
+[Create a cluster base for another provider](/docs/how-to/cluster-base-provider.md#write-the-base). The region isn't in
+either base: each cluster adds it with a component.
 
 ## When you copy it
 

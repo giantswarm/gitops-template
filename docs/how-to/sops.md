@@ -33,13 +33,14 @@ nothing else. Its private key goes into a Secret in the organisation's `namespac
 namespace, with the cluster's `Kustomization`s that decrypt with it. The master key encrypts that Secret.
 
 > [!Note]
-> `kubectl gs gitops add encryption --workload-cluster` does these steps for the layout of structure version 2, which
-> this repository no longer uses. It writes the key Secret into `MC_NAME/secrets`, in `default`, where the cluster's
-> `Kustomization`s, in the organisation's namespace, can't read it, and it adds `decryption` only to `WC_NAME.yaml`.
-> Its `.sops.yaml` rule covers only the cluster's `secrets/` directory, `--target secrets/` by default, so files in
-> `cluster` and `apps` aren't encrypted with the cluster's key. Follow the steps below instead. If you have already run
-> it, move its key as the steps below place it, and replace its rule with the one in the last steps, which covers
-> `cluster` and `apps`: `--target /` covers the whole cluster directory, `out-of-band` included.
+> From kubectl-gs X.Y.Z on, `kubectl gs gitops add encryption --workload-cluster` does most of these steps for you,
+> see [Encryption](./kubectl-gs.md#encryption): the key Secret in `namespace/secrets`, its protection, the
+> `decryption` of both `Kustomization`s, the public key and a `.sops.yaml` rule. Its rule covers only the directory
+> `--target` names, the cluster's `secrets/` by default, so pass `--target apps/` or add a rule for `cluster` and
+> `apps`, as in the last steps below; `--target /` covers the whole cluster directory, `out-of-band` included, where
+> the cluster's key can't decrypt. You still encrypt the key and keep it in your password manager yourself. Older
+> releases write the key into `MC_NAME/secrets`, where the cluster's `Kustomization`s can't read it: follow the steps
+> below instead.
 
 For more granular encryption, such as a key per app, see [Add another key to a cluster](#add-another-key-to-a-cluster):
 a `Kustomization` reads one Secret, so every key of the cluster goes into the same one.
