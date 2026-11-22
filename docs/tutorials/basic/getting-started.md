@@ -412,6 +412,8 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
 flux get sources git ${GITOPS_REPO} -n default
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#the-source-cant-be-fetched).
+
 So is the `Kustomization`:
 
 ```sh
@@ -608,6 +610,8 @@ organisation reads its secrets through the organisation's namespace.
 ```sh
 kubectl get namespace org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 The namespace `Kustomization` is `Ready` once it has applied into it:
 
@@ -823,6 +827,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
 kubectl gs get clusters -n org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-clusters-kustomization-waits-on-its-health-check).
+
 Once it's up, the cluster's `Kustomization` is `Ready`, and the apps' `Kustomization` follows:
 
 ```sh
@@ -1019,6 +1025,8 @@ Git and one secret value from the organisation's store.
 kubectl get externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
+
 The release is `Ready` on the management cluster:
 
 ```sh
@@ -1065,6 +1073,8 @@ fi
 ```sh
 flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 At least two pods run:
 

@@ -193,6 +193,8 @@ kubectl get resourcesetinputproviders -n org-${ORG_NAME} \
   -o 'custom-columns=NAME:.metadata.name,VERSION:.status.exportedInputs[0].tag,NEXT:.status.nextSchedule.when'
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 ## Schedule a cluster's release
 
 A cluster's release works the same way, with the cluster's `OCIRepository` and `HelmRelease` in the `ResourceSet`. The

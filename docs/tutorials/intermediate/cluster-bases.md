@@ -206,6 +206,8 @@ kubectl gs get clusters -n org-${ORG_NAME}
 kubectl get configmap ${WC2_NAME}-config -n org-${ORG_NAME} -o jsonpath='{.data.values}'
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-clusters-kustomization-waits-on-its-health-check).
+
 You can move your first cluster onto the base too: change `bases/clusters/capa` to `bases/clusters/${BASE_NAME}` in
 `${WC_DIR}/cluster/kustomization.yaml`. Its node pools then change to the base's at the next reconciliation, and
 its nodes are replaced, so pick your moment.

@@ -62,3 +62,5 @@ their `ResourceSet`, and the release hasn't changed:
 kubectl get helmrelease,ocirepository ${WC_NAME} -n org-${ORG_NAME} -L resourceset.fluxcd.controlplane.io/name
 flux get helmreleases ${WC_NAME} -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md).

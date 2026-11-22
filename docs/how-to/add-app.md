@@ -358,5 +358,7 @@ above.
 flux get helmreleases ${WC_NAME}-${APP_NAME} -n org-${ORG_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md).
+
 To change the app later, see [Change an app](./update-app.md). To let Flux install new chart versions by itself, see
 [Let Flux install new chart versions](../tutorials/intermediate/automatic-updates.md).

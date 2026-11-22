@@ -37,6 +37,7 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 
 ## How-to guides
 
+- [When something isn't Ready](./how-to/troubleshooting.md): what a red status means, and how to recover.
 - [Add an app](./how-to/add-app.md) to one cluster.
 - [Change an app](./how-to/update-app.md): its version, how it's installed, or its values.
 - [Give one cluster its own values](./how-to/cluster-values.md).

@@ -144,6 +144,8 @@ flux get kustomizations ${MC_NAME}-clusters-${WC_NAME}-direct -n org-${ORG_NAME}
 kubectl --context ${WC_CONTEXT} get configmap hello-from-out-of-band -n default -o jsonpath='{.data.values}'
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 Until the cluster is up, its kubeconfig Secret doesn't exist and the `-direct` `Kustomization` reports that it can't
 read it. It retries every `retryInterval`, and gets `Ready` once the Secret is there.
 
@@ -369,6 +371,8 @@ flux get helmreleases -n org-${ORG_NAME} | grep -- -flux
 flux --context FLUX_WC_CONTEXT check -n flux-app
 flux --context FLUX_WC_CONTEXT get kustomizations -n flux-app
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 `FLUX_WC_CONTEXT` is that cluster's context, from `kubectl gs login`, as in the basic tutorial.
 

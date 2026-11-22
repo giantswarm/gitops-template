@@ -507,6 +507,8 @@ git push
 kubectl get ocirepositories -n org-${ORG_NAME} | grep hello-app
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-clusters-kustomization-waits-on-its-health-check).
+
 With `prune: true`, Flux deletes what you delete from a cluster's files, but never the cluster itself: its
 `HelmRelease` and `OCIRepository`, from the CAPA base, have the `kustomize.toolkit.fluxcd.io/prune: disabled`
 annotation and the `giantswarm.io/prevent-deletion` label. To delete a cluster, see

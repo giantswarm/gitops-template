@@ -262,3 +262,5 @@ The cluster's `HelmRelease` and `OCIRepository` are still there, and so is the c
 ```sh
 kubectl gs get clusters -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#something-is-stuck-terminating).

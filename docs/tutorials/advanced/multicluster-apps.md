@@ -273,6 +273,8 @@ kubectl get resourceset hello-world-scheduled -n org-${ORG_NAME}
 flux get helmreleases -n org-${ORG_NAME} | grep hello-world-scheduled
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 If you followed [Scheduled upgrades](./scheduled-upgrades.md) on the same cluster, it keeps its `hello-world-window`
 from there. That one has names, a release and a namespace of its own, so the two `ResourceSet`s never render the same
 object, and neither deletes what the other installed.

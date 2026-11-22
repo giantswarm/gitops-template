@@ -83,6 +83,8 @@ kubectl get secretstore -n org-${ORG_NAME}
 kubectl get secretstore -n default
 ```
 
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
+
 ## A secret store for testing
 
 The docs and the examples read secrets through a `SecretStore` in the `default` namespace and one of the same name in
@@ -193,6 +195,8 @@ it by hand or keeping it in the repository encrypted, let ESO write it from your
     kubectl get externalsecret github-https-credentials -n default
     ```
 
+    If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
+
 Apply it by hand, as above, before Flux reads the repository for the first time. To keep it in Git from then on, save
 the same manifest in `management-clusters/${MC_NAME}`, with `${SECRET_STORE}` and `${GITHUB_TOKEN_KEY}` written out,
 and the management cluster's `Kustomization` applies it with the rest. When you rotate the token, change it in your
@@ -274,6 +278,8 @@ see [App values](../reference/values.md#app-values). An `ExternalSecret` next to
 ```sh
 kubectl get externalsecret ${WC_NAME}-${APP_NAME}-user-secrets -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
 
 For a complete example, see the
 [`ExternalSecret` of hello-world](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world/externalsecret.yaml)

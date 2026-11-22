@@ -235,6 +235,8 @@ CRDs:
 flux get helmreleases -n org-${ORG_NAME} | grep ${WC_NAME}-
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 hello-world's `HTTPRoute` is attached to the Gateway:
 
 ```sh

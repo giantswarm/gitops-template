@@ -208,6 +208,8 @@ flux get kustomizations ${WC_NAME}-${TEAM_NAME} -n org-${ORG_NAME}
 kubectl --context ${WC_CONTEXT} get all -n ${TEAM_NAME}
 ```
 
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
+
 From now on, the team pushes plain manifests, or a `kustomization.yaml`, to its repository, and Flux applies them at
 the next `interval`. It deletes what the team deletes, as the `Kustomization` has `prune: true`.
 
@@ -320,6 +322,8 @@ steps below are the same, and that Flux delivers the file.
 flux --context ${WC_CONTEXT} get kustomizations ${TEAM_NAME} -n ${TEAM_NAME}
 kubectl --context ${WC_CONTEXT} get all -n ${TEAM_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
 ## Remove a team
 
