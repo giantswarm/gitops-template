@@ -22,7 +22,7 @@ the workload cluster's `default` namespace.
 
 Point the `ExternalSecret` in `common-secret.yaml` at your own store, such as one from `bases/secret_stores`, and at
 your secret's name. Keep `refreshPolicy: CreatedOnce` and `updatePolicy: IfNotExists` on the password, or it changes
-at every refresh. To give every cluster a store without writing one per cluster, use the Kyverno policy instead, as
+at every refresh. To give every cluster a store without writing one per cluster, use the Kyverno policies instead, as
 [`pushed-password`](../pushed-password/) does.
 
 ## Read more

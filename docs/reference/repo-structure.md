@@ -299,7 +299,7 @@ organisation's `kustomization.yaml` lists `ORG_NAME.yaml`, `namespace.yaml` and 
   the organisation's namespace: what's in `namespace`, `../workload-clusters` and `../multicluster/secret-stores`.
 
 The files it applies name no namespace: `targetNamespace` sets it. Where one needs the organisation's name as a value,
-such as the namespace the Kyverno `Policy` in `multicluster/secret-stores` generates in, it writes `${organization}`,
+such as the namespace the `SecretStore` `default` in `multicluster/secret-stores` reads, it writes `${organization}`,
 which the `postBuild` of `namespace.yaml` fills in. So do the workload clusters' `Kustomization`s in
 `workload-clusters`: `organization: "${organization}"`, and `org-${organization}` as the namespace of a `Cluster`
 health check.

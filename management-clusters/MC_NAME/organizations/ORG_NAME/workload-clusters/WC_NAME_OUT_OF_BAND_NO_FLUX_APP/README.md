@@ -34,6 +34,8 @@ The first two decrypt with the GPG key `sops-gpg-from-template-wc-name`, from th
 - [`apps/workload-cluster-secrets/`](apps/workload-cluster-secrets/): secrets pushed into the cluster through a store
   in Git.
 - [`apps/pushed-password/`](apps/pushed-password/): a password pushed through the store Kyverno makes.
+- [`apps/pushed-kubeconfig/`](apps/pushed-kubeconfig/): the cluster's kubeconfig, pushed into another cluster through
+  the store Kyverno makes for that one.
 - [`teams/`](teams/): application teams whose Flux runs on the management cluster.
 - `out-of-band/`: what the `-direct` Kustomization applies to the workload cluster. It has no `kustomization.yaml`,
   so Flux takes every YAML file below it.
@@ -56,9 +58,9 @@ Kustomization's kubeconfig Secret. Change the `-direct` Kustomization's name in 
   directory's `kustomization.yaml`.
 
 Point the `ExternalSecret`s at your own store. Delete the examples you don't need, with their lines in the
-`kustomization.yaml` that lists them. `teams/` needs the `-direct` Kustomization, and `apps/pushed-password/` the store
-from the organisation's `multicluster/secret-stores/`. List the cluster's Kustomizations in
-`workload-clusters/kustomization.yaml` and in the organisation's commit status `Alert`, as
+`kustomization.yaml` that lists them. `teams/` needs the `-direct` Kustomization, and `apps/pushed-password/` and
+`apps/pushed-kubeconfig/` the stores from the organisation's `multicluster/secret-stores/`. List the cluster's
+Kustomizations in `workload-clusters/kustomization.yaml` and in the organisation's commit status `Alert`, as
 [`workload-clusters/README.md`](../README.md#when-you-copy-it) says.
 
 ## Read more

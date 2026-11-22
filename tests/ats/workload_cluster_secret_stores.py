@@ -1,15 +1,17 @@
-"""The Kyverno `Policy` `generate-eso-cluster-auth-from-kubeconfig` in the organisation's
-namespace gives every workload cluster a SecretStore.
+"""The Kyverno NamespacedGeneratingPolicies in the organisation's namespace give every workload
+cluster a SecretStore.
 
-From the cluster's kubeconfig Secret the policy generates an ExternalSecret that writes the
-cluster's credentials into `<cluster>-eso-cluster-auth`, through the organisation's SecretStore
-`default`, and from that Secret the SecretStore `<cluster>-eso-cluster-store` that reaches the
-cluster. The test's vCluster and its kubeconfig Secret stand in for a workload cluster that
-exists before the policy. The check waits for the chain, reads a Secret from the vCluster
-through the store, and checks the example's PushSecret wrote its Secret into the vCluster
-through it. It then writes a kubeconfig Secret for a new cluster, as Cluster API does, and
-waits for the policy to react to it. test_flux_objects.py runs it once the Kustomizations are
-ready.
+From the cluster's kubeconfig Secret `generate-eso-cluster-auth-from-kubeconfig` generates an
+ExternalSecret that writes the cluster's credentials into `<cluster>-eso-cluster-auth`, through
+the organisation's SecretStore `default`, and from that Secret
+`generate-eso-cluster-store-from-cluster-auth` generates the SecretStore
+`<cluster>-eso-cluster-store` that reaches the cluster. The test's vCluster and its kubeconfig
+Secret stand in for a workload cluster that exists before the policies, and for the tools
+cluster the example pushes a kubeconfig to. The check waits for the chain, reads a Secret from
+the vCluster through the store, and checks the example's PushSecrets wrote their Secrets into
+the vCluster through the stores. It then writes a kubeconfig Secret for a new cluster, as
+Cluster API does, and waits for the policies to react to it. test_flux_objects.py runs it once
+the Kustomizations are ready.
 """
 
 import pykube
@@ -18,6 +20,7 @@ from conftest import WORKLOAD_CLUSTER_KUBECONFIG_NAME
 from conftest import WORKLOAD_CLUSTER_VCLUSTER_NAME as CLUSTER
 from eso_kinds import ExternalSecretCR, SecretStoreCR
 from eso_ready import wait_ready
+from workload_cluster_kubeconfig_push import TOOLS_CLUSTER, check_kubeconfig_pushed
 from workload_cluster_secret_push import check_secret_pushed
 from workload_cluster_secret_read import NAMESPACE, read_through_store
 
@@ -25,7 +28,7 @@ from workload_cluster_secret_read import NAMESPACE, read_through_store
 # organisation namespace's own Secrets
 ORGANIZATION_STORE = "default"
 AUTH_KEYS = {"tls.crt", "tls.key", "ca.crt", "server"}
-# the cluster whose kubeconfig Secret the test writes once the policy is in place; it reaches
+# the cluster whose kubeconfig Secret the test writes once the policies are in place; it reaches
 # the vCluster too
 NEW_CLUSTER = "new-cluster"
 CLUSTER_NAME_LABEL = "cluster.x-k8s.io/cluster-name"
@@ -65,7 +68,7 @@ def secret(api: pykube.HTTPClient, name: str) -> dict | None:
 
 
 def wait_cluster_store(api: pykube.HTTPClient, cluster: str, when: str) -> None:
-    """Wait for what the policy generates for `cluster`: the ExternalSecret that writes its
+    """Wait for what the policies generate for `cluster`: the ExternalSecret that writes its
     credentials, and the SecretStore that reaches it."""
     auth = f"{cluster}-eso-cluster-auth"
     wait_ready(
@@ -88,7 +91,7 @@ def wait_cluster_store(api: pykube.HTTPClient, cluster: str, when: str) -> None:
 
 
 def check_new_cluster(api: pykube.HTTPClient) -> None:
-    """Write a kubeconfig Secret for NEW_CLUSTER and wait for the policy to react to it."""
+    """Write a kubeconfig Secret for NEW_CLUSTER and wait for the policies to react to it."""
     source = secret(api, WORKLOAD_CLUSTER_KUBECONFIG_NAME)
     if source is None:
         pytest.fail(f"Secret '{NAMESPACE}/{WORKLOAD_CLUSTER_KUBECONFIG_NAME}' is gone")
@@ -105,8 +108,8 @@ def check_new_cluster(api: pykube.HTTPClient) -> None:
 def check_workload_cluster_secret_store(
     api: pykube.HTTPClient, workload_cluster: pykube.HTTPClient
 ) -> None:
-    """Wait for the policy's chain for the vCluster, read a Secret through its store, check
-    the example's PushSecret wrote one through it, then check the policy reacts to a new
+    """Wait for the policies' chain for the vCluster, read a Secret through its store, check
+    the examples' PushSecrets wrote through the stores, then check the policies react to a new
     cluster."""
     wait_ready(
         api,
@@ -119,4 +122,6 @@ def check_workload_cluster_secret_store(
     wait_cluster_store(api, CLUSTER, "the existing cluster")
     read_through_store(api, workload_cluster, f"{CLUSTER}-eso-cluster-store")
     check_secret_pushed(api, workload_cluster)
+    wait_cluster_store(api, TOOLS_CLUSTER, "the tools cluster")
+    check_kubeconfig_pushed(api, workload_cluster)
     check_new_cluster(api)

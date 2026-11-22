@@ -8,9 +8,12 @@ from kyverno_rbac import NAMESPACE, SERVICE_ACCOUNT
 
 
 def kyverno_access(org: str) -> list[Access]:
-    """Creating ExternalSecrets in the organisation namespace `org`, and not elsewhere."""
+    """Creating ExternalSecrets in the organisation namespace `org`, and not elsewhere, and
+    listing Secrets across the cluster, as Kyverno does for a NamespacedGeneratingPolicy's
+    triggers."""
     eso = (NAMESPACE, "create", "external-secrets.io", "externalsecrets")
     return [
         Access(*eso, org, True, SERVICE_ACCOUNT),
         Access(*eso, DEFAULT_NAMESPACE, False, SERVICE_ACCOUNT),
+        Access(NAMESPACE, "list", "", "secrets", "", True, SERVICE_ACCOUNT),
     ]

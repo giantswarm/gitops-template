@@ -5,12 +5,15 @@ from automation_access import describe, subject_access_review
 from kyverno_access import kyverno_access
 
 
-def test_kyverno_access_in_the_organisation_namespace_only() -> None:
+def test_kyverno_access_writes_in_the_organisation_namespace_only() -> None:
     checks = kyverno_access("org-a")
-    assert [(a.name, a.resource, a.namespace, a.allowed) for a in checks] == [
-        ("kyverno-background-controller", "externalsecrets", "org-a", True),
-        ("kyverno-background-controller", "externalsecrets", "default", False),
+    assert [(a.verb, a.resource, a.namespace, a.allowed) for a in checks] == [
+        ("create", "externalsecrets", "org-a", True),
+        ("create", "externalsecrets", "default", False),
+        # a NamespacedGeneratingPolicy lists its triggers across the whole cluster
+        ("list", "secrets", "", True),
     ]
+    assert {a.name for a in checks} == {"kyverno-background-controller"}
 
 
 def test_review_of_the_background_controller() -> None:

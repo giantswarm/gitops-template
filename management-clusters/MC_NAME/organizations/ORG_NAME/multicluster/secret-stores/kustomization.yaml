@@ -1,5 +1,5 @@
-# A Kyverno Policy that gives every workload cluster of the organisation a SecretStore, and the
-# organisation's SecretStore it reads through. The organisation's namespace Kustomization, in
+# The Kyverno policies that give every workload cluster of the organisation a SecretStore, and the
+# organisation's SecretStore they read through. The organisation's namespace Kustomization, in
 # ../../namespace.yaml, applies them into the organisation's namespace, as
 # ../../namespace/kustomization.yaml lists this directory. It has no Flux Kustomization of its
 # own, and ../kustomization.yaml, which the management cluster's Kustomization applies, leaves it
