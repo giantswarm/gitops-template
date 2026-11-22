@@ -1,9 +1,13 @@
 # Voice
 
 How the template's documentation is written: the docs, the READMEs of the example directories and the comments in the
-examples. It's for anyone changing them, people and coding agents alike.
+examples. It's for anyone changing them in the template, people and coding agents alike.
 
-It applies to this template only. In your fork, write however suits your team.
+It applies to the template only: to a change that's going to `giantswarm/gitops-template`. You're working on the
+template when that repository is the `origin` of your clone, or where your pull request will go. Anywhere else you're
+in a fork, and this page doesn't apply. In a fork, write however suits your team: match the language and style the
+fork's own docs already use, and if you're an agent and can't tell what that is, ask. A fork that came with this page
+can keep it for the changes it sends back to the template, make it its own style guide, or delete it.
 
 A customer reads from the first tutorial to the reference pages, and should hear one voice all the way: someone
 plain-spoken who has done this before and is showing you how. GitOps is a dull subject by design. Learning it needn't

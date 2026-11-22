@@ -98,6 +98,10 @@ them where they are, as complete examples to check your own files against. CI's 
 [Configure CI](../../how-to/configure-ci.md#the-kind-test-in-your-fork) says what to delete, or set, before your first
 pull request.
 
+It also comes with the template's own house rules: `CONTRIBUTING.md`, the [voice](../../contributing/voice.md) its
+documentation is written in, and the last section of `AGENTS.md`. They're about changing the template, not your fork.
+Keep them if you send changes back, make them your own, or delete them.
+
 `kubectl gs gitops` can write most of the files in this tutorial for you, and each step names the command that does.
 You write them by hand here, so that you know what each one is for when you come to change it.
 
