@@ -1,8 +1,9 @@
 # Configure CI in a fork
 
 Your fork comes with GitHub workflows that check every pull request before Flux ever sees it. Most of them work as
-they are. This page covers the parts you set yourself: which upstream workflows you follow, the settings and the secret
-of the kind test, and when the workflows run. For what each job checks, see [CI checks](../reference/ci-checks.md).
+they are. This page covers the parts you set yourself: which upstream workflows you follow, what the kind test needs in
+your fork, its settings and its one secret, and when the workflows run. For what each job checks, see
+[CI checks](../reference/ci-checks.md).
 
 ## The workflows
 
@@ -26,6 +27,47 @@ as inputs, each with a comment that says why it has the value it has:
 
 Renovate keeps the versions up to date through the `# renovate:` comment above each.
 
+## The kind test in your fork
+
+The kind test isn't only the template's: it runs on whatever your fork has under `management-clusters/`. It finds the
+root `Kustomization` of each management cluster, the `GitRepository` it reads and the Secret it decrypts with in your
+files, so a management cluster built with the [basic tutorial](../tutorials/basic/getting-started.md), with a
+`GitRepository` name of your own, needs no change to the test. Three things are yours to do:
+
+1. **Set the master key.** Put your management cluster's private master key in the repository secret
+   `GITOPS_MASTER_GPG_KEY`, see [`GITOPS_MASTER_GPG_KEY`](#configuration) below, and read
+   [What the key in CI means](#what-the-key-in-ci-means) first. If your management cluster's `Kustomization` has no
+   `decryption`, as with External Secrets Operator only, there's nothing to set.
+1. **Delete the template's examples.** `management-clusters/MC_NAME` holds example SOPS secrets, there to show what an
+   encrypted Secret looks like. They're encrypted for the template's master key, which your fork doesn't have, so the
+   test can't decrypt them: delete the directory, and the template's rules for `MC_NAME` in `.sops.yaml`. If you'd
+   rather keep the examples to read, leave them, and list your own management clusters in `managementClusters` in
+   [tests/ats/kind-test.yaml](../../tests/ats/kind-test.yaml) instead, so the test applies only yours.
+1. **Write bindings for your own clusters, when you want more than `Ready`.** Out of the box, the test checks that
+   everything your management clusters apply gets `Ready`, at the platform's versions, rights and admission rules. The
+   checks of the template's examples are skipped once the examples are gone, each saying why. To check more of your
+   own, add to `kind-test.yaml` and `tests/ats/assertions`, see
+   [Write bindings for your own clusters](../tutorials/advanced/testing.md#write-bindings-for-your-own-clusters).
+
+What the test proves, and what it stands in for, such as your secret manager and cluster creation, is in
+[What the test proves, and what it can't](../reference/ci-checks.md#what-the-test-proves-and-what-it-cant).
+
+### What the key in CI means
+
+The kind test checks that production will work, so it decrypts with production's key: there's no test key that would
+prove your secrets decrypt. That has a cost, and it's worth saying plainly:
+
+- Every run decrypts your management cluster's secrets on a GitHub-hosted runner, into a kind cluster that lives as
+  long as the job.
+- Anyone who can change a workflow, which is anyone with write access to the repository, can read the secret. Treat
+  write access to the repository as access to the key, and so to every secret it decrypts.
+- GitHub gives a pull request from a fork of your repository no secrets, so an outsider's pull request can't read it;
+  the test skips its cluster checks there instead.
+
+If that's more than you want to give CI, don't set the secret, and don't run the kind test: stop calling the shared
+workflow from `validate.yaml`, as [Choose tests/ats, Chainsaw or both](../tutorials/advanced/testing.md#choose-testsats-chainsaw-or-both)
+describes.
+
 ## Configuration
 
 The kind test reads these settings, which `validate.yaml` sets through the inputs above and a repository secret:
@@ -46,12 +88,17 @@ The kind test reads these settings, which `validate.yaml` sets through the input
   `Ready`. [validate.yaml](../../.github/workflows/validate.yaml) sets it with the `gitops_ignored_objects` input of
   the shared workflow, empty in this repository. Keep it empty: an example the test can reconcile has to get `Ready`,
   so install what it needs in the test instead.
-- `GITOPS_MASTER_GPG_KEY`: this variable needs to be a secret (unless you know what you're doing) and needs to contain
-  a base64 encoded private master GPG key (armor-encoded, including `-----BEGIN...`
-  and `-----END...` header and footer) for your `sops` configuration. Set it as a repository secret on GitHub: the
-  job picks up this secret by default. An empty key fails the test, also in a fork's own runs, with one exception: on
-  a pull request from a fork, which GitHub gives no secrets, the test skips every test that needs the cluster and
-  says so in a warning on the run; the checks that need no cluster still run.
+- `GITOPS_MASTER_GPG_KEY`: a repository secret, holding your private master GPG key, armoured (with its
+  `-----BEGIN...` and `-----END...` lines) and then base64-encoded. The test puts it in the Secret each management
+  cluster's root `Kustomization` names in `spec.decryption.secretRef`, such as `sops-gpg-master`. With several
+  management clusters that decrypt, export all their keys at once, into one armoured block. When a root decrypts, an
+  empty key fails the test, also in your fork's own runs, with one exception: on a pull request from a fork, which
+  GitHub gives no secrets, the test skips every test that needs the cluster and says so in a warning on the run; the
+  checks that need no cluster still run. When no root decrypts, the key isn't needed.
+- `GITHUB_TOKEN`: the run's own token, which the shared workflow passes to the test. The test's `GitRepository`s read
+  the repository with it, so the test works in a private repository too. You set nothing.
+- [tests/ats/kind-test.yaml](../../tests/ats/kind-test.yaml): which management clusters the test applies, and the
+  bindings of the example checks, see [Configure the kind test](../reference/ci-checks.md#configure-the-kind-test).
 
 To set the secret from the master key in your keyring, for example with the GitHub CLI:
 
@@ -60,8 +107,7 @@ gpg --export-secret-keys --armor "${KEY_FP}" | base64 -w0 | gh secret set GITOPS
 ```
 
 Only the master key decrypts what the kind test applies: the workload clusters' keys are in the repository, encrypted
-with it. Anyone who can change your workflows can read the secret, so treat write access to the repository as access
-to the key.
+with it. See [What the key in CI means](#what-the-key-in-ci-means) before you set it.
 
 ## When the workflows run
 

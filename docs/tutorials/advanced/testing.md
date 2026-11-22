@@ -8,11 +8,13 @@ This repository tests itself in two ways, and you can use either or both in your
 
 - **the kind test**, `tests/ats`: on every pull request, CI bootstraps a throwaway kind cluster the way a new
   management cluster is bootstrapped, lets Flux apply the repository from your branch, and checks that everything gets
-  `Ready`. It catches mistakes before the merge.
+  `Ready`. It catches mistakes before the merge, and it works on your management clusters, not only on the template's
+  examples.
 - **Chainsaw**, `tests/chainsaw`: tests in YAML that you run against a real management cluster that Flux reconciles
   from your repository. They check what's running, after the merge.
 
 - [What the kind test does](#what-the-kind-test-does)
+- [Write bindings for your own clusters](#write-bindings-for-your-own-clusters)
 - [Run the kind test locally](#run-the-kind-test-locally)
 - [Test with Chainsaw](#test-with-chainsaw)
 - [Run Chainsaw from your machine](#run-chainsaw-from-your-machine)
@@ -27,21 +29,83 @@ that changes more than Markdown. It:
 1. creates a kind cluster, and installs what a Giant Swarm management cluster brings: Flux from flux-app, the CRDs of
    Cluster API and of Giant Swarm, External Secrets Operator, Kyverno and Flux Operator, at the versions the management
    clusters run;
+1. applies the two Kyverno policies a management cluster uses to refuse Flux objects that break its rules, so the
+   test refuses them too;
 1. stands in for organization-operator, which creates an organisation's namespace once Flux has applied its
-   `Organization`, and for the workload clusters, with a [vCluster](https://www.vcluster.com/) for the
-   `out-of-band-no-flux` example, since kind can't create real ones;
-1. points a `GitRepository` at your branch, applies each management cluster's `Kustomization`, and waits until every
-   Flux `Kustomization`, source and `HelmRelease` it can run is `Ready`;
+   `Organization`, and for the workload clusters, with a stand-in `Cluster` for every cluster a `Kustomization` waits
+   for, since kind can't create real ones;
+1. points the `GitRepository` your management cluster's `Kustomization` reads at your branch, puts your master key in
+   the Secret it decrypts with, applies each management cluster's `Kustomization`, and waits until every Flux
+   `Kustomization`, source and `HelmRelease` it can run is `Ready`;
 1. compares the objects with the assertions in `tests/ats/assertions`, and runs the example checks, such as the
-   upgrade windows of the `ResourceSet`s and pruning.
+   upgrade windows of the `ResourceSet`s and pruning, where the examples are.
+
+None of the first three steps knows a name of yours or of the template's: the test reads them from your files. The
+fourth is the template's own, bound to its examples in [tests/ats/kind-test.yaml](/tests/ats/kind-test.yaml). Once
+you've deleted the examples, as [Configure CI](../../how-to/configure-ci.md#the-kind-test-in-your-fork) tells you to,
+those checks are skipped, each with a line that says which example it missed. A skipped check isn't a failure; it's a
+check with nothing to look at.
 
 Every example is something you build from, so every example the test can reconcile has to get `Ready`: the test
 installs what an example needs rather than skipping it. Creating clusters is the one exception, as there's no cloud
-account to create them in. [The kind test](../../reference/ci-checks.md#the-kind-test) has every check in detail.
+account to create them in, and your secret manager is another, as the kind cluster can't reach it.
+[The kind test](../../reference/ci-checks.md#the-kind-test) has every check in detail, and
+[what it can't prove](../../reference/ci-checks.md#what-the-test-proves-and-what-it-cant).
 
-When you add a cluster or an app, the test usually needs to know: a workload-cluster app needs an assertion of its
-main workload, and a cluster with node pools an entry in `EXPECTED_NODE_POOLS` in `tests/ats/node_pools.py`. The test
-fails and tells you which, so a red run after a new cluster is the test doing its job.
+## Write bindings for your own clusters
+
+Out of the box, the test tells you that what you wrote applies and gets `Ready`. That's most of what goes wrong, but
+not all of it: a cluster can be `Ready` with the wrong node pools, and an app `Ready` with the wrong values. To check
+those, you tell the test what right looks like, in two places.
+
+**Assertions.** A file under `tests/ats/assertions/exists` lists objects that have to exist, with the fields that have to
+match; the test checks every field you write and ignores the rest, though a list has to match whole. The app of the
+basic tutorial, installed where you meant it to be, is a good start:
+
+```yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prod1-hello-world
+  namespace: org-acme
+spec:
+  releaseName: hello-world
+  targetNamespace: hello-world
+```
+
+Every file there is checked, unless the binding of an example that isn't there names it. The template's own files are
+named by their examples' bindings, so they go quietly with the examples; delete them anyway when you delete the
+examples, as they're no use to you.
+
+**`kind-test.yaml`.** The data the test can't find in your files:
+
+- `nodePools`: the node pools each workload cluster should end up with, by namespace. Once a namespace is listed,
+  every cluster in it has to be, so a new cluster without an entry fails the test, which is the point.
+- `clusterBaseApps`: the apps a cluster's `Kustomization` installs before the cluster is `Available`, such as a
+  Gateway API stack, by the `Cluster`'s `namespace/name`. The test checks they're installed while the cluster's other
+  apps wait.
+- `secretStore`: a stand-in for your secret manager, with test values for the keys your `ExternalSecret`s read. It
+  only helps where your repository doesn't create a store of the same name itself; a real store in the repository
+  replaces it, and its `ExternalSecret`s can't sync in kind.
+- `managementClusters`: which of your management clusters the test applies, when not all of them.
+
+For a cluster `prod1` in the organisation `acme`, with its own pool and the Gateway API CRDs installed with the cluster:
+
+```yaml
+nodePools:
+  org-acme:
+    prod1: [nodepool0]
+clusterBaseApps:
+  org-acme/prod1:
+    - prod1-gateway-api-crds
+```
+
+The rest of `kind-test.yaml`, under `examples`, binds the template's examples. You can leave it: with the examples
+gone, it does nothing but explain the skips. Or delete what you don't use.
+
+The checks of the examples, such as pruning or the upgrade windows, are written for the template's example objects.
+They're worth reading when you build something similar, and copying when you want the same check on yours, but they
+won't check your objects by renaming a binding.
 
 ## Run the kind test locally
 
@@ -54,8 +118,8 @@ CI is the usual place for the kind test, but a local run is quicker when you're 
 - [kind](https://kind.sigs.k8s.io/), the version `kind_ver` in `validate.yaml` names, `kubectl` and `helm` in your
   `$PATH`;
 - Python 3.12 and [pipenv](https://pipenv.pypa.io/);
-- your branch pushed to a repository the kind cluster can read without credentials, as the test's `GitRepository` has
-  none, and the private part of your master GPG key, as in CI.
+- your branch pushed to a repository the kind cluster can read: a public one, or a private one with a token that can
+  read it in `GITHUB_TOKEN`, and the private part of your master GPG key, as in CI, unless nothing you apply decrypts.
 
 1. Create a kind cluster and save its kubeconfig:
 

@@ -35,9 +35,11 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
   difference between the two as a comment, so you see what your change does to the objects Flux applies.
 - `test_on_kind` installs Flux on a kind cluster, applies the repository and checks that every `Kustomization` and
   source gets `Ready`, that the `HelmRelease`s the test cluster can run get `Ready`, and that the objects in
-  `tests/ats/assertions` exist, see [The kind test](#the-kind-test). It runs the pytest suite in `tests/ats`.
-  Its last test, `test_prune`, checks pruning on the `out-of-band-no-flux` cluster. It leaves the organisation's
-  `ORG_NAME.yaml` out of the `GitRepository` with `spec.ignore`, and drops an app, `apps/hello-world-from-template`,
+  `tests/ats/assertions` exist, see [The kind test](#the-kind-test). It runs the pytest suite in `tests/ats`, whose
+  checks that need no cluster run first. The checks of the template's examples run where the examples are, see
+  [Example checks in a fork](#example-checks-in-a-fork). Its last test, `test_prune`, checks pruning on the
+  `out-of-band-no-flux` cluster. It leaves the organisation's `ORG_NAME.yaml` out of the `GitRepository` with
+  `spec.ignore`, and drops an app, `apps/hello-world-from-template`,
   from what the cluster's apps `Kustomization` builds with `$patch: delete` patches in its `spec.patches`, as
   `apps/kustomization.yaml` lists the app and `spec.ignore` can't change that list. The app has to go. The
   organisation's `kustomization.yaml` takes the organisation's name from the `Organization`, so without `ORG_NAME.yaml`
@@ -80,11 +82,113 @@ On a cluster, each of these stops Flux applying the `Kustomization` until it's f
 
 ## The kind test
 
-The `test on kind` job checks more than the files: it applies them to a cluster.
+The `test on kind` job checks more than the files: it applies them to a cluster, standing in for a new Giant Swarm
+management cluster, and Flux reconciles them from your branch.
+
+The test has two parts:
+
+- The generic part works on whatever is under `management-clusters/`, in the template or in your fork. It applies the
+  root `Kustomization` of each management cluster, stands in for the platform, waits for every `Kustomization`, source
+  and `HelmRelease` to get `Ready` and enforces the platform's [admission policies](#admission-policies). It names
+  nothing of the template's: it finds what it needs in the repository, see
+  [What the test finds in the repository](#what-the-test-finds-in-the-repository).
+- The example part checks the template's examples beyond getting `Ready`: pruning, the upgrade windows, the out-of-band
+  clusters, the secret stores and so on. [tests/ats/kind-test.yaml](../../tests/ats/kind-test.yaml) binds each check to
+  the example it checks, and a check whose example isn't in the repository is skipped, saying why, see
+  [Example checks in a fork](#example-checks-in-a-fork).
 
 Every example is something you build from, so an example the test can reconcile has to get `Ready`. The test installs
 what an example needs; it doesn't skip examples to pass. Creating clusters is the one exception, as the test can't
 do it (see [Cluster API](#cluster-api)).
+
+### What the test finds in the repository
+
+- **The management clusters.** Every directory `management-clusters/<name>` with a `<name>/<name>.yaml` is a management
+  cluster, and that file holds its root `Kustomization`, the one whose `spec.path` is the directory. `managementClusters`
+  in `kind-test.yaml` narrows the list, see [Configure the kind test](#configure-the-kind-test).
+- **The `GitRepository`s.** The test creates the `GitRepository` each root names in `spec.sourceRef`, in its namespace,
+  pointed at the branch of the pull request. When `GITHUB_TOKEN` is set, as the shared workflow sets it to the run's
+  token, the `GitRepository` reads the repository with it, so a private repository works. The root's own `ignore` and
+  credentials, which you applied by hand on the management cluster, aren't in the repository, so the test's
+  `GitRepository` has neither.
+- **The master key.** The test creates the Secret each root names in `spec.decryption.secretRef`, holding the key in
+  `GITOPS_MASTER_GPG_KEY`, as you apply it by hand on a new management cluster. Flux then applies the encrypted copy
+  in the repository over it. The key is needed only when a root decrypts: a repository that uses External Secrets
+  Operator only needs no key at all.
+- **The organisations.** Once the roots are `Ready`, the
+  [organization-operator stand-in](#the-organization-operator-stand-in) creates the namespace of every
+  `Organization` in the cluster.
+- **The clusters.** Every Cluster API `Cluster` a `Kustomization` health-checks gets a stand-in, see
+  [Cluster API](#cluster-api).
+
+All the root `Kustomization`s go into the one kind cluster, so the roots of several management clusters have to be
+able to share it, and `GITOPS_MASTER_GPG_KEY` has to hold the key of every root that decrypts, exported together into
+one armoured block.
+
+### Configure the kind test
+
+[tests/ats/kind-test.yaml](../../tests/ats/kind-test.yaml) holds what the test can't find in the repository. Every key
+is optional, and the test fails on one it doesn't know, rather than ignore a typo:
+
+| Key | What it is |
+| --- | --- |
+| `managementClusters` | The directories under `management-clusters/` whose root the test applies. Without it, every management cluster. |
+| `examples` | The example checks, by example: `paths`, the files and directories of the repository the checks need, and `assertions`, the files and directories under `tests/ats/assertions` that assert the example's objects. |
+| `nodePools` | The node pools of each workload cluster's `HelmRelease`, by namespace, then by cluster. See [Node pools](#node-pools). |
+| `clusterBaseApps` | The `HelmRelease`s a cluster's `Kustomization` applies before its `Cluster` is `Available`, by the `Cluster`'s `namespace/name`. See [Cluster API](#cluster-api). |
+| `secretStore` | The stand-in for your secret manager: a `SecretStore` with the [fake provider](https://external-secrets.io/latest/provider/fake/), its `name` and its `data`, the keys and values it serves. The test creates it in `default` and in every organisation's namespace. Without it, there's no stand-in. |
+
+The stand-in store only stands in where nothing else has the name: a `SecretStore` of the same name in the repository
+replaces it when Flux applies the namespace. So it serves `ExternalSecret`s that read a store the repository doesn't
+create, as the template's examples do.
+
+### Example checks in a fork
+
+Each example check names its example in `kind-test.yaml`. When a path of the binding isn't in the
+repository, or is in a management cluster the test doesn't apply, the check is skipped, and pytest's summary gives the
+reason, such as:
+
+```text
+SKIPPED [1] The example 'prune' isn't in this repository: management-clusters/MC_NAME/organizations/ORG_NAME/ORG_NAME.yaml
+isn't in the repository. Its binding is in tests/ats/kind-test.yaml.
+```
+
+Setting up for an example works the same way: without its binding's paths, the test creates no vCluster for
+`out-of-band-no-flux`, suspends no notification example `Alert` and forces no `ResourceSetInputProvider`. The assertion
+files an example's binding names are left out with it, and every other assertion file is checked.
+
+In the template's own CI, where `GITHUB_REPOSITORY` is `giantswarm/gitops-template`, a check whose example can't be
+found fails instead: there, it's a binding that's gone wrong. `test_the_template_binds_every_example_it_has` checks,
+without a cluster, that every assertion file in the template belongs to an example.
+
+The checks that need no cluster work the same way: the ones of the repository's structure, in `test_root_build.py` and
+`test_namespace_build.py`, run on the root of every management cluster the test applies; the ones that pin the
+examples' files are bound to the examples.
+
+### What the test proves, and what it can't
+
+It proves that Flux, at the version of the management clusters, can apply every file your management clusters' roots
+reach, that each `Kustomization` and source gets `Ready`, that the `automation` ServiceAccounts' rights and the admission
+policies of a management cluster let them, that your SOPS files decrypt with your master key, and that the apps whose
+cluster the test can reach install and get `Ready`.
+
+It stands in for three things it can't have:
+
+- **Cluster creation.** A `release-aws` `HelmRelease` is checked, not run: there's no cloud account. Its `Cluster` is a
+  paused stand-in that the test sets `Available`, and the apps of a cluster the test has no kubeconfig for aren't
+  installed. The template's `out-of-band-no-flux` example gets a vCluster; your clusters don't.
+- **Your secret manager.** The kind cluster can't reach AWS Secrets Manager or Azure Key Vault, and has no workload
+  identity. An `ExternalSecret` that reads a real store doesn't sync, and a `HelmRelease` that needs the Secret it would
+  write doesn't get `Ready`: give that store's name and test values to `secretStore` when the repository doesn't
+  create the store, or list the `HelmRelease` in `GITOPS_IGNORED_OBJECTS`.
+- **The rest of the platform.** organization-operator, rbac-operator and the Kyverno policy that copies
+  `cluster-app-installation-values` are stood in for; app-operator, cluster-apps-operator and the monitoring stack
+  don't run.
+
+Your own `Alert`s aren't suspended: an `Alert` that posts commit statuses to GitHub with a token from your repository
+posts them for the kind test's `Kustomization`s too.
+
+### What it checks
 
 The objects named in `GITOPS_IGNORED_OBJECTS` that are `HelmRelease`s or sources aren't looked at at all. The list
 doesn't apply to `Kustomization`s. The test checks:
@@ -127,7 +231,8 @@ For a workload-cluster app whose Secret doesn't exist, two references are exempt
 named `<cluster>-kubeconfig`, and the `<cluster>-cluster-values` ConfigMap in its `valuesFrom`. The management cluster
 creates both.
 
-Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified. Each of these files
+Additionally, every file present in `tests/ats/assertions/exists` is loaded and verified, but for the files of an
+example that isn't there, see [Example checks in a fork](#example-checks-in-a-fork). Each of these files
 has to contain one or more YAML description of objects of Kubernetes objects you expect to be present in the cluster
 after your Kustomizations are deployed. Each object has to have `kind:`, `metadata.name` and `metadata.namespace`
 (if it's a namespace-scoped object) defined. The rest of object definition is arbitrary, but every property specified
@@ -135,13 +240,17 @@ in the assertions file must be also present (and have exactly the same value) as
 in cluster. Strings are compared as text, so a ConfigMap's `values` has to match line by line. Only trailing whitespace
 is ignored: whether the assertion writes a block as `|` or `|-`, or a line ends in a space, doesn't matter.
 
+### Node pools
+
 A cluster's node pools come from several ConfigMaps in the `valuesFrom` of its `HelmRelease`, so no single assertion
 shows them. For every `HelmRelease` that creates a workload cluster, the test reads the `HelmRelease` and its
 ConfigMaps from the test cluster, merges the values the way helm-controller does, `spec.values` included, and compares
-the node pools with `EXPECTED_NODE_POOLS` in [node_pools.py](../../tests/ats/node_pools.py). A production cluster gets
-its own `nodepool0` and its region's extra pool. Dev and staging have no pools of their own and get the chart's
-defaults. The test fails for a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or
-change its node pools, update that table.
+the node pools with `nodePools` in [kind-test.yaml](../../tests/ats/kind-test.yaml), by the cluster's namespace and
+name. In the template, a production cluster gets its own `nodepool0` and its region's extra pool; dev and staging have
+no pools of their own and get the chart's defaults. In a namespace `nodePools` lists, the test fails for a workload
+cluster that isn't listed, so when you add a cluster there or change its node pools, update the list. A namespace it
+doesn't list isn't checked, and nor is a listed one without any cluster, such as `org-org-name` in a fork without the
+examples. Without `nodePools`, `test_node_pools` is skipped.
 
 ## Versions
 
@@ -177,43 +286,48 @@ A test can create one, for example a stand-in `Cluster`, and set its status itse
 objects are stored in: the CRDs are installed without their conversion webhook, so other versions are served without
 conversion.
 
-The test does that for every cluster whose apps wait for it, as listed in `GATES` in
-[cluster_gates.py](../../tests/ats/cluster_gates.py). It creates a paused stand-in `Cluster` with `Available` `False`.
-The cluster's `Kustomization` still has to apply the base apps, while the apps `Kustomization` has to report
-`DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization` has to
-get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
-`Kustomization`s only get `Ready` once their `Cluster` is `Available`. When you add a cluster with apps, add it to
-`GATES`: a test without the cluster compares the list with the `Kustomization`s in the repository.
+The test does that for every `Cluster` a `Kustomization` health-checks, as the cluster `Kustomization` of the basic
+tutorial and the examples does: [cluster_gates.py](../../tests/ats/cluster_gates.py) finds them in the test cluster once
+the organisations' `Kustomization`s have applied them, with the `Kustomization`s that depend on each, its apps. It
+creates a paused stand-in `Cluster` with `Available` `False`. The cluster's `Kustomization` still has to apply the base
+apps `clusterBaseApps` in `kind-test.yaml` names for it, while the apps `Kustomization`s have to report
+`DependencyNotReady` without applying anything. Then it sets `Available` to `True`, and the apps `Kustomization`s have
+to get `Ready`. `test_apps_wait_for_cluster` reports the result. The other checks run after it, as the cluster
+`Kustomization`s only get `Ready` once their `Cluster` is `Available`. A cluster you add gets its stand-in without
+anything to list; list its base apps if it has any.
 
 The shared workflow still installs `clusterctl`, at its own default version, but nothing uses it.
 
 ## The organization-operator stand-in
 
 The test bootstraps the repository as a new management cluster does: no `Organization` and no `org-*` namespace exist
-before Flux applies `MC_NAME.yaml`. On a management cluster, organization-operator creates the organisation's
-namespace once Flux has applied the `Organization`, and other operators fill it. The kind cluster runs none of them,
-so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py) stands in for them:
+before Flux applies the roots. On a management cluster, organization-operator creates an organisation's namespace once
+Flux has applied the `Organization`, and other operators fill it. The kind cluster runs none of them, so
+[tests/ats/organization_operator.py](../../tests/ats/organization_operator.py) stands in for them, for every
+`Organization` the roots apply, whatever its name. In the template, that's `org-name`, applied by `mc-name-gitops`:
 
-1. Before Flux applies `MC_NAME.yaml`, it checks that neither the `Organization` `org-name` nor the namespace
-   `org-org-name` exists.
-1. It waits for `mc-name-gitops` to get `Ready` and apply the `Organization`, which carries the
-   `kustomize.toolkit.fluxcd.io/name: mc-name-gitops` label, and for the organisation's namespace `Kustomization`,
-   `mc-name-organization-org-name`, to fail for want of the namespace. Its `dependsOn` holds it back until
-   `mc-name-gitops` is `Ready`, and then its error names `org-org-name`: the namespace doesn't exist, or
+1. Before Flux applies the roots, it checks that no `Organization` and no `org-*` namespace exists.
+1. It waits for every root to get `Ready`, which applies the `Organization`s. For each one, it waits for the
+   `Kustomization`s that apply into its namespace from another one, such as the organisation's namespace
+   `Kustomization`, `mc-name-organization-org-name`, to fail for want of it. Its `dependsOn` holds it back until the
+   root is `Ready`, and then its error names the namespace, `org-org-name`: the namespace doesn't exist, or
    `default/automation` may not write there, as it gets its rights in the namespace only with it.
-1. It creates `org-org-name`, and in it what the management cluster's operators create there: the organisation's
-   commit-status `Alert`, suspended, before Flux can apply it; `automation` and the rights rbac-operator gives in a
-   new organisation namespace, see [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts);
-   the `cluster-app-installation-values` ConfigMap, which Kyverno copies there; the test's secret store; and the
-   kubeconfig Secret and cluster values of the [vCluster](#the-out-of-band-no-flux-workload-cluster).
-1. Without asking Flux to reconcile, it waits up to 150 seconds, two `retryInterval`s and a margin, for the
-   organisation's `Kustomization` to get `Ready` on its own retry.
+1. It creates the namespace, and in it what the management cluster's operators create there: `automation` and the
+   rights rbac-operator gives in a new organisation namespace, see
+   [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts); the
+   `cluster-app-installation-values` ConfigMap, which Kyverno copies there; and the stand-in secret store, if
+   `kind-test.yaml` has one. In `org-org-name`, when the examples are there, it also creates the notification example's
+   commit-status `Alert`, suspended, before Flux can apply it, and the kubeconfig Secret and cluster values of the
+   [vCluster](#the-out-of-band-no-flux-workload-cluster).
+1. Without asking Flux to reconcile, it waits up to 150 seconds, two `retryInterval`s and a margin, for those
+   `Kustomization`s to get `Ready` on their own retry.
 
 The other checks run after it. The cluster `Kustomization`s are in the organisation's `workload-clusters` directory,
 which its `namespace/kustomization.yaml` lists, so they appear only once the organisation's `Kustomization` is `Ready`,
-and run as `org-org-name/automation`. `tests/ats/test_root_build.py` checks, without a cluster, that the build of
-`MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each organisation's namespace
-`Kustomization` applies into the organisation's namespace. `tests/ats/test_namespace_build.py` checks that the
+and run as the organisation's `automation`. `test_automation_access` checks the rights of `automation` in every
+organisation's namespace. `tests/ats/test_root_build.py` checks, without a cluster, that the build of each root holds
+only `Organization`s and objects in `default`, and that each organisation's namespace `Kustomization` applies into the
+organisation's namespace. `tests/ats/test_namespace_build.py` checks that the
 `Kustomization`s it applies read the repository's `GitRepository` in `default`, depend on it, directly or through
 another of them, and decrypt with a key Secret it applies too.
 
@@ -301,6 +415,9 @@ When management-cluster-bases changes them, copy them again and update the commi
 `SOURCE_COMMIT` in [tests/ats/admission_policies.py](../../tests/ats/admission_policies.py).
 
 ## The `out-of-band-no-flux` workload cluster
+
+This part of the test belongs to the example: its binding in `kind-test.yaml` is `out-of-band-no-flux`, and without the
+example there's no vCluster, and the tests that use it are skipped.
 
 `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml` applies its manifests straight to a workload cluster, and the cluster's
 `HelmRelease`s install their apps there, through the `out-of-band-no-flux-kubeconfig` Secret a management cluster
@@ -408,7 +525,8 @@ cluster's `Kustomization`s, as an organisation's `ResourceSet` installs it.
 
 ## Example checks
 
-Some examples get a test of their own, beyond getting `Ready`.
+Some examples get a test of their own, beyond getting `Ready`. Each is bound to its example in `kind-test.yaml`, and
+skipped where the example isn't, see [Example checks in a fork](#example-checks-in-a-fork).
 
 ### Shared objects
 
