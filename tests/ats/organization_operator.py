@@ -36,6 +36,7 @@ from conftest import (
     installation_values_config_map,
 )
 from external_secrets import organization_store
+from flux_inventory import DEPENDENCY_NOT_READY
 from flux_reconcile import wait_until
 from kind_config import kind_test_config
 from notification_objects import organization_alert
@@ -98,16 +99,25 @@ def waiting_kustomizations(kustomizations: list[dict], namespace: str) -> list[d
     ]
 
 
+def _ready_reason(kustomization: dict) -> str | None:
+    conditions = (kustomization.get("status") or {}).get("conditions") or []
+    return next((c.get("reason") for c in conditions if c.get("type") == "Ready"), None)
+
+
 def waiting_problems(kustomization: dict, namespace: str) -> list[str]:
     """Why the Kustomization doesn't fail for want of `namespace`, if it doesn't. Flux names the
     namespace in its error: it doesn't exist, or `automation` may not write there, as
-    rbac-operator gives it its rights in the namespace only once it exists.
+    rbac-operator gives it its rights in the namespace only once it exists. One that depends on
+    such a Kustomization waits for it instead.
     """
     key = obj_key(kustomization)
     if is_ready(kustomization):
         return [f"Kustomization '{key}' is Ready without namespace '{namespace}'"]
     reason = not_ready_reason(kustomization)
-    if f'"{namespace}"' in reason:
+    if (
+        f'"{namespace}"' in reason
+        or _ready_reason(kustomization) == DEPENDENCY_NOT_READY
+    ):
         return []
     return [f"Kustomization '{key}' doesn't wait for namespace '{namespace}': {reason}"]
 

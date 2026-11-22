@@ -71,6 +71,13 @@ def test_waiting_problems_while_the_namespace_is_missing() -> None:
     assert waiting_problems(kustomization(NAME, "False", FORBIDDEN), NAMESPACE) == []
 
 
+def test_waiting_problems_behind_one_that_waits() -> None:
+    # a Kustomization that depends on the one that fails for want of the namespace waits too
+    k = kustomization(NAME, "False", "dependency 'default/other' is not ready")
+    k["status"]["conditions"][0]["reason"] = "DependencyNotReady"
+    assert waiting_problems(k, NAMESPACE) == []
+
+
 def test_waiting_problems_ready_without_the_namespace() -> None:
     assert waiting_problems(kustomization(NAME, "True"), NAMESPACE) == [
         f"Kustomization 'default/{NAME}' is Ready without namespace '{NAMESPACE}'"
