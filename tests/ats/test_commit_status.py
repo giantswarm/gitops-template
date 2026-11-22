@@ -1,10 +1,22 @@
-"""Checks of how commit_status suspends the Alert and judges the Receiver and the tokens; they
-need no cluster."""
+"""Checks of how commit_status suspends the Alert and judges the Receiver and the tokens, and of
+which event messages the example's Alerts drop; they need no cluster."""
 
 import base64
+from pathlib import Path
 
-from commit_status import receiver_problems, suspended, suspended_alerts, token_problems
-from notification_objects import organization_alerts
+import pytest
+import yaml
+from commit_status import (
+    excluded,
+    receiver_problems,
+    suspended,
+    suspended_alerts,
+    token_problems,
+)
+from notification_objects import ALERT_FILE, ORG_ALERT_FILE, organization_alerts
+
+ALERT_FILES = (ALERT_FILE, ORG_ALERT_FILE)
+ALERT_IDS = ("management-cluster", "organisation")
 
 READY = {"conditions": [{"type": "Ready", "status": "True"}]}
 
@@ -95,3 +107,43 @@ def test_token_problems_other_value() -> None:
     assert token_problems(
         "default/t", _secret({"token": encoded}), "from-the-store"
     ) == ["Secret 'default/t' has another 'token' than the store's"]
+
+
+# kustomize-controller v1.7.3 sends this `info` event, for the new revision, while a
+#  Kustomization waits for its `dependsOn` (kustomization_controller.go:255-257); 30s is the
+#  default of --requeue-dependency
+DEPENDENCY_WAIT = "Dependencies do not meet ready condition, retrying in 30s"
+# the controller's other event messages, which the Alerts must still forward
+OTHER_MESSAGES = (
+    "Reconciliation finished in 2.1s, next run in 10m0s",
+    "Health check passed in 1.4s",
+    "Source artifact not found, retrying in 30s",
+    "Source is not ready, artifact not found, retrying in 30s",
+    "New revision detected during health check, cancelling",
+    "Kustomization/org-a/mc-name-clusters-a configured",
+    "dependency 'default/mc-name' is not ready",
+    "health check failed after 5m0s: Dependencies do not meet ready condition",
+)
+
+
+@pytest.mark.parametrize("alert_file", ALERT_FILES, ids=ALERT_IDS)
+def test_alert_drops_the_dependency_wait(alert_file: Path) -> None:
+    alert = yaml.safe_load(alert_file.read_text())
+    assert excluded(alert, DEPENDENCY_WAIT)
+    # any --requeue-dependency interval
+    assert excluded(alert, "Dependencies do not meet ready condition, retrying in 1m0s")
+
+
+@pytest.mark.parametrize("alert_file", ALERT_FILES, ids=ALERT_IDS)
+@pytest.mark.parametrize("message", OTHER_MESSAGES)
+def test_alert_forwards_everything_else(alert_file: Path, message: str) -> None:
+    assert not excluded(yaml.safe_load(alert_file.read_text()), message)
+
+
+def test_excluded_without_a_list() -> None:
+    assert not excluded({"spec": {}}, DEPENDENCY_WAIT)
+
+
+def test_excluded_searches_like_go() -> None:
+    # notification-controller's regexp.Match finds a match anywhere in the message
+    assert excluded({"spec": {"exclusionList": ["ready"]}}, DEPENDENCY_WAIT)
