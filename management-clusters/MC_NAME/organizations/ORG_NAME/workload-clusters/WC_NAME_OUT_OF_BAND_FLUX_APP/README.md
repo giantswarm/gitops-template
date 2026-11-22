@@ -29,6 +29,7 @@ the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 - [`apps/hello-world-from-template/`](apps/hello-world-from-template/): hello-world from its App Template.
 - `out-of-band/`: what the workload cluster's own Flux applies. The management cluster never does.
 - `out-of-band/configmaps/`: an example ConfigMap for the `default` namespace of the workload cluster.
+- [`out-of-band/teams/`](out-of-band/teams/): an application team whose Flux runs in the workload cluster.
 
 ## When you copy it
 
