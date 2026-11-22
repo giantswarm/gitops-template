@@ -11,7 +11,7 @@ patches:
       - op: replace
         path: /spec/ref
         value:
-          semver: '>=3.0.0-0'
+          semver: '>=3.2.2-0'
           semverFilter: '-r[0-9a-f]{8}t[0-9]{14}h[0-9a-f]{7}'
     target:
       kind: OCIRepository

@@ -20,7 +20,9 @@ Some objects delete a whole cluster when they go, so they carry two markers:
 - The `kustomize.toolkit.fluxcd.io/prune: disabled` annotation: Flux doesn't delete them, even when their files
   disappear from what it renders, for example because a mistake in a template drops them.
 - The `giantswarm.io/prevent-deletion: "true"` label: the `kyverno-policies-ux` policies on a Giant Swarm management
-  cluster refuse to delete them, whoever asks, `kubectl` and Flux included, until the label is removed.
+  cluster refuse to delete them, whoever asks, `kubectl` and Flux included, until the label is removed. The policy
+  covers a `HelmRelease` and an `OCIRepository` in `kyverno-policies-ux` 0.16.0 and newer; with an older one, the
+  label on the cluster's `HelmRelease` and `OCIRepository` stops nothing.
 
 The two do different jobs. The annotation keeps Flux from trying, so a pruned file doesn't turn into a failing
 `Kustomization`. The label stops everyone else, including a person with `kubectl delete` and the wrong context. You
