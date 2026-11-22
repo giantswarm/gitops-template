@@ -73,13 +73,8 @@ checks `main` as it is after a merge, which no pull request run has tested when 
 other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
 `on.push.branches`.
 
-A pull request that changes only Markdown files (`*.md`, anywhere in the repository, `CHANGELOG.md` included) skips
-`validate` and the kind test, as Markdown changes nothing they check. Its first job, `changes`, lists the files the
-pull request changes; a file renamed from or to another type counts as a change to that type too. Instead of the shared
-workflow, `validate.yaml` then calls [validate-markdown.yaml](../../.github/workflows/validate-markdown.yaml), which
-runs the same `pre-commit` hooks, so the Markdown is still linted, and reports `validate / validate` and
-`validate / test_on_kind` as skipped. GitHub counts a skipped check as passed, so a branch that requires these checks
-doesn't wait for them. Any other file in the pull request, and every push to `main`, runs everything.
+A pull request that changes nothing the tests read, such as documentation alone, gets a lighter run, see
+[Which pull requests run the kind test](#which-pull-requests-run-the-kind-test). Every push to `main` runs everything.
 
 A pull request from a fork gets a read-only token and none of the repository's secrets. `yaml-diff.yaml` and
 `validate.yaml` skip their comments there, which they can't post, leave a notice on the run saying why, and put the
@@ -89,3 +84,34 @@ the cluster there; see [`GITOPS_MASTER_GPG_KEY`](#configuration).
 The kind test takes a while, so `validate.yaml` runs once per pull request at a time. When you push a new commit to
 a pull request, the run for the previous commit is cancelled. Pushes to a branch, such as a merge to `main`, don't
 cancel the run in progress: it finishes, and GitHub keeps only the newest of the push runs waiting behind it.
+
+## Which pull requests run the kind test
+
+A comment in a manifest and a Renovate setting both used to cost the whole chain: about four minutes of `validate`
+and twelve of the kind test, to prove nothing had changed. `validate.yaml` now asks first. Its `changes` job runs
+[tests/ats/ci_scope.py](../../tests/ats/ci_scope.py), which compares the pull request's head with its merge base and
+gives each changed file one of three answers:
+
+- **No test reads it.** The file matches a pattern in `IGNORABLE` at the top of the module and none in
+  `NOT_IGNORABLE`: Markdown, `docs/`, `renovate.json5`, `tests/chainsaw/`, the workflows other than `validate.yaml`
+  and `validate-light.yaml`, `.gitignore`, `CODEOWNERS` and `LICENSE`. Markdown under `bases/` and
+  `management-clusters/` doesn't count, as `tools/test-all-ff validate` checks those READMEs. Nor does a `*.yaml`
+  that names a Flux API, wherever it is, as `tools/test-all-ff` reads every such file outside `tests/`.
+- **Same YAML.** A YAML file changed only in its comments, whitespace, quoting or the order of its keys. The order of
+  documents and of list items counts, and so does a value spelled differently, such as `yes` for `true`.
+- **Anything else counts:** a real change, however small, a file added, removed or renamed, YAML that doesn't parse.
+
+If no file counts, `validate.yaml` calls [validate-light.yaml](../../.github/workflows/validate-light.yaml) in place
+of the shared workflow. It runs the same `pre-commit` hooks, so Markdown is still linted and READMEs still checked,
+and reports `validate / validate` and `validate / test_on_kind` as skipped. GitHub counts a skipped check as passed,
+so a branch that requires these checks doesn't wait for them. The job summary of `changes` lists every file with its
+answer, so you can see why a pull request got the run it did.
+
+The decision fails open. If GitHub lists fewer files than the pull request changes, if the module hits an error, or if
+the job can't get as far as asking, the full run happens. A change to the content of a manifest always runs the kind
+test, however small: it's the only proof that the example still works.
+
+To add your own files to the light run, such as a directory of notes, add a pattern to `IGNORABLE` in
+`tests/ats/ci_scope.py`. The patterns are `fnmatch` patterns, where `*` matches `/` too, so `notes/*` covers
+everything below `notes/`. Only add what neither test reads: the module can't tell if you're wrong, and a pull
+request that matches skips the kind test.
