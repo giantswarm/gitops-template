@@ -592,7 +592,8 @@ the organisation's Kyverno `Policy`, with the vCluster's kubeconfig Secret, whic
 API does. Kyverno's background controller needs rights in the organisation's namespace that rbac-operator grants on a
 management cluster and the example doesn't ship; the organization-operator stand-in creates them with the others, see
 [The rights of the `automation` ServiceAccounts](#the-rights-of-the-automation-serviceaccounts). Flux applies the
-`Policy` as `default/automation`, and the `default` store reads the organisation's namespace as its `automation`. The
+`Policy` as `default/automation`, and the `default` store reads the organisation's namespace as its `automation`.
+The kubeconfig Secret is there before Flux applies the `Policy`, so the test goes through `generateExisting`. The
 test waits for the organisation's `SecretStore` `default`, `out-of-band-no-flux-eso-cluster-auth` and the
 `out-of-band-no-flux-eso-cluster-store` `SecretStore`, then reads a Secret from the vCluster through that store and
 checks its value. It then waits for the
@@ -600,10 +601,20 @@ checks its value. It then waits for the
 `pushed-password` Secret it writes into the vCluster's `default` namespace to have a `password` of the generator's 32
 characters. On a management cluster, the ESO chart's `CiliumNetworkPolicy` lets ESO reach the cluster and the world; the
 kind cluster has no Cilium, so the `NetworkPolicy` in `tests/ats/workload_cluster_secrets.py`, which the
-[workload cluster secrets example](#workload-cluster-secrets) needs too, gives ESO the same egress. Last, the test
-writes a kubeconfig Secret for a new cluster, `new-cluster-kubeconfig`, with the vCluster's kubeconfig, and waits for
-the policy to react to it with `new-cluster-eso-cluster-auth` and a Ready `new-cluster-eso-cluster-store` in the
-organisation's namespace, then deletes the Secret.
+[workload cluster secrets example](#workload-cluster-secrets) needs too, gives ESO the same egress.
+
+The [kubeconfig example](../how-to/workload-cluster-secrets.md#push-a-clusters-kubeconfig-to-another-cluster)
+pushes to `tools-cluster`, which the test hasn't got: the stand-in writes `tools-cluster-kubeconfig` with the
+vCluster's kubeconfig too, so the vCluster stands in for both clusters. Its check,
+`test_kubeconfig_pushed_to_another_cluster`, is bound as `pushed-kubeconfig` in `kind-test.yaml`, and without the
+example the stand-in writes no `tools-cluster-kubeconfig`. The test waits for
+`tools-cluster-eso-cluster-store` to get Ready, then for the `PushSecret` to get Ready and for the
+`out-of-band-no-flux-kubeconfig` Secret in the vCluster's `default` namespace to hold the same `value` as the
+kubeconfig Secret on the management cluster.
+
+Last, the test writes a kubeconfig Secret for a new cluster, `new-cluster-kubeconfig`, with the vCluster's kubeconfig,
+and waits for the policy to react to it with `new-cluster-eso-cluster-auth` and a Ready
+`new-cluster-eso-cluster-store` in the organisation's namespace, then deletes the Secret.
 
 ### Workload cluster secrets
 

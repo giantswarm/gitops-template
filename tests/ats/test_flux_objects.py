@@ -45,7 +45,11 @@ from resource_set_upgrade import check_scheduled_cluster_upgrade
 from shared_objects import check_shared_object_copied
 from stand_in_clusters import stand_in_clusters
 from values_watch import check_values_change_applied
-from workload_cluster_secret_stores import check_workload_cluster_secret_store
+from workload_cluster_kubeconfig_push import EXAMPLE as KUBECONFIG_PUSH_EXAMPLE
+from workload_cluster_secret_stores import (
+    check_tools_cluster_push,
+    check_workload_cluster_secret_store,
+)
 from workload_cluster_secrets import check_secrets_pushed
 
 # Kyverno has to run before gitops_deployment installs External Secrets Operator, and the
@@ -276,6 +280,16 @@ def test_workload_cluster_secret_store(
 ) -> None:
     require_example("secret-store-policy")
     check_workload_cluster_secret_store(kube_cluster.kube_client, workload_cluster)
+
+
+def test_kubeconfig_pushed_to_another_cluster(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    require_example("secret-store-policy")
+    require_example(KUBECONFIG_PUSH_EXAMPLE)
+    check_tools_cluster_push(kube_cluster.kube_client, workload_cluster)
 
 
 def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:

@@ -73,3 +73,11 @@ def test_kyverno_binding_in_each_org_namespace(namespace: str) -> None:
 
 def test_no_kyverno_binding_in_default() -> None:
     assert ("RoleBinding", "default", KYVERNO) not in objects(["default", "org-a"])
+
+
+def test_no_cluster_wide_kyverno_binding() -> None:
+    # rbac-operator binds the background controller in the organisation namespaces only
+    kyverno = sa("kyverno", "kyverno-background-controller")
+    for (kind, _, name), o in objects(["default", "org-a"]).items():
+        if kind == "ClusterRoleBinding":
+            assert kyverno not in o["subjects"], name

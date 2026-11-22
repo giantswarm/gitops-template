@@ -4,9 +4,8 @@ metadata:
   name: kyverno-generate
 spec:
   description: >-
-    The Kyverno policy of the shared-objects example is Ready and has copied its ConfigMap, with
-    the source's data, into the organisation's namespace. The test only reads: the kind test's
-    check_shared_object_copied creates a new organisation namespace and changes the source.
+    The secret-stores example: its Kyverno Policy is Ready and has given the cluster its
+    ExternalSecret and its SecretStore, both Ready. The test only reads.
   timeouts:
     assert: 2m
   steps:
@@ -15,25 +14,40 @@ spec:
         - assert:
             resource:
               apiVersion: kyverno.io/v1
-              kind: ClusterPolicy
+              kind: Policy
               metadata:
-                name: ($values.sharedObject.policy)
+                name: ($values.secretStores.policy)
+                namespace: ($values.organizationNamespace)
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"
-    - name: the organisation has a copy of the source
-      bindings:
-        - name: source
-          value: (x_k8s_get($client, 'v1', 'ConfigMap', $values.sharedObject.namespace, $values.sharedObject.configMap))
+    - name: the cluster's credentials are written
       try:
         - assert:
             resource:
-              apiVersion: v1
-              kind: ConfigMap
+              apiVersion: external-secrets.io/v1
+              kind: ExternalSecret
               metadata:
-                name: ($values.sharedObject.configMap)
+                name: (join('-', [$values.cluster, 'eso-cluster-auth']))
                 namespace: ($values.organizationNamespace)
                 labels:
                   app.kubernetes.io/managed-by: kyverno
-                  generate.kyverno.io/policy-name: ($values.sharedObject.policy)
-              (data == $source.data): true
+                  generate.kyverno.io/policy-name: ($values.secretStores.policy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the cluster has its store
+      try:
+        - assert:
+            resource:
+              apiVersion: external-secrets.io/v1
+              kind: SecretStore
+              metadata:
+                name: (join('-', [$values.cluster, 'eso-cluster-store']))
+                namespace: ($values.organizationNamespace)
+                labels:
+                  app.kubernetes.io/managed-by: kyverno
+                  generate.kyverno.io/policy-name: ($values.secretStores.policy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
