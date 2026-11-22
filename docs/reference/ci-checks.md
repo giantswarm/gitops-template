@@ -11,7 +11,8 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
 `gitops-validate` workflow, which reports its jobs as `validate / validate / <job>`:
 
 - `changes` decides whether the pull request needs the full run. One that changes nothing the tests read skips
-  `validate`, `get-diff` and `test_on_kind` (see [The light run](#the-light-run)).
+  `validate`, `get-diff` and `test_on_kind`, and runs the tests in `tests/ats` that need no cluster on their own in
+  `test_without_cluster` (see [The light run](#the-light-run)).
 - `check-pre-commit` runs every `pre-commit` hook of [.pre-commit-config.yaml](../../.pre-commit-config.yaml) on
   every file. Among them are [check-kustomization-paths](#check-kustomization-paths);
   [check-directory-readmes](../../tools/README.md#check-directory-readmes), which fails when a directory under
@@ -659,8 +660,8 @@ merge base and its head. The light run happens only when every file is one of th
 
 | The file | Why it doesn't count |
 | --- | --- |
-| `*.md`, anywhere | Neither test reads Markdown, except the self-tests of `check-directory-readmes` in `tools/test-all-ff validate`, which depend on four READMEs under `bases/` and `management-clusters/`. A README change that breaks them also fails `check-directory-readmes` itself, a `pre-commit` hook that the light run runs as well. |
-| `docs/` | Documentation; no test reads it. |
+| `*.md`, anywhere | `tools/test-all-ff validate` reads no Markdown, except in the self-tests of `check-directory-readmes`, which depend on four READMEs under `bases/` and `management-clusters/`. A README change that breaks them also fails `check-directory-readmes` itself, a `pre-commit` hook that the light run runs as well. The kind test's checks that need no cluster read some Markdown, and the light run runs them too. |
+| `docs/` | Documentation. Only checks that need no cluster read it, such as `test_delete_protection.py`, which tries the patch `docs/how-to/delete-cluster.md` writes, and the light run runs them. |
 | `renovate.json5` | Read by Renovate only. |
 | `tests/chainsaw/` | Run by `chainsaw.yaml` against a management cluster. `tools/test-all-ff` leaves out `tests/`, and `tests/ats` doesn't read it. |
 | `.github/workflows/`, except `validate.yaml` and `validate-light.yaml` | The other workflows; neither test reads them. |
@@ -675,4 +676,11 @@ the full run, as does every push to `main`.
 
 The light run is [validate-light.yaml](../../.github/workflows/validate-light.yaml): `check-pre-commit` runs every
 `pre-commit` hook, and `validate` and `test_on_kind` report as skipped, so the required checks have the same names
-either way. The shared workflow has no input to run `validate` without the kind test, so the two always run together.
+either way. One more job, `test_without_cluster`, runs every test in `tests/ats` that needs no cluster: all of them but
+`test_flux_objects.py`. Those are the checks the kind test runs first, and some of them read a file as text, comment
+and all. `test_org_name_references.py` finds the list of files in the organisation's `kustomization.yaml` by the
+comment's first words, and `test_delete_protection.py` reads a heredoc out of `docs/how-to/delete-cluster.md`. Reword
+one of those and the light run fails, as it should. The job installs Python and the packages `tests/ats/Pipfile.lock`
+pins, as `test_on_kind` does, and `kubectl` for `kubectl kustomize`. It needs no secret, so it runs on a pull request
+from a fork too. The shared workflow has no input to run `validate` without the kind test, so the two always run
+together.

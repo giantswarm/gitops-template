@@ -14,7 +14,7 @@ ORG_DIR = (
     / "../../management-clusters/MC_NAME/organizations/ORG_NAME"
 ).resolve()
 # the first line of the list's comment
-LIST_HEADING = "If you do not want to use kustomize replacements"
+LIST_HEADING = "Without the kustomize replacements"
 # a file in the list: `#   - path`, relative to the organisation's directory
 LISTED = re.compile(r"^\s*#\s+- (\S+\.yaml)\s*$")
 
@@ -66,13 +66,14 @@ def test_names_the_organisation() -> None:
     assert not names_the_organisation("# org-ORG_NAME in a comment\na: b")
 
 
-HEADING = f"  # {LIST_HEADING}, you must update all references to\n"
+HEADING = (
+    f"  # {LIST_HEADING}, change every `org-ORG_NAME` and `ORG_NAME` in these\n"
+    "  # files by hand:\n"
+)
 
 
 def test_listed_files() -> None:
-    kustomization = (
-        HEADING + "  # `org-ORG_NAME` in:\n  #   - a/b.yaml\n  #   - c.yaml\n  - x: y\n"
-    )
+    kustomization = HEADING + "  #   - a/b.yaml\n  #   - c.yaml\n  - x: y\n"
     assert listed_files(kustomization) == {"a/b.yaml", "c.yaml"}
 
 
