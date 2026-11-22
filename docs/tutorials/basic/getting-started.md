@@ -138,13 +138,17 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     ```
 
 1. Create the `Kustomization` that applies the management cluster's directory. Its `decryption` field names the
-   Secret that will hold the master key, so Flux can decrypt what it applies:
+   Secret that will hold the master key, so Flux can decrypt what it applies. It applies itself too, as part of that
+   directory, so the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation keeps a rename from making it delete
+   itself, and everything it applied with it, see [Deletion protection](../../explanation/deletion-protection.md):
 
     ```sh
     cat <<EOF > ${MC_DIR}/${MC_NAME}.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
+      annotations:
+        kustomize.toolkit.fluxcd.io/prune: disabled
       name: ${MC_NAME}-gitops
       namespace: default
     spec:
@@ -437,15 +441,18 @@ organisation reads its secrets through the organisation's namespace.
    the directory `${ORG_DIR}/namespace` into `org-${ORG_NAME}`. It fails until organization-operator has created
    the namespace, and succeeds on its next retry. Its `dependsOn` names your management cluster's `Kustomization`, so
    that one always applies a commit first. Its `decryption` field is there for the SOPS keys you may give your
-   clusters later, which go in `${ORG_DIR}/namespace/secrets`. `ORG_NAME` and `org-ORG_NAME` are placeholders that the
-   organisation's `kustomization.yaml` fills in, see
-   [Flux Kustomizations](../../reference/repo-structure.md#flux-kustomizations):
+   clusters later, which go in `${ORG_DIR}/namespace/secrets`. It has the `kustomize.toolkit.fluxcd.io/prune: disabled`
+   annotation, like the `Organization`: everything of the organisation's clusters hangs off it, so Flux mustn't delete
+   it when its file goes. `ORG_NAME` and `org-ORG_NAME` are placeholders that the organisation's `kustomization.yaml`
+   fills in, see [Flux Kustomizations](../../reference/repo-structure.md#flux-kustomizations):
 
     ```sh
     cat <<EOF > ${ORG_DIR}/namespace.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
+      annotations:
+        kustomize.toolkit.fluxcd.io/prune: disabled
       labels:
         giantswarm.io/organization-namespace: "true"
       name: ${MC_NAME}-organization-${ORG_NAME}

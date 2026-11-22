@@ -16,7 +16,9 @@ the namespace Kustomization in `namespace.yaml` then applies everything that goe
   Deleting it deletes the namespace and every cluster in it, so it has `kustomize.toolkit.fluxcd.io/prune: disabled`
   and `giantswarm.io/prevent-deletion: "true"`.
 - `namespace.yaml`: the organisation's namespace Kustomization, which applies [`namespace/`](namespace/) into
-  `org-<name>`.
+  `org-<name>`. Everything of the organisation's clusters hangs off it, so it has
+  `kustomize.toolkit.fluxcd.io/prune: disabled`, as does `multicluster/apps.yaml`: removing the organisation's
+  directory leaves them, see [Deletion protection](/docs/explanation/deletion-protection.md).
 - `kustomization.yaml`: lists `ORG_NAME.yaml`, `namespace.yaml` and `multicluster/`, and holds the replacements that
   copy the organisation's name from the `Organization` into the Flux Kustomizations, as `${organization}` and as the
   namespace Kustomization's `targetNamespace`.

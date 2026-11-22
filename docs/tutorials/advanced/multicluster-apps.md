@@ -51,18 +51,24 @@ the management cluster's.
     ```
 
 1. Create the `Kustomization` that applies `${ORG_DIR}/multicluster/apps`. It lives in `default`, as the management
-   cluster's `Kustomization` applies it, and runs as the `automation` ServiceAccount there. `ORG_NAME` is a
-   placeholder that the organisation's `kustomization.yaml` replaces with the `Organization`'s name, as it does for
-   `namespace.yaml`:
+   cluster's `Kustomization` applies it, and runs as the `automation` ServiceAccount there. Like `namespace.yaml`, it
+   depends on the management cluster's `Kustomization`, which applies every commit first, and has the
+   `kustomize.toolkit.fluxcd.io/prune: disabled` annotation: if Flux deleted it, it would take every `ResourceSet` in
+   the directory with it, and their apps from every cluster. `ORG_NAME` is a placeholder that the organisation's
+   `kustomization.yaml` replaces with the `Organization`'s name, as it does for `namespace.yaml`:
 
     ```sh
     cat <<EOF > ${ORG_DIR}/multicluster/apps.yaml
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata:
+      annotations:
+        kustomize.toolkit.fluxcd.io/prune: disabled
       name: ${MC_NAME}-multicluster-apps-${ORG_NAME}
       namespace: default
     spec:
+      dependsOn:
+        - name: ${MC_NAME}-gitops
       interval: 10m
       path: "./${ORG_DIR}/multicluster/apps"
       postBuild:

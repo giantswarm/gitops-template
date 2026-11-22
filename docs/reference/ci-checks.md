@@ -41,8 +41,12 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
   the management cluster's `Kustomization`, `mc-name-gitops`, has to report that its build failed and prune nothing: its
   inventory keeps the `Organization` and the organisation's namespace `Kustomization`, and they stay. That one, which
   depends on `mc-name-gitops`, has to report `DependencyNotReady` and prune nothing either: its inventory keeps the
-  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Then it
-  deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
+  cluster's `Kustomization`s, and they stay. Once `ORG_NAME.yaml` is back, all three have to get `Ready` again. Next it
+  drops the organisation's namespace `Kustomization` from what `mc-name-gitops` builds, with a `$patch: delete` patch
+  in that one's `spec.patches`, as deleting or renaming `namespace.yaml` would. `mc-name-gitops` has to drop it from
+  its inventory, and it has to stay, with the cluster's `Kustomization`s: its `kustomize.toolkit.fluxcd.io/prune:
+  disabled` annotation keeps Flux from deleting it. Once the patch is gone, `mc-name-gitops` has to list it again. Then
+  it deletes the cluster's two `Kustomization`s. Everything they applied has to go, and the cluster's `HelmRelease` and
   `OCIRepository` have to stay. It deletes what the other tests check, so it runs last and fails if they didn't run
   before it.
 
@@ -212,8 +216,12 @@ so [tests/ats/organization_operator.py](../../tests/ats/organization_operator.py
 The other checks run after it. The cluster `Kustomization`s are in the organisation's `workload-clusters` directory,
 which its `namespace/kustomization.yaml` lists, so they appear only once the organisation's `Kustomization` is `Ready`,
 and run as `org-org-name/automation`. `tests/ats/test_root_build.py` checks, without a cluster, that the build of
-`MC_NAME.yaml` holds only `Organization`s and objects in `default`, and that each organisation's namespace
-`Kustomization` applies into the organisation's namespace. `tests/ats/test_namespace_build.py` checks that the
+`MC_NAME.yaml` holds only `Organization`s and objects in `default`, that each organisation's namespace
+`Kustomization` applies into the organisation's namespace, that every `Kustomization` in it other than `MC_NAME.yaml`'s
+depends on that one, and that every `Kustomization` in it, `MC_NAME.yaml`'s included, has the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, see
+[Deletion protection](../explanation/deletion-protection.md#the-protected-objects).
+`tests/ats/test_namespace_build.py` checks that the
 `Kustomization`s it applies read the repository's `GitRepository` in `default`, depend on it, directly or through
 another of them, and decrypt with a key Secret it applies too.
 
