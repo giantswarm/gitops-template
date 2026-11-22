@@ -34,8 +34,9 @@ The management cluster's `Kustomization` doesn't apply `${ORG_DIR}/multicluster/
 the management cluster's.
 
 1. Create the directory, and its `kustomization.yaml`, which lists only `apps.yaml`. The organisation's
-   `multicluster` directory may already hold `secret-stores`, from the basic tutorial. Leave it out of this list: the
-   organisation's namespace `Kustomization` applies it, into the organisation's namespace:
+   `multicluster` directory may already hold `secret-stores`, if you gave every cluster a store with
+   [Kyverno](../../how-to/workload-cluster-secrets.md#give-every-cluster-a-store-with-kyverno). Leave it out of this
+   list: the organisation's namespace `Kustomization` applies it, into the organisation's namespace:
 
     ```sh
     mkdir -p ${ORG_DIR}/multicluster/apps

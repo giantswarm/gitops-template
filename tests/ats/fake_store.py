@@ -4,8 +4,8 @@ without it, the test creates no store.
 
 external_secrets.py creates the store in `default`, organization_operator in every organisation's
 namespace. For the template, the store is the one the examples' ExternalSecrets read, and
-docs/how-to/external-secrets.md, "A secret store for testing", has a store of the same name for
-trying the guides by hand.
+docs/how-to/external-secrets.md, "A secret store for testing", has a store of the same name, with
+the same dummy values, for trying the guides by hand.
 """
 
 from collections.abc import Iterable
