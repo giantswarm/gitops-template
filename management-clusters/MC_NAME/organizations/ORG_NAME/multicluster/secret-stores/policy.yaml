@@ -85,8 +85,9 @@ spec:
             dataFrom:
               - find:
                   name:
-                    # look up exactly the triggering Secret, i.e. <cluster_name>-kubeconfig
-                    regexp: "{{request.object.metadata.name}}"
+                    # exactly the triggering Secret, <cluster_name>-kubeconfig, and not, say,
+                    # another-<cluster_name>-kubeconfig
+                    regexp: "^{{request.object.metadata.name}}$"
 
     # When the ExternalSecret has synced and written its secret out,
     # generate a SecretStore that can be used to push into the cluster
@@ -97,10 +98,15 @@ spec:
               kinds:
                 - v1/Secret
               name: "*-eso-cluster-auth"
+              # External Secrets Operator labels every Secret it writes this way, so the rule
+              # leaves alone any other Secret whose name happens to end the same
+              selector:
+                matchLabels:
+                  reconcile.external-secrets.io/managed: "true"
       generate:
         apiVersion: external-secrets.io/v1
         kind: SecretStore
-        # <cluster>-eso-cluster-auth -> <cluster>-k8s-store
+        # <cluster>-eso-cluster-auth -> <cluster>-eso-cluster-store
         name: "{{ regex_replace_all('-eso-cluster-auth$', request.object.metadata.name, '-eso-cluster-store') }}"
         namespace: org-${organization}
         # keep SecretStore in sync with the auth Secret and delete it when the Secret disappears
