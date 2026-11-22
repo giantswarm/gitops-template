@@ -38,7 +38,7 @@ the ones that move objects Flux manages twice before you push.
 | Change | Why you might want it |
 | --- | --- |
 | [The kubectl-gs file names](#move-to-the-kubectl-gs-names) | `kubectl gs gitops check --adopt` and `add automatic-update` only find apps under these names |
-| [A cluster `Kustomization` and an apps `Kustomization`](#split-a-clusters-kustomization) | The apps wait for the cluster to be `Available`, instead of failing until it is |
+| [A cluster `Kustomization` and an apps `Kustomization`](#split-a-clusters-kustomization) | The apps wait for the cluster's control plane to be up, instead of failing until it is |
 | [`prune: true` on the clusters' `Kustomization`s](#turn-on-pruning-for-the-clusters) | Deleting an app's files uninstalls it. With `prune: false`, as on `main`, it stays, unmanaged |
 | [Apps in their own namespace](#install-apps-into-their-own-namespace) | Apps no longer create an `org-<name>` namespace in the workload cluster. It reinstalls them |
 | [Stacks and cluster bases](#replace-app-sets-and-cluster-templates) instead of `bases/app_sets` and `bases/cluster_templates` | One indirection fewer, and the layout the tutorials teach |

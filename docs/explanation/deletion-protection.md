@@ -85,8 +85,8 @@ organisation's namespace `Kustomization` from the management cluster's build, an
 
 ## What kubectl-gs writes
 
-From kubectl-gs X.Y.Z on, `kubectl gs gitops` writes the protection this page describes, and older releases write
-some of it:
+From kubectl-gs X.Y.Z on, `kubectl gs gitops` writes the protection this page describes, except the annotation on the
+`Kustomization`s everything else hangs off, and older releases write some of it:
 
 | Command | Writes |
 | --- | --- |
@@ -101,7 +101,9 @@ some of it:
 
 With an older kubectl-gs, or with `kubectl gs template`, add what's missing by hand, as the
 [CAPA base](/bases/clusters/capa/cluster.yaml) and the example `Organization` have it. Without the annotation, the
-`prune: true` this repository uses makes Flux try to delete the cluster when its file goes.
+`prune: true` this repository uses makes Flux try to delete the cluster when its file goes. Whichever release you
+use, add the annotation to `MC_NAME.yaml` and the organisation's `namespace.yaml` yourself, see
+[Let kubectl-gs write the files](../how-to/kubectl-gs.md).
 
 ## ResourceSets
 

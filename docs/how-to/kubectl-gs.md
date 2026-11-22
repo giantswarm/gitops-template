@@ -65,6 +65,15 @@ Then:
     gpg --batch --yes --delete-secret-keys "${KEY_FP}"
     ```
 
+`MC_NAME.yaml` has no `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. It applies itself, so renaming it
+would make Flux prune it, and its finalizer would delete everything beneath it, see
+[Deletion protection](../explanation/deletion-protection.md#the-protected-objects). Add the annotation, as the
+template's has it:
+
+```sh
+yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' ${MC_DIR}/${MC_NAME}.yaml
+```
+
 `MC_NAME.yaml` has `interval: 1m` and no `retryInterval`. The template uses `interval: 10m` and `retryInterval: 1m`,
 see [Reconcile intervals](../reference/repo-structure.md#reconcile-intervals); either works. The `GitRepository` and
 the repository token aren't in the repository: you create them on the management cluster once, as the basic tutorial
@@ -88,7 +97,15 @@ hand:
 - `namespace/kustomization.yaml`, which lists `../workload-clusters`, and an empty
   `workload-clusters/kustomization.yaml`, the organisation's list of clusters.
 
-There's nothing to change. `kubectl gs template organization --name ${ORG_NAME}` prints the `Organization` alone,
+One thing to change: `namespace.yaml` has no `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, and without
+it a rename or a dropped line would make Flux prune it and uninstall every app in the organisation. Add it:
+
+```sh
+yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled"' \
+  management-clusters/${MC_NAME}/organizations/${ORG_NAME}/namespace.yaml
+```
+
+`kubectl gs template organization --name ${ORG_NAME}` prints the `Organization` alone,
 without the protection.
 
 ## Workload cluster
@@ -143,6 +160,16 @@ Then:
 1. If the cluster needs SOPS-encrypted files, give it a key, see
    [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg), or let
    `kubectl gs gitops add encryption --workload-cluster ${WC_NAME}` write it, as below.
+
+1. Make the cluster's `Kustomization` wait for the control plane rather than for `Available`, which counts every node
+   pool, so that one short node pool doesn't hold back every change to the cluster's apps. Take its health check from
+   the example, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations):
+
+    ```sh
+    export WC_FILE=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}.yaml
+    yq -i ".spec.healthCheckExprs = $(yq -o json '.spec.healthCheckExprs' \
+      management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml)" ${WC_FILE}
+    ```
 
 A few things differ from the examples, and are yours to keep or change. The `kustomization.yaml`s use
 `commonLabels`, which kustomize has deprecated in favour of `labels:`; `kustomize edit fix` converts them. The
