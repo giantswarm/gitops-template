@@ -42,8 +42,9 @@ Check what you're about to delete:
 - **Application teams are gone.** If an application team delivers to the cluster with Flux on the management cluster,
   remove the team from the cluster first, see [Remove a team](../tutorials/advanced/teams.md#remove-a-team).
 - **A cluster from a `ResourceSet`**, as in the scheduled-upgrades example, has `fluxcd.controlplane.io/prune:
-  disabled` instead of Flux's annotation, and its `ResourceSet` renders it. The steps are the same; its `HelmRelease`
-  and `OCIRepository` stay when the `ResourceSet` goes.
+  disabled` instead of Flux's annotation, and its `ResourceSet` renders it. Its `HelmRelease` and `OCIRepository` stay
+  when the `ResourceSet` goes. The steps are the same, except for the patches that remove the protection, which have
+  to target the `ResourceSet`, see below.
 
 ## Remove the deletion protection
 
@@ -61,11 +62,58 @@ deleting them with the files later.
     The second patch targets only the cluster's `HelmRelease`, named `${cluster_name}`, not the base apps in
     `cluster/apps`. kustomize reads the target name as a regular expression, hence the escaped `$`.
 
+    For a cluster a `ResourceSet` renders, those two patches match nothing, and kustomize says nothing about a patch
+    that matches nothing: the `HelmRelease` and the `OCIRepository` are entries in the `ResourceSet`'s `resources`,
+    not objects kustomize sees. Patch the `ResourceSet` instead, the way its `patch_cluster_userconfig.yaml` does: the
+    `OCIRepository` is the first resource and the `HelmRelease` the second, and a `test` before each change fails the
+    build if that isn't so. The `HelmRelease` in the example has no `spec.values`, so the patch adds them; if yours
+    has some, add `global.metadata.preventDeletion` under them instead of replacing them:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/cluster/patch_remove_protection.yaml
+    - op: test
+      path: /spec/resources/0/kind
+      value: OCIRepository
+    - op: remove
+      path: /spec/resources/0/metadata/labels/giantswarm.io~1prevent-deletion
+    - op: test
+      path: /spec/resources/1/kind
+      value: HelmRelease
+    - op: remove
+      path: /spec/resources/1/metadata/labels/giantswarm.io~1prevent-deletion
+    - op: add
+      path: /spec/resources/1/spec/values
+      value:
+        global:
+          metadata:
+            preventDeletion: false
+    EOF
+    yq -i '.patches += [{"path": "patch_remove_protection.yaml", "target": {"group": "fluxcd.controlplane.io", "kind": "ResourceSet", "name": "\\${cluster_name}"}}]' ${WC_DIR}/cluster/kustomization.yaml
+    ```
+
+    Check that the patch took, before you push: neither rendered object may carry the label any more, so this has to
+    print `OCIRepository: null` and `HelmRelease: null`:
+
+    ```sh
+    kubectl kustomize ${WC_DIR}/cluster |
+      yq 'select(.kind == "ResourceSet") | .spec.resources[] | .kind + ": " + (.metadata.labels."giantswarm.io/prevent-deletion" // "null")'
+    ```
+
 1. Commit and push, and make Flux read the change right away:
 
     ```sh
     git commit -am "Remove the deletion protection of workload cluster ${WC_NAME}" && git push
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
+    ```
+
+    For a cluster a `ResourceSet` renders, Flux applies the changed `ResourceSet`, and Flux Operator applies what it
+    renders at once, without waiting for the upgrade window, as long as its provider is `Ready` with a version. Its
+    server-side apply takes the label off the live `HelmRelease` and `OCIRepository`, as Flux Operator is the only
+    field manager that set it there. A label someone added by hand, with `kubectl label`, stays; remove that by hand.
+    Check the live objects too, the `PREVENT-DELETION` column has to be empty:
+
+    ```sh
+    kubectl get helmrelease,ocirepository ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
     ```
 
 1. Wait until the `Cluster` has lost the label, which takes an upgrade of the chart. The `PREVENT-DELETION` column has

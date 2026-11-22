@@ -392,7 +392,12 @@ The assertions in `tests/ats/assertions/exists/organizations/workload-clusters/s
 cluster's `ResourceSet`, not its `Kustomization`, renders the cluster's `OCIRepository` and `HelmRelease`, with the
 protection of the cluster base and the cluster's own values. `tests/ats/test_cluster_move.py` builds the move of
 `WC_NAME` without a cluster, and fails if the `HelmRelease` the `ResourceSet` renders lacks a `valuesFrom` entry of the
-cluster's own `HelmRelease`, or has them in another order.
+cluster's own `HelmRelease`, or has them in another order. `tests/ats/test_delete_protection.py` builds the
+scheduled-upgrades example with the patch that [Delete a workload cluster](../how-to/delete-cluster.md) writes for a
+cluster a `ResourceSet` renders, and fails unless the rendered `OCIRepository` and `HelmRelease` have lost the
+`giantswarm.io/prevent-deletion` label and the release's values set `preventDeletion` to `false`. The kind test
+removes the deletion protection of neither kind of cluster: `test_prune` deletes a cluster's `Kustomization`s and
+checks that its `HelmRelease` and `OCIRepository` stay, but doesn't take the protection off or delete the cluster.
 
 They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
 hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
