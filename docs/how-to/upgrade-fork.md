@@ -1,24 +1,73 @@
 # Bring an older fork up to date
 
-A fork of this template doesn't follow the template by itself. When the template changes its layout or its names, a
-fork made before the change keeps working, but it drifts: `kubectl gs gitops` stops recognising parts of it, and the
-docs describe a repository it no longer is. This page brings it back in line.
+A fork of this template doesn't follow the template by itself. This page takes a fork of the template's `main` branch,
+at [structure version](../reference/repo-structure.md#structure-version) 2, to the layout the docs describe, version 3.
 
-Work through the sections in order. Each one says what it changes on a running management cluster, and the ones that
-move objects Flux manages say how to move them without deleting anything. Read those twice before you push.
+Flux doesn't care which version your repository is at: a fork you leave alone keeps reconciling exactly as it does
+today. kubectl-gs does care. From kubectl-gs X.Y.Z on, `kubectl gs gitops add workload-cluster` and
+`kubectl gs gitops add encryption --workload-cluster` refuse an organisation whose workload clusters' `Kustomization`s
+haven't moved into its namespace, so the day you want to add a cluster with the CLI, you have to do the move first.
 
+Some of it is mandatory, some of it is optional, and a little of it is the most dangerous thing in these docs: moving
+`Kustomization`s that own running clusters. Each section says what it changes on a running management cluster. Read
+the ones that move objects Flux manages twice before you push.
+
+- [What's mandatory](#whats-mandatory)
+- [What's optional, and why you might want it](#whats-optional-and-why-you-might-want-it)
+- [The path from main](#the-path-from-main)
 - [Check and upgrade the structure version](#check-and-upgrade-the-structure-version)
 - [Move to the kubectl-gs names](#move-to-the-kubectl-gs-names)
+- [Give every cluster its region](#give-every-cluster-its-region)
 - [Move an organisation's namespace objects](#move-an-organisations-namespace-objects)
 - [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations)
+- [Split a cluster's Kustomization](#split-a-clusters-kustomization)
+- [Turn on pruning for the clusters](#turn-on-pruning-for-the-clusters)
+- [Install apps into their own namespace](#install-apps-into-their-own-namespace)
+- [Replace App Sets and Cluster Templates](#replace-app-sets-and-cluster-templates)
+
+## What's mandatory
+
+| Change | Why |
+| --- | --- |
+| [Every cluster sets its region](#give-every-cluster-its-region), as a kustomize Component | Without a region, `release-aws` takes the region of the management cluster, and the template's bases and CI expect one |
+| [The structure version 3 files](#check-and-upgrade-the-structure-version): no `mapi`, and an organisation `namespace.yaml` | `kubectl gs gitops upgrade` writes them. Every `kubectl gs gitops` command from X.Y.Z on writes this layout |
+| [The workload cluster `Kustomization`s in the organisation's namespace](#move-the-workload-cluster-kustomizations) | kubectl-gs X.Y.Z and newer refuse to add clusters or cluster keys to an organisation that hasn't moved them |
+
+## What's optional, and why you might want it
+
+| Change | Why you might want it |
+| --- | --- |
+| [The kubectl-gs file names](#move-to-the-kubectl-gs-names) | `kubectl gs gitops check --adopt` and `add automatic-update` only find apps under these names |
+| [A cluster `Kustomization` and an apps `Kustomization`](#split-a-clusters-kustomization) | The apps wait for the cluster to be `Available`, instead of failing until it is |
+| [`prune: true` on the clusters' `Kustomization`s](#turn-on-pruning-for-the-clusters) | Deleting an app's files uninstalls it. With `prune: false`, as on `main`, it stays, unmanaged |
+| [Apps in their own namespace](#install-apps-into-their-own-namespace) | Apps no longer create an `org-<name>` namespace in the workload cluster. It reinstalls them |
+| [Stacks and cluster bases](#replace-app-sets-and-cluster-templates) instead of `bases/app_sets` and `bases/cluster_templates` | One indirection fewer, and the layout the tutorials teach |
+
+Changes to examples you don't use, such as new apps under `bases/`, need nothing from you.
+
+## The path from main
+
+Do the mandatory steps in this order. Take the optional ones whenever you like after step 4, one at a time, each
+in its own pull request:
+
+1. Update kubectl-gs to X.Y.Z or newer, with `kubectl gs selfupdate`, and start from a clean clone, on a new branch.
+1. [Move to the kubectl-gs names](#move-to-the-kubectl-gs-names). Optional, but it's renames only and changes nothing
+   on the cluster, and the next step finds more of your repository with them.
+1. [Give every cluster its region](#give-every-cluster-its-region).
+1. [Check and upgrade the structure version](#check-and-upgrade-the-structure-version), which drops `mapi` and adds
+   each organisation's `namespace.yaml`.
+1. [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations), one organisation at a time,
+   in three commits each.
+
+Wait for Flux to apply each push, and for everything to be `Ready` at that commit, before you start the next. If
+something isn't, [When something isn't Ready](./troubleshooting.md) helps you find out why.
 
 ## Check and upgrade the structure version
 
 The repository's layout has a version, the [structure version](../reference/repo-structure.md#structure-version),
-which `kubectl gs gitops` records in `.gitops-metadata.yaml`.
-
-`check` and `upgrade` need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version).
-If yours is older, update it with `kubectl gs selfupdate`.
+which `kubectl gs gitops` records in `.gitops-metadata.yaml`. `check` and `upgrade` know version 3 from kubectl-gs
+X.Y.Z on, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version). If yours is older, update it with
+`kubectl gs selfupdate`.
 
 To see which parts of your repository are behind, run this in your clone:
 
@@ -27,10 +76,8 @@ kubectl gs gitops check
 ```
 
 It exits with an error when anything is behind, so you can run it in CI. If your repository is older than the
-metadata file, run `kubectl gs gitops check --adopt` once to record what's there as current. It assumes what's there
-is current, so it can't find drift from before you ran it.
-
-To see what it would record first:
+metadata file, run `kubectl gs gitops check --adopt` once to record what's there. It records it at version 2, the
+layout of `main`, so it can't find drift from before you ran it. To see what it would record first:
 
 ```sh
 kubectl gs gitops check --adopt --dry-run
@@ -44,58 +91,58 @@ still lack a `helm-release.yaml` or a `kustomization.yaml`: rename them first, s
 kubectl gs gitops check --adopt
 ```
 
-From now on `kubectl gs gitops check` reports when the repository falls behind, and
-`kubectl gs gitops add automatic-update` works on the apps.
-
-To bring the repository up to date, first see which files would change:
+To bring the repository up to date, first see what would change, and the steps it leaves to you:
 
 ```sh
 kubectl gs gitops upgrade --dry-run
 ```
 
-Then run the upgrade:
+Then run the upgrade, and review the result with `git diff` before you commit it:
 
 ```sh
 kubectl gs gitops upgrade
 ```
 
-It changes the files in place and keeps your own edits where it can. Review the result with `git diff` before you
-commit it. If something goes wrong, undo it with Git. That's why the command doesn't run on a repository with
-uncommitted changes, or on a directory Git doesn't track, unless you pass `--force`. Migrations never touch files Git
-ignores, such as decrypted secrets, so move those yourself.
+It changes the files in place and keeps your own edits where it can. It doesn't run on a repository with uncommitted
+changes unless you pass `--force`, so you can always undo it with Git, and it never touches files Git ignores, such as
+decrypted secrets: move those yourself. It refuses, and writes nothing, when it can't tell what a directory holds, for
+example when both `mapi/apps` and `apps` exist, or when a `kustomization.yaml` lists `out-of-band`.
 
-Version 2 deploys clusters and apps with Flux `HelmRelease`s instead of App CRs. The upgrade to it doesn't convert
-App CRs, because the `HelmRelease` has to take over the Helm release the App CR installed in the cluster. It fails on
-every layer that still deploys or patches an App CR. Move those first, see the
-[App Platform deprecation](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/).
-Then it rewrites the user config patch of each workload cluster for the `HelmRelease`.
+From version 2 to 3, it changes only files:
 
-Version 3 drops the `mapi` directory of workload clusters. Its `cluster`, `apps` and any other directories move up
-into the cluster's directory, next to `out-of-band`, and the cluster's `kustomization.yaml` lists what the cluster's
-Kustomizations apply, never `out-of-band`, see
-[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). It also moves everything
-an organisation keeps in its namespace into the organisation's `namespace` directory, which its own Kustomization,
-`namespace.yaml`, applies, see [Move an organisation's namespace objects](#move-an-organisations-namespace-objects).
-The workload clusters' Kustomizations stay in `workload-clusters`, but `namespace.yaml` applies them too, into the
-organisation's namespace, with their SOPS keys in `namespace/secrets`, see
-[Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations).
-kubectl-gs doesn't know version 3 yet: `kubectl gs gitops add workload-cluster` still generates `mapi`, the version 2
-layout, and `kubectl gs gitops upgrade` has no migration to version 3. Move an existing cluster by hand, as the
-[CHANGELOG](/CHANGELOG.md) describes.
+- Each workload cluster's `mapi` directory goes: `cluster`, `apps` and any other directories in it move up into the
+  cluster's directory, next to `out-of-band`, with the relative paths in them corrected. The cluster's `Kustomization`
+  points at the cluster's directory, whose new `kustomization.yaml` lists what it applies, never `out-of-band`.
+- Each organisation gets its own `Kustomization`, `namespace.yaml`, and an empty `namespace` directory for it to
+  apply, and a `kustomization.yaml` that lists both, the `Organization` and `workload-clusters`.
+- `MC_NAME/secrets` gets a `kustomization.yaml` that protects the SOPS keys in it, if it has none.
 
-The CHANGELOG's "To split a running cluster's `Kustomization`" and "To move a running cluster" steps keep every
-object while it changes owner.
+On the management cluster, the cluster's `Kustomization` applies the same objects from their new paths, and
+`namespace.yaml` starts with nothing to apply. A fork of `main` has `prune: false` on every `Kustomization`, so nothing
+is deleted on the way.
 
-Note that layers recorded without a structure version can't be upgraded. If you know the version they were created
-with, set their `structureVersion` by hand. Otherwise, remove their entries and run
-`kubectl gs gitops check --adopt`.
+> [!Caution]
+> If you've already given your clusters' `Kustomization`s `prune: true`, objects that change path can be deleted and
+> created again while they move. First annotate every object under `mapi`, `OCIRepository`s, ConfigMaps and Secrets
+> as well as `HelmRelease`s, with `kustomize.toolkit.fluxcd.io/prune: disabled`, push, and wait for Flux to apply it.
+> Run the upgrade in the next commit, and remove the annotations once the `Kustomization`s are `Ready` at that commit.
+> Keep it on the objects that carry it anyway, such as the cluster's `HelmRelease`.
+
+What it leaves to you, it prints. The workload clusters' `Kustomization`s stay in `default`, applied by
+`MC_NAME.yaml`, with their keys in `MC_NAME/secrets`: move them with
+[Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations). It doesn't split a cluster's
+`Kustomization`, change `prune`, move apps to their own namespace or replace App Sets and Cluster Templates; the
+optional sections below do.
+
+Layers recorded without a structure version can't be upgraded. If you know the version they were created with, set
+their `structureVersion` by hand. Otherwise, remove their entries and run `kubectl gs gitops check --adopt`.
 
 ## Move to the kubectl-gs names
 
 This template uses the file and resource names that `kubectl gs gitops` generates. Earlier versions of the template
-used names of their own, so `kubectl gs gitops check --adopt` skipped their apps, and
-`kubectl gs gitops add automatic-update` and the `gitops upgrade` migrations couldn't find their files. Follow this
-section if your repository was forked from one of those versions.
+used names of their own, `main` among them, so `kubectl gs gitops check --adopt` skips their apps, and
+`kubectl gs gitops add automatic-update` and the `gitops upgrade` migrations can't find their files. It's renames only:
+nothing changes on the clusters.
 
 ### What changed
 
@@ -115,8 +162,6 @@ the files of the cluster base, so renaming those is optional and only makes your
 `kubectl gs gitops add` creates.
 
 ### Before you start
-
-You need kubectl-gs 6.0.0 or newer, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version).
 
 Start from a clean clone of your repository, on a new branch:
 
@@ -205,11 +250,11 @@ kubectl delete configmap WC_NAME-user-config -n org-ORG_NAME
 
 Renaming a Flux `Kustomization` creates a new one. If the `Kustomization` that applies it has `prune: true`, as in this
 template, Flux deletes the old one. If it has `prune: false`, as in earlier versions, the old one stays, and both apply
-the same resources until you delete it. A fork old enough to need this section still has its workload cluster
+the same resources until you delete it. A fork of `main` still has its workload cluster
 `Kustomization`s in `default`, which the management cluster's `Kustomization` applies, so the commands below use
 `-n default`. Rename them before you
-[move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations). If you have already moved
-them into the organisation's namespace, use `-n org-ORG_NAME` instead.
+[move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations), or not at all: the move gives
+them new objects anyway.
 
 > [!Caution]
 > Check that the old workload cluster `Kustomization` has `prune: false` before you go on. Deleting a
@@ -252,14 +297,53 @@ it differs from the CLI's on purpose.
 
 ### Record the layers
 
-Once the files are renamed, `kubectl gs gitops` recognises the apps. Record them as
-[Check and upgrade the structure version](#check-and-upgrade-the-structure-version) describes, then commit and push:
+Once the files are renamed, `kubectl gs gitops` recognises the apps. Commit and push, then record them as
+[Check and upgrade the structure version](#check-and-upgrade-the-structure-version) describes:
 
 ```sh
 git add -A && git commit -m "Use the kubectl-gs file and resource names" && git push
 ```
 
+## Give every cluster its region
+
+On `main`, a region is optional, and a cluster lists one as a kustomize base under `resources:`. Here, every cluster
+sets one, and a region is a kustomize Component, which appends `${cluster_name}-region-config` to the cluster's
+`valuesFrom`, see [Stages and regions](../tutorials/intermediate/stages-and-regions.md#regions). A cluster without a
+region gets the region of the management cluster's nodes from `release-aws`, which is rarely what anyone meant.
+
+A running cluster has to keep the region it runs in. A region Component that names another one tries to build the
+cluster somewhere else, so set each cluster's region to where it is now.
+
+1. Find the region each cluster runs in:
+
+    ```sh
+    kubectl get awsclusters -n org-ORG_NAME -o custom-columns=NAME:.metadata.name,REGION:.spec.region
+    ```
+
+1. Copy the template's regions, in [bases/environments/regions](/bases/environments/regions/), into your fork, or turn
+   yours into Components the same way: `kind: Component`, `apiVersion: kustomize.config.k8s.io/v1alpha1`, and a patch
+   that appends the region's ConfigMap to `/spec/valuesFrom/-`. Each one sets `global.providerSpecific.region` and the
+   zones of its node pools.
+1. In each cluster's `cluster/kustomization.yaml`, take the region out of `resources:` and list it under
+   `components:` instead, and give every cluster that has none the region from the first step. Drop any patch that
+   inserts the region's ConfigMap at a fixed position, such as `/spec/valuesFrom/1`.
+1. Check the order of the layers before you push. The region has to come after the base's `${cluster_name}-config`
+   and before the cluster's own values, and the values in it have to be the ones the cluster has now:
+
+    ```sh
+    tools/fake-flux build CLUSTER_KUSTOMIZATION '. | select(.kind == "HelmRelease" and .metadata.name == "CLUSTER_NAME") | .spec.valuesFrom'
+    ```
+
+When the merged values don't change, Flux doesn't upgrade the cluster's release. A cluster made from a Cluster
+Template gets its region the same way, in the cluster's own `kustomization.yaml`, and
+[Replace App Sets and Cluster Templates](#replace-app-sets-and-cluster-templates) says how to drop the template later.
+
 ## Move an organisation's namespace objects
+
+You need this section only if `MC_NAME.yaml` applies objects of your own in an organisation's namespace, such as
+`ExternalSecret`s you listed in the organisation's directory, and you want the organisation's `namespace.yaml` to apply
+them instead, as the template does. The workload clusters' `Kustomization`s have
+[a section of their own](#move-the-workload-cluster-kustomizations).
 
 On a management cluster that already runs the repository, moving objects from what `MC_NAME.yaml` applies into the
 organisation's `namespace` directory deletes them once. Flux deletes what leaves a `Kustomization`'s inventory in the
@@ -272,32 +356,34 @@ To move them without a deletion, use three commits, and let Flux apply each one 
 
 1. Annotate every object that moves with `kustomize.toolkit.fluxcd.io/prune: disabled`. `MC_NAME.yaml` applies the
    annotation, so Flux leaves the objects when they leave its inventory.
-1. Move the objects into `namespace`, or into `multicluster/secret-stores` for the workload clusters' secret stores,
-   which `namespace/kustomization.yaml` lists as `../multicluster/secret-stores`, add `namespace.yaml`, and take them
-   out of the organisation's `kustomization.yaml`, as in
-   [Add an organization](../tutorials/basic/getting-started.md#2-add-an-organisation). The workload clusters'
-   `Kustomization`s, `-direct` ones included, move with the steps of
-   [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations) instead. Until then,
-   `MC_NAME.yaml` applies them from `workload-clusters`: write the organisation's namespace, `org-<name>`, in a
-   `-direct` one that names the placeholder `org-ORG_NAME`, as the organisation's `kustomization.yaml` no longer
-   completes it. `MC_NAME.yaml` applies the commit first: it leaves the annotated objects where they are and creates
-   `namespace.yaml`'s `Kustomization`, which then takes the objects over.
+1. Move the objects into `namespace`, list them in `namespace/kustomization.yaml`, and take them out of the
+   organisation's `kustomization.yaml`, as in
+   [Add an organisation](../tutorials/basic/getting-started.md#2-add-an-organisation). `MC_NAME.yaml` applies the
+   commit first: it leaves the annotated objects where they are, and `namespace.yaml` then takes them over.
 1. Remove the annotation, so Flux deletes the objects again when you delete them from Git. Leave it on SOPS key
-   Secrets, such as a `-direct` `Kustomization`'s key in `namespace/secrets`: like the ones in `MC_NAME/secrets`,
-   they keep `kustomize.toolkit.fluxcd.io/prune: disabled` for good, from `namespace/secrets/kustomization.yaml`.
+   Secrets: like the ones in `MC_NAME/secrets`, they keep `kustomize.toolkit.fluxcd.io/prune: disabled` for good.
 
 A new management cluster needs none of this: its organisations' namespaces don't exist yet.
 
 ## Move the workload cluster Kustomizations
 
-The workload clusters' Kustomizations, `WC_NAME.yaml`, `WC_NAME-apps.yaml` and the others, used to be in `default`:
-`MC_NAME.yaml` applied the organisation's `workload-clusters` directory, and the cluster keys were in
-`MC_NAME/secrets`. A `-direct` one was in the organisation's namespace already, from the same directory or from
-`namespace/workload-clusters`. Their files stay in `workload-clusters`, but `namespace.yaml` applies them instead, into
-the organisation's namespace. On a management cluster that already runs them, move them in three commits, and let
-Flux apply each one before you push the next. Before you start:
+On `main`, the workload clusters' `Kustomization`s are in `default`: `MC_NAME.yaml` applies the organisation's
+`workload-clusters` directory, and the cluster keys are in `MC_NAME/secrets`. A `-direct` one is in the organisation's
+namespace already, applied by `MC_NAME.yaml` from the same directory. Here, their files stay in `workload-clusters`,
+but the organisation's `namespace.yaml` applies them, into the organisation's namespace, as its `automation`
+ServiceAccount, with their keys in `namespace/secrets`. kubectl-gs X.Y.Z and newer won't add a cluster to an
+organisation until they've moved. On a management cluster that already runs them, move them in three commits, and let
+Flux apply each one before you push the next.
 
-- The organisation's `namespace.yaml` runs, see [Move an organisation's namespace objects](#move-an-organisations-namespace-objects).
+> [!Caution]
+> This procedure has been reasoned through against Flux's source, and its steps checked for files, but it has not
+> been rehearsed on a live management cluster. Try it first on an organisation whose clusters you can afford to lose,
+> or on a test installation, and keep the warning below in mind.
+
+Before you start:
+
+- The organisation's `namespace.yaml` runs and is `Ready`. `kubectl gs gitops upgrade` writes it, see
+  [Check and upgrade the structure version](#check-and-upgrade-the-structure-version).
 - `MC_NAME.yaml` needs `prune: true` by the second commit, so that Flux deletes the old `Kustomization`s in
   `default`. With `prune: false`, as in `main` and in what `kubectl gs gitops add management-cluster` writes, they
   stay, and the old and the new `Kustomization`s both reconcile the same clusters. The first commit sets it.
@@ -326,8 +412,8 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
 1. The first commit moves nothing:
 
     - Protect what `MC_NAME.yaml` applies and has to keep, whatever its `prune` is now, as
-      [How it works](../explanation/deletion-protection.md#the-protected-objects) lists: the SOPS key Secrets in `MC_NAME/secrets`,
-      which the second commit takes out of its build, and the `Organization`s. Give them the
+      [The protected objects](../explanation/deletion-protection.md#the-protected-objects) lists: the SOPS key Secrets
+      in `MC_NAME/secrets`, which the second commit takes out of its build, and the `Organization`s. Give them the
       `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, and
       give `MC_NAME.yaml` `prune: true`. This commit takes nothing out of its build, so turning `prune` on deletes
       nothing: Flux deletes only what leaves the build once it's on. The commands leave what's there already, and
@@ -386,15 +472,18 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
     - Copy each key Secret in `default` that those `Kustomization`s name in `decryption.secretRef` into the
       organisation's `namespace/secrets`, in the organisation's namespace, and list it in
       `namespace/secrets/kustomization.yaml`. If the organisation doesn't have that directory yet, create it as in
-      [Add an organization](./sops.md#add-a-workload-cluster-key-gpg), with its `kustomization.yaml`, and list `secrets`
-      in `namespace/kustomization.yaml`. With the master private key in your keyring, for each key file, such as
-      `WC_NAME.gpgkey.enc.yaml`:
+      [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg), with its `kustomization.yaml`, and
+      list `secrets` in `namespace/kustomization.yaml`. With the master private key in your keyring, for each key file,
+      such as `WC_NAME.gpgkey.enc.yaml`, decrypt it and encrypt it again on its way to the new file, so the private key
+      never lands in the working tree in plain text. If `sops` finds no rule for the new path, it fails and leaves the
+      file empty:
 
       ```sh
       export KEY_FILE=WC_NAME.gpgkey.enc.yaml
       sops --decrypt management-clusters/${MC_NAME}/secrets/${KEY_FILE} |
-        yq '.metadata.namespace = "org-'"${ORG_NAME}"'"' > ${ORG_DIR}/namespace/secrets/${KEY_FILE}
-      sops --encrypt --in-place ${ORG_DIR}/namespace/secrets/${KEY_FILE}
+        yq '.metadata.namespace = "org-'"${ORG_NAME}"'"' |
+        sops --encrypt --filename-override ${ORG_DIR}/namespace/secrets/${KEY_FILE} --input-type yaml \
+          --output-type yaml /dev/stdin > ${ORG_DIR}/namespace/secrets/${KEY_FILE}
       yq -i '.resources += [strenv(KEY_FILE)]' ${ORG_DIR}/namespace/secrets/kustomization.yaml
       ```
 
@@ -422,41 +511,24 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
 
 1. The second commit moves the `Kustomization`s:
 
-    - Take `workload-clusters` and the replacement with `labelSelector: giantswarm.io/health-check-cluster=true` out
-      of the organisation's `kustomization.yaml`, and list `../workload-clusters` in `namespace/kustomization.yaml`
-      instead. `workload-clusters/kustomization.yaml` keeps listing the `Kustomization` files.
-    - Move what `namespace/workload-clusters/kustomization.yaml` lists, such as a `-direct` `Kustomization` from
-      [Move an organisation's namespace objects](#move-an-organisations-namespace-objects), into `workload-clusters`
-      and its list, and take `workload-clusters` out of `namespace/kustomization.yaml`, which lists
-      `../workload-clusters` now: `namespace.yaml` applies them from both, so they keep their owner.
+    - Take `workload-clusters` out of the organisation's `kustomization.yaml`, and list `../workload-clusters` in
+      `namespace/kustomization.yaml` instead. kubectl-gs looks for exactly that entry to tell that the organisation has
+      moved. `workload-clusters/kustomization.yaml` keeps listing the `Kustomization` files.
     - Change each file as [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations) describes: no
-      `metadata.namespace` and no `giantswarm.io/health-check-cluster` label, `sourceRef.namespace`, `organization:
-      "${organization}"`, `org-${organization}` as the namespace of a `Cluster` health check, the organisation's
-      namespace `Kustomization` in `dependsOn` where there's no `dependsOn` yet, and no `deletionPolicy`.
+      `metadata.namespace`, `sourceRef.namespace`, `organization: "${organization}"`, `org-${organization}` as the
+      namespace of a `Cluster` health check, the organisation's namespace `Kustomization` in `dependsOn` where there's
+      no `dependsOn` yet, and no `deletionPolicy`.
       `sourceRef.namespace` keeps the namespace of the `GitRepository` each one reads now: one without it reads the one
       in its own namespace. The `-direct` ones keep the annotation until the third commit:
 
       ```sh
       export ORG_KUSTOMIZATION=$(yq '.metadata.name' ${ORG_DIR}/namespace.yaml)
       yq -i '.resources |= ((. // []) + ["../workload-clusters"] | unique)' ${ORG_DIR}/namespace/kustomization.yaml
-      yq -i 'del(.resources[] | select(. == "workload-clusters")) |
-        del(.replacements[] | select(.targets[].select.labelSelector == "giantswarm.io/health-check-cluster=true"))' \
-        ${ORG_DIR}/kustomization.yaml
-      if [ -e ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml ]; then
-        for F in $(yq '(.resources // [])[]' ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml); do
-          git mv ${ORG_DIR}/namespace/workload-clusters/${F} ${ORG_DIR}/workload-clusters/
-          # the namespace it read its GitRepository in there
-          yq -i '.spec.sourceRef.namespace |= (. // ("org-" + strenv(ORG_NAME)))' ${ORG_DIR}/workload-clusters/${F}
-          F=${F} yq -i '.resources += [strenv(F)]' ${ORG_DIR}/workload-clusters/kustomization.yaml
-        done
-        git rm -q ${ORG_DIR}/namespace/workload-clusters/kustomization.yaml
-        yq -i 'del(.resources[] | select(. == "workload-clusters"))' ${ORG_DIR}/namespace/kustomization.yaml
-      fi
+      yq -i 'del(.resources[] | select(. == "workload-clusters"))' ${ORG_DIR}/kustomization.yaml
       for f in ${ORG_DIR}/workload-clusters/*.yaml; do
         [ "$(basename ${f})" = kustomization.yaml ] && continue
         yq -i '.spec.sourceRef.namespace = (.spec.sourceRef.namespace // .metadata.namespace // "default") |
-          del(.metadata.namespace, .metadata.labels["giantswarm.io/health-check-cluster"], .spec.deletionPolicy) |
-          del(.metadata.labels | select(length == 0)) |
+          del(.metadata.namespace, .spec.deletionPolicy) |
           .spec.postBuild.substitute.organization = "${organization}" |
           with(.spec | select(has("healthChecks")) | .healthChecks[] | select(.kind == "Cluster");
             .namespace = "org-${organization}") |
@@ -466,7 +538,7 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
       ```
 
       The template's `Kustomization`s read the repository's `GitRepository` in `default`. If one now names another
-      namespace, such as a `-direct` one from `main`, which named none, check that it reads this repository:
+      namespace, such as a `-direct` one, which on `main` names none, check that it reads this repository:
       `kubectl get gitrepository -n org-${ORG_NAME}`. If it does, set its `sourceRef.namespace` to `default`, as the
       template does. Otherwise keep it.
 
@@ -547,3 +619,116 @@ The cluster directories don't move, so the `path`s and the per-cluster rules in 
 `Kustomization`s run as the organisation's `automation` ServiceAccount, which may write only in the organisation's
 namespace: a cluster directory that applies anything else fails with "forbidden", see
 [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+
+## Split a cluster's Kustomization
+
+On `main`, one `Kustomization` per cluster applies the cluster and its apps together, so the apps fail and retry until
+the cluster is up. Here, a cluster with apps has two: `WC_NAME.yaml` applies `cluster`, the cluster's `HelmRelease`
+and its base apps, and waits for the Cluster API `Cluster` to be `Available`; `WC_NAME-apps.yaml` applies the rest
+once it is, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). The `HELLO_APP_*` examples
+have no secondary apps and keep one.
+
+Do this after [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations), and while the
+cluster's `Kustomization` still has `prune: false`: objects then change owner without being deleted on the way.
+
+1. Move the base apps, the ones the cluster needs from the start, into `cluster/apps`, and list them in
+   `cluster/kustomization.yaml`. Make sure `${WC_NAME}/kustomization.yaml` lists `apps/` and anything else the apps
+   `Kustomization` should apply, but not `cluster/` or `out-of-band/`. A directory it doesn't list stops being
+   applied.
+1. Add the apps `Kustomization`, `WC_NAME-apps.yaml`, with the cluster's `Kustomization` in `dependsOn`, and the same
+   `postBuild` substitutions, `decryption`, `serviceAccountName` and `sourceRef`. List it in
+   `workload-clusters/kustomization.yaml`, and in the organisation's commit-status `Alert` if it has one.
+1. In the same commit, narrow the cluster's `Kustomization` to `path: ./.../WC_NAME/cluster`, and give it the health
+   check and the `timeout` of the [WC_NAME.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME.yaml)
+   example.
+
+Push. The cluster's `Kustomization` stops applying the apps, and leaves them where they are, as its `prune` is off.
+The apps `Kustomization` takes them over once the cluster is `Available`, without changing them. Check that the apps
+`Kustomization` lists them in its inventory:
+
+```sh
+kubectl get kustomization MC_NAME-clusters-WC_NAME-apps -n org-ORG_NAME -o yaml | yq '.status.inventory'
+```
+
+If the cluster's `Kustomization` already has `prune: true`, first give every object in `apps`, and in any other
+directory that changes owner, the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, `OCIRepository`s,
+ConfigMaps and Secrets as well as `HelmRelease`s, and wait until Flux has applied it. Take the annotation off again,
+in Git, once each object is in its new `Kustomization`'s inventory, and keep it on the objects that carry it anyway,
+such as the cluster's `HelmRelease`.
+
+## Turn on pruning for the clusters
+
+On `main`, every `Kustomization` has `prune: false`: deleting a file from Git leaves the object it created on the
+cluster, unmanaged. Here, every `Kustomization` has `prune: true`, so deleting an app's files uninstalls the app, and a
+handful of objects that must never go by accident carry the `kustomize.toolkit.fluxcd.io/prune: disabled`
+annotation, see [Deletion protection](../explanation/deletion-protection.md).
+
+The base on `main` gives the cluster's `HelmRelease` the `giantswarm.io/prevent-deletion` label, but not the
+annotation. With pruning on and only the label, deleting a cluster's files makes Flux try to delete the cluster, the
+management cluster refuse, and the `Kustomization` fail, rather than Flux leaving the cluster alone.
+
+1. Give the cluster's `HelmRelease` and `OCIRepository` in your cluster base both the annotation and the label, as
+   [bases/clusters/capa/cluster.yaml](/bases/clusters/capa/cluster.yaml) has them. Do the same for anything else your
+   clusters' `Kustomization`s apply that must outlive its file. Push, and wait until Flux has applied it.
+1. Set `prune: true` on the clusters' `Kustomization`s, `-direct` ones included, and push. Turning `prune` on deletes
+   nothing that's still in the build: Flux only deletes what leaves it from now on.
+1. Objects that left the build while `prune` was off aren't in any inventory, so Flux doesn't know about them and
+   leaves them. Find and delete them by hand if you don't want them.
+
+A `-direct` `Kustomization` with `prune: true` deletes what it applied in the workload cluster when you delete it,
+which is what you want when you delete the cluster, and the reason
+[Delete a workload cluster](./delete-cluster.md#remove-out-of-band-resources) removes it first.
+
+## Install apps into their own namespace
+
+On `main`, the `hello-world` and `cert-manager` examples install into `org-<organisation>` in the workload cluster,
+which creates an organisation namespace there. Here, each app installs into a namespace of its own, `hello-world` and
+`cert-manager`, with its Helm storage in the same namespace. The `HelmRelease`s stay in the organisation's namespace on
+the management cluster. Apps of your own built from those examples can follow, or not: it's a choice, and it costs a
+reinstall.
+
+Flux uninstalls a release whose `targetNamespace` or `storageNamespace` changes, and installs it again in the new
+namespace, in separate reconciliations. Until the new install is ready, the app isn't running:
+
+- `hello-world` has no Service or `HTTPRoute` in between.
+- cert-manager has no controller, and its webhook configurations go with the release, so the API server stores
+  changes to `Certificate`s without validating them, and nothing acts on them until the reinstall.
+- CRDs survive only if the chart keeps them. `cert-manager-app` does, with `cert-manager.crds.keep: true`, its default.
+  With `keep` off, or for a chart whose CRDs don't have the `helm.sh/resource-policy: keep` annotation, the uninstall
+  deletes the CRDs and every resource of those kinds.
+- cert-manager reads the Secrets of `ClusterIssuer`s from its own namespace. Before you change it, copy the ACME
+  account key, and any CA key pairs or credentials you created yourself, from `org-<organisation>` to `cert-manager` in
+  the workload cluster. Otherwise the `ClusterIssuer`s aren't ready and renewals fail, and a missing ACME account key
+  registers a new account.
+
+Change `targetNamespace` and `storageNamespace` together, and keep `install.createNamespace: true`. The template's
+cert-manager no longer installs its CRDs, `cert-manager.crds.enabled: false`, because the Giant Swarm release does.
+The `org-<organisation>` namespace in the workload cluster isn't part of any release, so nothing deletes it: delete it
+once it holds nothing you need.
+
+## Replace App Sets and Cluster Templates
+
+`main` has two kinds of base that this layout replaces:
+
+| `main` | Here | Read |
+| --- | --- | --- |
+| `bases/app_sets`, listed in a cluster's `mapi/app_sets` | `bases/stacks`, listed in the cluster's `apps` or `cluster/apps` | [Stacks](../tutorials/intermediate/stacks.md) |
+| `bases/cluster_templates`, with stages in `bases/environments/stages/*/hello_app_cluster` | A cluster base in `bases/clusters`, with stage and region Components | [Cluster bases](../tutorials/intermediate/cluster-bases.md), [Stages and regions](../tutorials/intermediate/stages-and-regions.md) |
+| `bases/clusters/capa/template` | `bases/clusters/capa` | [Align the CAPA cluster base](#align-the-capa-cluster-base-optional) |
+| `bases/apps/envoy-gateway` | `bases/stacks/envoy-gateway`, a directory per chart | [Stacks](../tutorials/intermediate/stacks.md) |
+
+Nothing forces you to move. `kubectl gs gitops add base` writes `bases/clusters/PROVIDER` from X.Y.Z on, and an
+existing cluster that names `bases/clusters/capa/template` with `--base` keeps working.
+
+What matters when you do move is that the objects keep their names and their values. A `HelmRelease` that keeps its
+name and namespace is updated in place; one whose name changes is a new release, and the old one is uninstalled. So
+render each cluster before and after, and compare:
+
+```sh
+tools/fake-flux build CLUSTER_KUSTOMIZATION -M > /tmp/before.yaml
+```
+
+Make the change, then build again into `/tmp/after.yaml`, and compare the two with `diff`. The names of the
+`HelmRelease`s and `OCIRepository`s, and the merged values, should be the same; labels and annotations may differ.
+For a cluster from a Cluster Template, the stage's patches move into a stage Component that the cluster lists after
+its region, and the template's own values into the cluster's `cluster_userconfig.yaml`, so that they come last.
