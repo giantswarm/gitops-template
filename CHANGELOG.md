@@ -217,7 +217,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Breaking:** the template uses the file and resource names `kubectl gs gitops` 6.0.4 generates, so
   `kubectl gs gitops check --adopt` records every example app and `kubectl gs gitops add automatic-update` works on
   them. Forks keep working as they are; to move one, follow
-  [Move a fork to the kubectl-gs file and resource names](docs/guides/kubectl-gs-names.md).
+  [Move a fork to the kubectl-gs file and resource names](docs/how-to/upgrade-fork.md#move-to-the-kubectl-gs-names).
   - Apps keep their `HelmRelease` in `helm-release.yaml` and their `OCIRepository` in `oci-repository.yaml`, instead
     of `helmrelease.yaml` and `ocirepository.yaml`. The envoy-gateway App Template has a directory per chart instead
     of `helmreleases.yaml` and `ocirepositories.yaml`, so every file holds one resource.
