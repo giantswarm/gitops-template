@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  values: |
+    global:
+      nodePools:
+        workers:
+          instanceType: m6i.4xlarge
+kind: ConfigMap
+metadata:
+  name: scheduled-upgrades-cluster-userconfig
+  namespace: org-org-name

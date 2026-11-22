@@ -80,8 +80,9 @@ No release writes `kustomize.toolkit.fluxcd.io/prune: disabled`. So add it by ha
 A Flux Operator `ResourceSet` can render a cluster's `OCIRepository` and `HelmRelease` instead of a `Kustomization`, as
 the scheduled-upgrades example does, see
 [Hold upgrades for a window](../tutorials/advanced/scheduled-upgrades.md). It prunes too: when its input goes, it
-deletes what it rendered for it. Its input is a version, and the version goes when no tag matches the range, when the
-registry can't be read or when the provider is deleted. Two guards cover it:
+deletes what it rendered for it. Its input is a version, which in Flux Operator v0.62.1 goes only when no tag matches
+the range: a provider that can't read the registry keeps its last version, and a deleted provider stalls the
+`ResourceSet` rather than emptying it. Two guards cover it all the same:
 
 - The `ResourceSet` has its provider in `dependsOn`, with a `readyExpr` that needs exported inputs. Until the provider
   is `Ready` with a version, the `ResourceSet` reports `DependencyNotReady` and leaves what it rendered as it is.
@@ -91,4 +92,5 @@ registry can't be read or when the provider is deleted. Two guards cover it:
   base.
 
 [Keep the version](../tutorials/advanced/scheduled-upgrades.md#keep-the-version) shows the guard, and the kind test
-takes the version away in each of the three ways and checks that the cluster stays.
+tries all three, an unreadable registry, a range no tag matches and a deleted provider, and checks that the cluster
+stays.

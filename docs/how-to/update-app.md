@@ -5,6 +5,7 @@ Every change to an app is a change to one of its files, pushed to Git. The trick
 | To change | Edit | Resource |
 | --- | --- | --- |
 | the chart version | `oci-repository.yaml` | the `OCIRepository` |
+| the chart version of a [scheduled](../tutorials/advanced/scheduled-upgrades.md) or [multicluster](../tutorials/advanced/multicluster-apps.md) app | `spec.filter.semver` in its `input-provider.yaml` | the `ResourceSetInputProvider` |
 | how the chart is installed, such as the target namespace, timeouts or retries | `helm-release.yaml` | the `HelmRelease` |
 | plain values | `override_config.yaml` | the `-user-values` ConfigMap the app's `kustomization.yaml` generates |
 | secret values | your secret manager, or `secret.enc.yaml` | the `-user-secrets` Secret |
@@ -46,6 +47,39 @@ stage's patch wins: change the version there, see
 [Promote a change from dev to prod](../tutorials/intermediate/stages-and-regions.md#promote-a-change-from-dev-to-prod).
 To have Flux pick up new versions by itself, use a version range instead, see
 [Let Flux install new chart versions](../tutorials/intermediate/automatic-updates.md).
+
+A scheduled or multicluster app has no `oci-repository.yaml`: its `ResourceSet` renders the `OCIRepository` at the
+version its provider exports. Change the provider's range, `spec.filter.semver` in `input-provider.yaml`, instead. A new
+range reaches the app at the provider's next window, like a new version, see
+[How the window works](../tutorials/advanced/scheduled-upgrades.md#how-the-window-works).
+
+## Back out a version
+
+Flux rolls back an upgrade that fails, on its own. This is for one that succeeded and then misbehaved.
+
+For an app with an `oci-repository.yaml`, set the last good version as the tag, as in
+[Change the chart version](#change-the-chart-version), then commit and push.
+
+For a scheduled or multicluster app, pin the provider to the last good version, then make it read the registry at
+once, as a pin waits for the window too. In the app's directory, `multicluster/apps/APP_NAME` for a multicluster app,
+with `PROVIDER_NAME` the provider's `metadata.name`, `${cluster_name}` filled in:
+
+1. Pin the range, then commit and push:
+
+    ```sh
+    yq -i '.spec.filter.semver = "LAST_GOOD_VERSION"' input-provider.yaml
+    git commit -am "Back out ${APP_NAME} to LAST_GOOD_VERSION" && git push
+    ```
+
+1. Wait until Flux has applied the pin, which this prints, then force the provider. It exports the pinned version,
+   and the `ResourceSet` moves every cluster it renders for back to it:
+
+    ```sh
+    kubectl get resourcesetinputprovider PROVIDER_NAME -n org-${ORG_NAME} -o jsonpath='{.spec.filter.semver}'
+    flux-operator reconcile inputprovider PROVIDER_NAME -n org-${ORG_NAME} --force
+    ```
+
+Put the range back once a fixed version is out; it reaches the app at the next window.
 
 ## Change how the chart is installed
 

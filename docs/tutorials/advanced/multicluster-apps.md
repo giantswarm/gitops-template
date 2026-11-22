@@ -16,6 +16,7 @@ only in an upgrade window. It builds on [Scheduled upgrades](./scheduled-upgrade
 - [The multicluster directory](#the-multicluster-directory)
 - [List the clusters](#list-the-clusters)
 - [Add an app](#add-an-app)
+- [Upgrade production later](#upgrade-production-later)
 - [Clusters that aren't ready yet](#clusters-that-arent-ready-yet)
 - [Next steps](#next-steps)
 
@@ -136,6 +137,12 @@ To roll every app out to another cluster later, add its name to `clusters.yaml`.
 has what each app depends on, see [Clusters that aren't ready yet](#clusters-that-arent-ready-yet). Removing a name
 uninstalls the apps from that cluster. To give one app a list of its own, add a patch after `clusters.yaml` in
 `kustomization.yaml` that targets that `ResourceSet` by name and sets its `spec.inputs`.
+
+Removing the last name is the exception: it uninstalls nothing. With no clusters, a `ResourceSet` has no
+`inputs.hello_world_scheduled` to render with, so its build fails with `map has no entry for key`, and it keeps what it
+installed. That's the safe way to fail, but it isn't what you meant. To take an app off every cluster, remove it from
+`kustomization.yaml`: Flux deletes its `ResourceSet`, which uninstalls it everywhere. An empty
+`MULTICLUSTER_CLUSTERS` in the step above gives you the empty list, too.
 
 ## Add an app
 
@@ -262,12 +269,11 @@ the provider's under `inputs.hello_world_scheduled_version`.
     ```
 
 **Check:** the multicluster `Kustomization` is `Ready`, and the `ResourceSet` has rendered a `HelmRelease` per cluster.
-Until the provider's first window, there's no version yet and nothing is rendered; to install at once, force the
-provider once, as in [Install before the first window](./scheduled-upgrades.md#install-before-the-first-window):
+Until the provider's first window nothing is rendered: force `hello-world-scheduled-version` once, as
+[Install before the first window](./scheduled-upgrades.md#install-before-the-first-window) shows, to install at once.
 
 ```sh
 flux get kustomizations ${MC_NAME}-multicluster-apps-${ORG_NAME} -n default
-flux-operator reconcile inputprovider hello-world-scheduled-version -n org-${ORG_NAME} --force
 kubectl get resourceset hello-world-scheduled -n org-${ORG_NAME}
 flux get helmreleases -n org-${ORG_NAME} | grep hello-world-scheduled
 ```
@@ -275,6 +281,73 @@ flux get helmreleases -n org-${ORG_NAME} | grep hello-world-scheduled
 If you followed [Scheduled upgrades](./scheduled-upgrades.md) on the same cluster, it keeps its `hello-world-window`
 from there. That one has names, a release and a namespace of its own, so the two `ResourceSet`s never render the same
 object, and neither deletes what the other installed.
+
+## Upgrade production later
+
+Every cluster in the list upgrades in the same window. The provider exports one version, `Permute` pairs it with every
+cluster, and when the window opens on a new version, Flux Operator applies the new tag to all of them in one go: dev and
+production in the same minute. Rollback remediation catches an upgrade that fails, not one that succeeds and then
+misbehaves. For a logging agent that may be fine. For anything production would notice, give production a window of
+its own.
+
+Production then gets its own provider, with a later window, and its own list of clusters, which means a second app made
+from the first: a `ResourceSet` reads one provider here, and `Permute` would pair every provider with every cluster.
+
+1. Export the production clusters, and the directory of the apps:
+
+    ```sh
+    export PROD_CLUSTERS="CLUSTER_NAME"
+    export APPS_DIR=${ORG_DIR}/multicluster/apps
+    ```
+
+1. Copy the `ResourceSet` as `hello-world-scheduled-prod`. With `Permute`, its inputs follow its name and its
+   provider's, so the keys change with them, `inputs.hello_world_scheduled_prod` and
+   `inputs.hello_world_scheduled_prod_version`. The objects get names of their own, so the two `ResourceSet`s never
+   render the same one; the Helm release keeps its name and namespace on every cluster:
+
+    ```sh
+    mkdir -p ${APPS_DIR}/hello-world-scheduled-prod
+    sed -e 's/hello-world-scheduled/hello-world-scheduled-prod/g' -e 's/hello_world_scheduled/hello_world_scheduled_prod/g' \
+      -e 's/releaseName: hello-world-scheduled-prod/releaseName: hello-world-scheduled/' \
+      -e 's/storageNamespace: hello-world-scheduled-prod/storageNamespace: hello-world-scheduled/' \
+      -e 's/targetNamespace: hello-world-scheduled-prod/targetNamespace: hello-world-scheduled/' \
+      ${APPS_DIR}/hello-world-scheduled/resource-set.yaml > ${APPS_DIR}/hello-world-scheduled-prod/resource-set.yaml
+    ```
+
+1. Create its provider, the same range on Fridays, and its list of clusters. Each production cluster leaves
+   `clusters.yaml`: a cluster is in one list, never both. Then list the files, and the patch that sets the production
+   `ResourceSet`'s clusters, after `clusters.yaml`:
+
+    ```sh
+    yq '.metadata.name = "hello-world-scheduled-prod-version" | .spec.schedule[0].cron = "0 9 * * 5"' \
+      ${APPS_DIR}/hello-world-scheduled/input-provider.yaml > ${APPS_DIR}/hello-world-scheduled-prod/input-provider.yaml
+    cat <<'EOF' > ${APPS_DIR}/hello-world-scheduled-prod/clusters.yaml
+    apiVersion: fluxcd.controlplane.io/v1
+    kind: ResourceSet
+    metadata:
+      name: hello-world-scheduled-prod
+    spec:
+      inputs: []
+    EOF
+    for c in ${PROD_CLUSTERS}; do
+      yq -i '.spec.inputs += [{"cluster": "'"${c}"'"}]' ${APPS_DIR}/hello-world-scheduled-prod/clusters.yaml
+      yq -i 'del(.spec.inputs[] | select(.cluster == "'"${c}"'"))' ${APPS_DIR}/clusters.yaml
+    done
+    yq -i '.resources += ["hello-world-scheduled-prod/input-provider.yaml", "hello-world-scheduled-prod/resource-set.yaml"] |
+      .patches += [{"path": "hello-world-scheduled-prod/clusters.yaml", "target": {"kind": "ResourceSet", "name": "hello-world-scheduled-prod"}}]' \
+      ${APPS_DIR}/kustomization.yaml
+    ```
+
+    If other apps here need the production clusters too, keep them in `clusters.yaml`, and give `hello-world-scheduled`
+    a list of its own the same way.
+
+1. Commit and push, and force the new provider once, as for any new provider.
+
+Windows space upgrades out in time; they don't promote. A version published on a Thursday evening, after the others'
+window has closed, reaches production on Friday, before anyone else has run it. If production must only get what the
+others have run, pin its range to that version, as the stages pin a release in
+[Promote a change from dev to prod](../intermediate/stages-and-regions.md#promote-a-change-from-dev-to-prod), and move
+the pin on when you're happy.
 
 ## Clusters that aren't ready yet
 

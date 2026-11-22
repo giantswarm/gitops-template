@@ -6,8 +6,9 @@ apps and its configuration, but the cluster's `HelmRelease` and `OCIRepository` 
 label, so nobody can delete them until the label is removed. The cluster's `Cluster` has the label too. See
 [Deletion protection](../explanation/deletion-protection.md) for why.
 
-So deleting a cluster takes a few deliberate steps, in this order: remove the protection, remove what the cluster
-applies to the workload cluster directly, remove its keys and its files, and only then delete the cluster by hand.
+So deleting a cluster takes a few deliberate steps, in this order: remove the protection, take the cluster out of the
+organisation's multicluster apps, remove what the cluster applies to the workload cluster directly, remove its keys and
+its files, and only then delete the cluster by hand.
 The [basic tutorial](../tutorials/basic/getting-started.md#6-delete-the-cluster-optional) deletes the cluster it
 created the same way.
 
@@ -72,6 +73,34 @@ deleting them with the files later.
 
     ```sh
     kubectl get clusters.cluster.x-k8s.io ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
+    ```
+
+## Take the cluster out of multicluster apps
+
+Skip this if the cluster isn't in `${ORG_DIR}/multicluster/apps/clusters.yaml`, or in a list of its own that a patch in
+`${ORG_DIR}/multicluster/apps/kustomization.yaml` gives one app, see
+[Multicluster apps](../tutorials/advanced/multicluster-apps.md). The organisation's `ResourceSet`s install those apps on
+every listed cluster, and the cluster's own files don't know about them. Left in the list, they keep rendering a
+`HelmRelease` for a cluster that's gone, which fails for good.
+
+1. Take the cluster out of the list, then commit and push:
+
+    ```sh
+    yq -i 'del(.spec.inputs[] | select(.cluster == strenv(WC_NAME)))' ${ORG_DIR}/multicluster/apps/clusters.yaml
+    git commit -am "Take workload cluster ${WC_NAME} out of the multicluster apps" && git push
+    flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
+    flux reconcile kustomization ${MC_NAME}-multicluster-apps-${ORG_NAME} -n default
+    ```
+
+    Do the same in any list of its own. If the cluster is the last one in a list, the `ResourceSet` can't build
+    without it and uninstalls nothing: remove that app from `kustomization.yaml` instead.
+
+1. Wait until the `ResourceSet`s have uninstalled the apps from the cluster:
+
+    ```sh
+    until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \
+        -l "resourceset.fluxcd.controlplane.io/name,giantswarm.io/cluster=${WC_NAME}" \
+        --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
 ## Remove out-of-band resources
@@ -205,6 +234,15 @@ Don't commit yet: the next section commits the keys together with the cluster's 
     git rm -rq ${WC_DIR}
     ```
 
+1. If the organisation sends [commit statuses](./commit-statuses.md), take the cluster's `Kustomization`s, the
+   `-direct` one included, out of the `eventSources` of its `Alert`:
+
+    ```sh
+    export ALERT=${ORG_DIR}/namespace/notifications/commit-status-alert.yaml
+    [ -f ${ALERT} ] && yq -i 'del(.spec.eventSources[] |
+      select(.name | test("^'"${MC_NAME}-clusters-${WC_NAME}"'(-apps|-direct)?$")))' ${ALERT}
+    ```
+
 1. If your [kind test](../reference/ci-checks.md#the-kind-test) knows the cluster, take it out of
    `EXPECTED_NODE_POOLS` in `tests/ats/node_pools.py`, out of `GATES` in `tests/ats/cluster_gates.py`, and remove its
    assertions under `tests/ats/assertions`.
@@ -226,7 +264,9 @@ Don't commit yet: the next section commits the keys together with the cluster's 
     ```
 
 1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
-   uninstalled them from the workload cluster, and it needs the cluster to do that, so wait for them:
+   uninstalled them from the workload cluster. Wait for them: the uninstall is what removes what the apps created
+   outside the cluster, such as load balancers, volumes and DNS records, and deleting the cluster may leave those
+   behind. Once the cluster's kubeconfig Secret has gone, helm-controller skips the uninstall rather than wait for it:
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \

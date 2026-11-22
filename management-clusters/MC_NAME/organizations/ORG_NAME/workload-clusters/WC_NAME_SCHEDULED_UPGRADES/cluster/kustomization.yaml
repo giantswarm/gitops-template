@@ -8,11 +8,19 @@ labels:
       giantswarm.io/managed-by: flux
 # The ResourceSet in cluster-resource-set.yaml renders the whole cluster, its
 # OCIRepository and its HelmRelease, at the release its provider in
-# release-input-provider.yaml picks inside the upgrade window. The patch drops
-# the base's two; the base and the region still give the cluster its values.
+# release-input-provider.yaml picks inside the upgrade window. The first patch
+# drops the base's two; the base and the region still give the cluster its
+# values. The second appends the cluster's own values to the HelmRelease the
+# ResourceSet renders: it targets the ResourceSet, as the HelmRelease is part of it.
 patches:
   - path: patch_delete_base_cluster.yaml
+  - path: patch_cluster_userconfig.yaml
+    target:
+      group: fluxcd.controlplane.io
+      kind: ResourceSet
+      name: \${cluster_name}
 resources:
   - ../../../../../../../bases/clusters/capa
   - release-input-provider.yaml
   - cluster-resource-set.yaml
+  - cluster_userconfig.yaml

@@ -137,8 +137,10 @@ shows them. For every `HelmRelease` that creates a workload cluster, the test re
 ConfigMaps from the test cluster, merges the values the way helm-controller does, `spec.values` included, and compares
 the node pools with `EXPECTED_NODE_POOLS` in [node_pools.py](../../tests/ats/node_pools.py). A production cluster gets
 its own `nodepool0` and its region's extra pool. Dev and staging have no pools of their own and get the chart's
-defaults. The test fails for a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or
-change its node pools, update that table.
+defaults. The `scheduled-upgrades` cluster gets `workers` from its own values, which a patch on its `ResourceSet`
+appends, so the test also shows that the patch reaches the `HelmRelease` the `ResourceSet` renders. The test fails for
+a workload cluster that isn't in `EXPECTED_NODE_POOLS`, so when you add a cluster or change its node pools, update that
+table.
 
 ## Versions
 
@@ -376,10 +378,21 @@ each example's provider once and waits for its `ResourceSet`, before it checks t
   range no tag matches and a deleted provider, and checks that the `ResourceSet` waits and the App stays installed.
 - `test_input_loss_keeps_the_cluster` does the same to the `scheduled-upgrades` cluster, and then deletes its
   `ResourceSet`. The cluster's `HelmRelease` and `OCIRepository` have to stay each time.
+- `test_move_to_scheduled_upgrades` moves the running `capi-wc-name` cluster, the `WC_NAME` example, to the layout of
+  the scheduled-upgrades example, as
+  [Move a running cluster to scheduled upgrades](../how-to/scheduled-upgrades-existing-cluster.md) does, without a
+  commit: it suspends the cluster's `Kustomization`, applies the provider and the `ResourceSet` built from the moved
+  directory, pinned to the release the cluster runs, and forces the provider. The `ResourceSet` has to take the
+  `HelmRelease` and `OCIRepository` over with the same `valuesFrom`, and the release mustn't be upgraded. Then it
+  deletes the two, takes the `ResourceSet`'s labels off the objects and resumes the `Kustomization`. It doesn't push the
+  move to Git, so it doesn't show that Flux lets go of the objects when their files go; `test_prune` shows that for
+  the `prune: disabled` annotation.
 
 The assertions in `tests/ats/assertions/exists/organizations/workload-clusters/scheduled-upgrades` check that the
 cluster's `ResourceSet`, not its `Kustomization`, renders the cluster's `OCIRepository` and `HelmRelease`, with the
-protection of the cluster base.
+protection of the cluster base and the cluster's own values. `tests/ats/test_cluster_move.py` builds the move of
+`WC_NAME` without a cluster, and fails if the `HelmRelease` the `ResourceSet` renders lacks a `valuesFrom` entry of the
+cluster's own `HelmRelease`, or has them in another order.
 
 They change the providers with the `Kustomization` that applies them suspended, and resume it afterwards. The
 hello-world example's `HelmRelease` for the `out-of-band-no-flux` cluster installs into the vCluster, so it's in
