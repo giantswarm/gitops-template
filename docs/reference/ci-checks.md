@@ -10,8 +10,8 @@ management cluster with Chainsaw, see [Test the repository](../tutorials/advance
 Three workflows check a pull request. [validate.yaml](../../.github/workflows/validate.yaml) calls the shared
 `gitops-validate` workflow, which reports its jobs as `validate / validate / <job>`:
 
-- `changes` lists the files the pull request changes. A pull request that changes only Markdown skips `validate`,
-  `get-diff` and `test_on_kind`, see [When the workflows run](../how-to/configure-ci.md#when-the-workflows-run).
+- `changes` decides whether the pull request needs the full run. One that changes nothing the tests read skips
+  `validate`, `get-diff` and `test_on_kind`, see [The light run](#the-light-run).
 - `check-pre-commit` runs every `pre-commit` hook of [.pre-commit-config.yaml](../../.pre-commit-config.yaml),
   including [check-kustomization-paths](#check-kustomization-paths), on every file, and
   [check-directory-readmes](../../tools/README.md#check-directory-readmes), which fails when a directory under
@@ -641,3 +641,29 @@ A schema doesn't cover an object's name, and the API server refuses one that isn
 `tests/ats/test_object_names.py` checks, without a cluster, the name of every object in the YAML files of `bases/`
 and `management-clusters/`, and of every object a `ResourceSet` there renders, with the variables Flux substitutes
 filled in.
+
+## The light run
+
+[tests/ats/ci_scope.py](../../tests/ats/ci_scope.py) decides, for the `changes` job of `validate.yaml`, whether a pull
+request gets the full run or the light one. It reads GitHub's list of the pull request's files, and checkouts of its
+merge base and its head. The light run happens only when every file is one of these:
+
+| The file | Why it doesn't count |
+| --- | --- |
+| `*.md`, anywhere | Neither test reads Markdown, except the self-tests of `check-directory-readmes` in `tools/test-all-ff validate`, which depend on four READMEs under `bases/` and `management-clusters/`. A README change that breaks them also fails `check-directory-readmes` itself, a `pre-commit` hook that the light run runs as well. |
+| `docs/` | Documentation; no test reads it. |
+| `renovate.json5` | Read by Renovate only. |
+| `tests/chainsaw/` | Run by `chainsaw.yaml` against a management cluster. `tools/test-all-ff` leaves out `tests/`, and `tests/ats` doesn't read it. |
+| `.github/workflows/`, except `validate.yaml` and `validate-light.yaml` | The other workflows; neither test reads them. |
+| `.gitignore`, `CODEOWNERS`, `LICENSE` | Read by git and GitHub only. |
+| A YAML file whose parsed content is the same in both versions | Comments, whitespace, quoting and key order are all that changed. Document order, list order, tags and each value's type count; a duplicate key counts, as `kubeconform -strict` rejects it. |
+
+A `*.yaml` file in the table that names a Flux API in either version counts even so: `tools/test-all-ff` reads every
+`*.yaml` outside `tests/` and `tools/testdata/` that matches `api.*\.fluxcd\.io`, looking for the `Kustomization`s it
+builds. A file added, removed or renamed counts unless both its paths are in the table. YAML that doesn't parse
+counts. A list of files shorter than GitHub's count, an error, or a `changes` job that fails before it decides, means
+the full run, as does every push to `main`.
+
+The light run is [validate-light.yaml](../../.github/workflows/validate-light.yaml): `check-pre-commit` runs every
+`pre-commit` hook, and `validate` and `test_on_kind` report as skipped, so the required checks have the same names
+either way. The shared workflow has no input to run `validate` without the kind test, so the two always run together.
