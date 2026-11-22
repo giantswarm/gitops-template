@@ -11,6 +11,8 @@ its documentation and its tests, and every example has to get `Ready` in CI.
   [What the kind test does](docs/tutorials/advanced/testing.md#what-the-kind-test-does) and
   [CI checks](docs/reference/ci-checks.md).
 - A change to documented behaviour updates the documentation in the same pull request.
+- Documentation, READMEs and the comments in the examples follow [Voice](docs/contributing/voice.md), whether a
+  person or a coding agent writes them.
 
 ## Bumping the structure version
 
