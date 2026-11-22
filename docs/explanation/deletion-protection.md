@@ -1,6 +1,6 @@
 # Deletion protection
 
-GitOps makes deleting things easy: delete a file, push, and Flux deletes what it made. For an app that's exactly
+GitOps makes deleting things cheap: delete a file, push, and Flux deletes what it made. For an app that's exactly
 right. For a workload cluster it's pruning the roses with a chainsaw: one careless `git rm`, or a template that
 quietly stops rendering a file, and Flux takes the cluster down with its cloud infrastructure. This page explains
 what keeps clusters, organisations and keys from being deleted by accident, and what it takes to delete them on
@@ -44,7 +44,7 @@ it as not ready. To delete it on purpose, remove the label with a push first, th
   delete the cluster it was installing.
 - The `Organization`, such as `organizations/demoorg/demoorg.yaml`. Deleting it deletes the `org-demoorg` namespace,
   with every cluster in it. Its file can't go on its own anyway: the organisation's `kustomization.yaml` takes the
-  organisation's name from it, so without it the management cluster's Kustomization fails to build, and applies and
+  organisation's name from it, so without it the management cluster's `Kustomization` fails to build, and applies and
   prunes nothing until the file is back.
 - The SOPS key `Secret`s in the management cluster's `secrets/`, such as `sops-gpg-master`, and in an organisation's
   `namespace/secrets/`, such as a workload cluster's key. Flux decrypts with them, so deleting one stops GitOps for
@@ -105,7 +105,7 @@ With an older kubectl-gs, or with `kubectl gs template`, add what's missing by h
 use, add the annotation to `MC_NAME.yaml` and the organisation's `namespace.yaml` yourself, see
 [Let kubectl-gs write the files](../how-to/kubectl-gs.md).
 
-## ResourceSets
+## `ResourceSet`s
 
 A Flux Operator `ResourceSet` can render a cluster's `OCIRepository` and `HelmRelease` instead of a `Kustomization`, as
 the scheduled-upgrades example does, see

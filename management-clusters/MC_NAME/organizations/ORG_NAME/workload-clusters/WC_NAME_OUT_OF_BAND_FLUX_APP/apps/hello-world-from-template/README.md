@@ -5,8 +5,8 @@
 hello-world from its App Template, [`bases/apps/hello-world`](/bases/apps/hello-world/), with values of this
 cluster's own on top. The App Template holds what every cluster has; this directory holds only what's different here.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml`, applies it into `org-<name>` once the
-cluster is up.
+The Flux `Kustomization` for the cluster's apps, `WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml`, applies it into `org-<name>`
+once the cluster is up.
 
 ## What's here
 

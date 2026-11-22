@@ -12,8 +12,8 @@ The example has two parts:
   `kustomization.yaml` that lists it. Put your own objects here, with no namespace either.
 - [management-clusters/MC_NAME/organizations/ORG_NAME/namespace/shared-objects](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/shared-objects/)
   lists the base, with no namespace either. The organisation's `namespace/kustomization.yaml` lists `shared-objects`,
-  and the organisation's namespace `Kustomization`, `namespace.yaml`, puts it in the organisation's namespace with its
-  `targetNamespace`, see [The organisation's name](../reference/repo-structure.md#the-organisations-name):
+  and the organisation's namespace Flux `Kustomization`, `namespace.yaml`, puts it in the organisation's namespace with
+  its `targetNamespace`, see [The organisation's name](../reference/repo-structure.md#the-organisations-name):
 
     ```yaml
     apiVersion: kustomize.config.k8s.io/v1beta1
@@ -29,11 +29,11 @@ cluster. The kind test checks both, see [Shared objects](../reference/ci-checks.
 
 ## Share a secret
 
-Don't put a Secret itself in the base: every organisation's copy would carry the same value in Git, and SOPS can't
-help, as the file would have to name a namespace to keep its checksum, and the base names none. Put an
+Don't put a Secret itself in the base: every organisation's copy would carry the same value in Git. SOPS can't help
+either, as the file would have to name a namespace to keep its checksum, and the base names none. Put an
 `ExternalSecret` in the base instead. Each organisation's copy then reads the value from your secret manager through
 the `SecretStore` in its own namespace, see
-[Create a SecretStore for your secret manager](./external-secrets.md#create-a-secretstore-for-your-secret-manager).
+[Create a `SecretStore` for your secret manager](./external-secrets.md#create-a-secretstore-for-your-secret-manager).
 Give the stores the same name in every organisation, so one `secretStoreRef` in the base works for all of them.
 
 For example, a registry pull secret, in `bases/shared_objects/registry-pull-secret.yaml`:

@@ -6,7 +6,7 @@ App Templates: one app's chart, version and default values, written once and ins
 clusters. Each directory here is one App Template, and they all have the same shape, so this README covers them.
 
 Nothing applies this directory directly. A `kustomization.yaml` in a cluster's directory, or a stack, lists an App
-Template under `resources:`, and the Flux Kustomization that applies that cluster directory puts it into the
+Template under `resources:`, and the Flux `Kustomization` that applies that cluster directory puts it into the
 organisation's namespace, `org-<name>`, with `${cluster_name}` set to that cluster.
 
 ## What's here

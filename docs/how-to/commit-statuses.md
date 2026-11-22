@@ -4,8 +4,8 @@ Flux's notification-controller can tell you on GitHub whether Flux applied a com
 a commit status to the repository, and an `Alert` decides which events it gets. Each of this repository's Flux
 `Kustomization`s shows as its own check on the commit: green once it applied the commit, red when it failed.
 
-An `Alert` only sees its own namespace (an event source without a `namespace` matches only the `Alert`'s, and an `Alert`
-reaches only a `Provider` beside it), so the example has two:
+An `Alert` only sees its own namespace: an event source without a `namespace` matches only the `Alert`'s, and an
+`Alert` reaches only a `Provider` beside it. So the example has two:
 
 - The management cluster's, in `default`, takes every `Kustomization` there with `name: "*"`: the management cluster's,
   in `MC_NAME.yaml`, and each organisation's namespace `Kustomization`, in `namespace.yaml`.
@@ -54,7 +54,7 @@ The organisation's are in
 [MC_NAME/organizations/ORG_NAME/namespace/notifications](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications/):
 the same `Provider`, `Alert` and token `ExternalSecret`, with no namespace. The organisation's
 `namespace/kustomization.yaml` lists `notifications`, and its namespace `Kustomization`, `namespace.yaml`, applies them
-into the organisation's namespace, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+into the organisation's namespace, see [Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations).
 
 The management cluster's `Kustomization` applies its own, and the organisation's namespace `Kustomization` the
 organisation's, so they need no `Kustomization` of their own.
@@ -129,9 +129,9 @@ yq -i '.creation_rules += [{
 Then write the token into the Secrets. `sops` encrypts each on its way into its file, with the rule above, so the
 token never sits in the repository in plain text. It needs the master key's public key in your keyring, which the
 first line imports, and `sops` 3.10.0 or newer, see [Tools](../reference/tools.md#tools). The second line reads the
-token without it landing in your shell history. The organisation's Secret names its real namespace,
-`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in, from the start: changing the
-encrypted file afterwards would break its MAC, and `sops` couldn't decrypt it to change the token or rotate its key:
+token without it landing in your shell history. The organisation's Secret names its real namespace from the start:
+`org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in. Changing the encrypted file
+afterwards would break its MAC, and `sops` could then no longer decrypt it to change the token or rotate its key:
 
 ```sh
 gpg --import ${MC_DIR}/.sops.keys/.sops.master.asc
@@ -174,7 +174,7 @@ A green check vouches for the `Kustomization` and nothing further: where it appl
 `ResourceSet` was applied, not that Flux Operator rendered and applied what it describes, and Flux Operator's own
 notifications are switched off on management clusters.
 
-If Kustomizations that read another repository live in the same namespaces, list this repository's by name in the
+If `Kustomization`s that read another repository live in the same namespaces, list this repository's by name in the
 `Alert`s' `eventSources`, instead of `name: "*"`: GitHub refuses statuses for commits it doesn't know.
 
 ## Fetch on push (optional)

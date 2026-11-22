@@ -6,8 +6,8 @@ Application teams that deliver to this cluster from their own repositories, with
 applying their work. The platform team owns these objects, and each team owns its repository. Each team has the same
 shape, so this README covers them.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies this directory into
-`org-<name>`. Each team's Flux Kustomization then applies the team's repository into the team's namespace in the
+The Flux `Kustomization` for the cluster's apps, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies this directory
+into `org-<name>`. Each team's Flux `Kustomization` then applies the team's repository into the team's namespace in the
 workload cluster, through the cluster's kubeconfig.
 
 ## What's here
@@ -16,7 +16,7 @@ workload cluster, through the cluster's kubeconfig.
 - [`hello-team/`](hello-team/): the example team.
   - `git-repository.yaml`: the team's repository and the branch or tag Flux applies.
   - `flux-kustomization.yaml`: applies the team's directory into the `hello-team` namespace, as the organisation's
-    `automation` ServiceAccount. It waits for the cluster's `-direct` Kustomization, which creates that namespace.
+    `automation` ServiceAccount. It waits for the cluster's `-direct` `Kustomization`, which creates that namespace.
   - `kustomization.yaml`: lists the two.
 
 The team's namespace and its rights there are in [`out-of-band/teams/`](../out-of-band/teams/).

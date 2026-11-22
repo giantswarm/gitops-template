@@ -4,7 +4,7 @@ kind: Component
 # runs; the hello-world patch overrides the one in bases/stacks/hello-web.
 # Renovate updates these pins in a pull request of their own, on a
 # `renovate/prod-*` branch, that isn't automerged. Prod renders the new
-# version once this one is merged: merge it after staging has run it.
+# version once that pull request is merged: merge it after staging has run it.
 patches:
   - patch: |-
       - op: replace

@@ -5,8 +5,8 @@
 This organisation's copy of the objects every organisation shares. The `kustomization.yaml` here lists
 [`bases/shared_objects`](/bases/shared_objects/), so a change to the base reaches every organisation that lists it.
 
-The organisation's namespace Kustomization, in `../../namespace.yaml`, applies this directory into `org-<name>`, which
-gives the shared objects this organisation's namespace.
+The Flux `Kustomization` for the organisation's namespace, in `../../namespace.yaml`, applies this directory into
+`org-<name>`, which gives the shared objects this organisation's namespace.
 
 ## What's here
 

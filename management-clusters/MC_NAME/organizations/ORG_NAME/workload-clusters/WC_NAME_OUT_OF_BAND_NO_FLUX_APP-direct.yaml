@@ -1,8 +1,8 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  # TODO: change 'mc-name' to your Management Cluster name and 'out-of-band-no-flux' to your cluster name;
-  # must be a correct k8s resource name (DNS-like)
+  # TODO: change 'mc-name' to your management cluster's name and 'out-of-band-no-flux' to your cluster name;
+  # must be a valid resource name (DNS-like)
   name: mc-name-clusters-out-of-band-no-flux-direct
   # No namespace: the rule of thumb is to follow the `kubeconfig` Secret's namespace, and here
   # it's the organisation's, where the organisation's namespace Kustomization puts this one.
@@ -15,7 +15,7 @@ spec:
   interval: 10m
   kubeConfig:
     secretRef:
-      name: out-of-band-no-flux-kubeconfig  # TODO: make sure to change it to a name of a secret with a kubeconfig to connect to the target cluster
+      name: out-of-band-no-flux-kubeconfig  # TODO: change to the name of the Secret with the kubeconfig of the target cluster
   path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band"
   postBuild:
     substitute:
@@ -25,6 +25,6 @@ spec:
   retryInterval: 1m
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo for this cluster (might be the same or different than the one used for the MC)
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository for this cluster, the management cluster's or another
     namespace: default  # the namespace of that GitRepository; this Kustomization is in the namespace of the kubeconfig Secret
   timeout: 2m

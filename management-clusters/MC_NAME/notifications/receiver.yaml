@@ -17,4 +17,4 @@ spec:
   resources:
     - apiVersion: source.toolkit.fluxcd.io/v1
       kind: GitRepository
-      name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+      name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork

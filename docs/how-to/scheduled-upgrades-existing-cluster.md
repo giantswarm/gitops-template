@@ -1,7 +1,7 @@
 # Move a running cluster to scheduled upgrades
 
-A cluster made from a cluster base gets its release from the `release` variable of its `Kustomization`, and upgrades
-as soon as you change it. To have it upgrade only in a window instead, move it to the layout of the
+A cluster made from a cluster base gets its release from the `release` variable of its Flux `Kustomization`, and
+upgrades as soon as you change it. To have it upgrade only in a window instead, move it to the layout of the
 [WC_NAME_SCHEDULED_UPGRADES](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES/)
 example, where a Flux Operator `ResourceSet` renders the cluster's `OCIRepository` and `HelmRelease` at the release a
 `ResourceSetInputProvider` picks. This page moves a running cluster without changing it: no upgrade, and above all no
@@ -10,10 +10,10 @@ deletion. [Hold upgrades for a window](../tutorials/advanced/scheduled-upgrades.
 ## Before you start
 
 The move hands the cluster's `OCIRepository` and `HelmRelease` from one owner to another. The cluster's
-`Kustomization` lets go of them, which doesn't delete them, as both have the
-`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, and its `ResourceSet` takes them over once its provider has a
-version. Forcing the provider picks the highest release in its range at once, outside the window, so pin the range to
-the release the cluster runs first.
+`Kustomization` lets go of them, and its `ResourceSet` takes them over once its provider has a version. Letting go
+doesn't delete them, as both have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. Forcing the provider
+picks the highest release in its range at once, outside the window, so first pin the range to the release the cluster
+runs.
 
 Export the names the commands use, and run them from the root of your clone:
 
@@ -57,7 +57,7 @@ as `patch_cluster_userconfig.yaml`, which appends `${cluster_name}-cluster-userc
 
 After the move, the `HelmRelease` is one of the `resources` of the `ResourceSet`, and kustomize no longer sees a
 `HelmRelease` there. A patch aimed at the `HelmRelease` matches nothing, and kustomize is silent about a patch that
-matches nothing: the build succeeds and the entry is simply gone. Flux Operator then applies the `HelmRelease` it
+matches nothing: the build succeeds and the entry is gone. Flux Operator then applies the `HelmRelease` it
 renders, and replaces `valuesFrom` whole. Forcing the provider would upgrade the cluster without its own values, which
 for node pool settings means new nodes.
 
@@ -97,9 +97,9 @@ compares the lists before anything reaches the cluster, so a missed entry shows 
     yq -i 'del(.spec.postBuild.substitute.release)' ${ORG_DIR}/workload-clusters/${WC_NAME}.yaml
     ```
 
-    If the cluster's `kustomization.yaml` has other patches on its
-    `HelmRelease`, rewrite them the way `patch_cluster_userconfig.yaml` is written: JSON 6902, with paths under
-    `/spec/resources/1`, the `test` first, and the `ResourceSet` as the target.
+    If the cluster's `kustomization.yaml` has other patches on its `HelmRelease`, rewrite them the way
+    `patch_cluster_userconfig.yaml` is written: JSON 6902, with paths under `/spec/resources/1`, the `test` first, and
+    the `ResourceSet` as the target.
 
 1. Compare the `valuesFrom` of the running `HelmRelease` with the one the `ResourceSet` will render. kustomize leaves
    `${cluster_name}` for Flux to fill in, so `sed` does it here:

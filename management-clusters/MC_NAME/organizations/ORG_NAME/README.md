@@ -2,30 +2,30 @@
 
 `management-clusters/MC_NAME/organizations/ORG_NAME`
 
-The example organisation: its `Organization`, the Flux Kustomizations that fill its namespace, and its workload
+The example organisation: its `Organization`, the Flux `Kustomization`s that fill its namespace, and its workload
 clusters. Copy it once per organisation.
 
-The management cluster's Kustomization, in `MC_NAME.yaml`, applies this directory through `kustomization.yaml`, but
+The management cluster's `Kustomization`, in `MC_NAME.yaml`, applies this directory through `kustomization.yaml`, but
 only the objects that don't live in the organisation's namespace: the `Organization` itself and two Flux
-Kustomizations in `default`. organization-operator creates the namespace, `org-<name>`, for the `Organization`, and
-the namespace Kustomization in `namespace.yaml` then applies everything that goes into it.
+`Kustomization`s in `default`. organization-operator creates the namespace, `org-<name>`, for the `Organization`, and
+the namespace `Kustomization` in `namespace.yaml` then applies everything that goes into it.
 
 ## What's here
 
 - `ORG_NAME.yaml`: the `Organization`. Its `metadata.name` is the organisation's name, and the only place you set it.
   Deleting it deletes the namespace and every cluster in it, so it has `kustomize.toolkit.fluxcd.io/prune: disabled`
   and `giantswarm.io/prevent-deletion: "true"`.
-- `namespace.yaml`: the organisation's namespace Kustomization, which applies [`namespace/`](namespace/) into
+- `namespace.yaml`: the organisation's namespace `Kustomization`, which applies [`namespace/`](namespace/) into
   `org-<name>`. Everything of the organisation's clusters hangs off it, so it has
   `kustomize.toolkit.fluxcd.io/prune: disabled`, as does `multicluster/apps.yaml`: removing the organisation's
   directory leaves them, see [Deletion protection](/docs/explanation/deletion-protection.md).
 - `kustomization.yaml`: lists `ORG_NAME.yaml`, `namespace.yaml` and `multicluster/`, and holds the replacements that
-  copy the organisation's name from the `Organization` into the Flux Kustomizations, as `${organization}` and as the
-  namespace Kustomization's `targetNamespace`.
+  copy the organisation's name from the `Organization` into the Flux `Kustomization`s, as `${organization}` and as the
+  namespace `Kustomization`'s `targetNamespace`.
 - [`namespace/`](namespace/): everything the organisation keeps in its namespace.
 - [`multicluster/`](multicluster/): apps that roll out to several of the organisation's clusters, and the clusters'
   secret stores.
-- [`workload-clusters/`](workload-clusters/): one directory per workload cluster, and their Flux Kustomizations.
+- [`workload-clusters/`](workload-clusters/): one directory per workload cluster, and their Flux `Kustomization`s.
 
 ## When you copy it
 
@@ -39,4 +39,4 @@ search-and-replace the old organisation's name in an encrypted file when you cop
 ## Read more
 
 - [2. Add an organisation](/docs/tutorials/basic/getting-started.md#2-add-an-organisation)
-- [Flux Kustomizations](/docs/reference/repo-structure.md#flux-kustomizations)
+- [Flux `Kustomization`s](/docs/reference/repo-structure.md#flux-kustomizations)

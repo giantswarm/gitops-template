@@ -1,11 +1,11 @@
 # When something isn't Ready
 
-Every step in these docs ends on a **Check**, and every check describes what success looks like. This page is for the
-other times. It's sorted by what you see, not by which controller is complaining: find the symptom, and each section
-says what it means in this repository, why it happens, what you can do about it, and when it's Giant Swarm's to fix.
+Every step in these docs ends on a **Check** that describes what success looks like. This page is for when you don't
+see it. It's sorted by what you see, not by which controller is complaining. Find the symptom, and its section says
+what it means in this repository, why it happens, what you can do about it, and when it's Giant Swarm's to fix.
 
 Most of it comes down to one habit. Flux nearly always tells you what's wrong, in the `Ready` condition of the object
-that failed, and the trick is finding that object, because one failure makes everything after it wait.
+that failed. The trick is finding that object, because one failure makes everything after it wait.
 
 - [Read a failure](#read-a-failure)
 - [Everything says DependencyNotReady](#everything-says-dependencynotready)
@@ -13,13 +13,13 @@ that failed, and the trick is finding that object, because one failure makes eve
 - [A build fails](#a-build-fails)
 - [A variable comes out empty](#a-variable-comes-out-empty)
 - [Forbidden, or refused at admission](#forbidden-or-refused-at-admission)
-- [A cluster's Kustomization waits on its health check](#a-clusters-kustomization-waits-on-its-health-check)
+- [A cluster's `Kustomization` waits on its health check](#a-clusters-kustomization-waits-on-its-health-check)
 - [A new cluster's apps started before its nodes joined](#a-new-clusters-apps-started-before-its-nodes-joined)
-- [A HelmRelease can't find its values](#a-helmrelease-cant-find-its-values)
-- [A HelmRelease has run out of retries](#a-helmrelease-has-run-out-of-retries)
+- [A `HelmRelease` can't find its values](#a-helmrelease-cant-find-its-values)
+- [A `HelmRelease` has run out of retries](#a-helmrelease-has-run-out-of-retries)
 - [A cluster's first install failed](#a-clusters-first-install-failed)
 - [SOPS can't decrypt](#sops-cant-decrypt)
-- [A SecretStore or ExternalSecret isn't Ready](#a-secretstore-or-externalsecret-isnt-ready)
+- [A `SecretStore` or `ExternalSecret` isn't `Ready`](#a-secretstore-or-externalsecret-isnt-ready)
 - [Suspend and resume](#suspend-and-resume)
 - [Something is stuck Terminating](#something-is-stuck-terminating)
 
@@ -45,12 +45,12 @@ flux events --for Kustomization/NAME -n NS
 ```
 
 The same works for `HelmRelease/NAME`, `GitRepository/NAME`, `OCIRepository/NAME` and the rest. `flux tree
-kustomization NAME -n NS` lists what a `Kustomization` applies, which helps when you're not sure which one owns an
-object.
+kustomization NAME -n NS` lists what a Flux `Kustomization` applies, which helps when you're not sure which one owns
+an object.
 
 When that isn't enough, read the controllers' logs. You and Giant Swarm share one Flux, in the `flux-giantswarm`
-namespace, and you may read its logs, even though you can't change anything there, see
-[What you can do, and what Giant Swarm does](../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does).
+namespace. You can read its logs, though you can't change anything there (see
+[What you can do, and what Giant Swarm does](../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does)).
 `flux logs` looks in `flux-system` unless you tell it otherwise:
 
 ```sh
@@ -75,7 +75,7 @@ flux reconcile kustomization NAME -n NS --with-source
 **What it means.** Nothing is wrong with them. The `Kustomization`s here form a chain, each with the one before it in
 `dependsOn`: the management cluster's `MC_NAME.yaml`, then each organisation's `namespace.yaml`, then each cluster's
 `Kustomization`, then its apps `Kustomization`. They all read the same `GitRepository`, so each waits until the one
-before it is `Ready` at the same commit, see [Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations).
+before it is `Ready` at the same commit (see [Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations)).
 One failure near the top makes everything below it wait, and say so, every 30 seconds.
 
 **What you can do.** Follow the chain up. Open the dependency the message names; if it says `DependencyNotReady` too,
@@ -102,8 +102,8 @@ or with `no match found for semver: RANGE` for a range no tag satisfies. Everyth
   doesn't go into Git, so this is the one fix that isn't a push.
 - *A missing branch or tag.* Check `spec.ref` against what's really there. For an `OCIRepository`, list the chart's
   tags in the registry, and remember that a `semver` range without `-0` ignores pre-releases.
-- *The host can't be reached.* Check the URL. If it's right and the management cluster can't reach your Git host, for
-  example one inside your own network, the management cluster's network is Giant Swarm's: ask them.
+- *The host can't be reached.* Check the URL. If it's right but the management cluster can't reach your Git host (one
+  inside your own network, for example), ask Giant Swarm: the management cluster's network is theirs.
 
 ## A build fails
 
@@ -125,8 +125,8 @@ one on this layout is a commit that lists a file in a `kustomization.yaml` witho
 **What it means.** Flux fills in `${variable}`s from the `Kustomization`'s `spec.postBuild`. On the management
 cluster, a variable that isn't set becomes an empty string, without an error. CI is stricter, and fails on it.
 
-**What you can do.** Set the variable in the `Kustomization`'s `postBuild.substitute`, see
-[Variables](../reference/repo-structure.md#variables). A `${variable}` that should reach the cluster as it is needs
+**What you can do.** Set the variable in the `Kustomization`'s `postBuild.substitute` (see
+[Variables](../reference/repo-structure.md#variables)). A `${variable}` that should reach the cluster as it is needs
 escaping as `$${variable}`.
 
 ## Forbidden, or refused at admission
@@ -136,9 +136,9 @@ User "system:serviceaccount:org-ORG_NAME:automation" cannot create resource ...`
 the `Kustomization` that applies the file is `False` with a message from an admission webhook that names a Kyverno
 policy, such as `flux-multi-tenancy`.
 
-**What it means.** Flux applies the files as the `automation` ServiceAccount of the `Kustomization`'s namespace, and
-the management cluster limits what that account may do and which Flux objects it accepts, see
-[What you can do, and what Giant Swarm does](../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does).
+**What it means.** Flux applies the files as the `automation` ServiceAccount of the `Kustomization`'s namespace. The
+management cluster limits what that account may do and which Flux objects it accepts (see
+[What you can do, and what Giant Swarm does](../reference/repo-structure.md#what-you-can-do-and-what-giant-swarm-does)).
 "Forbidden" means the account may not write that object there: a cluster directory, applied as the organisation's
 account, holds an object in `default`, in another namespace, or a cluster-scoped one. A Kyverno refusal means a Flux
 object breaks one of the rules, usually a `Kustomization` or `HelmRelease` without `serviceAccountName`, copied from
@@ -148,7 +148,7 @@ upstream Flux documentation.
 `serviceAccountName: automation` to a Flux object that lacks it, and keep its sources in its own namespace or in
 `default`. A cluster-scoped object other than an `Organization` is Giant Swarm's to create, if they agree to.
 
-## A cluster's Kustomization waits on its health check
+## A cluster's `Kustomization` waits on its health check
 
 **What you see.** A cluster's `Kustomization`, `WC_NAME.yaml`, is `Unknown` with reason `Progressing` and
 `Reconciliation in progress` for a long time, and its apps `Kustomization` says `DependencyNotReady`. After 30 minutes
@@ -156,8 +156,8 @@ it turns `False` with reason `HealthCheckFailed` and a message that names the Cl
 
 **What it means.** The cluster's `Kustomization` only gets `Ready` once the `Cluster`'s `ControlPlaneAvailable` and
 `RemoteConnectionProbe` conditions are `True`: its control plane is up, and the management cluster can reach it,
-which is all the apps need to install. Its `timeout` of 30 minutes covers a new cluster coming up, see
-[Flux Kustomizations](../reference/repo-structure.md#flux-kustomizations). For a new cluster, waiting is normal. For
+which is all the apps need to install. Its `timeout` of 30 minutes covers a new cluster coming up (see
+[Flux `Kustomization`s](../reference/repo-structure.md#flux-kustomizations)). For a new cluster, waiting is normal. For
 a running one, it means the control plane is down or out of reach. The worker nodes don't count: a node pool that's
 short of nodes doesn't hold the `Kustomization` back.
 
@@ -189,9 +189,9 @@ back every later change to the apps while one node pool is short.
 
 **What you can do.** Usually nothing but wait. If the nodes don't come, look at the node pools as in the section
 above, and if a `HelmRelease` has used up its retries by then, see
-[A HelmRelease has run out of retries](#a-helmrelease-has-run-out-of-retries).
+[A `HelmRelease` has run out of retries](#a-helmrelease-has-run-out-of-retries).
 
-## A HelmRelease can't find its values
+## A `HelmRelease` can't find its values
 
 **What you see.** A `HelmRelease` is `False` with reason `ValuesError` and a message such as
 `could not resolve ConfigMap chart values reference 'NS/NAME' with key 'values': configmaps "NAME" not found`.
@@ -199,8 +199,8 @@ above, and if a `HelmRelease` has used up its retries by then, see
 **What it means.** Every entry in `spec.valuesFrom` that isn't `optional: true` has to exist. The usual ones here:
 
 - `cluster-app-installation-values`, the first entry of every cluster's `HelmRelease`, which Giant Swarm provides in
-  every organisation's namespace, see
-  [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster). If it's
+  every organisation's namespace (see
+  [Values from the management cluster](/bases/clusters/capa/readme.md#values-from-the-management-cluster)). If it's
   missing, every cluster in that organisation fails this way, and it's Giant Swarm's to fix.
 - `CLUSTER_NAME-cluster-values`, the first entry of every app, which cluster-apps-operator creates once the cluster
   exists. An app on a cluster that isn't up yet waits for it. An apps `Kustomization` waits for the cluster, so you'll
@@ -214,7 +214,7 @@ An app whose cluster's kubeconfig Secret doesn't exist yet says `could not get K
 **What you can do.** Fix the name or list the file, and push. The `HelmRelease` retries by itself, so a missing object
 that turns up later needs nothing from you.
 
-## A HelmRelease has run out of retries
+## A `HelmRelease` has run out of retries
 
 **What you see.** A `HelmRelease` is `False` with reason `InstallFailed` or `UpgradeFailed` and Helm's error, and it
 has a `Stalled` condition with reason `RetriesExceeded` and a message such as `Failed to install after 11 attempt(s)`.
@@ -243,13 +243,13 @@ attempt(s)`, and the cluster's `Kustomization` waits on its health check.
 
 **What it means.** The cluster base turns install remediation off on purpose: `install.remediation` has no `retries`
 and `remediateLastFailure: false`. Flux remediates a failed install by uninstalling it, and uninstalling a cluster
-chart deletes whatever part of the cluster already exists, so a failed install stays failed and stays put, for you to
-look at, see [The protected objects](../explanation/deletion-protection.md#the-protected-objects). The release also
+chart deletes whatever part of the cluster already exists. So a failed install stays failed and stays put, for you to
+look at (see [The protected objects](../explanation/deletion-protection.md#the-protected-objects)). The release also
 carries the `giantswarm.io/prevent-deletion` label, so you can't delete the `HelmRelease` to start afresh: the
 management cluster refuses.
 
 **What you can do.** Read Helm's error in the `Ready` condition, and the cluster's own state as in
-[A cluster's Kustomization waits on its health check](#a-clusters-kustomization-waits-on-its-health-check). Common
+[A cluster's `Kustomization` waits on its health check](#a-clusters-kustomization-waits-on-its-health-check). Common
 causes are a cluster name longer than 20 characters, a release that doesn't exist, missing values from the
 management cluster, and a values file the chart's schema rejects. Fix it in Git, push, and once Flux has applied the
 fix, start again:
@@ -275,21 +275,21 @@ as the cloud account or the release itself, it's Giant Swarm's.
 
 **What it means and what you can do.**
 
-- *No decryption.* Add `spec.decryption`, see [Decrypt a cluster's files](./sops.md#decrypt-a-clusters-files).
+- *No decryption.* Add `spec.decryption`, as [Decrypt a cluster's files](./sops.md#decrypt-a-clusters-files) shows.
 - *No key Secret.* A cluster's key goes in its organisation's `namespace/secrets`, in the organisation's namespace,
-  with its `Kustomization`s, and the master key is `sops-gpg-master` in `default`. Check the Secret's name and that its
-  directory's `kustomization.yaml` lists it, see [SOPS keys](../reference/sops-keys.md).
+  with its `Kustomization`s. The master key is `sops-gpg-master` in `default`. Check the Secret's name, and that its
+  directory's `kustomization.yaml` lists it (see [SOPS keys](../reference/sops-keys.md)).
 - *The wrong key.* The first rule in `.sops.yaml` whose `path_regex` matches a file picks its key when you encrypt
   it. A file encrypted before you added its cluster's rule, or under a rule that matches too much, has the wrong key.
-  `sops` names the key in the file's `sops:` section. Encrypt it again with the right one, see
-  [Change encrypted values](./sops.md#change-encrypted-values).
+  `sops` names the key in the file's `sops:` section. Encrypt it again with the right one (see
+  [Change encrypted values](./sops.md#change-encrypted-values)).
 
 A file someone changed by hand, without `sops`, has a broken MAC. Flux doesn't check the MAC, so it carries on
 decrypting, and the cluster shows nothing wrong. `sops` does check it, so you find out the next time you edit or
 rotate the file: it refuses with a MAC mismatch. Write the file again from scratch with its values, encrypted, rather
 than patching it.
 
-## A SecretStore or ExternalSecret isn't Ready
+## A `SecretStore` or `ExternalSecret` isn't `Ready`
 
 **What you see.** A `SecretStore` is `False` with reason `InvalidProviderConfig` and `unable to validate store` or
 `unable to create client`. Or an `ExternalSecret` is `False` with reason `SecretSyncedError` and
@@ -315,8 +315,8 @@ Fix the store's credentials or the `ExternalSecret`'s `remoteRef`, in your secre
 kubectl annotate externalsecret NAME -n NS force-sync=$(date +%s) --overwrite
 ```
 
-External Secrets Operator itself, and the cluster-wide stores, are Giant Swarm's, see
-[Secrets](../explanation/secrets.md).
+External Secrets Operator itself, and the cluster-wide stores, are Giant Swarm's (see
+[Secrets](../explanation/secrets.md)).
 
 ## Suspend and resume
 
@@ -328,10 +328,11 @@ flux suspend kustomization NAME -n NS
 flux resume kustomization NAME -n NS
 ```
 
-A suspended `Kustomization` stops applying, and keeps the status it had: it stays `Ready`, at the revision it applied
+A suspended `Kustomization` stops applying and keeps the status it had: it stays `Ready`, at the revision it applied
 last. Everything that depends on it stops too. Its dependants read the same `GitRepository`, so as soon as you push a
-new commit they wait for it to apply that commit, and report `dependency '...' revision is not up to date` until you
-resume it. Suspend `MC_NAME.yaml` and every organisation and cluster stops following Git, though they all look fine.
+new commit they wait for it to apply that commit. Until you resume it, they report
+`dependency '...' revision is not up to date`. Suspend `MC_NAME.yaml` and every organisation and cluster stops
+following Git, though they all look fine.
 
 `flux resume` applies the latest commit at once, and waits until the object is `Ready` again. A suspended
 `HelmRelease` behaves the same way, with one more catch: if it's deleted while suspended, Flux doesn't uninstall its
@@ -352,7 +353,7 @@ for good.
 
 The case this repository can lead you into is a `-direct` `Kustomization`, which applies `out-of-band` to a workload
 cluster through the cluster's kubeconfig Secret. Deleting it means deleting what it applied, in the workload cluster.
-If the cluster went first, so did its kubeconfig Secret, Flux can't reach the cluster to clean up, and the
+If the cluster went first, its kubeconfig Secret went with it. Flux can't reach the cluster to clean up, and the
 `Kustomization` stays `Terminating`, retrying, for good. [Delete a workload cluster](./delete-cluster.md) removes it
 before the cluster for exactly this reason.
 
@@ -367,7 +368,7 @@ The objects it applied went with the cluster anyway. Don't remove a finalizer by
 do its job: whatever it would have cleaned up stays behind, and nothing tracks it any more.
 
 In a workload cluster, an object stuck `Terminating` is usually waiting for its own controller, such as a `Namespace`
-waiting for its contents or a `GatewayClass` waiting for its `Gateway`s, see
-[envoy-gateway](/bases/stacks/envoy-gateway/README.md). Those are yours to look at, as the cluster's admin. An object on
-the management cluster waiting for a finalizer of Giant Swarm's controllers, such as a cluster's resources while Cluster
-API deletes it, is Giant Swarm's to look at if it doesn't move.
+waiting for its contents or a `GatewayClass` waiting for its `Gateway`s (see
+[envoy-gateway](/bases/stacks/envoy-gateway/README.md)). Those are yours to look at, as the cluster's admin. An object
+on the management cluster waiting for a finalizer of Giant Swarm's controllers, such as a cluster's resources while
+Cluster API deletes it, is Giant Swarm's to look at if it doesn't move.

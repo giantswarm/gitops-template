@@ -28,4 +28,4 @@ See [`cluster`, `apps` and `[out-of-band]`](./reference/repo-structure.md#cluste
 
 ## Flux Kustomization CRs Involved
 
-See [Flux Kustomizations](./reference/repo-structure.md#flux-kustomizations).
+See [Flux `Kustomization`s](./reference/repo-structure.md#flux-kustomizations).

@@ -8,10 +8,10 @@ rather the workload cluster reconciled itself. The other way round, the manageme
 through the cluster's kubeconfig, is [`WC_NAME_OUT_OF_BAND_NO_FLUX_APP`](../WC_NAME_OUT_OF_BAND_NO_FLUX_APP/). The
 cluster also shows App Templates, a stack as base apps, and an app that updates itself.
 
-Two Flux Kustomizations, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
+Two Flux `Kustomization`s, next to this directory in `workload-clusters/`, apply it into `org-<name>`. Both decrypt with
 the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 
-- `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml` applies `cluster/`, and is Ready once Cluster API reports the cluster's control
+- `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml` applies `cluster/`, and is `Ready` once Cluster API reports the cluster's control
   plane available and reachable.
 - `WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml` then applies this directory, whose `kustomization.yaml` lists only `apps/`.
 
@@ -34,19 +34,19 @@ the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 
 ## When you copy it
 
-Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` in both, and
+Copy the directory and its two `Kustomization`s, rename them after your cluster, and set `cluster_name` in both, and
 `release` and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml`. Give the cluster its own SOPS
 key:
 
 - add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
 - add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`
   in the `kustomization.yaml` there;
-- set `spec.decryption.secretRef.name` in both Kustomizations to that Secret's name;
+- set `spec.decryption.secretRef.name` in both `Kustomization`s to that Secret's name;
 - encrypt `cluster/apps/envoy-gateway-from-template/secret.enc.yaml` again with it, or delete it and its line in that
   directory's `kustomization.yaml`.
 
 Point flux-app's values at your repository, and the path at this cluster's `out-of-band/`. List the cluster's
-Kustomizations in `workload-clusters/kustomization.yaml` and in the organisation's commit status `Alert`, as
+`Kustomization`s in `workload-clusters/kustomization.yaml` and in the organisation's commit status `Alert`, as
 [`workload-clusters/README.md`](../README.md#when-you-copy-it) says.
 
 ## Read more

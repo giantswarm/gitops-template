@@ -15,7 +15,7 @@ over the result so far, then merges `spec.values` over all of them. So:
   replaces the whole list. Nothing appends to it.
 - **A later layer can't take a key away by leaving it out.** To remove a map key an earlier layer set, set it to
   `null`: Helm drops it when it merges the values with the chart's defaults.
-- **A missing layer fails the release**, unless the entry has `optional: true`. The `HelmRelease` stays not ready and
+- **A missing layer fails the release**, unless the entry has `optional: true`. The `HelmRelease` isn't `Ready` and
   retries until the ConfigMap or Secret exists, so the order Flux creates objects in doesn't matter.
 
 Every ConfigMap and Secret a `HelmRelease` lists carries the `reconcile.fluxcd.io/watch: Enabled` label, so a change to
@@ -96,9 +96,9 @@ pool `nodepool0`. `global.nodePools` is a map, so the cluster gets both pools. H
 
 That merge is why the CAPA base leaves `global.nodePools` out: the chart uses its default node pools only when
 `global.nodePools` is empty, and a pool the base put in would turn up in every cluster next to the cluster's own. The
-kind test checks the result for every example cluster, see [The kind test](./ci-checks.md#the-kind-test).
+kind test checks the result for every example cluster (see [The kind test](./ci-checks.md#the-kind-test)).
 
-To see what a cluster gets, render it as Flux does, see
+To see what a cluster gets, render it as Flux does: see
 [Render what Flux applies](../how-to/check-changes.md#render-what-flux-applies).
 
 ## App values

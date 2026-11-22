@@ -25,7 +25,7 @@ See [Add a workload cluster key (age)](how-to/sops.md#add-a-workload-cluster-key
 
 See [Create a workload cluster](tutorials/basic/getting-started.md#3-create-a-workload-cluster),
 [Decrypt a cluster's files](how-to/sops.md#decrypt-a-clusters-files), [App values](reference/values.md#app-values) and
-[Add the -direct Kustomization](tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
+[Add the -direct `Kustomization`](tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
 
 ### Configuring default apps
 
@@ -34,7 +34,7 @@ See [Configure the default apps](how-to/cluster-values.md#configure-the-default-
 ## MC configuration
 
 See [Create a workload cluster](tutorials/basic/getting-started.md#3-create-a-workload-cluster) and
-[Add the -direct Kustomization](tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
+[Add the -direct `Kustomization`](tutorials/advanced/out-of-band.md#add-the--direct-kustomization).
 
 ## Recommended next steps
 

@@ -2,12 +2,12 @@
 
 `bases/secret_stores/aws-secrets-manager`
 
-A `SecretStore` named `aws-secrets-manager` that reads AWS Secrets Manager with IAM roles for service accounts. ESO
-assumes the IAM role the ServiceAccount names, with a token Kubernetes issues for that ServiceAccount, so no access key
-is stored anywhere.
+A `SecretStore` named `aws-secrets-manager` that reads AWS Secrets Manager with IAM roles for service accounts. External
+Secrets Operator assumes the IAM role the ServiceAccount names, with a token Kubernetes issues for that ServiceAccount,
+so no access key is stored anywhere.
 
 Nothing applies this directory directly. A `kustomization.yaml` in your organisation's `namespace/` lists it, and the
-organisation's namespace Kustomization applies it into `org-<name>`.
+Flux `Kustomization` for the organisation's namespace applies it into `org-<name>`.
 
 ## What's here
 

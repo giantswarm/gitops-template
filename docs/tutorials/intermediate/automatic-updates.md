@@ -2,7 +2,8 @@
 
 In the [basic tutorial](../basic/getting-started.md#5-update-the-app) you updated hello-world by changing its version
 in Git and pushing. Every new chart version is a pull request, which is what you want for an app you have to watch
-closely, and a chore for one you don't. For those, let Flux install new versions by itself.
+closely, and a chore for one you don't. For those, let Flux install new versions by itself. By the end of this
+tutorial, a copy of hello-world on your cluster follows a version range, and new releases arrive without a pull request.
 
 The chart version of an app is set in its `OCIRepository`. Instead of a fixed `spec.ref.tag`, give it a
 `spec.ref.semver` range: Flux then picks the highest chart tag that satisfies the range, checks the registry again
@@ -13,7 +14,7 @@ cluster reports the version it installed.
 A range upgrades the app whenever a new version is published, at any time of day. To hold upgrades back until an
 upgrade window instead, see [Scheduled upgrades](../advanced/scheduled-upgrades.md).
 
-This tutorial gives hello-world on the cluster from the basic tutorial a version range. It creates no cluster.
+Everything happens on the cluster from the basic tutorial. This one creates no cluster.
 
 - [Set a version range](#set-a-version-range)
 - [Apps from an App Template or a stack](#apps-from-an-app-template-or-a-stack)

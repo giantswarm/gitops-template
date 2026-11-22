@@ -5,8 +5,8 @@
 A `SecretStore` for every workload cluster of the organisation, made as the cluster comes up, so External Secrets
 Operator can push secrets into it. Nobody writes a store per cluster: a Kyverno policy does it.
 
-The organisation's namespace Kustomization, in `../../namespace.yaml`, applies this directory into `org-<name>`, as
-`../../namespace/kustomization.yaml` lists it. It has no Flux Kustomization of its own.
+The Flux `Kustomization` for the organisation's namespace, in `../../namespace.yaml`, applies this directory into
+`org-<name>`, as `../../namespace/kustomization.yaml` lists it. It has no `Kustomization` of its own.
 
 ## What's here
 
@@ -46,7 +46,7 @@ It's a namespaced `Policy`, not a `ClusterPolicy`, so the organisation's `automa
 Kyverno's background controller, `kyverno/kyverno-background-controller`, does the generating, and needs rights in
 the organisation's namespace to manage `ExternalSecret`s and `SecretStore`s and to read the Secrets that trigger the
 rules. Kyverno checks those rights when the policy is applied and refuses the policy without them, so Flux reports the
-organisation's namespace Kustomization as failed. You can't grant them yourself: on a Giant Swarm management cluster
+organisation's namespace `Kustomization` as failed. You can't grant them yourself: on a Giant Swarm management cluster
 rbac-operator does, with the `ClusterRole` `write-kyverno-generated-externalsecrets`, bound in each `org-*` namespace
 by a `RoleBinding` of the same name.
 

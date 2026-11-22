@@ -6,8 +6,9 @@ This cluster's kubeconfig, pushed into another cluster, for a tool there that ne
 goes through, `tools-cluster-eso-cluster-store`, is the one the Kyverno policy in the organisation's
 `multicluster/secret-stores/` makes for the other cluster, `tools-cluster`, as soon as that cluster's kubeconfig exists.
 
-The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies it into `org-<name>` once the
-cluster is up. Until Kyverno and ESO have made the store, ESO retries the push.
+The Flux `Kustomization` for the cluster's apps, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies it into
+`org-<name>` once the cluster is up. Until Kyverno and External Secrets Operator have made the store, ESO retries the
+push.
 
 ## What's here
 

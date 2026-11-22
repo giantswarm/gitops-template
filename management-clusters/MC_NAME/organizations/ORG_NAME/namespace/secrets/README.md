@@ -3,10 +3,10 @@
 `management-clusters/MC_NAME/organizations/ORG_NAME/namespace/secrets`
 
 The SOPS keys the organisation's workload clusters decrypt their files with, as Secrets encrypted with the management
-cluster's master key. A Flux Kustomization reads its decryption Secret from its own namespace, so the keys live here,
-next to the clusters' Kustomizations.
+cluster's master key. A Flux `Kustomization` reads its decryption Secret from its own namespace, so the keys live here,
+next to the clusters' `Kustomization`s.
 
-The organisation's namespace Kustomization, in `../../namespace.yaml`, applies this directory into `org-<name>`, and
+The organisation's namespace `Kustomization`, in `../../namespace.yaml`, applies this directory into `org-<name>`, and
 decrypts the keys with the master key.
 
 ## What's here

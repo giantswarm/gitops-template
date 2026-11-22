@@ -83,4 +83,4 @@ See [Run Chainsaw in GitHub Actions](../tutorials/advanced/testing.md#run-chains
 
 ### Choose `tests/ats`, Chainsaw or both
 
-See [Choose tests/ats, Chainsaw or both](../tutorials/advanced/testing.md#choose-testsats-chainsaw-or-both).
+See [Choose `tests/ats`, Chainsaw or both](../tutorials/advanced/testing.md#choose-testsats-chainsaw-or-both).

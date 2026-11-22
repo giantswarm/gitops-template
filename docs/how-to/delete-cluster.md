@@ -1,10 +1,12 @@
 # Delete a workload cluster
 
-Deleting a cluster's files doesn't delete the cluster, on purpose. Flux deletes the cluster's `Kustomization`s, its
-apps and its configuration, but the cluster's `HelmRelease` and `OCIRepository` have the
-`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so Flux keeps them, and the `giantswarm.io/prevent-deletion`
-label, so nobody can delete them until the label is removed. The cluster's `Cluster` has the label too. See
-[Deletion protection](../explanation/deletion-protection.md) for why.
+This page deletes a workload cluster your fork manages, with its apps, keys and files.
+
+Deleting a cluster's files doesn't delete the cluster, on purpose. Flux deletes the cluster's Flux `Kustomization`s, its
+apps and its configuration, but keeps the cluster's `HelmRelease` and `OCIRepository`, because they carry the
+`kustomize.toolkit.fluxcd.io/prune: disabled` annotation. They also carry the `giantswarm.io/prevent-deletion` label,
+so nobody can delete them until the label is removed, and the cluster's `Cluster` has the label too.
+[Deletion protection](../explanation/deletion-protection.md) explains why.
 
 So deleting a cluster takes a few deliberate steps, in this order: remove the protection, take the cluster out of the
 organisation's multicluster apps, remove what the cluster applies to the workload cluster directly, remove its keys and
@@ -27,12 +29,12 @@ export WC_DIR=${ORG_DIR}/workload-clusters/${WC_NAME}
 
 Check what you're about to delete:
 
-- **The protection is there.** The steps below rely on it to keep the cluster until the last step.
-  `kubectl gs` doesn't write all of it, see
-  [What kubectl-gs writes](../explanation/deletion-protection.md#what-kubectl-gs-writes): a cluster whose base a
-  kubectl-gs older than X.Y.Z wrote may lack the annotation, and before 7.0.0 the label. Without the annotation on the
-  `OCIRepository`, Flux deletes it with the files and the `HelmRelease` it keeps loses its chart; without either on the
-  `HelmRelease`, Flux deletes the cluster with them. Check both:
+- **The protection is there.** The steps below rely on it to keep the cluster until the last step, and `kubectl gs`
+  doesn't write all of it (see
+  [What kubectl-gs writes](../explanation/deletion-protection.md#what-kubectl-gs-writes)). A cluster whose base a
+  kubectl-gs older than X.Y.Z wrote may lack the annotation, and one older than 7.0.0 the label. Without the annotation
+  on the `OCIRepository`, Flux deletes it with the files, and the `HelmRelease` it keeps loses its chart. Without either
+  on the `HelmRelease`, Flux deletes the cluster with them. Check both:
 
     ```sh
     kubectl get helmrelease,ocirepository ${WC_NAME} -n org-${ORG_NAME} \
@@ -41,11 +43,11 @@ Check what you're about to delete:
 
     Both have to print `disabled` and `true`. If they don't, add them to the base and push before you go on.
 - **Application teams are gone.** If an application team delivers to the cluster with Flux on the management cluster,
-  remove the team from the cluster first, see [Remove a team](../tutorials/advanced/teams.md#remove-a-team).
+  remove the team from the cluster first, as [Remove a team](../tutorials/advanced/teams.md#remove-a-team) describes.
 - **A cluster from a `ResourceSet`**, as in the scheduled-upgrades example, has `fluxcd.controlplane.io/prune:
   disabled` instead of Flux's annotation, and its `ResourceSet` renders it. Its `HelmRelease` and `OCIRepository` stay
-  when the `ResourceSet` goes. The steps are the same, except for the patches that remove the protection, which have
-  to target the `ResourceSet`, see below.
+  when the `ResourceSet` goes. The steps are the same, except that the patches that remove the protection have to
+  target the `ResourceSet`, as the next section shows.
 
 ## Remove the deletion protection
 
@@ -65,9 +67,9 @@ deleting them with the files later.
 
     For a cluster a `ResourceSet` renders, those two patches match nothing, and kustomize says nothing about a patch
     that matches nothing: the `HelmRelease` and the `OCIRepository` are entries in the `ResourceSet`'s `resources`,
-    not objects kustomize sees. Patch the `ResourceSet` instead, the way its `patch_cluster_userconfig.yaml` does: the
+    not objects kustomize sees. Patch the `ResourceSet` instead, the way its `patch_cluster_userconfig.yaml` does. The
     `OCIRepository` is the first resource and the `HelmRelease` the second, and a `test` before each change fails the
-    build if that isn't so. The `HelmRelease` in the example has no `spec.values`, so the patch adds them; if yours
+    build if that isn't so. The `HelmRelease` in the example has no `spec.values`, so the patch adds them. If yours
     has some, add `global.metadata.preventDeletion` under them instead of replacing them:
 
     ```sh
@@ -107,11 +109,11 @@ deleting them with the files later.
     flux reconcile kustomization ${MC_NAME}-gitops -n default --with-source
     ```
 
-    For a cluster a `ResourceSet` renders, Flux applies the changed `ResourceSet`, and Flux Operator applies what it
-    renders at once, without waiting for the upgrade window, as long as its provider is `Ready` with a version. Its
-    server-side apply takes the label off the live `HelmRelease` and `OCIRepository`, as Flux Operator is the only
-    field manager that set it there. A label someone added by hand, with `kubectl label`, stays; remove that by hand.
-    Check the live objects too, the `PREVENT-DELETION` column has to be empty:
+    For a cluster a `ResourceSet` renders, Flux applies the changed `ResourceSet`. As long as its provider is `Ready`
+    with a version, Flux Operator applies what it renders at once, without waiting for the upgrade window. Its
+    server-side apply takes the label off the live `HelmRelease` and `OCIRepository`, because Flux Operator is the only
+    field manager that set it there. A label someone added by hand with `kubectl label` stays; remove that by hand.
+    Check the live objects too. The `PREVENT-DELETION` column has to be empty:
 
     ```sh
     kubectl get helmrelease,ocirepository ${WC_NAME} -n org-${ORG_NAME} -L giantswarm.io/prevent-deletion
@@ -126,11 +128,11 @@ deleting them with the files later.
 
 ## Take the cluster out of multicluster apps
 
-Skip this if the cluster isn't in `${ORG_DIR}/multicluster/apps/clusters.yaml`, or in a list of its own that a patch in
-`${ORG_DIR}/multicluster/apps/kustomization.yaml` gives one app, see
-[Multicluster apps](../tutorials/advanced/multicluster-apps.md). The organisation's `ResourceSet`s install those apps on
-every listed cluster, and the cluster's own files don't know about them. Left in the list, they keep rendering a
-`HelmRelease` for a cluster that's gone, which fails for good.
+Skip this section if the cluster isn't in `${ORG_DIR}/multicluster/apps/clusters.yaml`, or in a list of its own that a
+patch in `${ORG_DIR}/multicluster/apps/kustomization.yaml` gives one app (see
+[Multicluster apps](../tutorials/advanced/multicluster-apps.md)). The organisation's `ResourceSet`s install those apps
+on every listed cluster, and the cluster's own files don't know about them. If you leave the cluster in the list, they
+keep rendering a `HelmRelease` for a cluster that's gone, and it fails for good.
 
 1. Take the cluster out of the list, then commit and push:
 
@@ -154,18 +156,18 @@ every listed cluster, and the cluster's own files don't know about them. Left in
 
 ## Remove out-of-band resources
 
-Out-of-band resources reach a workload cluster in one of two ways, see
-[Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md):
+Out-of-band resources reach a workload cluster in one of two ways (see
+[Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md)):
 
 - Flux in the workload cluster pulls them itself. They go with the cluster, and there's nothing to remove on the
   management cluster for them. Skip this section.
-- A `Kustomization` on the management cluster applies them through the cluster's kubeconfig Secret: the template's
-  `WC_NAME-direct.yaml`, `${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml` in the steps below. If you named yours
-  differently, use its name. Skip this section if the cluster has none.
+- A `Kustomization` on the management cluster applies them through the cluster's kubeconfig Secret. In the template
+  that's `WC_NAME-direct.yaml`, which the steps below call `${ORG_DIR}/workload-clusters/${WC_NAME}-direct.yaml`. If
+  you named yours differently, use its name. Skip this section if the cluster has none.
 
-That `Kustomization` reaches the cluster through the cluster's kubeconfig Secret, which goes with the cluster. So it
-has to be gone before you delete the cluster: once the cluster is gone, so is its kubeconfig Secret, Flux can't reach
-the cluster any more, and the `Kustomization` stays `Terminating` for good.
+That `Kustomization` has to be gone before you delete the cluster. It reaches the cluster through the cluster's
+kubeconfig Secret, which goes with the cluster. Once the Secret is gone, Flux can't reach the cluster any more, and the
+`Kustomization` stays `Terminating` for good.
 
 1. Save the name of the key it decrypts with, if any, for the next section. Then take it out of the organisation's
    list of clusters, and remove its file:
@@ -193,11 +195,11 @@ the cluster any more, and the `Kustomization` stays `Terminating` for good.
 
 ## Remove the cluster's keys
 
-Skip this if the cluster has no SOPS key. Its `Kustomization`s name the key Secrets they decrypt with in
-`spec.decryption`, and the Secrets are in the organisation's `namespace/secrets`, see
-[SOPS keys](../reference/sops-keys.md#workload-cluster-keys). Each key also has a public key in `.sops.keys` and a
-rule in `.sops.yaml`. Remove all three in Git now, in the same commit as the cluster's files in the next section; the Secrets
-themselves stay on the management cluster, protected, until you delete them in the last section.
+Skip this section if the cluster has no SOPS key. Its `Kustomization`s name the key Secrets they decrypt with in
+`spec.decryption`, and the Secrets are in the organisation's `namespace/secrets` (see
+[SOPS keys](../reference/sops-keys.md#workload-cluster-keys)). Each key also has a public key in `.sops.keys` and a
+rule in `.sops.yaml`. Remove all three from Git now, in the same commit as the cluster's files in the next section.
+The Secrets themselves stay on the management cluster, protected, until you delete them in the last section.
 
 1. Save the names of the key Secrets the cluster's `Kustomization`s decrypt with, and the `-direct` one's from the
    section above:
@@ -312,10 +314,10 @@ Don't commit yet: the next section commits the keys together with the cluster's 
       kustomization/${MC_NAME}-clusters-${WC_NAME}-apps -n org-${ORG_NAME} --timeout=10m
     ```
 
-1. Flux doesn't wait for the cluster's apps to be uninstalled. Their `HelmRelease`s go once helm-controller has
-   uninstalled them from the workload cluster. Wait for them: the uninstall is what removes what the apps created
-   outside the cluster, such as load balancers, volumes and DNS records, and deleting the cluster may leave those
-   behind. Once the cluster's kubeconfig Secret has gone, helm-controller skips the uninstall rather than wait for it:
+1. Wait for the cluster's apps to be uninstalled: Flux doesn't. Their `HelmRelease`s go once helm-controller has
+   uninstalled them from the workload cluster. The uninstall is what removes what the apps created outside the
+   cluster, such as load balancers, volumes and DNS records, and deleting the cluster may leave those behind. Once the
+   cluster's kubeconfig Secret has gone, helm-controller skips the uninstall rather than wait for it:
 
     ```sh
     until [ -z "$(kubectl get helmrelease -n org-${ORG_NAME} \

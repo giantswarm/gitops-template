@@ -11,7 +11,7 @@ components:
   - ../../../../../../../bases/environments/stages/dev
 ```
 
-Nothing applies this directory directly. The cluster's Flux Kustomization applies what the Components add, with the
+Nothing applies this directory directly. The cluster's Flux `Kustomization` applies what the Components add, with the
 cluster, into the organisation's namespace, `org-<name>`.
 
 A Component, unlike a base, changes what the cluster already has: it adds a `valuesFrom` entry or replaces a version.

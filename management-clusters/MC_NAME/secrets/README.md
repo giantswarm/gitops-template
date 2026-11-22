@@ -3,11 +3,11 @@
 `management-clusters/MC_NAME/secrets`
 
 The management cluster's master key, `sops-gpg-master`, as a Secret encrypted with the master key itself. With it,
-Flux decrypts the encrypted files that the management cluster's Kustomization and the organisations' namespace
-Kustomizations apply, the workload clusters' keys among them.
+Flux decrypts the encrypted files that the management cluster's Flux `Kustomization` and the organisations' namespace
+`Kustomization`s apply, the workload clusters' keys among them.
 
-The management cluster's Kustomization, in `../MC_NAME.yaml`, applies this directory into the `default` namespace. You
-also apply the Secret by hand once, before that Kustomization can decrypt anything.
+The management cluster's `Kustomization`, in `../MC_NAME.yaml`, applies this directory into the `default` namespace. You
+also apply the Secret by hand once, before that `Kustomization` can decrypt anything.
 
 ## What's here
 

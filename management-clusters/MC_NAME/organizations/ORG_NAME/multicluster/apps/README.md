@@ -6,7 +6,7 @@ Apps the organisation installs on several of its workload clusters from one plac
 `ResourceSet` that renders an `OCIRepository` and a `HelmRelease` for every cluster in `clusters.yaml`. Each app has
 the same shape, so this README covers them.
 
-The Flux Kustomization in `../apps.yaml`, in `default`, applies this directory. The `ResourceSet`s and their providers
+The Flux `Kustomization` in `../apps.yaml`, in `default`, applies this directory. The `ResourceSet`s and their providers
 are in the organisation's namespace, `org-<name>`, and so is what they render.
 
 ## What's here

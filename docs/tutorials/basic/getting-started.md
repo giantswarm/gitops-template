@@ -7,11 +7,11 @@ your cloud bill back afterwards, the last step deletes the cluster again.
 
 Every change goes the same way: you write a file, commit it and push, and Flux on the management cluster applies it.
 Think of the repository as a planting plan and Flux as the gardener. Every few minutes it walks round, plants whatever
-is in the plan but not yet in the ground, and, because the `Kustomization`s here set `prune: true`, pulls up whatever
-you've taken out of the plan. That last part is why a few objects in this tutorial carry the
+is in the plan but not yet in the ground, and, because the Flux `Kustomization`s here set `prune: true`, pulls up
+whatever you've taken out of the plan. That last part is why a few objects in this tutorial carry the
 `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, which tells Flux to leave them alone, and the
 `giantswarm.io/prevent-deletion` label, which stops anyone at all from deleting them: some things you don't want gone
-just because a file went missing. For more on the approach, see
+because of a missing file. For more on the approach, see
 [GitOps at Giant Swarm](https://docs.giantswarm.io/tutorials/continuous-deployment/gitops-at-giantswarm/).
 
 A cluster and its apps need secrets, and this repository supports two ways to keep them:
@@ -129,7 +129,7 @@ export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert
 | `ORG_NAME` | The organisation's name, without the `org-` prefix. |
 | `WC_NAME` | The new workload cluster's name: lowercase letters and digits, at most 20 characters. |
 | `GITOPS_REPO` | A name for the Flux `GitRepository`, for example `gitops`. |
-| `GITOPS_REPO_URL` | Your copy of this repository, over HTTPS. This tutorial reads it from GitHub with a personal access token; on another Git host, use its HTTPS URL, and the username and token that host gives you in step 1. |
+| `GITOPS_REPO_URL` | Your fork, over HTTPS. This tutorial reads it from GitHub with a personal access token; on another Git host, use its HTTPS URL, and the username and token that host gives you in step 1. |
 | `GIT_SECRET` | The Secret Flux reads the repository with, see step 1. |
 | `SECRET_STORE` | The organisation's `SecretStore`, see step 2. |
 | `WC_CONTEXT` | The context `kubectl gs login` creates for the workload cluster in step 3. |
@@ -465,7 +465,7 @@ organisation reads its secrets through the organisation's namespace.
    clusters later, which go in `${ORG_DIR}/namespace/secrets`. It has the `kustomize.toolkit.fluxcd.io/prune: disabled`
    annotation, like the `Organization`: everything of the organisation's clusters hangs off it, so Flux mustn't delete
    it when its file goes. `ORG_NAME` and `org-ORG_NAME` are placeholders that the organisation's `kustomization.yaml`
-   fills in, see [Flux Kustomizations](../../reference/repo-structure.md#flux-kustomizations):
+   fills in, see [Flux `Kustomization`s](../../reference/repo-structure.md#flux-kustomizations):
 
     ```sh
     cat <<EOF > ${ORG_DIR}/namespace.yaml
@@ -553,7 +553,7 @@ organisation reads its secrets through the organisation's namespace.
     For the real thing, replace `secret-store.yaml` with a store for your secret manager, and set `SECRET_STORE` in
     your exports to its name. The bases in [bases/secret_stores](../../../bases/secret_stores) read AWS Secrets
     Manager or Azure Key Vault with workload identity, so no credential is stored anywhere, see
-    [Create a SecretStore for your secret manager](../../how-to/external-secrets.md#create-a-secretstore-for-your-secret-manager).
+    [Create a `SecretStore` for your secret manager](../../how-to/external-secrets.md#create-a-secretstore-for-your-secret-manager).
     If your secret manager can't use workload identity, its store needs a credential, such as an access key: keep it
     in a Secret encrypted with SOPS in `${ORG_DIR}/namespace/secrets`, with an
     [organisation key](../../how-to/sops.md#add-an-organisation-key).

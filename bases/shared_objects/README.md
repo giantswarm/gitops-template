@@ -7,7 +7,7 @@ here, and every organisation that lists this base gets it in its namespace and k
 
 Nothing applies this directory directly. The objects have no namespace: each organisation's
 [`namespace/shared-objects/`](/management-clusters/MC_NAME/organizations/ORG_NAME/namespace/shared-objects/) lists this
-base, and the organisation's namespace Kustomization applies the copy into that organisation's namespace,
+base, and the Flux `Kustomization` for the organisation's namespace applies the copy into that organisation's namespace,
 `org-<name>`.
 
 ## What's here

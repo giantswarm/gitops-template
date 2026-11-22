@@ -4,7 +4,7 @@
   - [What kubectl-gs writes](#what-kubectl-gs-writes)
 - [Structure version](#structure-version)
   - [Move an organisation's namespace objects](#move-an-organisations-namespace-objects)
-  - [Move the workload cluster Kustomizations](#move-the-workload-cluster-kustomizations)
+  - [Move the workload cluster `Kustomization`s](#move-the-workload-cluster-kustomizations)
 - [Naming](#naming)
 - [Optional components](#optional-components)
   - [`[OTHER_RESOURCES]`](#other_resources)
@@ -12,7 +12,7 @@
   - [`[organizations]` and `[workload-clusters]`](#organizations-and-workload-clusters)
   - [The organisation's name](#the-organisations-name)
   - [`cluster`, `apps` and `[out-of-band]`](#cluster-apps-and-out-of-band)
-- [Flux Kustomizations](#flux-kustomizations)
+- [Flux `Kustomization`s](#flux-kustomizations)
   - [Reconcile intervals](#reconcile-intervals)
 - [Variables](#variables)
 - [Objects the management cluster provides](#objects-the-management-cluster-provides)
@@ -93,10 +93,10 @@ How to read it:
   Lowercase parts stay as they are: `WC_NAME-apps.yaml` for a cluster `demo0` is `demo0-apps.yaml`.
 - Names with an extension, like `MC_NAME.yaml`, are files. The rest are directories.
 - Names in square brackets are optional. See [optional components](#optional-components).
-- The horizontal line splits the work between the [Flux Kustomizations](#flux-kustomizations). `MC_NAME.yaml`
+- The horizontal line splits the work between the [Flux `Kustomization`s](#flux-kustomizations). `MC_NAME.yaml`
   applies everything above it but what the organisation's `namespace/kustomization.yaml` lists: `namespace`,
   `../multicluster/secret-stores` and `../workload-clusters`, which `namespace.yaml` applies into the organisation's
-  namespace. The cluster's Kustomizations, in `workload-clusters`, apply the cluster directory below it, except
+  namespace. The cluster's `Kustomization`s, in `workload-clusters`, apply the cluster directory below it, except
   `out-of-band`.
 - `.sops.yaml`, `.sops.keys` and the `*.gpgkey.enc.yaml` files are only needed when you encrypt secrets with SOPS.
   See [SOPS keys](./sops-keys.md).
@@ -151,13 +151,13 @@ layers:
     structureVersion: 3
 ```
 
-The file sits outside of what Flux applies, so it never reaches a cluster. Don't edit it by hand.
+The file sits outside what Flux applies, so it never reaches a cluster. Don't edit it by hand.
 
 | Version | What it brought | Written by |
 | --- | --- | --- |
 | 1 | Clusters and apps as App CRs | kubectl-gs before 6.0.0 |
 | 2 | Clusters and apps as Flux `HelmRelease`s, in a workload cluster's `mapi` directory | kubectl-gs 6.0.0 and newer |
-| 3 | No `mapi`; an organisation's `namespace` directory and `namespace.yaml`; the workload clusters' Kustomizations and keys in the organisation's namespace | kubectl-gs X.Y.Z and newer |
+| 3 | No `mapi`; an organisation's `namespace` directory and `namespace.yaml`; the workload clusters' `Kustomization`s and keys in the organisation's namespace | kubectl-gs X.Y.Z and newer |
 
 To check which parts of your repository are behind and bring them up to date, see
 [Check and upgrade the structure version](../how-to/upgrade-fork.md#check-and-upgrade-the-structure-version).
@@ -166,9 +166,9 @@ To check which parts of your repository are behind and bring them up to date, se
 
 Moved to [Move an organisation's namespace objects](../how-to/upgrade-fork.md#move-an-organisations-namespace-objects).
 
-### Move the workload cluster Kustomizations
+### Move the workload cluster `Kustomization`s
 
-Moved to [Move the workload cluster Kustomizations](../how-to/upgrade-fork.md#move-the-workload-cluster-kustomizations).
+Moved to [Move the workload cluster `Kustomization`s](../how-to/upgrade-fork.md#move-the-workload-cluster-kustomizations).
 
 ## Naming
 
@@ -187,7 +187,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognise
 | --- | --- |
 | Management cluster Flux `Kustomization` | `MC_NAME-gitops`, in `MC_NAME.yaml` |
 | Workload cluster Flux `Kustomization` | `MC_NAME-clusters-WC_NAME`, in `WC_NAME.yaml` |
-| Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME-apps.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux Kustomizations](#flux-kustomizations) |
+| Flux `Kustomization` of a workload cluster's secondary apps | `MC_NAME-clusters-WC_NAME-apps`, in `WC_NAME-apps.yaml`. `kubectl gs gitops` doesn't generate it, see [Flux `Kustomization`s](#flux-kustomizations) |
 | An app's `HelmRelease` and `OCIRepository` when it's a base app, installed with the cluster | the same files, in `cluster/apps/APP_NAME` |
 | Out-of-band Flux `Kustomization` on the management cluster, which applies `out-of-band` through the workload cluster's kubeconfig | `MC_NAME-clusters-WC_NAME-direct`, in `WC_NAME-direct.yaml`. `kubectl gs gitops` doesn't generate it |
 | Flux `Kustomization` of an organisation's namespace | `MC_NAME-organization-ORG_NAME`, in `namespace.yaml`. `kubectl gs gitops` doesn't generate it |
@@ -205,9 +205,9 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognise
 The suffixes the template adds to file and object names that `kubectl gs gitops` doesn't generate, such as `-apps`,
 `-direct` and the `-from-template` of the example apps, are only the template's labels for telling its techniques apart.
 They aren't a convention, and nothing relies on them: name your own files and objects however you like. The same goes
-for out-of-band delivery, which has two forms, and the template shows both: a `Kustomization` on the management cluster
-that applies `out-of-band` through the workload cluster's kubeconfig, the template's `-direct` one, and Flux in the
-workload cluster pulling the same content itself, see
+for out-of-band delivery. It has two forms, and the template shows both: a `Kustomization` on the management cluster
+that applies `out-of-band` through the workload cluster's kubeconfig (the template's `-direct` one), and Flux in the
+workload cluster pulling the same content itself. See
 [Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md).
 
 Repositories forked before the template used these names can move to them with
@@ -319,14 +319,14 @@ when it decrypts, which is why `targetNamespace`, and the labels and annotations
 harm: they change what Flux applies, not the file in Git.
 
 If you don't want to use the replacements, leave them out of the organisation's `kustomization.yaml`, and replace
-`ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the multi-cluster apps
+`ORG_NAME` and `org-ORG_NAME` with your organisation's name wherever they stand for it: in the multicluster apps
 `Kustomization` in `multicluster/apps.yaml`, and in `namespace.yaml`. The files in `namespace` get the name from
 `namespace.yaml`. The template's `kustomization.yaml` lists its own files of these kinds in a comment.
 
 Flux applies the organisation's directory as its `kustomization.yaml` builds it, so list there everything else in the
 directory that Flux has to apply in `default`. Put what belongs in the organisation's namespace, such as its
 `secrets`, in `namespace` and list it in `namespace/kustomization.yaml`: `MC_NAME.yaml` applies only the
-`Organization`s and objects in `default`, see [Flux Kustomizations](#flux-kustomizations). Build the organisation's
+`Organization`s and objects in `default`, see [Flux `Kustomization`s](#flux-kustomizations). Build the organisation's
 directory to see what `MC_NAME.yaml` applies, for example with
 `kubectl kustomize management-clusters/MC_NAME/organizations/ORG_NAME`. Building `namespace` on its own leaves
 `${organization}` as it is.
@@ -336,7 +336,7 @@ directory to see what `MC_NAME.yaml` applies, for example with
 Every workload cluster directory holds the resources on the management cluster that configure the workload
 cluster, through the Management API, in `cluster` and `apps`. Examples are the `HelmRelease` and
 `OCIRepository` resources of the cluster and its apps, and the ConfigMaps and Secrets with their values. Its
-`kustomization.yaml` lists the directories the cluster's Kustomizations apply, and never `out-of-band`, which must not
+`kustomization.yaml` lists the directories the cluster's `Kustomization`s apply, and never `out-of-band`, which must not
 be applied to the management cluster.
 
 The optional `out-of-band` directory holds resources that go straight into the workload cluster, such as extra
@@ -344,13 +344,13 @@ ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are tw
 [Apply resources straight to a workload cluster](../tutorials/advanced/out-of-band.md) walks through:
 
 - Run Flux in the workload cluster and point it at the `out-of-band` directory.
-- Add another Flux Kustomization on the management cluster that uses the workload cluster's kubeconfig. That's the
+- Add another Flux `Kustomization` on the management cluster that uses the workload cluster's kubeconfig. That's the
   optional `WC_NAME-direct.yaml`, with its own `WC_NAME-direct.gpgkey.enc.yaml`. It lives in the namespace of the
   kubeconfig Secret, the organisation's, where the organisation's namespace `Kustomization` puts it from
-  `workload-clusters`, and its key Secret, which has to be in the same namespace, goes in `namespace/secrets`.
+  `workload-clusters`. Its key Secret has to be in the same namespace, so it goes in `namespace/secrets`.
   `namespace/secrets/kustomization.yaml` gives its Secrets the `kustomize.toolkit.fluxcd.io/prune: disabled`
   annotation and the `giantswarm.io/prevent-deletion` label, as the management cluster's `secrets/kustomization.yaml`
-  does, see [Add a workload cluster key (GPG)](../how-to/sops.md#add-a-workload-cluster-key-gpg).
+  does; see [Add a workload cluster key (GPG)](../how-to/sops.md#add-a-workload-cluster-key-gpg).
 
   `sops` encrypts the key Secret with the first rule in `.sops.yaml` whose `path_regex` matches its file. The
   management cluster's rule for the workload clusters' keys in `namespace/secrets`, from
@@ -359,9 +359,9 @@ ConfigMaps, Secrets or Deployments that aren't delivered as an app. There are tw
   `sops-gpg-master` holds for the organisation's namespace `Kustomization`. See
   [SOPS keys](./sops-keys.md#encryption-rules).
 
-## Flux Kustomizations
+## Flux `Kustomization`s
 
-Three kinds of Flux Kustomization apply the repository:
+Three kinds of Flux `Kustomization` apply the repository:
 
 ```text
 management-clusters
@@ -389,24 +389,25 @@ management-clusters
                     └── [out-of-band]       # applied only by the out-of-band mechanisms
 ```
 
-`MC_NAME.yaml` applies only the `Organization`s and objects in `default`, the Flux Kustomizations among them. On a new
+`MC_NAME.yaml` applies only the `Organization`s and objects in `default`, the Flux `Kustomization`s among them. On a new
 management cluster, no organisation's namespace exists until organization-operator creates it for the `Organization`.
 Flux dry-runs every object of a `Kustomization` before it applies any, so one object in a missing namespace would stop
-the `Organization` from being applied at all. Everything the organisation keeps in its namespace is what its
-`namespace/kustomization.yaml` lists instead, which the organisation's own `Kustomization`, `namespace.yaml`, applies
-with `targetNamespace: org-ORG_NAME`. It fails until the namespace exists, then succeeds on its next retry, a minute
-later: nothing else waits for the namespace, and there's no health check. Its `dependsOn` names `MC_NAME.yaml`'s
-`Kustomization`. Both read the same `GitRepository`, so Flux applies a commit to the organisation's namespace only once
-`MC_NAME.yaml` is `Ready` at the same revision: `MC_NAME.yaml` always applies a commit first. The namespace
-`Kustomization`'s own spec, such as its `path` or `targetNamespace`, is up to date before it applies the commit, and an
-object that moves between the two in one commit moves in that order. `MC_NAME.yaml` has no `wait` and no health
-checks, so it never waits for the organisations. A broken file in one organisation's `namespace` stops only that
-organisation's `Kustomization`, not `MC_NAME.yaml` or the other organisations; while `MC_NAME.yaml` fails, the
-organisations' `Kustomization`s report `DependencyNotReady` and apply nothing new.
+the `Organization` from being applied at all. So everything the organisation keeps in its namespace goes in its
+`namespace/kustomization.yaml` instead, which the organisation's own `Kustomization`, `namespace.yaml`, applies with
+`targetNamespace: org-ORG_NAME`. That `Kustomization` fails until the namespace exists, then succeeds on its next
+retry, a minute later: nothing else waits for the namespace, and there's no health check.
 
-The workload clusters' Kustomizations are in the organisation's `workload-clusters`, next to the cluster directories
+Its `dependsOn` names `MC_NAME.yaml`'s `Kustomization`. Both read the same `GitRepository`, so Flux applies a commit to
+the organisation's namespace only once `MC_NAME.yaml` is `Ready` at the same revision: `MC_NAME.yaml` always applies a
+commit first. The namespace `Kustomization`'s own spec, such as its `path` or `targetNamespace`, is up to date before
+it applies the commit, and an object that moves between the two in one commit moves in that order. `MC_NAME.yaml` has
+no `wait` and no health checks, so it never waits for the organisations. A broken file in one organisation's
+`namespace` stops only that organisation's `Kustomization`, not `MC_NAME.yaml` or the other organisations. While
+`MC_NAME.yaml` fails, the organisations' `Kustomization`s report `DependencyNotReady` and apply nothing new.
+
+The workload clusters' `Kustomization`s are in the organisation's `workload-clusters`, next to the cluster directories
 they apply. `namespace/kustomization.yaml` lists `../workload-clusters`, and `workload-clusters/kustomization.yaml`
-lists only the Kustomization files, so `namespace.yaml` creates them in the organisation's namespace, and not the
+lists only the `Kustomization` files, so `namespace.yaml` creates them in the organisation's namespace, and not the
 cluster directories. In that namespace:
 
 - `serviceAccountName: automation` is the organisation's `automation` ServiceAccount. rbac-operator gives it every
@@ -425,25 +426,25 @@ They set the [variables](#variables), like `${cluster_name}`, that the bases use
 `${organization}`, which the `postBuild` of `namespace.yaml` fills in, see
 [The organisation's name](#the-organisations-name). See
 [How it works](../explanation/how-it-works.md#from-a-commit-to-a-cluster) for why the management cluster's and the
-clusters' Kustomizations are separate.
+clusters' `Kustomization`s are separate.
 
-In the same way, the `kustomization.yaml` in `multicluster` lists only `apps.yaml`, whose Kustomization applies the
-organisation's apps on several clusters in `multicluster/apps`, so the management cluster's Kustomization never applies
-their `ResourceSet`s itself. Like `namespace.yaml`, it depends on `MC_NAME.yaml`'s `Kustomization`, which applies every
-commit first. See [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
+In the same way, the `kustomization.yaml` in `multicluster` lists only `apps.yaml`, whose `Kustomization` applies the
+organisation's apps on several clusters in `multicluster/apps`, so the management cluster's `Kustomization` never
+applies their `ResourceSet`s itself. Like `namespace.yaml`, it depends on `MC_NAME.yaml`'s `Kustomization`, which
+applies every commit first. See [Roll an app out to many clusters](../tutorials/advanced/multicluster-apps.md).
 
-A cluster with apps has two Kustomizations:
+A cluster with apps has two `Kustomization`s:
 
 1. `WC_NAME.yaml` applies `cluster`: the cluster's `HelmRelease` and its base apps, in `cluster/apps`. Base apps are the
    ones the cluster needs from the start, such as the Gateway API charts of the
    [envoy-gateway](/bases/stacks/envoy-gateway/) stack in the out-of-band examples. Flux applies them with the cluster,
-   and their `HelmRelease`s install them as soon as the cluster can take them. The Kustomization's `healthChecks` name
+   and their `HelmRelease`s install them as soon as the cluster can take them. The `Kustomization`'s `healthChecks` name
    the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its
    `ControlPlaneAvailable` and `RemoteConnectionProbe` conditions are `True`: the control plane is up and the
-   management cluster can reach it, which is all the apps need to install. The Kustomization only gets `Ready` then,
+   management cluster can reach it, which is all the apps need to install. The `Kustomization` only gets `Ready` then,
    so its `timeout` of 30 minutes covers a new cluster coming up. While the control plane isn't up, each
    reconciliation waits for up to those 30 minutes: a change you push to the cluster's files, such as a fix to its
-   values, is only applied after the wait runs out, and the apps Kustomization reports `DependencyNotReady` all the
+   values, is only applied after the wait runs out, and the apps `Kustomization` reports `DependencyNotReady` all the
    while. The check doesn't wait for the cluster's `Available` condition, which also counts every node pool: with it,
    one node pool short of its minimum would hold back every change to the cluster's apps, including the one that
    would fix it. Cluster API keeps `ControlPlaneAvailable` `True` through a rolling upgrade of the control plane while
@@ -453,7 +454,7 @@ A cluster with apps has two Kustomizations:
    install up to 10 times, uninstalling it in between, so it settles by itself once the nodes join. A slower first
    install is the price of not holding back every later change to the apps while one node pool is short.
 1. `WC_NAME-apps.yaml` applies the cluster's directory: the secondary apps in `apps`, which its `kustomization.yaml`
-   lists. It has the cluster's Kustomization in `dependsOn`, so Flux applies none of them until the cluster's control
+   lists. It has the cluster's `Kustomization` in `dependsOn`, so Flux applies none of them until the cluster's control
    plane is up. Until then, it reports `DependencyNotReady`.
 
 Name the cluster in `healthChecks` with its name written out, such as `capi-wc-name`, and the namespace as
@@ -462,7 +463,7 @@ applies it, fills in `${organization}`. The namespace must be explicit: Flux doe
 `Kustomization`'s. A cluster without secondary apps, such as the `HELLO_APP_*` examples, has only `WC_NAME.yaml`, which
 applies the cluster's directory, whose `kustomization.yaml` lists `cluster`, and needs no health check.
 
-`kubectl gs gitops add workload-cluster --base` writes both of a cluster's Kustomizations, as described here, from
+`kubectl gs gitops add workload-cluster --base` writes both of a cluster's `Kustomization`s, as described here, from
 kubectl-gs X.Y.Z on, and `kubectl gs gitops add encryption --workload-cluster` its key Secret in `namespace/secrets`.
 Older releases write a single `WC_NAME.yaml` in `default` and a `mapi` directory, and the key into `MC_NAME/secrets`.
 [Workload cluster](../how-to/kubectl-gs.md#workload-cluster) lists what's left to change.
@@ -478,7 +479,7 @@ management cluster:
 | Object | `interval` | `retryInterval` | Why |
 | --- | --- | --- | --- |
 | `GitRepository` | 1m | | How soon Flux sees a push. A [`Receiver`][flux-receiver] makes it immediate. |
-| Management cluster `Kustomization`, `MC_NAME.yaml` | 10m | 1m | Only undoes drift, the same as `flux bootstrap` sets. It also applies the Organizations. |
+| Management cluster `Kustomization`, `MC_NAME.yaml` | 10m | 1m | Only undoes drift, the same as `flux bootstrap` sets. It also applies the `Organization`s. |
 | Organisation namespace `Kustomization`, `namespace.yaml` | 10m | 1m | The retry applies it a minute after organization-operator has created the namespace. |
 | Workload cluster `Kustomization`s, `WC_NAME.yaml`, `WC_NAME-apps.yaml`, `-direct` and `HELLO_APP_*` | 10m | 1m | One to three per cluster, each building and applying its whole directory. |
 | `OCIRepository` | 10m | | How soon a `semver` range picks up a new chart. |
