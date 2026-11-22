@@ -87,18 +87,19 @@ If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a
 
 ## A secret store for testing
 
-The docs and the examples read secrets through a `SecretStore` in the `default` namespace and one of the same name in
-`org-${ORG_NAME}`, both pointing at your secret manager. If you only want to try them and have no store yet, create
-them with the [fake provider](https://external-secrets.io/latest/provider/fake/) of External Secrets Operator. It keeps
-the values in the store object itself, so it needs no secret manager and no extra credentials.
+The docs and the examples read secrets through a `SecretStore` named `gitops-test` in the `default` namespace and one
+of the same name in `org-${ORG_NAME}`. If you only want to try them and have no store yet, create them with the
+[fake provider](https://external-secrets.io/latest/provider/fake/) of External Secrets Operator. It keeps the values in
+the store object itself, so it needs no secret manager and no extra credentials.
 
 > [!Caution]
-> The token ends up in plain text in the cluster. Use this only for testing, and delete the stores when you're
-> done.
+> Never put a real secret in a test store. A `SecretStore` is a custom resource, not a Secret, so everyone with read
+> access to the management cluster can read the values in it, in any namespace. Use it only for testing, and delete
+> the stores when you're done.
 
 Create a store with the values the docs and examples read, first in `default`, then again in `org-${ORG_NAME}` once
-the organisation's namespace exists, with `STORE_NAMESPACE=org-${ORG_NAME}`. Put your GitHub token in place of
-`YOUR_GITHUB_TOKEN`:
+the organisation's namespace exists, with `STORE_NAMESPACE=org-${ORG_NAME}`. The tokens are dummies, the same ones
+the kind test uses:
 
 ```sh
 export STORE_NAMESPACE=default
@@ -111,21 +112,18 @@ spec:
   provider:
     fake:
       data:
-        - key: gitops/github-token
-          value: YOUR_GITHUB_TOKEN
         - key: gitops/hello-world-values
           value: |
             podAnnotations:
               example.com/source: secret-manager
+        - key: gitops/github-commit-status-token
+          value: not-a-github-token
+        - key: gitops/github-webhook-token
+          value: not-a-webhook-token
         - key: workload-clusters-common-token
           value: common-token-from-secret-manager
 EOF
 ```
-
-To try [Report reconcile status on GitHub commits](./commit-statuses.md) too, add its values to the list under
-`data`: `gitops/github-commit-status-token`, a GitHub token that can write commit statuses, to both stores, as both
-notification directories read it, and `gitops/github-webhook-token`, the secret of the optional webhook, to the store
-in `default`.
 
 Check that the store is `Ready`:
 
@@ -133,9 +131,17 @@ Check that the store is `Ready`:
 kubectl get secretstore gitops-test -n "${STORE_NAMESPACE}"
 ```
 
-Then set `SECRET_STORE=gitops-test` and keep the default secret names, `gitops/github-token` and
-`gitops/hello-world-values`. The examples in `WC_NAME_OUT_OF_BAND_NO_FLUX_APP` and the `notifications` directories read
-this store.
+Then set `SECRET_STORE=gitops-test` and keep the default secret names. The examples in
+`WC_NAME_OUT_OF_BAND_NO_FLUX_APP` and the `notifications` directories read this store: their `ExternalSecret`s get
+`SecretSynced`, and hello-world gets its pod annotation.
+
+A dummy token gets you no further than the Secret, though: GitHub refuses commit statuses sent with
+`not-a-github-token`. To try something with a real token, keep the token in the repository, encrypted with SOPS, while
+you test, as in [Token encrypted with SOPS](./commit-statuses.md#token-encrypted-with-sops). Flux's repository token
+comes from SOPS, as in the [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster), or
+from your secret manager's store: never point the `ExternalSecret` of
+[Keep the repository token in your secret manager](#keep-the-repository-token-in-your-secret-manager) at the test
+store, as it would replace Flux's working token with a dummy, and Flux would stop reading the repository.
 
 When you're done testing, delete the stores:
 
@@ -148,7 +154,8 @@ kubectl delete secretstore gitops-test -n org-${ORG_NAME}
 
 Flux reads the repository with the `github-https-credentials` Secret in the `default` namespace. Instead of creating
 it by hand or keeping it in the repository encrypted, let ESO write it from your secret manager, through the
-`SecretStore` in `default`.
+`SecretStore` in `default`. That has to be your secret manager's store, not the
+[test store](#a-secret-store-for-testing).
 
 1. Create a GitHub token with read access to the repository's contents, for example a
    [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)

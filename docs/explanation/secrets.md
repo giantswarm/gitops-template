@@ -24,10 +24,11 @@ read it. You create them by hand once, when you connect the management cluster, 
 them, so that Flux puts them back if they change and a new management cluster gets them from Git.
 
 With SOPS, each management cluster has a master key, a GPG key pair. Its public key is in the repository, so anyone
-can encrypt for it, and its private key is in the `sops-gpg-master` Secret on the management cluster, so only Flux can
-decrypt. Flux's repository token goes in the management cluster's `secrets` directory, encrypted with the master key.
-The private keys of the workload clusters go in their organisation's `namespace/secrets`, encrypted with the master key
-too, so each cluster can have a key of its own.
+can encrypt for it, and its private key is in the `sops-gpg-master` Secret on the management cluster, where Flux
+decrypts with it. Anyone who can read Secrets in `default` can decrypt too, see [Risks](#risks). Flux's repository
+token goes in the management cluster's `secrets` directory, encrypted with the master key. The private keys of the
+workload clusters go in their organisation's `namespace/secrets`, encrypted with the master key too, so each cluster
+can have a key of its own.
 [SOPS keys](../reference/sops-keys.md) lists the keys and what each one decrypts.
 
 SOPS needs nothing outside the repository and the management cluster. That suits the secrets a secret manager can't
@@ -53,6 +54,21 @@ passwords, and push secrets into new workload clusters, see
 [Put secrets into new workload clusters](../how-to/workload-cluster-secrets.md).
 
 The steps are in [Read secrets from a secret manager](../how-to/external-secrets.md).
+
+### Four kinds of secret store
+
+"Secret store" means four different things in these docs, and each has its own place:
+
+| Store | What it is | Where it lives |
+| --- | --- | --- |
+| Your secret manager's store | a `SecretStore` that reads your secret manager, such as one from [bases/secret_stores](/bases/secret_stores/). The apps' `ExternalSecret`s read it | the organisation's `namespace/secret-stores`, applied into the organisation's namespace. If Flux's own secrets come from your secret manager too, a second one in `default`, in the management cluster's directory |
+| The store named `default` | a `SecretStore` with ESO's `kubernetes` provider, which reads Secrets in the organisation's own namespace, such as the workload clusters' kubeconfigs | the organisation's `multicluster/secret-stores`, next to the Kyverno policy whose `ExternalSecret`s read through it |
+| The generated per-cluster store | `<cluster>-eso-cluster-store`, which the Kyverno policy makes for each workload cluster as it comes up, so that ESO can push secrets into the cluster | nowhere in the repository: Kyverno writes it into the organisation's namespace |
+| The test store | `gitops-test`, with ESO's fake provider, which keeps dummy values in the store itself, so you can try the docs without a secret manager | applied by hand, see [A secret store for testing](../how-to/external-secrets.md#a-secret-store-for-testing), or in `namespace/secret-stores` while you follow the [basic tutorial](../tutorials/basic/getting-started.md#2-add-an-organisation) |
+
+A `SecretStore` is a custom resource, not a Secret, so everyone with read access to the management cluster can read
+what's in one, in any namespace. That's why the first three hold no credential themselves, and why the test store
+holds dummy values and never a real secret.
 
 ## Which secret goes where
 

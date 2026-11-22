@@ -20,7 +20,7 @@ other shell, start `bash` first.
 | [`kubectl gs`](https://github.com/giantswarm/kubectl-gs), X.Y.Z or newer | logging in, and the shortcuts that write files for you, see [kubectl-gs version](#kubectl-gs-version) | everything |
 | [`flux`](https://github.com/fluxcd/flux2), the same minor version as the management cluster's Flux, 2.7 today | inspecting and reconciling Flux objects, and rendering what Flux applies | everything |
 | `gpg` of [GnuPG](https://gnupg.org/) | creating and handling GPG keys | [SOPS](../how-to/sops.md) |
-| [`sops`](https://github.com/getsops/sops) | encrypting and decrypting Secrets in the repository | [SOPS](../how-to/sops.md) |
+| [`sops`](https://github.com/getsops/sops), 3.10.0 or newer | encrypting and decrypting Secrets in the repository. The docs pipe a Secret into `sops --encrypt --filename-override PATH /dev/stdin`, so it never sits in the repository in plain text. 3.9.0 added `--filename-override`; 3.10.0 is the first that matches a relative path against `.sops.yaml` from any directory, as the steps that run in an app's directory need | [SOPS](../how-to/sops.md) |
 | `age-keygen` of [age](https://github.com/FiloSottile/age) | creating an age key | [Add a workload cluster key (age)](../how-to/sops.md#add-a-workload-cluster-key-age) |
 | `jq` and a password manager's CLI, such as 1Password's `op` | keeping a private key in a password manager | [Keep a private key in a password manager](../how-to/sops.md#keep-a-private-key-in-a-password-manager), optional |
 | `flux-operator`, Flux Operator's CLI | forcing a `ResourceSetInputProvider` outside its window | [Hold upgrades for a window](../tutorials/advanced/scheduled-upgrades.md), optional: `kubectl annotate` does the same |

@@ -294,25 +294,24 @@ an `ExternalSecret` from your secret manager, see [Read secrets from a secret ma
     export DOCKER_CONFIG_JSON=PATH
     ```
 
-1. In the app's directory, create the Secret and save it into a file:
+1. In the app's directory, create the Secret and save it into a file, encrypted with the cluster's key. `sops`
+   encrypts it on its way into the file, so the credentials never sit in the repository in plain text. The cluster's
+   rule in `.sops.yaml` picks the key; if the cluster has none yet, add one first, see
+   [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg). For a GPG key, import its public key
+   first; an age key needs nothing:
 
     ```sh
+    gpg --import "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc"
     kubectl create secret docker-registry \
     ${WC_NAME}-${APP_NAME}-pull-secret \
     --namespace org-${ORG_NAME} \
     --from-file .dockerconfigjson=${DOCKER_CONFIG_JSON} \
     --dry-run=client \
-    -o yaml > pullsecret.enc.yaml
+    -o yaml | sops --encrypt --filename-override pullsecret.enc.yaml /dev/stdin > pullsecret.enc.yaml
     ```
 
-1. Encrypt it with the cluster's key. The cluster's rule in `.sops.yaml` picks the key; if the cluster has none yet,
-   add one first, see [Add a workload cluster key (GPG)](./sops.md#add-a-workload-cluster-key-gpg). For a GPG key,
-   import its public key first:
-
-    ```sh
-    gpg --import "$(git rev-parse --show-toplevel)/management-clusters/${MC_NAME}/.sops.keys/.sops.${WC_NAME}.asc"
-    sops --encrypt --in-place pullsecret.enc.yaml
-    ```
+    `--filename-override` tells `sops` which file it's writing, and so which rule applies, as it reads the Secret from
+    stdin. It needs `sops` 3.10.0 or newer, see [Tools](../reference/tools.md#tools).
 
 1. Reference the Secret in the `OCIRepository`, and list it: in the app's `kustomization.yaml` if it has one, or as
    `APP_NAME/pullsecret.enc.yaml` in the cluster's `apps/kustomization.yaml` if that lists the app's files one by one:

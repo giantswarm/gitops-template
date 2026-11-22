@@ -60,6 +60,7 @@ management-clusters
             |   |   ├── [WC_NAME.gpgkey.enc.yaml]       a workload cluster's SOPS key
             |   |   └── [WC_NAME-direct.gpgkey.enc.yaml]
             |   ├── [notifications]                     the organisation's commit statuses
+            |   ├── [secret-stores]                     your secret manager's SecretStore, see how-to/external-secrets.md
             |   └── [shared-objects]                    objects every organisation shares, see how-to/share-objects.md
             ├── [multicluster]                          apps on several clusters, see tutorials/advanced/multicluster-apps.md
             |   ├── kustomization.yaml

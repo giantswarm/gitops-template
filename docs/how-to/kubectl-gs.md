@@ -55,9 +55,9 @@ Then:
    encrypted and the key is gone from your keyring, the password manager holds the only copy you can read.
 
 1. Apply the Secret, so that Flux has `sops-gpg-master` in `default` before it needs it, then encrypt the file with
-   the rule kubectl-gs wrote, and delete the private key from your keyring. This is the order the
-   [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster) uses: the file holds the
-   private key in plain text until `sops` has encrypted it, so don't add it to Git before then.
+   the rule kubectl-gs wrote, and delete the private key from your keyring. kubectl-gs writes the file with the
+   private key in plain text, so don't add it to Git until `sops` has encrypted it:
+   [check-sops-encrypted](/tools/README.md#check-sops-encrypted) fails for it until then.
 
     ```sh
     kubectl apply -f ${MC_DIR}/secrets/${MC_NAME}.gpgkey.enc.yaml
