@@ -758,7 +758,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     ```
 
 1. Create the apps' `Kustomization`. It names the cluster's `Kustomization` in `dependsOn`, so Flux applies none of it
-   until the cluster's is `Ready`. It takes the organisation's name the same way:
+   until the cluster's is `Ready`. It takes the organisation's name the same way. It needs only `cluster_name` and
+   `organization`: the release and the description are the cluster's business, not the apps':
 
     ```sh
     cat <<EOF > ${ORG_DIR}/workload-clusters/${WC_NAME}-apps.yaml
@@ -773,11 +774,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
       path: ./${WC_DIR}
       postBuild:
         substitute:
-          cluster_description: "${WC_NAME} managed by GitOps"
           cluster_name: "${WC_NAME}"
           organization: "\${organization}"
-          # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
-          release: "${RELEASE_VERSION}"
       prune: true
       retryInterval: 1m
       serviceAccountName: automation

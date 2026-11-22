@@ -43,7 +43,7 @@ The first two decrypt with the GPG key `sops-gpg-from-template-wc-name`, from th
 ## When you copy it
 
 Copy the directory and its three Kustomizations, rename them after your cluster, and set `cluster_name` in all three,
-`release` in the first two, the health check's cluster name in `WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml`, and the `-direct`
+`release` and the health check's cluster name in `WC_NAME_OUT_OF_BAND_NO_FLUX_APP.yaml`, and the `-direct`
 Kustomization's kubeconfig Secret. Change the `-direct` Kustomization's name in the `dependsOn` of
 `teams/hello-team/flux-kustomization.yaml` too, where a `TODO` marks it. Give the cluster its own SOPS key:
 

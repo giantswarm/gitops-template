@@ -33,8 +33,9 @@ the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 
 ## When you copy it
 
-Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` and `release`
-in both, and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml`. Give the cluster its own SOPS key:
+Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` in both, and
+`release` and the health check's cluster name in `WC_NAME_OUT_OF_BAND_FLUX_APP.yaml`. Give the cluster its own SOPS
+key:
 
 - add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
 - add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`

@@ -497,6 +497,10 @@ The bases use variables where every cluster needs its own value, such as `${clus
 | `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa`. Without it, the `OCIRepository` has no chart version to pull and the cluster doesn't install. |
 | `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa`. |
 
+Each of a cluster's `Kustomization`s sets the variables of what it applies. Only the cluster base uses `release` and
+`cluster_description`, so the cluster's own `Kustomization` sets all four, and the apps and `-direct` ones only
+`cluster_name` and `organization`.
+
 Set every variable the cluster's bases use. Flux replaces a variable that isn't set with an empty string; CI fails on
 it instead, see [Jobs](./ci-checks.md#jobs). CI reads only `spec.postBuild.substitute`, not
 `spec.postBuild.substituteFrom`, so a variable set only in `substituteFrom` fails CI, although Flux sets it on the

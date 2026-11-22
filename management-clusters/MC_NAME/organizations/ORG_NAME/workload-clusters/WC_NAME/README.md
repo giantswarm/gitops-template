@@ -28,9 +28,9 @@ the age key `sops-age-wc-name`, from the organisation's `namespace/secrets/`:
 
 ## When you copy it
 
-Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` and `release`
-in both, and the health check's cluster name in `WC_NAME.yaml`, the only one with a health check. Give the cluster its
-own key:
+Copy the directory and its two Kustomizations, rename them after your cluster, and set `cluster_name` in both, and
+`release` and the health check's cluster name in `WC_NAME.yaml`, the only one that installs the cluster. Give the
+cluster its own key:
 
 - add its public half to `.sops.keys/` and a rule to `.sops.yaml`;
 - add its private half, encrypted with the master key, to the organisation's `namespace/secrets/` and to `resources:`
