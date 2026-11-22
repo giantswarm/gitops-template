@@ -110,7 +110,10 @@ do it (see [Cluster API](#cluster-api)).
   pointed at the branch of the pull request. When `GITHUB_TOKEN` is set, as the shared workflow sets it to the run's
   token, the `GitRepository` reads the repository with it, so a private repository works. The root's own `ignore` and
   credentials, which you applied by hand on the management cluster, aren't in the repository, so the test's
-  `GitRepository` has neither.
+  `GitRepository` has neither. Mind which commit that is: the shared workflow runs the test code of the pull request
+  merged with its base branch, but Flux in the kind cluster reads the head of the pull request's branch,
+  `GITOPS_REPO_BRANCH`. A branch behind its base can fail for something that isn't its own, such as a fixture the base
+  removed that the branch's manifests still need. Update the branch from its base before you read a failure as yours.
 - **The master key.** The test creates the Secret each root names in `spec.decryption.secretRef`, holding the key in
   `GITOPS_MASTER_GPG_KEY`, as you apply it by hand on a new management cluster. Flux then applies the encrypted copy
   in the repository over it. The key is needed only when a root decrypts: a repository that uses External Secrets
@@ -157,9 +160,11 @@ Setting up for an example works the same way: without its binding's paths, the t
 `out-of-band-no-flux`, suspends no notification example `Alert` and forces no `ResourceSetInputProvider`. The assertion
 files an example's binding names are left out with it, and every other assertion file is checked.
 
-In the template's own CI, where `GITHUB_REPOSITORY` is `giantswarm/gitops-template`, a check whose example can't be
-found fails instead: there, it's a binding that's gone wrong. `test_the_template_binds_every_example_it_has` checks,
-without a cluster, that every assertion file in the template belongs to an example.
+In the template's own CI, where `GITHUB_REPOSITORY` is `giantswarm/gitops-template`, an example that can't be found
+fails the run instead: there, it's a binding that's gone wrong. That covers the example checks, the assertion files of
+every example, and `test_the_template_binds_every_example_it_has`, which also checks, without a cluster, that every
+assertion file in the template belongs to an example. The template is recognised by that repository name and nothing
+else, so a copy under another name, a renamed template included, skips where the template would fail.
 
 The checks that need no cluster work the same way: the ones of the repository's structure, in `test_root_build.py` and
 `test_namespace_build.py`, run on the root of every management cluster the test applies; the ones that pin the

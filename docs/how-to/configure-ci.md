@@ -63,6 +63,11 @@ prove your secrets decrypt. That has a cost, and it's worth saying plainly:
   write access to the repository as access to the key, and so to every secret it decrypts.
 - GitHub gives a pull request from a fork of your repository no secrets, so an outsider's pull request can't read it;
   the test skips its cluster checks there instead.
+- Flux in the kind cluster uses what it decrypts, as it would in production. Your own `Alert`s and `Provider`s post
+  real commit statuses or chat messages, for the pull request's head commit, with the tokens they decrypt; the test
+  suspends only the template's example `Alert`s. Anything else the repository decrypts that reaches outside the kind
+  cluster, such as a kubeconfig encrypted with SOPS for a `Kustomization` or `HelmRelease` to deploy to a cluster,
+  gets used: Flux applies to that cluster from the pull request's branch.
 
 If that's more than you want to give CI, don't set the secret, and don't run the kind test: stop calling the shared
 workflow from `validate.yaml`, as [Choose tests/ats, Chainsaw or both](../tutorials/advanced/testing.md#choose-testsats-chainsaw-or-both)
@@ -115,6 +120,10 @@ with it. See [What the key in CI means](#what-the-key-in-ci-means) before you se
 checks `main` as it is after a merge, which no pull request run has tested when two pull requests merge one after the
 other. If your fork's default branch has another name, or you want post-merge runs on more branches, list them under
 `on.push.branches`.
+
+The kind test runs the test code of the pull request merged with its base, but its Flux reads the pull request's own
+branch, so update a branch that's behind before you read a kind test failure as yours, see
+[What the test finds in the repository](../reference/ci-checks.md#what-the-test-finds-in-the-repository).
 
 A pull request that changes only Markdown files (`*.md`, anywhere in the repository, `CHANGELOG.md` included) skips
 `validate` and the kind test, as Markdown changes nothing they check. Its first job, `changes`, lists the files the

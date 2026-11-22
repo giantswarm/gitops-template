@@ -40,8 +40,8 @@ that changes more than Markdown. It:
 1. compares the objects with the assertions in `tests/ats/assertions`, and runs the example checks, such as the
    upgrade windows of the `ResourceSet`s and pruning, where the examples are.
 
-None of the first three steps knows a name of yours or of the template's: the test reads them from your files. The
-fourth is the template's own, bound to its examples in [tests/ats/kind-test.yaml](/tests/ats/kind-test.yaml). Once
+None of the first four steps knows a name of yours or of the template's: the test reads them from your files. The
+fifth is the template's own, bound to its examples in [tests/ats/kind-test.yaml](/tests/ats/kind-test.yaml). Once
 you've deleted the examples, as [Configure CI](../../how-to/configure-ci.md#the-kind-test-in-your-fork) tells you to,
 those checks are skipped, each with a line that says which example it missed. A skipped check isn't a failure; it's a
 check with nothing to look at.
