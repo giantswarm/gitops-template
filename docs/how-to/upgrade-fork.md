@@ -388,13 +388,16 @@ export ORG_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}
       `namespace/secrets/kustomization.yaml`. If the organisation doesn't have that directory yet, create it as in
       [Add an organization](./sops.md#add-a-workload-cluster-key-gpg), with its `kustomization.yaml`, and list `secrets`
       in `namespace/kustomization.yaml`. With the master private key in your keyring, for each key file, such as
-      `WC_NAME.gpgkey.enc.yaml`:
+      `WC_NAME.gpgkey.enc.yaml`, decrypt it, change its namespace and encrypt it again on its way into the new file,
+      so the private key never sits in the repository in plain text. This needs `sops` 3.10.0 or newer, see
+      [Tools](../reference/tools.md#tools):
 
       ```sh
       export KEY_FILE=WC_NAME.gpgkey.enc.yaml
       sops --decrypt management-clusters/${MC_NAME}/secrets/${KEY_FILE} |
-        yq '.metadata.namespace = "org-'"${ORG_NAME}"'"' > ${ORG_DIR}/namespace/secrets/${KEY_FILE}
-      sops --encrypt --in-place ${ORG_DIR}/namespace/secrets/${KEY_FILE}
+        yq '.metadata.namespace = "org-'"${ORG_NAME}"'"' |
+        sops --encrypt --filename-override ${ORG_DIR}/namespace/secrets/${KEY_FILE} /dev/stdin \
+        > ${ORG_DIR}/namespace/secrets/${KEY_FILE}
       yq -i '.resources += [strenv(KEY_FILE)]' ${ORG_DIR}/namespace/secrets/kustomization.yaml
       ```
 

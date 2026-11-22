@@ -21,6 +21,7 @@ This directory provides the following tools
 - [fake-flux](https://github.com/giantswarm/gitops-template/blob/main/tools/fake-flux)
 - [validate-helm-values](https://github.com/giantswarm/gitops-template/blob/main/tools/validate-helm-values)
 - [check-directory-readmes](https://github.com/giantswarm/gitops-template/blob/main/tools/check-directory-readmes)
+- [check-sops-encrypted](https://github.com/giantswarm/gitops-template/blob/main/tools/check-sops-encrypted)
 
 ## `test-all-ff`
 
@@ -97,6 +98,31 @@ that README instead.
 ### check-directory-readmes usage
 
 Run it from the root of a git repository, or pass the root as the only argument: `tools/check-directory-readmes [dir]`.
+
+## `check-sops-encrypted`
+
+A file named `*.enc.yaml` is meant to be encrypted with SOPS, and one that isn't puts its secret in Git for good: Git
+keeps history, and a master key in plain text gives away every other key in the repository. `check-sops-encrypted` is
+a seatbelt for that. It fails for a `*.enc.yaml` file git tracks, staged files included, that has a YAML document
+without a top-level `sops` key, the one `sops` adds to every document it encrypts. An empty file fails too. It checks
+the copy in the working tree and the staged copy, so it also catches a file you staged in plain text and encrypted
+afterwards without staging it again.
+
+A file git doesn't know about yet isn't checked until you stage it, so a file you've only just written doesn't stop
+you committing something else. The documented procedures never write one in plain text anyway: they pipe the Secret
+straight into `sops --encrypt`, see [Keep secrets in the repository](/docs/how-to/sops.md). pre-commit runs the check,
+so CI does too, also on a pull request that changes only Markdown. It runs with bash 3.2, as on macOS, and needs only
+`git` and `awk`.
+
+It checks the file's name and the key, not the encryption itself: a file that names `sops` at the top level by hand
+passes. It doesn't look at files with other names, so keep the `.enc.yaml` ending for everything you encrypt, as the
+`.sops.yaml` rules expect anyway.
+
+`test-all-ff validate` checks that the script fails in each of those cases, and passes for a file git doesn't track.
+
+### check-sops-encrypted usage
+
+Run it from the root of a git repository, or pass the root as the only argument: `tools/check-sops-encrypted [dir]`.
 
 ## `validate-helm-values`
 
