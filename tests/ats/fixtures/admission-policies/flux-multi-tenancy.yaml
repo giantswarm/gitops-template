@@ -1,0 +1,175 @@
+# Copied from giantswarm/management-cluster-bases at 54ec7bdb049a14d343999107abe7174cb65fd9f2,
+# bases/flux-app-v2/common/resource-kyverno-policies.yaml, indented for yamllint. See README.md.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: flux-multi-tenancy
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: serviceAccountNameMustBeSet
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - Kustomization
+            - HelmRelease
+      validate:
+        message: "either .spec.serviceAccountName or .spec.kubeConfig.secretRef.name is required"
+        anyPattern:
+          - spec:
+              serviceAccountName: "?*"
+          - spec:
+              kubeConfig:
+                secretRef:
+                  name: "?*"
+    - name: kustomizationSourceRefNamespaceIsSafe
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - Kustomization
+      validate:
+        message: "spec.sourceRef.namespace must be the same as metadata.namespace or 'default'"
+        anyPattern:
+          - spec:
+              sourceRef:
+                =(namespace): "default"
+          - spec:
+              sourceRef:
+                =(namespace): "{{request.object.metadata.namespace}}"
+    - name: helmReleaseSourceRefNamespaceIsSafe
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - HelmRelease
+      validate:
+        message: >-
+          Both, the .spec.chart.spec.sourceRef and the .spec.chartRef, field are allowed to unconditionally refer to either default or local namespace.
+        anyPattern:
+          - spec:
+              chart:
+                spec:
+                  sourceRef:
+                    =(namespace): "default"
+          - spec:
+              chartRef:
+                =(namespace): "default"
+          - spec:
+              chartRef:
+                =(namespace): "{{request.object.metadata.namespace}}"
+          - spec:
+              chart:
+                spec:
+                  sourceRef:
+                    =(namespace): "{{request.object.metadata.namespace}}"
+    - name: targetNamespaceMustBeLocal
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - Kustomization
+            - HelmRelease
+      validate:
+        message: "spec.targetNamespace must be the same as metadata.namespace unless kubeConfig.secretRef.name is set"
+        anyPattern:
+          - spec:
+              =(targetNamespace): "{{request.object.metadata.namespace}}"
+          - spec:
+              =(targetNamespace): "org-* & !org-giantswarm"
+          - spec:
+              kubeConfig:
+                secretRef:
+                  name: "?*"
+    - name: storageNamespaceMustBeLocal
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - HelmRelease
+      validate:
+        message: "spec.storageNamespace must be the same as metadata.namespace unless kubeConfig.secretRef.name is set"
+        anyPattern:
+          - spec:
+              =(storageNamespace): "{{request.object.metadata.namespace}}"
+          - spec:
+              kubeConfig:
+                secretRef:
+                  name: "?*"
+    - name: alertEventSourcesMustBeLocal
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - Alert
+      validate:
+        message: "spec.eventSources namespaces must be the same as metadata.namespace"
+        foreach:
+          - list: "request.object.spec.eventSources"
+            pattern:
+              =(namespace): "{{request.object.metadata.namespace}}"
+    - name: receiverResourcesMustBeLocal
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - Receiver
+      validate:
+        message: "spec.resources namespaces must be the same as metadata.namespace"
+        foreach:
+          - list: "request.object.spec.resources"
+            pattern:
+              =(namespace): "{{request.object.metadata.namespace}}"
+    - name: imagePolicyRepositoryMustBeLocal
+      exclude:
+        resources:
+          namespaces:
+            - "flux-giantswarm"
+            - "giantswarm"
+            - "monitoring"
+      match:
+        resources:
+          kinds:
+            - ImagePolicy
+      validate:
+        message: "spec.imageRepositoryRef namespace must be the same as metadata.namespace"
+        pattern:
+          spec:
+            imageRepositoryRef:
+              =(namespace): "{{request.object.metadata.namespace}}"

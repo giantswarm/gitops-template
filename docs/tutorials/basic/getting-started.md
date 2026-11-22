@@ -94,7 +94,9 @@ You need:
   your copy "your fork" either way.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
-them where they are, as complete examples to check your own files against.
+them where they are, as complete examples to check your own files against. CI's kind test doesn't ignore them, though:
+[Configure CI](../../how-to/configure-ci.md#the-kind-test-in-your-fork) says what to delete, or set, before your first
+pull request.
 
 `kubectl gs gitops` can write most of the files in this tutorial for you, and each step names the command that does.
 You write them by hand here, so that you know what each one is for when you come to change it.

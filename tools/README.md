@@ -9,7 +9,8 @@ The tools provided here may require the following external tools
 - [yamllint](https://github.com/adrienverge/yamllint)
 - [kubeconform](https://github.com/yannh/kubeconform); CI uses 0.8.0
 - `curl`, `sha256sum` and `tar`, to fetch the Flux CRD schemas
-- [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli)
+- [flux](https://fluxcd.io/flux/installation/#install-the-flux-cli), for `fake-flux` on its own: `test-all-ff` brings its
+  own, see below
 - [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/binaries/)
 - [helm](https://helm.sh/docs/intro/install/), for `validate-helm-values`
 
@@ -56,6 +57,15 @@ this order:
 The versions are variables at the top of `test-all-ff`. If you add a resource whose kind is in none of these sources,
 add a `-schema-location` for it to the script.
 
+`fake-flux` builds with the Flux CLI of the same version, whatever `flux` you have installed: `test-all-ff` downloads
+the `v2.7.5` release archive for Linux or macOS on amd64 or arm64 once and keeps it under
+`${TMPDIR:-/tmp}/gitops-template-schemas`. Every run checks the archive's SHA-256 against the one at the top of the
+script, unpacks the CLI into the run's own temporary directory and puts it first in the `PATH` it runs `fake-flux`
+with, so a cached CLI is never run unchecked. A cached archive that doesn't match fails the run: delete it to download
+it again. `validate` checks that the CLI is that version, and that a changed archive is refused. When you move
+`FLUX_VERSION`, move the CLI checksums and `FLUX_CRD_SCHEMAS_SHA256` with it, from the release's
+`flux_<version>_checksums.txt` and `crd-schemas.tar.gz`.
+
 ### test-all-ff usage
 
 - `validate` Tests all found flux kustomizations with `yamllint`, `kubeconform` and `validate-helm-values`
@@ -85,15 +95,18 @@ on macOS.
 
 Some leaves are copies of one shape, such as the stages, the regions or an example cluster's `cluster/` and `apps/`.
 One README in the parent covers them, and the `COVERED` list at the top of the script names each one with its parent.
-The check fails for an entry whose directory is gone, and for a parent README that doesn't name a leaf it covers in
-backticks, as its path relative to the parent followed by a slash, such as `` `dev/` ``. A longer path doesn't count:
-`` `apps/cert-manager/` `` doesn't name `apps/`.
+The check fails for an entry whose directory is gone while its parent is still there, and for a parent README that
+doesn't name a leaf it covers in backticks, as its path relative to the parent followed by a slash, such as
+`` `dev/` ``. A longer path doesn't count: `` `apps/cert-manager/` `` doesn't name `apps/`.
 
 When you add a directory to the template's examples, give it a README. If it's a base, also list it in `SHIPPED`, or the
 check skips it. If it's another copy of a shape a parent README already describes, list it in `COVERED` and name it in
 that README instead.
 
-`test-all-ff validate` checks that the script fails in each of those cases, and passes for a customer's own directories.
+An entry whose parent is gone too went with its example, so a fork that deletes `management-clusters/MC_NAME` passes.
+`test-all-ff validate` checks that the script fails in each of those cases, and passes for a customer's own directories
+and in a fork without the examples. Those cases change the examples, so a fork that deleted them skips them, and says
+so.
 
 ### check-directory-readmes usage
 
@@ -147,7 +160,8 @@ also fails for a `ResourceSet` without a namespace, or one that renders with `sp
 it can't render, as [testdata/resource-set-unsupported.yaml](testdata/resource-set-unsupported.yaml) checks. The
 provider's namespace, `<< inputs.provider.namespace >>` or `<< inputs.SOURCE.provider.namespace >>` with `Permute`,
 is the `ResourceSet`'s own. Rendered objects that still have a `<< ... >>` template in them, such as the ones named
-after an entry of the `ResourceSet`'s `spec.inputs`, are left out.
+after an entry of the `ResourceSet`'s `spec.inputs`, are left out, and the script names each one it leaves out, as
+`ResourceSet <namespace>/<name>: <kind> <name> left out`. Only the kind test checks them.
 
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
 `reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values

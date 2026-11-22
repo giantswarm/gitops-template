@@ -29,7 +29,7 @@
 # gets the provider's version range instead; a fixed tag stays. The check fails when it can't
 # tell which provider's range that is, rather than guess. A rendered object that still has a
 # `<< ... >>` template in it after that, such as one named after an entry of `spec.inputs`, is
-# left out. It also fails for a ResourceSet without a namespace, or one that renders with
+# left out, and the check says so, naming it. It also fails for a ResourceSet without a namespace, or one that renders with
 # `spec.resourcesTemplate`, as it can't render those.
 #
 # Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the
@@ -73,7 +73,7 @@ function object() {
 # Print the objects each Flux Operator ResourceSet in the manifest renders, with the version
 # range of its provider in place of an OCIRepository's templated tag, and the ResourceSet's
 # namespace in place of the provider's namespace. Objects with a template left in them are left
-# out. Fail when a ResourceSet renders an OCIRepository with a template
+# out, and added to left_out. Fail when a ResourceSet renders an OCIRepository with a template
 # only in its ref, whose range can't be found: its one `inputsFrom` entry has to name a
 # provider in the manifest that has a `spec.filter.semver`. A guess, such as the newest chart,
 # would validate the wrong values.
@@ -109,7 +109,11 @@ function resource_set_objects() {
 		fi
 		# the namespace of the provider, which is the ResourceSet's: `inputsFrom` reads only its own
 		provider_ns='(.spec.resources[] | .. | select(tag == "!!str")) |= sub("<<\\s*inputs\\.(\\w+\\.)?provider\\.namespace\\s*>>", strenv(NS))'
-		objects=$(NS="${ns}" RANGE="${range}" yq "${provider_ns} | (.spec.resources[] | select(${templated}) | .spec.ref) = {\"semver\": strenv(RANGE)} | .spec.resources[] | select(to_yaml | test(\"<<\") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc" <<<"${rset}")
+		resolved=$(NS="${ns}" RANGE="${range}" yq "${provider_ns} | (.spec.resources[] | select(${templated}) | .spec.ref) = {\"semver\": strenv(RANGE)}" <<<"${rset}")
+		objects=$(NS="${ns}" yq '.spec.resources[] | select(to_yaml | test("<<") | not) | .metadata.namespace = (.metadata.namespace // strenv(NS)) | split_doc' <<<"${resolved}")
+		while IFS= read -r object; do
+			[ -n "${object}" ] && left_out+=("ResourceSet ${ns}/${name}: ${object} left out, as a << ... >> template is left in it that only Flux Operator fills in")
+		done < <(yq -N '.spec.resources[] | select(to_yaml | test("<<")) | .kind + " " + .metadata.name' <<<"${resolved}")
 		echo "---"
 		echo "${objects}"
 	done < <(yq -N 'select(.kind == "ResourceSet") | (.metadata.namespace // "") + "/" + .metadata.name' "${manifest}")
@@ -151,7 +155,9 @@ function pull_chart() {
 	ls "${dir}"/*.tgz
 }
 
-# Check what the ResourceSets render as if it were in the manifest itself.
+# Check what the ResourceSets render as if it were in the manifest itself. What they render with
+# a template left in it is listed in left_out, and reported with the HelmReleases.
+left_out=()
 expanded="${work_dir}/manifest.yaml"
 cat "${manifest}" >"${expanded}"
 echo >>"${expanded}"
@@ -311,6 +317,10 @@ while IFS=/ read -r ns name; do
 		echo "${id}: ${n}"
 	done
 done < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
+
+for n in "${left_out[@]}"; do
+	echo "${n}"
+done
 
 if [ "${failed}" -ne 0 ]; then
 	exit 1

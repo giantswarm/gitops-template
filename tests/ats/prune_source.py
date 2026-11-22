@@ -13,7 +13,6 @@ with a patch in its own `spec.patches`: it applies itself, but leaves the field 
 
 import pykube
 from checks.conditions import obj_key
-from conftest import FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE
 from flux_inventory import (
     build_failure_problems,
     dependency_wait_problems,
@@ -21,6 +20,7 @@ from flux_inventory import (
     left_out_problems,
 )
 from flux_reconcile import repo_problems, request_reconcile, wait_until
+from kind_config import kind_test_config
 from organization_operator import ready_problems
 from prune_objects import (
     APPS_KUSTOMIZATION,
@@ -28,6 +28,7 @@ from prune_objects import (
     KEPT_BY_FAILED_BUILD,
     KEPT_BY_WAITING_ORGANIZATION,
     LEFT_OUT_KUSTOMIZATION,
+    MANAGEMENT_CLUSTER,
     ORGANIZATION_KUSTOMIZATION,
     PRUNE_TIMEOUT_SEC,
     PRUNED_OBJECTS,
@@ -39,12 +40,20 @@ from pytest_helm_charts.flux.git_repository import GitRepositoryCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 
 
+class NoGitRepositoryError(ValueError):
+    """The example's root reads no GitRepository, so there's none to change."""
+
+    def __init__(self, mc: str) -> None:
+        super().__init__(f"The root of {mc} reads no GitRepository")
+
+
 def git_repository(api: pykube.HTTPClient) -> APIObject:
-    return (
-        GitRepositoryCR.objects(api)
-        .filter(namespace=FLUX_OBJECTS_NAMESPACE)
-        .get(name=FLUX_GIT_REPO_NAME)
-    )
+    """The GitRepository the example's management cluster reads."""
+    ref = kind_test_config().root(MANAGEMENT_CLUSTER).git_repository
+    if ref is None:
+        raise NoGitRepositoryError(MANAGEMENT_CLUSTER)
+    namespace, name = ref
+    return GitRepositoryCR.objects(api).filter(namespace=namespace).get(name=name)
 
 
 def kustomization(api: pykube.HTTPClient, key: tuple[str, str]) -> APIObject:
