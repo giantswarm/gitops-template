@@ -4,38 +4,23 @@ metadata:
   name: kyverno-generate
 spec:
   description: >-
-    The secret-stores example: Kyverno has both NamespacedGeneratingPolicies in its webhook, and
-    they have given the cluster its ExternalSecret and its SecretStore, both Ready. The test
-    only reads.
+    The secret-stores example: its Kyverno Policy is Ready and has given the cluster its
+    ExternalSecret and its SecretStore, both Ready. The test only reads.
   timeouts:
     assert: 2m
   steps:
-    - name: Kyverno acts on the policies
+    - name: the policy is ready
       try:
-        # `WebhookConfigured`, not `ready`: a policy's `ready` also needs Kyverno's reports
-        #  controller to read Secrets across the cluster, which has nothing to do with generating
         - assert:
             resource:
-              apiVersion: policies.kyverno.io/v1
-              kind: NamespacedGeneratingPolicy
+              apiVersion: kyverno.io/v1
+              kind: Policy
               metadata:
-                name: ($values.secretStores.authPolicy)
+                name: ($values.secretStores.policy)
                 namespace: ($values.organizationNamespace)
               status:
-                conditionStatus:
-                  (conditions[?type == 'WebhookConfigured']):
-                    - status: "True"
-        - assert:
-            resource:
-              apiVersion: policies.kyverno.io/v1
-              kind: NamespacedGeneratingPolicy
-              metadata:
-                name: ($values.secretStores.storePolicy)
-                namespace: ($values.organizationNamespace)
-              status:
-                conditionStatus:
-                  (conditions[?type == 'WebhookConfigured']):
-                    - status: "True"
+                (conditions[?type == 'Ready']):
+                  - status: "True"
     - name: the cluster's credentials are written
       try:
         - assert:
@@ -47,7 +32,7 @@ spec:
                 namespace: ($values.organizationNamespace)
                 labels:
                   app.kubernetes.io/managed-by: kyverno
-                  generate.kyverno.io/policy-name: ($values.secretStores.authPolicy)
+                  generate.kyverno.io/policy-name: ($values.secretStores.policy)
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"
@@ -62,7 +47,7 @@ spec:
                 namespace: ($values.organizationNamespace)
                 labels:
                   app.kubernetes.io/managed-by: kyverno
-                  generate.kyverno.io/policy-name: ($values.secretStores.storePolicy)
+                  generate.kyverno.io/policy-name: ($values.secretStores.policy)
               status:
                 (conditions[?type == 'Ready']):
                   - status: "True"

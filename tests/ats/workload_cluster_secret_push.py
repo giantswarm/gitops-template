@@ -2,7 +2,7 @@
 
 The out-of-band-no-flux cluster's apps push a password, made by ESO's Password generator, into
 the workload cluster through `<cluster>-eso-cluster-store`, which the Kyverno policy
-`generate-eso-cluster-store-from-cluster-auth` generates. The test's vCluster stands in for the
+`generate-eso-cluster-auth-from-kubeconfig` generates. The test's vCluster stands in for the
 cluster. workload_cluster_secret_stores.py calls the check once the store is Ready: it waits
 for the PushSecret to get Ready and for the Secret it writes to hold the password.
 """

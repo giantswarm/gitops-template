@@ -16,7 +16,7 @@ organisation's namespace Kustomization applies [`secret-stores/`](secret-stores/
 - `kustomization.yaml`: lists `apps.yaml`, and leaves out the two directories: `apps.yaml` applies `apps/`, and the
   organisation's namespace Kustomization applies `secret-stores/`, which has no Kustomization of its own.
 - [`apps/`](apps/): apps on several clusters, one `ResourceSet` each.
-- [`secret-stores/`](secret-stores/): two Kyverno policies that give each workload cluster a `SecretStore`.
+- [`secret-stores/`](secret-stores/): a Kyverno policy that gives each workload cluster a `SecretStore`.
 
 ## When you copy it
 

@@ -2,7 +2,7 @@
 
 The out-of-band-no-flux cluster's apps push its kubeconfig Secret, as Cluster API writes it,
 into the cluster `tools-cluster`, through `tools-cluster-eso-cluster-store`, which the Kyverno
-policies in the organisation's multicluster/secret-stores generate from that cluster's own
+policy in the organisation's multicluster/secret-stores generates from that cluster's own
 kubeconfig Secret. The test has no tools cluster: organization_operator writes a kubeconfig
 Secret for it with the vCluster's kubeconfig, so the vCluster stands in for it as well.
 workload_cluster_secret_stores.py calls the check once the stores are Ready: it waits for the

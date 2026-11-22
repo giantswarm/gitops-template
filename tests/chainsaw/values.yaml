@@ -21,8 +21,7 @@ externalSecret:
   key: values
   helmRelease: out-of-band-no-flux-hello-world-standalone
 
-# kyverno-generate: the two Kyverno policies of multicluster/secret-stores. The test looks for
-# what they generate for `cluster` in `organizationNamespace`.
+# kyverno-generate: the Kyverno Policy of multicluster/secret-stores, in
+# `organizationNamespace`. The test looks for what it generates for `cluster` there.
 secretStores:
-  authPolicy: generate-eso-cluster-auth-from-kubeconfig
-  storePolicy: generate-eso-cluster-store-from-cluster-auth
+  policy: generate-eso-cluster-auth-from-kubeconfig

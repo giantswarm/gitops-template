@@ -3,7 +3,7 @@
 `management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/pushed-password`
 
 A generated password pushed into the workload cluster through `${cluster_name}-eso-cluster-store`, the `SecretStore`
-that the Kyverno policies in the organisation's `multicluster/secret-stores/` make for every cluster. Nothing about
+that the Kyverno policy in the organisation's `multicluster/secret-stores/` makes for every cluster. Nothing about
 the password is kept in Git.
 
 The cluster's apps Kustomization, `WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml`, applies it into `org-<name>` once the

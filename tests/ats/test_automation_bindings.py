@@ -75,17 +75,9 @@ def test_no_kyverno_binding_in_default() -> None:
     assert ("RoleBinding", "default", KYVERNO) not in objects(["default", "org-a"])
 
 
-KYVERNO_TRIGGERS = "list-kyverno-generating-policy-triggers"
-
-
-def test_kyverno_may_list_secrets_cluster_wide() -> None:
-    # a NamespacedGeneratingPolicy lists its triggers across the whole cluster for
-    #  generateExisting, so the background controller needs `list` on Secrets cluster-wide
-    got = objects(["default", "org-a"])
-    role = got[("ClusterRole", "", KYVERNO_TRIGGERS)]
-    crb = got[("ClusterRoleBinding", "", KYVERNO_TRIGGERS)]
-    assert (role["rules"], crb["roleRef"], crb["subjects"]) == (
-        [{"apiGroups": [""], "resources": ["secrets"], "verbs": ["list"]}],
-        ref("ClusterRole", KYVERNO_TRIGGERS),
-        [sa("kyverno", "kyverno-background-controller")],
-    )
+def test_no_cluster_wide_kyverno_binding() -> None:
+    # rbac-operator binds the background controller in the organisation namespaces only
+    kyverno = sa("kyverno", "kyverno-background-controller")
+    for (kind, _, name), o in objects(["default", "org-a"]).items():
+        if kind == "ClusterRoleBinding":
+            assert kyverno not in o["subjects"], name
