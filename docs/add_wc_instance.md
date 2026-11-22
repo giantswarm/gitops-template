@@ -10,7 +10,7 @@ See [the WC_NAME cluster](/management-clusters/MC_NAME/organizations/ORG_NAME/wo
 ## Creating a cluster from the CAPA cluster base
 
 See [Create a workload cluster](tutorials/basic/getting-started.md#3-create-a-workload-cluster),
-[Give a cluster its own values](how-to/cluster-values.md#give-a-cluster-its-own-values) and
+[Give a cluster its own values](how-to/cluster-values.md#write-the-clusters-values-configmap) and
 [Workload cluster](how-to/kubectl-gs.md#workload-cluster).
 
 ## Recommended next steps

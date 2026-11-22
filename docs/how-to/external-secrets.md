@@ -6,13 +6,14 @@ repository holds only `ExternalSecret`s that say which secret goes where, so no 
 every Giant Swarm management cluster. For when to use it rather than SOPS, or alongside it, see
 [Secrets](../explanation/secrets.md).
 
-Export the names the commands use:
+Export the names the commands use. `SECRET_STORE` is the name of the `SecretStore`s in `default` and
+`org-${ORG_NAME}`:
 
 ```sh
 export MC_NAME=CODENAME
 export ORG_NAME=ORGANIZATION
 export WC_NAME=CLUSTER_NAME
-export SECRET_STORE=STORE_NAME       # name of the SecretStores in `default` and `org-${ORG_NAME}`
+export SECRET_STORE=STORE_NAME
 ```
 
 ## Create a SecretStore for your secret manager
@@ -82,6 +83,8 @@ kubectl get secretstore -n org-${ORG_NAME}
 kubectl get secretstore -n default
 ```
 
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
+
 ## A secret store for testing
 
 The docs and the examples read secrets through a `SecretStore` named `gitops-test` in the `default` namespace and one
@@ -95,10 +98,11 @@ the store object itself, so it needs no secret manager and no extra credentials.
 > the stores when you're done.
 
 Create a store with the values the docs and examples read, first in `default`, then again in `org-${ORG_NAME}` once
-the organisation's namespace exists. The tokens are dummies, the same ones the kind test uses:
+the organisation's namespace exists, with `STORE_NAMESPACE=org-${ORG_NAME}`. The tokens are dummies, the same ones
+the kind test uses:
 
 ```sh
-export STORE_NAMESPACE=default  # then org-${ORG_NAME}
+export STORE_NAMESPACE=default
 cat <<'EOF' | kubectl apply -n "${STORE_NAMESPACE}" -f -
 apiVersion: external-secrets.io/v1
 kind: SecretStore
@@ -198,6 +202,8 @@ it by hand or keeping it in the repository encrypted, let ESO write it from your
     kubectl get externalsecret github-https-credentials -n default
     ```
 
+    If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
+
 Apply it by hand, as above, before Flux reads the repository for the first time. To keep it in Git from then on, save
 the same manifest in `management-clusters/${MC_NAME}`, with `${SECRET_STORE}` and `${GITHUB_TOKEN_KEY}` written out,
 and the management cluster's `Kustomization` applies it with the rest. When you rotate the token, change it in your
@@ -279,6 +285,8 @@ see [App values](../reference/values.md#app-values). An `ExternalSecret` next to
 ```sh
 kubectl get externalsecret ${WC_NAME}-${APP_NAME}-user-secrets -n org-${ORG_NAME}
 ```
+
+If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
 
 For a complete example, see the
 [`ExternalSecret` of hello-world](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world/externalsecret.yaml)

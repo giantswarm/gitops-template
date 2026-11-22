@@ -67,9 +67,9 @@ ConfigMap, which every Giant Swarm management cluster has:
 - A [Kyverno](https://kyverno.io/) policy, `sync-cluster-app-configmap-to-org-namespaces`, copies it into every `org-*`
   namespace, where the cluster's `HelmRelease` can read it. The policy is a
   [generate rule](https://kyverno.io/docs/policy-types/cluster-policy/generate/) that clones the ConfigMap from the
-  `giantswarm` namespace with `synchronize: true`, so Kyverno creates the copy in every new organization namespace and
+  `giantswarm` namespace with `synchronize: true`, so Kyverno creates the copy in every new organisation namespace and
   updates the copies when the original changes. Giant Swarm ships the policy with `kyverno-policies-ux` 0.14.0 and
-  newer. On a management cluster with an older `kyverno-policies-ux`, the organization namespaces don't have the
+  newer. On a management cluster with an older `kyverno-policies-ux`, the organisation namespaces don't have the
   ConfigMap, and every cluster `HelmRelease` made from this base fails. Flux reports
   `could not resolve ConfigMap chart values reference '<namespace>/cluster-app-installation-values' with key
   'values.yaml': configmaps "cluster-app-installation-values" not found`. The entry is required on purpose: a cluster
@@ -101,14 +101,14 @@ same, but the `HelmRelease` reads more values, see below. `cluster_config.yaml` 
   [node pool components](/bases/environments/regions/eu_central/node_pool/) and the `WC_NAME` examples do, would get
   an extra `nodepool0` as well.
 
-The `HelmRelease` differs as well. `kubectl gs gitops add base` (6.0.0 and newer) only reads
-`${cluster_name}-config`, so a cluster made from its base gets no `global.managementCluster` or
-`global.connectivity.baseDomain`, which `release-aws` requires. This base adds `cluster-app-installation-values`
-before it, with the [values from the management cluster](#values-from-the-management-cluster). The region isn't
-in the base: each cluster adds it with a component.
-
-If you create a base with `kubectl gs gitops add base`, add the entry to its `HelmRelease`, see
-[Create a cluster base for another provider](/docs/how-to/cluster-base-provider.md#write-the-base).
+From kubectl-gs X.Y.Z on, the `OCIRepository` and the `HelmRelease` are the same as this base's, comments aside: both
+have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, and
+the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`, with the
+[values from the management cluster](#values-from-the-management-cluster). Older releases leave out the annotation
+and that entry, and before 7.0.0 the label, so a cluster made from their base gets no `global.managementCluster` or
+`global.connectivity.baseDomain`, which `release-aws` requires: add them, see
+[Create a cluster base for another provider](/docs/how-to/cluster-base-provider.md#write-the-base). The region isn't in
+either base: each cluster adds it with a component.
 
 ## When you copy it
 
@@ -120,5 +120,5 @@ directory and keep the deletion protection in `cluster.yaml` and `cluster-app-in
 ## Read more
 
 - [Cluster bases tutorial](/docs/tutorials/intermediate/cluster-bases.md)
-- [Give a cluster its own values](/docs/how-to/cluster-values.md#give-a-cluster-its-own-values)
+- [Give one cluster its own values](/docs/how-to/cluster-values.md#write-the-clusters-values-configmap)
 - [Cluster values](/docs/reference/values.md#cluster-values)

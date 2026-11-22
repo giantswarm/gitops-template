@@ -37,28 +37,29 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 
 ## How-to guides
 
+- [When something isn't Ready](./how-to/troubleshooting.md): what a red status means, and how to recover.
 - [Add an app](./how-to/add-app.md) to one cluster.
-- [Update an app](./how-to/update-app.md): its version, how it's installed, or its values.
-- [Give a cluster its own values](./how-to/cluster-values.md).
-- [Keep secrets in the repository with SOPS](./how-to/sops.md).
+- [Change an app](./how-to/update-app.md): its version, how it's installed, or its values.
+- [Give one cluster its own values](./how-to/cluster-values.md).
+- [Keep secrets in the repository](./how-to/sops.md) with SOPS.
 - [Read secrets from a secret manager with External Secrets Operator](./how-to/external-secrets.md).
 - [Put secrets into new workload clusters](./how-to/workload-cluster-secrets.md).
 - [Give every organisation the same object](./how-to/share-objects.md).
 - [Delete a workload cluster](./how-to/delete-cluster.md) and everything it uses.
 - [Let kubectl-gs write the files](./how-to/kubectl-gs.md), and what to fix afterwards.
-- [Create a cluster base for a provider other than CAPA](./how-to/cluster-base-provider.md).
+- [Create a cluster base for another provider](./how-to/cluster-base-provider.md), other than CAPA.
 - [Move a running cluster to scheduled upgrades](./how-to/scheduled-upgrades-existing-cluster.md) without changing it.
 - [Report reconcile status on GitHub commits](./how-to/commit-statuses.md).
 - [Bring an older fork up to date](./how-to/upgrade-fork.md).
 - [Check a change before you push](./how-to/check-changes.md).
-- [Set up the workflows in a fork](./how-to/configure-ci.md).
+- [Configure CI in a fork](./how-to/configure-ci.md).
 
 ## Reference
 
 - [Repository structure](./reference/repo-structure.md): every directory and file, and the rules for them.
 - [SOPS keys](./reference/sops-keys.md): which key decrypts what.
 - [Values](./reference/values.md): the `valuesFrom` layers of clusters and apps, in order.
-- [Tools](./reference/tools.md): the tools the docs use, and the kubectl-gs version each command needs.
+- [Tools and versions](./reference/tools.md): the tools the docs use, and the kubectl-gs version each command needs.
 - [CI checks](./reference/ci-checks.md): what each CI job and test checks.
 
 ## Explanation

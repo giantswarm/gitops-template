@@ -14,33 +14,23 @@ provider: `capa`, `capz` or `vsphere`. For example, for CAPZ, which also needs a
 kubectl gs gitops add base --provider capz --region westeurope --azure-subscription-id SUBSCRIPTION_ID
 ```
 
-It writes three files, into `bases/clusters/capz/template`:
+It writes three files, into `bases/clusters/capz`, where the [naming](../reference/repo-structure.md#naming) rules put
+a provider's base, and the path `kubectl gs gitops add workload-cluster --base` takes:
 
-- `cluster.yaml` with the `OCIRepository` of the `release-azure` chart and the `HelmRelease`;
-- `cluster_config.yaml` with the default values, the region and the subscription among them;
+- `cluster.yaml` with the `OCIRepository` of the `release-azure` chart and the `HelmRelease`, both protected with the
+  `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, see
+  [Deletion protection](../explanation/deletion-protection.md);
+- `cluster_config.yaml` with the default values, the region and the subscription among them, and
+  `global.metadata.preventDeletion: true`, so the chart labels the `Cluster` too;
 - `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap.
 
-Move them up into `bases/clusters/capz`, where the [naming](../reference/repo-structure.md#naming) rules put a
-provider's base:
+That's kubectl-gs X.Y.Z and newer. Older releases write the base into `bases/clusters/capz/template`, which you move up
+a level, without the annotation, and before 7.0.0 without the label and `preventDeletion`, which you add:
 
 ```sh
 mv bases/clusters/capz/template/* bases/clusters/capz/ && rmdir bases/clusters/capz/template
-```
-
-kubectl-gs 7.0.0 and newer put the `giantswarm.io/prevent-deletion` label on the `HelmRelease` and the
-`OCIRepository`, and set `global.metadata.preventDeletion` in `cluster_config.yaml`. No release writes the
-`kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so add it to both, as the CAPA base has it, see
-[Deletion protection](../explanation/deletion-protection.md). The command below sets the label as well, which an older
-kubectl-gs doesn't write:
-
-```sh
 yq -i '.metadata.annotations["kustomize.toolkit.fluxcd.io/prune"] = "disabled" |
   .metadata.labels["giantswarm.io/prevent-deletion"] = "true"' bases/clusters/capz/cluster.yaml
-```
-
-With kubectl-gs older than 7.0.0, also set `global.metadata.preventDeletion`, so the chart labels the `Cluster`:
-
-```sh
 yq -i '.global.metadata.preventDeletion = true' bases/clusters/capz/cluster_config.yaml
 ```
 
@@ -50,9 +40,10 @@ expects.
 
 ## Add the management cluster's values
 
-The `HelmRelease` the command writes only reads `${cluster_name}-config`. Add the `cluster-app-installation-values`
-entry in front of it, as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, or the chart misses
-`global.managementCluster` and `global.connectivity.baseDomain`:
+From kubectl-gs X.Y.Z on, the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`,
+as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, and there's nothing to add. An older release's reads only
+`${cluster_name}-config`: add the entry in front of it, or the chart misses `global.managementCluster` and
+`global.connectivity.baseDomain`:
 
 ```yaml
   valuesFrom:
