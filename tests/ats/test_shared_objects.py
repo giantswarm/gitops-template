@@ -13,6 +13,7 @@ from shared_objects import (
     copy_problems,
     source_config_map,
 )
+from kind_config import require_example
 
 SOURCE = {"data": {"ca.crt": "pem"}}
 
@@ -61,11 +62,13 @@ def test_copy_namespaces_of_the_organisations_that_list_the_source(
 
 
 def test_copy_namespaces_of_the_example() -> None:
+    require_example("shared-objects")
     # the example organisation lists the source, so Flux applies a copy into its namespace
     assert copy_namespaces(ORGANIZATIONS_DIR) == ["org-org-name"]
 
 
 def test_example_copy_names_no_namespace() -> None:
+    require_example("shared-objects")
     # the organisation's namespace Kustomization puts it in the organisation's namespace
     kustomization = yaml.safe_load(
         (

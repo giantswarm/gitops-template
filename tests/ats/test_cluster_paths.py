@@ -5,6 +5,7 @@ from pathlib import Path
 
 import yaml
 from repository_gates import WORKLOAD_CLUSTERS_DIR
+from kind_config import require_example
 
 # the directory each Kustomization applies, relative to the organisation's workload-clusters/:
 #  the cluster's applies `cluster/`, the apps one the cluster root, a -direct one `out-of-band/`
@@ -35,12 +36,14 @@ def _kustomization_paths(directory: Path) -> dict[str, str]:
 
 
 def test_cluster_kustomization_paths() -> None:
+    require_example("organisation")
     assert _kustomization_paths(WORKLOAD_CLUSTERS_DIR) == {
         file: PREFIX + path for file, path in EXPECTED_PATHS.items()
     }
 
 
 def test_cluster_roots_leave_out_cluster_and_out_of_band() -> None:
+    require_example("organisation")
     # without a kustomization.yaml, Flux would apply every directory below the cluster
     #  root, out-of-band/ too, to the management cluster
     for path in {path for path in EXPECTED_PATHS.values() if "/" not in path}:

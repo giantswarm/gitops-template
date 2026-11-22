@@ -1,45 +1,70 @@
 """G1: which clusters gate their secondary apps, and how cluster_gate judges what Flux did,
-without a cluster."""
+without a cluster.
+
+A gate is a Kustomization that health-checks a Cluster API `Cluster`, and the Kustomizations that
+depend on it. The test finds them in the cluster once the organisations' Kustomizations have
+applied them, so it needs no list of the repository's clusters: a fork's own clusters get their
+stand-in `Cluster`s too. The base apps a cluster's Kustomization applies before the cluster is
+Available are `clusterBaseApps` in kind-test.yaml.
+"""
 
 from typing import NamedTuple
 
 from flux_inventory import DEPENDENCY_NOT_READY, inventory_keys
 
+CLUSTER_KIND = "Cluster"
+
 
 class Gate(NamedTuple):
-    """The Kustomizations of a cluster with apps, and the base apps the cluster's applies."""
+    """A Cluster, the Kustomization that health-checks it, in the Cluster's namespace, the
+    Kustomizations that depend on that one, by `namespace/name`, and the base apps the cluster's
+    Kustomization applies, the HelmReleases in the Cluster's namespace."""
 
+    namespace: str
+    cluster: str
     cluster_kustomization: str
-    apps_kustomization: str
-    # the HelmReleases of the base apps, which don't wait for the cluster
+    dependents: list[str]
     base_apps: list[str]
 
 
-# the namespace of the clusters, and of their Kustomizations
-CLUSTERS_NAMESPACE = "org-org-name"
-# the base apps of the out-of-band clusters: the Gateway API stack of bases/stacks/envoy-gateway
-GATEWAY_API_STACK = ["gateway-api-crds", "envoy-gateway", "gateway-api-config"]
-# the clusters with apps, by the name of their `Cluster`
-GATES: dict[str, Gate] = {
-    "capi-wc-name": Gate(
-        "mc-name-clusters-capi-wc-name", "mc-name-clusters-capi-wc-name-apps", []
-    ),
-    "out-of-band-flux-app": Gate(
-        "mc-name-clusters-out-of-band-flux-app",
-        "mc-name-clusters-out-of-band-flux-app-apps",
-        [f"out-of-band-flux-app-{app}" for app in GATEWAY_API_STACK],
-    ),
-    "out-of-band-no-flux": Gate(
-        "mc-name-clusters-out-of-band-no-flux",
-        "mc-name-clusters-out-of-band-no-flux-apps",
-        [f"out-of-band-no-flux-{app}" for app in GATEWAY_API_STACK],
-    ),
-}
+def _depends_on(kustomization: dict, namespace: str, name: str) -> bool:
+    own = kustomization["metadata"].get("namespace", "default")
+    return any(
+        d.get("name") == name and d.get("namespace", own) == namespace
+        for d in (kustomization.get("spec") or {}).get("dependsOn") or []
+    )
+
+
+def gates_in_cluster(
+    kustomizations: dict[str, dict], base_apps: dict[str, list[str]]
+) -> list[Gate]:
+    """The gates of `kustomizations`, by `namespace/name`, sorted by Cluster, with the base apps
+    of `base_apps`, by the Cluster's `namespace/name`."""
+    gates = []
+    for k in kustomizations.values():
+        namespace = k["metadata"].get("namespace", "default")
+        name = k["metadata"]["name"]
+        for check in (k.get("spec") or {}).get("healthChecks") or []:
+            if check.get("kind") != CLUSTER_KIND:
+                continue
+            cluster_namespace = check.get("namespace", namespace)
+            gates.append(
+                Gate(
+                    cluster_namespace,
+                    check["name"],
+                    name,
+                    sorted(
+                        key
+                        for key, d in kustomizations.items()
+                        if _depends_on(d, namespace, name)
+                    ),
+                    base_apps.get(f"{cluster_namespace}/{check['name']}", []),
+                )
+            )
+    return sorted(gates, key=lambda g: (g.namespace, g.cluster))
+
+
 OWNER_LABEL = "kustomize.toolkit.fluxcd.io/name"
-
-
-def apps_key(gate: Gate) -> str:
-    return f"{CLUSTERS_NAMESPACE}/{gate.apps_kustomization}"
 
 
 def ready_condition(obj: dict) -> dict:
@@ -84,7 +109,7 @@ def base_app_problems(gate: Gate, hrs: dict[str, dict]) -> list[str]:
     applied by the cluster's Kustomization, if they aren't."""
     problems = []
     for name in gate.base_apps:
-        key = f"{CLUSTERS_NAMESPACE}/{name}"
+        key = f"{gate.namespace}/{name}"
         labels = (hrs.get(key) or {}).get("metadata", {}).get("labels") or {}
         owner = labels.get(OWNER_LABEL)
         if owner != gate.cluster_kustomization:

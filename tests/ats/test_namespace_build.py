@@ -8,13 +8,14 @@ import pytest
 import yaml
 from repository_gates import ORG_DIR, WORKLOAD_CLUSTERS_DIR
 from root_build import (
-    MC_DIR,
+    REPO_DIR,
     build,
     decryption_problems,
     namespace_builds,
     namespace_dependency_problems,
     source_problems,
 )
+from kind_config import RootKustomization, kind_test_config, require_example
 
 
 def organization_kustomization() -> dict:
@@ -100,9 +101,15 @@ def test_decryption_problems() -> None:
     ]
 
 
-@pytest.fixture(scope="module")
-def root() -> list[dict]:
-    return build(MC_DIR)
+@pytest.fixture(
+    scope="module",
+    params=kind_test_config().roots(),
+    ids=lambda r: r.management_cluster,
+)
+def root(request: pytest.FixtureRequest) -> list[dict]:
+    """The build of each management cluster's root Kustomization."""
+    root_kustomization: RootKustomization = request.param
+    return build(REPO_DIR / root_kustomization.file.parent)
 
 
 def test_organisation_namespace_kustomizations_read_the_repository_in_default(
@@ -141,6 +148,7 @@ def _kinds_and_names(build_objects: list[dict]) -> set[tuple[str, str]]:
 
 
 def test_organisation_namespace_build_applies_the_cluster_kustomizations() -> None:
+    require_example("organisation")
     # namespace/kustomization.yaml lists ../workload-clusters: the Kustomizations live next to
     #  the cluster directories they apply, and go into the organisation's namespace
     expected = set()
@@ -153,6 +161,7 @@ def test_organisation_namespace_build_applies_the_cluster_kustomizations() -> No
 
 
 def test_organisation_namespace_build_applies_the_secret_stores() -> None:
+    require_example("organisation")
     # namespace/kustomization.yaml lists ../multicluster/secret-stores, which has no Flux
     #  Kustomization of its own
     stores = build(ORG_DIR / "multicluster" / "secret-stores")

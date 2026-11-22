@@ -1,0 +1,133 @@
+# What the kind test needs to know about this repository. docs/reference/ci-checks.md,
+# "Configure the kind test", documents every key.
+#
+# The test applies the root Kustomization of every management cluster under
+# management-clusters/, <name>/<name>.yaml, and finds the GitRepository and the
+# decryption Secret it needs in each. To apply only some of them, list them:
+#
+#   managementClusters:
+#     - MY_MC
+#
+# Everything below binds the example checks to the template's examples. A check
+# whose example isn't in the repository is skipped and says why, so a fork that
+# deleted the examples can leave this as it is, or delete what it doesn't use.
+
+# The example checks, by example: the paths of the repository each needs, and the
+# files or directories under tests/ats/assertions that assert its objects.
+examples:
+  management-cluster:
+    paths:
+      - management-clusters/MC_NAME/secrets
+    assertions:
+      - assertions/exists/secrets
+  organisation:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME
+    assertions:
+      - assertions/exists/organizations/org_org-name.yaml
+      - assertions/exists/organizations/workload-clusters/kustomizations.yaml
+  notifications:
+    paths:
+      - management-clusters/MC_NAME/notifications
+      - management-clusters/MC_NAME/organizations/ORG_NAME/namespace/notifications
+    assertions:
+      - assertions/exists/notifications
+  shared-objects:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/namespace/shared-objects
+  capi-wc-name:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME
+    assertions:
+      - assertions/exists/organizations/workload-clusters/capi-wc-name
+  hello-app:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_DEV_CLUSTER_1
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_STAGING_CLUSTER_1
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_EU_CENTRAL
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/HELLO_APP_PROD_CLUSTER_US_WEST
+    assertions:
+      - assertions/exists/organizations/workload-clusters/hello-app-dev-1
+      - assertions/exists/organizations/workload-clusters/hello-app-staging-1
+      - assertions/exists/organizations/workload-clusters/hello-app-prod-euc
+      - assertions/exists/organizations/workload-clusters/hello-app-prod-usw
+  out-of-band-flux-app:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP
+    assertions:
+      - assertions/exists/organizations/workload-clusters/out-of-band-flux-app
+  # the vCluster that stands in for its workload cluster, and every check that uses it
+  out-of-band-no-flux:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
+    assertions:
+      - assertions/exists/organizations/workload-clusters/out-of-band-no-flux
+      - assertions/exists-in-workload-cluster/out-of-band-no-flux
+  secret-store-policy:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/secret-stores
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+  workload-cluster-secrets:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/workload-cluster-secrets
+  values-watch:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world
+  scheduled-upgrades:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps/hello-world-scheduled
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_SCHEDULED_UPGRADES
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
+    assertions:
+      - assertions/exists/organizations/workload-clusters/scheduled-upgrades
+  prune:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/ORG_NAME.yaml
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world-from-template
+
+# The node pools of every workload cluster's HelmRelease, by namespace. In a namespace
+# listed here, every cluster has to be listed; a namespace that isn't listed isn't
+# checked. Production clusters get their own nodepool0 and their region's extra pool;
+# dev, staging and scheduled-upgrades have none of their own and get the chart's.
+nodePools:
+  org-org-name:
+    hello-app-prod-euc: [nodepool0, large]
+    hello-app-prod-usw: [nodepool0, large]
+    hello-app-dev-1: []
+    hello-app-staging-1: []
+    capi-wc-name: [workers]
+    out-of-band-flux-app: [workers]
+    out-of-band-no-flux: [workers]
+    scheduled-upgrades: []
+
+# The HelmReleases a cluster's Kustomization applies while its Cluster isn't Available,
+# by the Cluster's namespace/name: the Gateway API stack of bases/stacks/envoy-gateway.
+clusterBaseApps:
+  org-org-name/out-of-band-flux-app:
+    - out-of-band-flux-app-gateway-api-crds
+    - out-of-band-flux-app-envoy-gateway
+    - out-of-band-flux-app-gateway-api-config
+  org-org-name/out-of-band-no-flux:
+    - out-of-band-no-flux-gateway-api-crds
+    - out-of-band-no-flux-envoy-gateway
+    - out-of-band-no-flux-gateway-api-config
+
+# A secret store with the fake provider, standing in for your secret manager: the test
+# creates it in `default` and in every organisation's namespace, with these values.
+# docs/how-to/external-secrets.md, "A secret store for testing", has the same store.
+secretStore:
+  name: gitops-test
+  data:
+    - key: gitops/hello-world-values
+      value: |
+        podAnnotations:
+          example.com/source: secret-manager
+    # the notification example's tokens; the test never sends them to GitHub
+    - key: gitops/github-commit-status-token
+      value: not-a-github-token
+    - key: gitops/github-webhook-token
+      value: not-a-webhook-token
+    # the workload cluster secrets example's
+    - key: workload-clusters-common-token
+      value: common-token-from-secret-manager

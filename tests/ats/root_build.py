@@ -1,5 +1,6 @@
-"""What the management cluster's root Kustomization, `mc-name-gitops`, applies, and what each
-organisation's namespace Kustomization applies, built as Flux builds them, without a cluster.
+"""What a management cluster's root Kustomization, such as the template's `mc-name-gitops`,
+applies, and what each organisation's namespace Kustomization applies, built as Flux builds them,
+without a cluster.
 
 The root applies only Organizations and objects in `default`, so its first reconcile on a new
 management cluster passes Flux's dry-run and creates the Organizations. Everything in an
@@ -14,7 +15,6 @@ import yaml
 from conftest import run_tool
 
 REPO_DIR = Path(__file__).resolve().parents[2]
-MC_DIR = REPO_DIR / "management-clusters" / "MC_NAME"
 ORGANIZATION_NAMESPACE_LABEL = "giantswarm.io/organization-namespace"
 DEFAULT_NAMESPACE = "default"
 # the cluster-scoped kinds a customer may create on a management cluster
@@ -91,6 +91,8 @@ def organization_namespace_problems(objects: list[dict]) -> list[str]:
         o["metadata"]["name"] for o in objects if o.get("kind") == "Organization"
     }
     kustomizations = [o for o in objects if _labelled(o)]
+    if not kustomizations and not organizations:
+        return []
     if not kustomizations:
         return [
             f"No Kustomization with the label '{ORGANIZATION_NAMESPACE_LABEL}' in the build"
@@ -122,12 +124,6 @@ def namespace_build_problems(objects: list[dict], namespace: str) -> list[str]:
         for obj in objects
         if (obj.get("metadata") or {}).get("namespace") not in (None, namespace)
     ]
-
-
-def root_kustomization_name() -> str:
-    """The name of the management cluster's root Kustomization, in MC_NAME.yaml."""
-    with (MC_DIR / f"{MC_DIR.name}.yaml").open() as f:
-        return yaml.safe_load(f)["metadata"]["name"]
 
 
 def root_dependency_problems(objects: list[dict], root: str) -> list[str]:

@@ -1,51 +1,38 @@
-"""The test's fake SecretStores and their values, which the examples' ExternalSecrets read.
+"""The test's stand-in for the secret manager: a SecretStore with the fake provider, which keeps
+its values in the store itself. `secretStore` in kind-test.yaml names it and holds its values;
+without it, the test creates no store.
 
-external_secrets.py creates the stores. docs/how-to/external-secrets.md, "A secret store for
-testing", has stores of the same name for trying the guides by hand: it lists
-`gitops/hello-world-values` with a GitHub token of the reader's own, and names the notification
-guide's two keys in its text.
+external_secrets.py creates the store in `default`, organization_operator in every organisation's
+namespace. For the template, the store is the one the examples' ExternalSecrets read, and
+docs/how-to/external-secrets.md, "A secret store for testing", has a store of the same name for
+trying the guides by hand.
 """
 
 from collections.abc import Iterable
 
-from workload_cluster_secrets import COMMON
+from kind_config import kind_test_config
 
-FAKE_STORE_DATA = [
-    {
-        "key": "gitops/hello-world-values",
-        "value": "podAnnotations:\n  example.com/source: secret-manager\n",
-    },
-    # the notification example's tokens; the test never sends them to GitHub
-    {"key": "gitops/github-commit-status-token", "value": "not-a-github-token"},
-    {"key": "gitops/github-webhook-token", "value": "not-a-webhook-token"},
-]
-
-STORE_NAME = "gitops-test"
-# the namespaces whose ExternalSecrets read the store: the management cluster's notifications in
-#  `default`, and the organisation's notifications and the clusters' in the organisation's,
-#  where organization_operator creates it once the namespace exists
 DEFAULT_STORE_NAMESPACE = "default"
-STORE_NAMESPACES = (DEFAULT_STORE_NAMESPACE, "org-org-name")
-STORE_SPEC = {
-    "provider": {
-        "fake": {
-            "data": [
-                *FAKE_STORE_DATA,
-                {"key": "workload-clusters-common-token", "value": COMMON.value},
-            ]
-        }
-    }
-}
 
 
-def secret_stores(namespaces: Iterable[str] = STORE_NAMESPACES) -> list[dict]:
-    """The same store in each of `namespaces`."""
+def store_values() -> dict[str, str]:
+    """The stand-in store's values, by key."""
+    store = kind_test_config().secret_store()
+    return {item["key"]: item["value"] for item in store[1]} if store else {}
+
+
+def secret_stores(namespaces: Iterable[str]) -> list[dict]:
+    """The stand-in store in each of `namespaces`, or none without one."""
+    store = kind_test_config().secret_store()
+    if store is None:
+        return []
+    name, data = store
     return [
         {
             "apiVersion": "external-secrets.io/v1",
             "kind": "SecretStore",
-            "metadata": {"name": STORE_NAME, "namespace": namespace},
-            "spec": STORE_SPEC,
+            "metadata": {"name": name, "namespace": namespace},
+            "spec": {"provider": {"fake": {"data": data}}},
         }
         for namespace in namespaces
     ]

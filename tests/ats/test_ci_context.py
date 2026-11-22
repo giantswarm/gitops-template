@@ -59,20 +59,27 @@ def test_no_skip_without_an_event(tmp_path: Path) -> None:
 
 
 def test_no_skip_with_the_key(tmp_path: Path) -> None:
-    """With the key, the cluster tests run and get it, on a pull request from a fork too."""
+    """With the key, the cluster tests run, on a pull request from a fork too."""
     env = {**event_env(tmp_path, "pull_request", FORK), KEY: "a2V5"}
-    skip_reason = ci_context.missing_secrets_skip_reason(env)
-    assert (skip_reason, ci_context.master_gpg_key(env)) == (None, "a2V5")
+    assert ci_context.missing_secrets_skip_reason(env) is None
 
 
-def test_missing_key_fails_outside_a_fork(
+def test_the_configuration_reads_the_key_without_needing_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Without a skip, a missing key is a broken setup: the test fails, as before."""
-    for name, value in event_env(tmp_path, "pull_request", UPSTREAM).items():
+    """The key is needed only when a root decrypts, which repository_objects checks: the
+    configuration of a repository without SOPS reads an empty one."""
+    env = {
+        **event_env(tmp_path, "pull_request", UPSTREAM),
+        "GITOPS_REPO_URL": "https://github.com/giantswarm/gitops-template",
+        "GITOPS_REPO_BRANCH": "main",
+        "GITOPS_FLUX_APP_VERSION": "1.12.2",
+    }
+    for name, value in env.items():
         monkeypatch.setenv(name, value)
-    with pytest.raises(ci_context.MissingGPGKeyError, match="master gpg key missing"):
-        conftest.GitOpsTestConfig()
+    assert conftest.GitOpsTestConfig().master_private_key == ""
+    monkeypatch.setenv(KEY, "a2V5")
+    assert conftest.GitOpsTestConfig().master_private_key == "a2V5"
 
 
 def test_header_and_skips_share_one_decision(

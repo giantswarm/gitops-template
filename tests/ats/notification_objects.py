@@ -1,5 +1,10 @@
 """N1: suspending the notification example's Alerts and waiting for its token Secrets and its
-Receiver; commit_status.py judges them, assertions/exists/notifications the rest."""
+Receiver; commit_status.py judges them, assertions/exists/notifications the rest.
+
+The example is the binding `notifications` in kind-test.yaml. Without it, the fixtures here do
+nothing and the check is skipped. They suspend the example's Alerts only: an Alert of your own
+sends what it sends, from the kind test too.
+"""
 
 from pathlib import Path
 
@@ -14,8 +19,9 @@ from commit_status import (
     token_problems,
 )
 from conftest import run_tool
-from fake_store import FAKE_STORE_DATA
+from fake_store import store_values
 from flux_reconcile import wait_until
+from kind_config import kind_test_config, require_example
 from pytest_helm_charts.clusters import Cluster
 
 MC_DIR = Path(__file__).resolve().parents[2] / "management-clusters/MC_NAME"
@@ -31,6 +37,7 @@ FIELD_MANAGER = "gitops-template-test"
 NAMESPACE = "default"
 ORG_NAMESPACE = "org-org-name"
 RECEIVER = "github-push"
+EXAMPLE = "notifications"
 # (namespace, name) of the Secrets ESO writes from the fake store's keys of the same name under
 #  gitops/: each Provider's token, and the Receiver's
 TOKEN_SECRETS = (
@@ -43,7 +50,7 @@ READY_TIMEOUT_SEC = 120
 
 
 def _token_problems(api: pykube.HTTPClient) -> list[str]:
-    store = {item["key"]: item["value"] for item in FAKE_STORE_DATA}
+    store = store_values()
     return [
         problem
         for namespace, name in TOKEN_SECRETS
@@ -84,6 +91,8 @@ def apply_alerts(kube_cluster: Cluster, alerts: list[dict]) -> None:
 def suspended_alert(kube_cluster: Cluster, flux_app_deployment: None) -> None:
     """Create the management cluster's Alert, suspended, before Flux applies the repository.
     organization_operator creates the organisation's with `organization_alert`."""
+    if kind_test_config().example_skip_reason(EXAMPLE):
+        return
     apply_alerts(kube_cluster, [suspended(yaml.safe_load(ALERT_FILE.read_text()))])
 
 
@@ -100,6 +109,8 @@ def organization_alerts(build: str, namespace: str) -> list[dict]:
 def organization_alert(kube_cluster: Cluster, namespace: str) -> list:
     """Create the organisation's Alert, suspended, in its `namespace`, before Flux applies it.
     Return nothing to delete: the Alert stays, as the management cluster's does."""
+    if namespace != ORG_NAMESPACE or kind_test_config().example_skip_reason(EXAMPLE):
+        return []
     alerts = organization_alerts(
         run_tool("kubectl", KUBECTL_URL, "kustomize", str(ORG_NAMESPACE_DIR)), namespace
     )
@@ -113,6 +124,7 @@ def organization_alert(kube_cluster: Cluster, namespace: str) -> list:
 
 def check_notifications(api: pykube.HTTPClient) -> None:
     """Wait until ESO has written the tokens and the Receiver is Ready."""
+    require_example(EXAMPLE)
     wait_until(
         lambda: _problems(api),
         READY_TIMEOUT_SEC,

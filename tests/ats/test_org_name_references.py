@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import yaml
+from kind_config import require_example
 
 ORG_DIR = (
     Path(__file__).resolve().parent
@@ -86,6 +87,7 @@ def test_listed_files_leaves_out_commented_out_resources() -> None:
 
 
 def test_kustomization_lists_every_file_that_names_the_organisation() -> None:
+    require_example("organisation")
     kustomization = ORG_DIR / "kustomization.yaml"
     naming = {
         str(f.relative_to(ORG_DIR))

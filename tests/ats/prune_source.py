@@ -11,7 +11,7 @@ namespace Kustomization, which depends on it, waits and prunes nothing either.
 
 import pykube
 from checks.conditions import obj_key
-from conftest import FLUX_GIT_REPO_NAME, FLUX_OBJECTS_NAMESPACE
+from kind_config import kind_test_config
 from flux_inventory import (
     build_failure_problems,
     dependency_wait_problems,
@@ -21,6 +21,7 @@ from flux_reconcile import repo_problems, request_reconcile, wait_until
 from organization_operator import ready_problems
 from prune_objects import (
     APPS_KUSTOMIZATION,
+    MANAGEMENT_CLUSTER,
     CLUSTER_KUSTOMIZATIONS,
     KEPT_BY_FAILED_BUILD,
     KEPT_BY_WAITING_ORGANIZATION,
@@ -35,11 +36,12 @@ from pytest_helm_charts.flux.kustomization import KustomizationCR
 
 
 def git_repository(api: pykube.HTTPClient) -> APIObject:
-    return (
-        GitRepositoryCR.objects(api)
-        .filter(namespace=FLUX_OBJECTS_NAMESPACE)
-        .get(name=FLUX_GIT_REPO_NAME)
-    )
+    """The GitRepository the example's management cluster reads."""
+    ref = kind_test_config().root(MANAGEMENT_CLUSTER).git_repository
+    if ref is None:
+        raise ValueError(f"The root of {MANAGEMENT_CLUSTER} reads no GitRepository")
+    namespace, name = ref
+    return GitRepositoryCR.objects(api).filter(namespace=namespace).get(name=name)
 
 
 def kustomization(api: pykube.HTTPClient, key: tuple[str, str]) -> APIObject:

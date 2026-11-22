@@ -1,12 +1,13 @@
-"""The management cluster's root Kustomization has to apply on a new management cluster, where no
-organisation namespace exists yet. Checks of root_build and of the repository's root build; they
-need no cluster, only kubectl."""
+"""A management cluster's root Kustomization has to apply on a new management cluster, where no
+organisation namespace exists yet. Checks of root_build and of the root build of every management
+cluster the kind test applies; they need no cluster, only kubectl."""
 
 from pathlib import Path
 
 import pytest
+from kind_config import RootKustomization, kind_test_config, require_example
 from root_build import (
-    MC_DIR,
+    REPO_DIR,
     ORGANIZATION_NAMESPACE_LABEL,
     build,
     generated_resources,
@@ -15,7 +16,6 @@ from root_build import (
     namespace_builds,
     organization_namespace_problems,
     root_dependency_problems,
-    root_kustomization_name,
 )
 
 ORGANIZATION = {
@@ -85,6 +85,11 @@ def test_organization_namespace_problems_without_any() -> None:
     ]
 
 
+def test_organization_namespace_problems_before_the_first_organisation() -> None:
+    # step 1 of the basic tutorial: the management cluster has no organisation yet
+    assert organization_namespace_problems([]) == []
+
+
 def test_namespace_build_problems() -> None:
     objects = [
         {"kind": "Alert", "metadata": {"name": "a"}},
@@ -137,12 +142,22 @@ def test_root_dependency_problems_in_another_namespace() -> None:
 
 
 def test_root_kustomization_name() -> None:
-    assert root_kustomization_name() == "mc-name-gitops"
+    require_example("management-cluster")
+    assert kind_test_config().root("MC_NAME").name == "mc-name-gitops"
+
+
+@pytest.fixture(
+    scope="module",
+    params=kind_test_config().roots(),
+    ids=lambda r: r.management_cluster,
+)
+def root(request: pytest.FixtureRequest) -> RootKustomization:
+    return request.param
 
 
 @pytest.fixture(scope="module")
-def root_build() -> list[dict]:
-    return build(MC_DIR)
+def root_build(root: RootKustomization) -> list[dict]:
+    return build(REPO_DIR / root.file.parent)
 
 
 def test_root_build_applies_only_organizations_and_default(
@@ -166,11 +181,11 @@ def test_root_build_applies_each_organisation_namespace(
 
 
 def test_organisation_namespace_kustomizations_follow_the_root(
-    root_build: list[dict],
+    root: RootKustomization, root_build: list[dict]
 ) -> None:
     # the root applies every commit first, so an object that moves between the root and an
     #  organisation's namespace/ moves in that order
-    problems = root_dependency_problems(root_build, root_kustomization_name())
+    problems = root_dependency_problems(root_build, root.name)
     assert not problems, "\n".join(problems)
 
 

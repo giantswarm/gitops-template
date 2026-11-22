@@ -8,9 +8,9 @@ its own namespace or `default`, and a `ResourceSet` needs `serviceAccountName`. 
 breaks a rule: `validationFailureAction: Enforce`.
 
 fixtures/admission-policies holds them, copied at SOURCE_COMMIT and only re-indented, as
-automation_roles holds rbac-operator's rules. The `admission_policies` fixture applies them once Kyverno runs and
-before Flux applies the repository, so an example the management cluster would refuse at
-admission fails the kind test too.
+automation_roles holds rbac-operator's rules. The `admission_policies` fixture applies them once
+Kyverno runs and before Flux applies the repository, so an example the management cluster would
+refuse at admission fails the kind test too.
 """
 
 import logging

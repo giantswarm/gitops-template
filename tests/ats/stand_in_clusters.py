@@ -1,13 +1,14 @@
-"""Stand-in Cluster API `Cluster`s for the clusters with apps.
+"""Stand-in Cluster API `Cluster`s for the clusters a Kustomization waits for.
 
 The test cluster has the Cluster API CRDs but no controllers, so nothing acts on a `Cluster`: the
-test creates one for each cluster in cluster_gates.GATES and sets its Available condition itself.
+test creates one for each gate cluster_gates finds, in the repository's own namespaces, and sets
+its Available condition itself.
 """
 
 from datetime import UTC, datetime
 
 import pykube
-from cluster_gates import CLUSTERS_NAMESPACE, GATES
+from cluster_gates import Gate
 from pykube.objects import NamespacedAPIObject
 
 
@@ -28,14 +29,14 @@ def available_condition(status: str) -> dict:
     }
 
 
-def stand_in_cluster(api: pykube.HTTPClient, name: str) -> CAPICluster:
+def stand_in_cluster(api: pykube.HTTPClient, namespace: str, name: str) -> CAPICluster:
     """A `Cluster` no controller acts on. The schema rejects an empty `spec`."""
     return CAPICluster(
         api,
         {
             "apiVersion": CAPICluster.version,
             "kind": CAPICluster.kind,
-            "metadata": {"name": name, "namespace": CLUSTERS_NAMESPACE},
+            "metadata": {"name": name, "namespace": namespace},
             "spec": {"paused": True},
         },
     )
@@ -49,11 +50,11 @@ def set_available(cluster: CAPICluster, status: str) -> None:
     )
 
 
-def stand_in_clusters(api: pykube.HTTPClient) -> list[CAPICluster]:
-    """Create a stand-in `Cluster` for every cluster with apps; an existing one is reused."""
+def stand_in_clusters(api: pykube.HTTPClient, gates: list[Gate]) -> list[CAPICluster]:
+    """Create a stand-in `Cluster` for every gate; an existing one is reused."""
     clusters = []
-    for name in GATES:
-        cluster = stand_in_cluster(api, name)
+    for gate in gates:
+        cluster = stand_in_cluster(api, gate.namespace, gate.cluster)
         if not cluster.exists():
             cluster.create()
         clusters.append(cluster)
