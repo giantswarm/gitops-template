@@ -127,8 +127,9 @@ SOPS and External Secrets Operator are both supported, alone or together. Don't 
 ### Check your work
 
 - `pre-commit run --files <changed files>`, see [Run pre-commit](docs/how-to/check-changes.md#run-pre-commit).
-- `tools/test-all-ff validate` after any change to a manifest or a tool. It needs no cluster, see
-  [Validate with test-all-ff](docs/how-to/check-changes.md#validate-with-test-all-ff).
+- `tools/test-all-ff validate` after any change to a manifest or a tool. It needs no cluster, but it does need the
+  network: it downloads the Flux CLI, the schemas and the charts, and keeps them under `${TMPDIR:-/tmp}` for the next
+  run, see [Validate with test-all-ff](docs/how-to/check-changes.md#validate-with-test-all-ff).
 - Neither needs a cluster. The first place the repository runs is CI's kind test, see
   [CI checks](docs/reference/ci-checks.md); after the merge, Flux applies it.
 - A directory you add under the examples needs a `README.md`, and a change to behaviour the documentation describes
@@ -139,6 +140,11 @@ SOPS and External Secrets Operator are both supported, alone or together. Don't 
 You're working on the template when your change is going to `giantswarm/gitops-template`: it's the `origin` of the
 clone, or the repository the pull request will be opened against. Anything else is a fork, and this section doesn't
 apply there. In a fork, match the language and style its own docs already use, and ask if you can't tell.
+`CHANGELOG.md` is the template's history, so a fork doesn't add to it, whatever the block at the top of this file
+says, unless the fork's owner keeps their own changelog there. For the kind test, a fork deletes the template's
+examples, or lists its own management clusters in `tests/ats/kind-test.yaml`, and adds to `kind-test.yaml` and
+`tests/ats/assertions` when it wants more checked than `Ready`, see
+[The kind test in your fork](docs/how-to/configure-ci.md#the-kind-test-in-your-fork).
 
 [CONTRIBUTING.md](CONTRIBUTING.md) applies. Every example has to get `Ready` in CI, and everything a reader sees, the
 docs, the READMEs and the comments in the examples, follows [Voice](docs/contributing/voice.md). The layout's

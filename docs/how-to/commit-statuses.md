@@ -129,19 +129,22 @@ yq -i '.creation_rules += [{
 Then write the token into the Secrets. `sops` encrypts each on its way into its file, with the rule above, so the
 token never sits in the repository in plain text. It needs the master key's public key in your keyring, which the
 first line imports, and `sops` 3.10.0 or newer, see [Tools](../reference/tools.md#tools). The second line reads the
-token without it landing in your shell history. The organisation's Secret names its real namespace from the start:
+token without it landing in your shell history, and `printf` hands it to `kubectl` on standard input, so it's on no
+command line in the process list either. The organisation's Secret names its real namespace from the start:
 `org-${ORG_NAME}`, the one the organisation's namespace `Kustomization` puts it in. Changing the encrypted file
 afterwards would break its MAC, and `sops` could then no longer decrypt it to change the token or rotate its key:
 
 ```sh
 gpg --import ${MC_DIR}/.sops.keys/.sops.master.asc
 read -rs GITHUB_TOKEN
-kubectl create secret generic github-commit-status-token --namespace=default \
-  --from-literal=token="${GITHUB_TOKEN}" --dry-run=client -o yaml |
+printf '%s' "${GITHUB_TOKEN}" |
+  kubectl create secret generic github-commit-status-token --namespace=default \
+  --from-file=token=/dev/stdin --dry-run=client -o yaml |
   sops --encrypt --filename-override ${MC_DIR}/notifications/github-commit-status-token.enc.yaml /dev/stdin \
   > ${MC_DIR}/notifications/github-commit-status-token.enc.yaml
-kubectl create secret generic github-commit-status-token --namespace=org-${ORG_NAME} \
-  --from-literal=token="${GITHUB_TOKEN}" --dry-run=client -o yaml |
+printf '%s' "${GITHUB_TOKEN}" |
+  kubectl create secret generic github-commit-status-token --namespace=org-${ORG_NAME} \
+  --from-file=token=/dev/stdin --dry-run=client -o yaml |
   sops --encrypt --filename-override ${ORG_DIR}/notifications/github-commit-status-token.enc.yaml /dev/stdin \
   > ${ORG_DIR}/notifications/github-commit-status-token.enc.yaml
 unset GITHUB_TOKEN
