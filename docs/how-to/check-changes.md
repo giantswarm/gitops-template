@@ -75,6 +75,10 @@ renders the chart of every `HelmRelease` with its values:
 tools/test-all-ff validate
 ```
 
+It needs no cluster, but it does need the network: it downloads the Flux CLI, the Flux CRD schemas, the other schemas
+`kubeconform` reads and the chart of every `HelmRelease`, and keeps them under `${TMPDIR:-/tmp}`, in
+`gitops-template-schemas` and `gitops-template-charts`, so a later run fetches only what it hasn't fetched before.
+
 It needs these tools in your `$PATH`:
 
 - `yamllint` of [github.com/adrienverge/yamllint](https://github.com/adrienverge/yamllint)
