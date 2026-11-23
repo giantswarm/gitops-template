@@ -402,12 +402,9 @@ The release stays at the revision Flux gave it. To go back to the revision insta
 `helm rollback ${APP_NAME} REVISION -n ${APP_NAMESPACE} --kube-context ${WC_CONTEXT}`, with `REVISION` from
 `helm history`.
 
-**After an `App` was migrated, before the cleanup,** the `App` and the `Chart` still exist, paused.
-
-> [!Caution]
-> Giant Swarm's guide doesn't describe this as a step of its own. The migration tool's own revert does it in this
-> order, which the steps below follow. Whether chart-operator takes the release back cleanly after Flux has upgraded
-> it isn't confirmed here: ask Giant Swarm before you do it on a release that matters.
+**After an `App` was migrated, before the cleanup,** the `App` and the `Chart` still exist, paused, and the App
+Platform takes the release back, also after Flux has upgraded it. The steps are the migration tool's own revert, in
+its order:
 
 1. Suspend the `HelmRelease`: in Git as above once you've pushed its files, or before that with
    `flux suspend helmrelease ${APP_CR} -n org-${ORG_NAME}`. Check it's suspended.
