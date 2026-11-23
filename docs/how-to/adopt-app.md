@@ -187,11 +187,11 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     flux suspend helmrelease ${WC_NAME}-${APP_NAME} -n org-${ORG_NAME}
     ```
 
-    Then make Helm forget the release you installed by hand, without touching what it installed. Don't run
-    `helm uninstall` on it, not even with `--cascade orphan`: uninstall deletes every object of the release, and
-    `orphan` only spares what those objects own, such as a Deployment's Pods. Helm keeps a release as Secrets, one
-    per revision, labelled `owner=helm` and `name=` the release's name. Delete those of the old release and nothing
-    else:
+    Then make Helm forget the release you installed by hand, without touching what it installed. Helm keeps a
+    release as Secrets, one per revision, labelled `owner=helm` and `name=` the release's name. Delete those of the
+    old release and nothing else. (`helm uninstall --cascade orphan` is the other way to drop a release. It deletes
+    the release's own objects and spares what they own, such as a Deployment's Pods, so something has to create the
+    objects again. Deleting the record deletes nothing.)
 
     ```sh
     helm list -A --kube-context ${WC_CONTEXT}  # the two releases, with their names and namespaces
