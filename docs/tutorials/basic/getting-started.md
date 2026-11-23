@@ -1115,7 +1115,7 @@ kubectl get externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME
 If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
 
 Six releases are `Ready` on the management cluster: the bundle straight away, as all it does is create the next
-four, then those four of Envoy Gateway, one after the other, then hello-world, which waits for the Gateway API CRDs.
+four, then those four of Envoy Gateway, the CRDs first, then hello-world, which waits for the Gateway API CRDs.
 It takes a few minutes:
 
 ```sh

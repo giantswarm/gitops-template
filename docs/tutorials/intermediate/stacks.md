@@ -231,8 +231,8 @@ stack, and take out the envoy-gateway directory, which the stack replaces. Every
     git commit -m "Deploy the hello-web stack to ${WC_NAME}" && git push
     ```
 
-**Check:** the same four releases are `Ready`: the three of Envoy Gateway, then hello-world, which waits for the
-Gateway API CRDs:
+**Check:** the same six releases are `Ready`: the bundle, the four of Envoy Gateway it creates, then hello-world,
+which waits for the Gateway API CRDs:
 
 ```sh
 flux get helmreleases -n org-${ORG_NAME} | grep ${WC_NAME}-

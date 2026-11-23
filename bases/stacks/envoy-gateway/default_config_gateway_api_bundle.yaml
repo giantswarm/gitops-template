@@ -10,9 +10,9 @@ organization: ${organization}
 #   2. ${cluster_name}-<app>-values          this stack's defaults (75)
 #   3. ${cluster_name}-<app>-user-values     (optional) overrides, like an App CR's userConfig (125)
 #   4. ${cluster_name}-<app>-user-secrets    (optional) the same, as an encrypted Secret (125)
-# The bundle's own `userConfig` of an app is at 100. Leave it empty for these three
-# apps: the bundle would create a `-user-values` ConfigMap or `-user-secrets` Secret
-# of the names above for it.
+# Only gateway-api-config has defaults in this stack. The bundle's own `userConfig`
+# of an app is at 100. Leave it empty: the bundle would create a `-user-values`
+# ConfigMap or `-user-secrets` Secret of the names above for it.
 apps:
   gatewayApiCrds:
     extraConfigs:
@@ -41,5 +41,14 @@ apps:
         priority: 125
       - kind: secret
         name: ${cluster_name}-gateway-api-config-user-secrets
+        optional: true
+        priority: 125
+  gatewayApiStateMetrics:
+    extraConfigs:
+      - name: ${cluster_name}-gateway-api-state-metrics-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-gateway-api-state-metrics-user-secrets
         optional: true
         priority: 125
