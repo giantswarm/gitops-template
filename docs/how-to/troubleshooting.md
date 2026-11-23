@@ -403,6 +403,16 @@ Then take the object away from all but one of them, in Git. A Secret that both a
 SOPS-encrypted file write is the commonest case here, see
 [One Secret, one route](../explanation/secrets.md#one-secret-one-route).
 
+When both writers are Flux `Kustomization`s, CI finds them before you merge: `test_no_object_has_two_kustomizations`
+fails and names the object and both `Kustomization`s (see [Objects in two builds](../reference/ci-checks.md#objects-in-two-builds)).
+It needs no cluster, so run it on your branch to check a fix:
+
+```sh
+cd tests/ats
+pipenv install --deploy
+KUBECONFIG=/dev/null pipenv run pytest test_one_owner.py
+```
+
 ## Suspend and resume
 
 Sometimes you want Flux to stop for a while: to try a change by hand, or to keep it from undoing one while you work.

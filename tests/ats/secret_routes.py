@@ -9,23 +9,12 @@ docs/explanation/secrets.md, "One Secret, one route".
 A SOPS file is read without decrypting it: `sops` leaves the keys and the metadata in clear text.
 """
 
-import json
-import re
-from collections.abc import Iterable
 from pathlib import Path
 from typing import NamedTuple
 
-import yaml
-from root_build import build
+from flux_builds import Applied, documents
 
 DEFAULT_TYPE = "Opaque"
-MANAGEMENT_CLUSTER = ""
-_VARIABLE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-
-# (cluster, namespace, object, source): `cluster` is MANAGEMENT_CLUSTER or the kubeconfig Secret
-#  of the cluster a Kustomization applies to, `namespace` where Flux puts the object, `source` the
-#  path of the Kustomization that applies it
-Applied = tuple[str, str, dict, str]
 
 
 class SecretShape(NamedTuple):
@@ -114,11 +103,6 @@ def shape_differences(eso: SecretShape, sops: SecretShape) -> list[str]:
     return problems
 
 
-def _documents(path: Path) -> Iterable[dict]:
-    with path.open() as f:
-        yield from (d for d in yaml.safe_load_all(f) if isinstance(d, dict))
-
-
 def example_pairs(paths: list[Path], repo_dir: Path) -> list[tuple[Route, Route]]:
     """Each Secret that `paths` show both as an `ExternalSecret` and as a SOPS file, whether a
     `kustomization.yaml` lists them or not: (the ExternalSecret's route, the SOPS file's).
@@ -130,7 +114,7 @@ def example_pairs(paths: list[Path], repo_dir: Path) -> list[tuple[Route, Route]
     sops: dict[tuple[str, str], Route] = {}
     for file in files:
         source = str(file.relative_to(repo_dir))
-        for doc in _documents(file):
+        for doc in documents(file):
             if is_external_secret(doc):
                 shape = eso_secret(doc)
                 eso[(shape.namespace, shape.name)] = Route(shape, source)
@@ -140,70 +124,15 @@ def example_pairs(paths: list[Path], repo_dir: Path) -> list[tuple[Route, Route]
     return [(eso[k], sops[k]) for k in sorted(eso.keys() & sops.keys())]
 
 
-def substitute(text: str, variables: dict[str, str]) -> str:
-    """`text` with the `${name}` variables of Flux's `postBuild.substitute` that `variables` has
-    filled in; the others stay as they are."""
-    return _VARIABLE.sub(lambda m: variables.get(m.group(1), m.group(0)), text)
-
-
-def _substituted(obj: dict, variables: dict[str, str]) -> dict:
-    return json.loads(substitute(json.dumps(obj), variables))
-
-
-def _applies(
-    repo_dir: Path, kustomization: dict, repository: str, seen: set[str]
-) -> list[Applied]:
-    """What `kustomization` applies, and what the Kustomizations among it that read
-    `repository` apply in turn."""
-    spec = kustomization["spec"]
-    path = str(spec.get("path", "")).removeprefix("./").rstrip("/")
-    metadata = kustomization["metadata"]
-    key = f"{metadata.get('namespace')}/{metadata['name']}:{path}"
-    if key in seen or not (repo_dir / path).exists():
-        return []
-    seen.add(key)
-    variables = (spec.get("postBuild") or {}).get("substitute") or {}
-    cluster = ((spec.get("kubeConfig") or {}).get("secretRef") or {}).get(
-        "name", MANAGEMENT_CLUSTER
-    )
-    applied: list[Applied] = []
-    for raw in build(repo_dir / path):
-        obj = _substituted(raw, variables)
-        namespace = (
-            spec.get("targetNamespace")
-            or obj.get("metadata", {}).get("namespace")
-            or metadata.get("namespace", "default")
-        )
-        applied.append((cluster, namespace, obj, path))
-        if (
-            obj.get("kind") == "Kustomization"
-            and (obj.get("spec") or {}).get("sourceRef", {}).get("name") == repository
-        ):
-            obj["metadata"].setdefault("namespace", namespace)
-            applied += _applies(repo_dir, obj, repository, seen)
-    return applied
-
-
-def applied_objects(repo_dir: Path, root_file: Path) -> list[Applied]:
-    """What the root Kustomization in `root_file` applies, and the Kustomizations below it that
-    read the same repository, each built as Flux builds it, with its `postBuild` variables.
-    """
-    root = next(
-        d for d in _documents(repo_dir / root_file) if d.get("kind") == "Kustomization"
-    )
-    repository = root["spec"]["sourceRef"]["name"]
-    return _applies(repo_dir, root, repository, set())
-
-
 def delivered_twice(applied: list[Applied]) -> list[str]:
     """The Secrets that an applied `ExternalSecret` and an applied SOPS file both deliver."""
     eso: dict[tuple[str, str, str], str] = {}
     sops: dict[tuple[str, str, str], str] = {}
-    for cluster, namespace, obj, source in applied:
-        if is_external_secret(obj):
-            eso[(cluster, namespace, eso_secret(obj).name)] = source
-        elif is_sops_secret(obj):
-            sops[(cluster, namespace, obj["metadata"]["name"])] = source
+    for a in applied:
+        if is_external_secret(a.obj):
+            eso[(a.cluster, a.namespace, eso_secret(a.obj).name)] = a.source
+        elif is_sops_secret(a.obj):
+            sops[(a.cluster, a.namespace, a.obj["metadata"]["name"])] = a.source
     return [
         f"Secret '{namespace}/{name}' on "
         f"{'the management cluster' if not cluster else f'the cluster of {cluster}'} is "

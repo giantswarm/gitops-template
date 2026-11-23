@@ -6,18 +6,16 @@ from pathlib import Path
 
 import pytest
 import yaml
+from flux_builds import Applied, applied_objects, substitute
 from kind_config import kind_test_config
 from root_build import REPO_DIR
 from secret_routes import (
-    Applied,
     SecretShape,
-    applied_objects,
     delivered_twice,
     eso_secret,
     example_pairs,
     shape_differences,
     sops_secret,
-    substitute,
 )
 
 
@@ -135,12 +133,12 @@ def test_delivered_twice() -> None:
     es = external_secret(target={"name": "app-user-secrets"})
     other = external_secret(target={"name": "other"})
     applied = [
-        ("", "org-acme", es, "apps/app/externalsecret.yaml"),
-        ("", "org-acme", other, "apps/other/externalsecret.yaml"),
-        ("", "org-acme", encrypted_secret(), "apps/app/secret.enc.yaml"),
+        Applied("", "org-acme", es, "apps/app/externalsecret.yaml"),
+        Applied("", "org-acme", other, "apps/other/externalsecret.yaml"),
+        Applied("", "org-acme", encrypted_secret(), "apps/app/secret.enc.yaml"),
         # the same name in a workload cluster is another Secret
-        (
-            "wc-kubeconfig",
+        Applied(
+            "org-acme/wc-kubeconfig",
             "org-acme",
             encrypted_secret(),
             "out-of-band/secret.enc.yaml",
