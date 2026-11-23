@@ -305,10 +305,11 @@ the `App`'s name.
    key the tool's `valuesFrom` names, into `override_config.yaml`, and those of its user Secret into the
    `-user-secrets` Secret. Add an entry to `valuesFrom` for each `extraConfigs` source the tool lists.
 
-    > **Caution:**
-    > Whether the `App`'s `spec.config` ConfigMap always holds the same values as the template's first layer,
-    > `${cluster_name}-cluster-values`, isn't confirmed here. If the tool's `valuesFrom` names another ConfigMap or a
-    > Secret there, ask Giant Swarm which to use before you commit.
+    The `App`'s `spec.config` needs nothing from you. The App Platform sets it to the cluster's values ConfigMap,
+    `${cluster_name}-cluster-values`, when an `App` doesn't name one (see
+    [Defaulting and validation of App CRs](https://docs.giantswarm.io/tutorials/fleet-management/app-platform/defaulting-validation/)),
+    and that's the template's first layer already. Only if someone set `spec.config` to another ConfigMap by hand,
+    add that one to `valuesFrom` as well, after the cluster's values.
 
     If the `App` and its ConfigMap and Secret are in this repository, take them out in the same change. If the
     ConfigMap or Secret has the name of one of the new layers, replace its file rather than adding a second one:
