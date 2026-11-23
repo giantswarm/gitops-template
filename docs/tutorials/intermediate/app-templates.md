@@ -2,7 +2,8 @@
 
 At the end of the [basic tutorial](../basic/getting-started.md) you have one organisation, one workload cluster and
 one app: hello-world, in `${WC_DIR}/apps/hello-world`, with an `OCIRepository`, a `HelmRelease`, its values and an
-`ExternalSecret`, written out by hand. That's fine for one cluster. The day a second cluster wants hello-world, you
+`ExternalSecret`, written out by hand, answering through the Envoy Gateway in `${WC_DIR}/apps/envoy-gateway`. That's
+fine for one cluster. The day a second cluster wants hello-world, you
 copy the directory, and from then on you have two copies of the same app that quietly drift apart, one fix at a time.
 
 An App Template writes the app once, in `bases/apps`, with `${cluster_name}` wherever the cluster goes. Every cluster
@@ -151,9 +152,10 @@ build one of your own.
     EOF
     ```
 
-    hello-world gets an `HTTPRoute` on the `giantswarm-default` Gateway that Envoy Gateway serves. Nothing in your
-    cluster serves it yet; [Stacks](./stacks.md) sorts that out. Secret values don't belong here: a cluster gets them
-    through its own `-user-secrets` Secret, below.
+    hello-world gets an `HTTPRoute` on the `giantswarm-default` Gateway that Envoy Gateway serves, as in the basic
+    tutorial. The template sets no hostname: the hostname has to be one of the subdomains the cluster's own Gateway
+    lists, so each cluster sets its own. Secret values don't belong here: a cluster gets them through its own
+    `-user-secrets` Secret, below.
 
 1. Create the template's `kustomization.yaml`. Its `configMapGenerator` turns `default_config.yaml` into the
    `-values` ConfigMap, so the file doesn't need a ConfigMap around it. The label makes Flux upgrade the release as
@@ -206,16 +208,13 @@ one, applies both. So Flux updates the release in place, rather than uninstallin
     ```
 
     Your `override_config.yaml` stays as it is. It already fills the `${cluster_name}-hello-world-user-values`
-    ConfigMap, which is the cluster's own layer in the template too.
-
-1. Your cluster has no Gateway for the template's `HTTPRoute` yet, so switch the route off for this cluster:
-
-    ```sh
-    yq -i '.route.enabled = false' ${APP_DIR}/override_config.yaml
-    ```
+    ConfigMap, which is the cluster's own layer in the template too, and it keeps the route's hostname,
+    `hello.{{ .Values.baseDomain }}`, which the template leaves to the cluster.
 
 1. Replace the app's `kustomization.yaml` with one that lists the template instead of the two files, and still turns
-   `override_config.yaml` into the `-user-values` ConfigMap:
+   `override_config.yaml` into the `-user-values` ConfigMap. Your hand-written `HelmRelease` waited for the Gateway API
+   CRDs; the template doesn't, for reasons [Order it after another release](#order-it-after-another-release) gives,
+   so a patch adds that `dependsOn` back for this cluster:
 
     ```sh
     cat <<'EOF' > ${APP_DIR}/kustomization.yaml
@@ -231,6 +230,15 @@ one, applies both. So Flux updates the release in place, rather than uninstallin
         reconcile.fluxcd.io/watch: Enabled
     kind: Kustomization
     namespace: org-${organization}
+    patches:
+      - patch: |-
+          - op: add
+            path: /spec/dependsOn
+            value:
+              - name: ${cluster_name}-gateway-api-crds
+        target:
+          kind: HelmRelease
+          name: \${cluster_name}-hello-world
     resources:
       - ../../../../../../../../bases/apps/hello-world
     EOF
@@ -260,6 +268,12 @@ flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
 
 If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md).
 
+The page still answers at the same address, as the route didn't change, only where its values come from:
+
+```sh
+curl -s ${HELLO_URL} | head
+```
+
 The cluster now runs the version the template pins. If it ran another one before, such as the basic tutorial's
 `3.2.3`, helm-controller has just moved the release to the template's chart, `3.2.4` when this was written.
 The next section shows how one cluster keeps a version of its own.
@@ -281,12 +295,11 @@ you: an `ExternalSecret` that reads your secret manager, as in the basic tutoria
 the repository, see [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values). You can use either, or both
 for different apps; neither needs the other.
 
-Everything else about the template's objects you change with a patch in the app's `kustomization.yaml`. kustomize
-applies the cluster's patches after the template's own, so the cluster's win. To keep this cluster on a version of its
-own, add this to `${APP_DIR}/kustomization.yaml`:
+Everything else about the template's objects you change with a patch in the app's `kustomization.yaml`, as you did
+for `dependsOn`. kustomize applies the cluster's patches after the template's own, so the cluster's win. To keep this
+cluster on a version of its own, add this to the `patches:` in `${APP_DIR}/kustomization.yaml`:
 
 ```yaml
-patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
@@ -328,7 +341,8 @@ patches:
       name: \${cluster_name}-hello-world
 ```
 
-A cluster that installs envoy-gateway itself adds the same patch to its own hello-world directory, as
+A cluster that installs envoy-gateway itself adds the same patch to its own hello-world directory, as yours does
+since [Deploy it to a cluster](#deploy-it-to-a-cluster), and as
 [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world-from-template/kustomization.yaml)
 in the `out-of-band-no-flux` example does.
 
@@ -345,6 +359,6 @@ kubectl --context ${WC_CONTEXT} patch gatewayclass giantswarm-default --type=mer
 
 ## Next steps
 
-- [Stacks](./stacks.md): install hello-world together with Envoy Gateway, so it has somewhere to serve from.
+- [Stacks](./stacks.md): tie hello-world and Envoy Gateway together, so a cluster gets both from one line.
 - [Automatic updates](./automatic-updates.md): let Flux move a template's version for you.
 - [Add an app](../../how-to/add-app.md): the short version of adding an app, directly or from a template.

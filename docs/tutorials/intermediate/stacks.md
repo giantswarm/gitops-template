@@ -1,19 +1,19 @@
 # Stacks
 
-At the end of [App Templates](./app-templates.md), your cluster runs hello-world from its template, with the route
-switched off, because nothing in the cluster serves it. To reach it over HTTPS, the cluster needs Envoy Gateway, and
-Envoy Gateway is three charts that have to go in in order. Its Gateway has to list the subdomain that hello-world's
-hostname uses, and hello-world has to wait for the Gateway API CRDs. Install those one by one and every cluster
-carries the order, the matching values and the versions in its own files, and has to get all of them right.
+At the end of [App Templates](./app-templates.md), your cluster runs hello-world from its template and Envoy Gateway
+from its stack, side by side, and the cluster's own files hold what ties them together. hello-world's directory has
+the `dependsOn` on the Gateway API CRDs and the hostname, Envoy Gateway's has the matching `hello` subdomain, and the
+chart versions are wherever each base pins them. Every cluster that wants the two carries the same ties in its own
+files, and has to get all of them right.
 
 A stack keeps them in one place. It's several `HelmRelease`s that are deployed together and may depend on each other,
 written as a kustomize base in `bases/stacks`. Its `resources:` lists the `HelmRelease`s and `OCIRepository`s of its
 charts, or App Templates and other stacks, which can each still be used on their own, and the stack adds what ties
 them together. A cluster lists the stack like an App Template, and gets all of its apps.
 
-By the end of this tutorial, hello-world answers over HTTPS on the cluster from the basic tutorial, installed with
-Envoy Gateway as the hello-web stack. It creates no cluster, though Envoy Gateway's load balancer is a cloud resource
-of its own.
+By the end of this tutorial, your cluster gets both from the hello-web stack, in one directory instead of two, and
+hello-world still answers at the same address. It creates no cluster and installs nothing new: Flux updates the four
+releases in place.
 
 - [When a stack helps](#when-a-stack-helps)
 - [Create a stack](#create-a-stack)
@@ -31,6 +31,12 @@ The fork ships two stacks:
   only the chart you mean.
 - [hello-web](/bases/stacks/hello-web/) is a stack built from a stack and an app: hello-world, served over HTTPS
   through the envoy-gateway stack. It's the one this tutorial builds and installs.
+
+On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which isn't part of a Giant Swarm release.
+Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
+[its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to. The
+cluster from the basic tutorial has it already. The Gateway also needs cert-manager's Gateway API support, which step
+4 of the basic tutorial switches on.
 
 Run the commands from the root of your clone, with the variables the basic tutorial exported still set: those from
 [Before you start](../basic/getting-started.md#before-you-start), and the ones its steps add, such as `WC_CONTEXT`.
@@ -199,8 +205,8 @@ bases/stacks/hello-web
 
 A cluster uses a stack as it uses an App Template: a directory in the cluster's `apps`, whose `kustomization.yaml`
 lists the stack under `resources:`. Your cluster's hello-world directory does nearly that already, so move it onto the
-stack. hello-world keeps its object names, `${WC_NAME}-hello-world`, so Flux upgrades it in place, and the three
-envoy-gateway releases are new.
+stack, and take out the envoy-gateway directory, which the stack replaces. Every object keeps its name, such as
+`${WC_NAME}-hello-world` and `${WC_NAME}-gateway-api-crds`, so Flux upgrades the four releases in place.
 
 1. Rename the app's directory after the stack, and point it at the stack instead of the template:
 
@@ -211,10 +217,21 @@ envoy-gateway releases are new.
     yq -i '.resources |= map(sub("^hello-world$"; "hello-web"))' ${WC_DIR}/apps/kustomization.yaml
     ```
 
-1. The cluster's `override_config.yaml` switched the route off. Take that out, so hello-world gets the stack's route:
+1. The stack now holds what the cluster's files did. It makes hello-world wait for the Gateway API CRDs, so take out
+   the cluster's `dependsOn` patch. Its values set the route and the hostname, so take those out of
+   `override_config.yaml` too:
 
     ```sh
-    yq -i 'del(.route)' ${APP_DIR}/override_config.yaml
+    yq -i 'del(.patches[] | select(.patch | test("dependsOn")))' ${APP_DIR}/kustomization.yaml
+    yq -i 'del(.ingress) | del(.route)' ${APP_DIR}/override_config.yaml
+    ```
+
+1. The stack brings Envoy Gateway, with the `hello` subdomain in its Gateway values, so remove the cluster's own
+   envoy-gateway directory:
+
+    ```sh
+    git rm -rq ${WC_DIR}/apps/envoy-gateway
+    yq -i 'del(.resources[] | select(. == "envoy-gateway"))' ${WC_DIR}/apps/kustomization.yaml
     ```
 
     The rest of `override_config.yaml` is still the `${cluster_name}-hello-world-user-values` ConfigMap, and still
@@ -229,8 +246,8 @@ envoy-gateway releases are new.
     git commit -m "Deploy the hello-web stack to ${WC_NAME}" && git push
     ```
 
-**Check:** four releases are `Ready`: the three of Envoy Gateway, then hello-world, which waits for the Gateway API
-CRDs:
+**Check:** the same four releases are `Ready`: the three of Envoy Gateway, then hello-world, which waits for the
+Gateway API CRDs:
 
 ```sh
 flux get helmreleases -n org-${ORG_NAME} | grep ${WC_NAME}-
@@ -244,16 +261,12 @@ hello-world's `HTTPRoute` is attached to the Gateway:
 kubectl --context ${WC_CONTEXT} get httproute -n hello-world
 ```
 
-And the point of the whole exercise: hello-world answers over HTTPS, at the hostname in its route. Open it in a
-browser, or ask from the shell:
+And hello-world answers at the same address as before. The Gateway, its DNS record and its certificate didn't
+change, only which files describe them:
 
 ```sh
-export HELLO_URL=https://$(kubectl --context ${WC_CONTEXT} get httproute -n hello-world -o jsonpath='{.items[0].spec.hostnames[0]}')
-echo ${HELLO_URL}
 curl -s ${HELLO_URL} | head
 ```
-
-The DNS record and the certificate follow the Gateway, so give them a few minutes after the releases are `Ready`.
 
 Your cluster installs the stack as a secondary app, from `${WC_DIR}/apps`, once the cluster is up. A cluster can also
 install a stack with the cluster, as a base app, by listing it in `${WC_DIR}/cluster/apps/kustomization.yaml`, as the

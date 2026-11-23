@@ -3,10 +3,15 @@
 #
 # Prerequisites on the workload cluster: the Giant Swarm default apps the charts build
 # on (cert-manager, external-dns, Kyverno, Cilium, the monitoring CRDs), plus
-# - Gateway API support enabled in cert-manager, for the Gateway's Let's Encrypt
-#   certificate (HTTP01 through the Gateway)
-# - on AWS (`provider: capa`): aws-load-balancer-controller, as the Gateway is exposed
-#   through a Network Load Balancer
+# - Gateway API support in cert-manager, for the Gateway's Let's Encrypt certificate
+#   (HTTP01 through the Gateway): set
+#   `global.apps.certManager.values.cert-manager.config.enableGatewayAPI: true` in the
+#   cluster's values once the Gateway API CRDs are in, then restart cert-manager, see
+#   docs/tutorials/basic/getting-started.md, step 4
+# - on AWS, the Gateway gets its address from the AWS Load Balancer Controller, which
+#   isn't part of a Giant Swarm release. Install Giant Swarm's aws-lb-controller-bundle
+#   on the workload cluster as its README describes, or ask Giant Swarm to:
+#   https://github.com/giantswarm/aws-lb-controller-bundle#installing
 gateways:
   default:
     # apps attach their HTTPRoutes to this Gateway, see `route.parentRefs` of the

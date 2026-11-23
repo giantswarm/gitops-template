@@ -46,11 +46,11 @@ the `ResourceSet`, its `OCIRepository` and its `HelmRelease`; why, and when rend
 ## Schedule an app's upgrades
 
 The app is a second copy of hello-world, `hello-world-window`, in its own namespace, which upgrades only from Monday
-to Thursday, 09:00 to 17:00 in Berlin. Its Ingress is switched off, as in the basic tutorial, so that it doesn't claim
-the host of the cluster's other hello-world. Its `dependsOn` names the cluster's `gateway-api-crds` release. The chart
-doesn't need the CRDs with its route switched off: the dependency is a readiness gate, so that the app installs only
-once the cluster is up and running its base apps, as [Multicluster apps](./multicluster-apps.md#clusters-that-arent-ready-yet)
-explains. It does mean the cluster has to have that release, from the [hello-web](../intermediate/stacks.md) stack or
+to Thursday, 09:00 to 17:00 in Berlin. Its Ingress is switched off and it gets no route: it's there for its upgrade
+window, not to be opened, and it leaves the address to the cluster's other hello-world. Its `dependsOn` names the
+cluster's `gateway-api-crds` release. The chart doesn't need the CRDs with its route switched off: the dependency is
+a readiness gate, so that the app installs only once the cluster is up and running its base apps, as
+[Multicluster apps](./multicluster-apps.md#clusters-that-arent-ready-yet) explains. It does mean the cluster has to have that release, from the [hello-web](../intermediate/stacks.md) stack or
 envoy-gateway. Without it, the app waits in `DependencyNotReady` for good, with no error; leave the `dependsOn` out on
 such a cluster.
 
