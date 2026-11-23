@@ -364,6 +364,9 @@ the `App`'s name.
 
     It can't read your repository: if the `App` is still in Git, Flux creates it again. Take it out first, in step 3.
 
+    The cleanup is final. After it there's no way back to the App Platform, only forward, so run it once you're
+    content with the `HelmRelease`.
+
     [Something is stuck Terminating](./troubleshooting.md#something-is-stuck-terminating) says not to remove a
     finalizer while its controller can still do its job. Here, the job is to uninstall the release, which is exactly
     what you don't want, so removing it is the point.
@@ -423,5 +426,4 @@ its order:
 **After the cleanup,** the `App` and the `Chart` are gone.
 
 > [!Caution]
-> There's no confirmed way back to the App Platform from here without the release being installed again. Keep the
-> `HelmRelease`, and fix forward. If you need the `App` back, ask Giant Swarm.
+> There's no way back to the App Platform from here. Keep the `HelmRelease`, and fix forward.
