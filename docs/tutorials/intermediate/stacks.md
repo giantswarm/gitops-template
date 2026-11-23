@@ -151,7 +151,7 @@ bases/stacks/hello-web
           - op: replace
             path: /spec/ref/tag
             # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle versioning=docker
-            value: "2.1.0"
+            value: "2.1.1"
         target:
           kind: OCIRepository
           name: \${cluster_name}-gateway-api-bundle
@@ -271,8 +271,8 @@ reinstalling the app.
 
 Moving an app out of a stack is the same in reverse: in one commit, list the app's template in the cluster's apps and
 take the stack out. Take a stack out of a cluster altogether and Flux uninstalls all of its apps together. For the
-envoy-gateway stack, see [Order it after another release](./app-templates.md#order-it-after-another-release) for the
-`GatewayClass` that can be left behind.
+envoy-gateway stack, see [Order it after another release](./app-templates.md#order-it-after-another-release) for how
+its bundle keeps that from leaving a `GatewayClass` behind.
 
 kustomize has limits as a way to build stacks: it can replace values, but it can't set one value in several places,
 which is why hello-web writes the `hello` subdomain twice. [Limits of kustomize](../../explanation/composition.md#limits-of-kustomize)
