@@ -348,10 +348,11 @@ in the `out-of-band-no-flux` example does.
 
 `dependsOn` orders installs and upgrades, not deletes. When several `HelmRelease`s are deleted at once, such as a
 stack's when a `Kustomization` prunes it, helm-controller uninstalls them all together. Take the envoy-gateway stack
-out of a cluster and its bundle deletes the `HelmRelease`s it created, all four at once. If Envoy Gateway is gone
-before it has cleared the finalizer of the `giantswarm-default` `GatewayClass`, the `GatewayClass` stays `Terminating`,
-and the uninstall of `gateway-api-config` waits for it. That only matters when you remove the envoy-gateway stack from
-a workload cluster that stays up. Clear the finalizer there with:
+out of a cluster and its bundle deletes the `HelmRelease`s it created, all four at once. The stack therefore sets
+`spec.uninstall.disableWait` on the `gateway-api-config` one, so that its uninstall doesn't wait for the
+`giantswarm-default` `GatewayClass` to go. If Envoy Gateway is gone before it has cleared the `GatewayClass`'s
+finalizer, the `GatewayClass` stays `Terminating`. That only matters when you remove the envoy-gateway stack from a
+workload cluster that stays up. Clear the finalizer there with:
 
 ```sh
 kubectl --context ${WC_CONTEXT} patch gatewayclass giantswarm-default --type=merge -p '{"metadata":{"finalizers":null}}'

@@ -170,6 +170,7 @@ Tools and CI:
   Gateway API CRDs with `dependsOn` instead of retrying their install forever.
 - The docs read secrets through namespaced `SecretStore`s instead of a `ClusterSecretStore`, which a customer can't
   create on a management cluster.
+- Uninstalling the envoy-gateway stack no longer waits on the `GatewayClass` finalizer until it times out.
 - yamllint uses the rules in `.yamllint.yaml`, `tools/test-all-ff validate` fails on `kubeconform` errors, and the kind
   test's `HelmRelease` check checks the `HelmRelease`s.
 

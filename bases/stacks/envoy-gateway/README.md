@@ -44,9 +44,11 @@ Flux doesn't apply those objects from Git, the bundle does, so `flux trace` lead
 `HelmRelease`, and the bundle's version decides the version of each app.
 
 `dependsOn` orders installs and upgrades, but not deletes: when a `Kustomization` prunes the stack, the bundle deletes
-its `HelmRelease`s and helm-controller uninstalls the apps at once. If Envoy Gateway is gone before it has cleared the
-GatewayClass's finalizer, the GatewayClass stays `Terminating` and the uninstall of `gateway-api-config` waits for it.
-That only matters when you remove the stack from a workload cluster that stays up. Clear the finalizer there with:
+its `HelmRelease`s and helm-controller uninstalls the apps at once. So the bundle's `HelmRelease` patches the one for
+`gateway-api-config`, through `spec.postRenderers`, to set `spec.uninstall.disableWait`, and its uninstall doesn't
+wait for the GatewayClass to go. If Envoy Gateway is gone before it has cleared the GatewayClass's finalizer, the
+GatewayClass stays `Terminating`. That only matters when you remove the stack from a workload cluster that stays up.
+Clear the finalizer there with:
 
 ```sh
 kubectl patch gatewayclass giantswarm-default --type=merge -p '{"metadata":{"finalizers":null}}'

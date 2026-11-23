@@ -19,6 +19,17 @@ spec:
     remediation:
       remediateLastFailure: false
       retries: 10
+  postRenderers:
+    - kustomize:
+        patches:
+          - patch: |-
+              - op: add
+                path: /spec/uninstall
+                value:
+                  disableWait: true
+            target:
+              kind: HelmRelease
+              name: hello-app-dev-1-gateway-api-config
   releaseName: hello-app-dev-1-gateway-api-bundle
   serviceAccountName: automation
   storageNamespace: org-org-name
@@ -67,6 +78,9 @@ spec:
   releaseName: gateway-api-config
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
+  # the stack's patch, through the bundle's postRenderers
+  uninstall:
+    disableWait: true
   valuesFrom:
     - kind: ConfigMap
       name: hello-app-dev-1-cluster-values
