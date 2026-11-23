@@ -350,10 +350,8 @@ the `App`'s name.
     If your values come to the same as the `App`'s, Flux finds nothing to change and the release stays at its
     revision. If they don't, Flux upgrades it to what Git says: check the values before you push.
 
-    > **Caution:**
-    > Whether a field the tool set and Git doesn't, such as an annotation carried over from the `App`, stays on the
-    > `HelmRelease` after Flux applies it isn't confirmed here. Compare the object on the cluster with the file in
-    > Git, and ask Giant Swarm about anything left over that changes how the release is reconciled.
+    The tool leaves nothing of note behind on the `HelmRelease`. If you'd like to see for yourself, compare the
+    object on the cluster with the file in Git.
 
 1. Delete the `App` and its `Chart`. The tool's `cleanup` checks first that the `HelmRelease` is `Ready`, not
    suspended, applied by a `Kustomization`, and that the `App` has Flux reconciliation disabled. Then it removes the
