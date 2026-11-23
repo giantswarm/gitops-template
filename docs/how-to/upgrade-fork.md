@@ -781,9 +781,10 @@ Envoy Gateway only as the `gateway-api-bundle`, so [bases/stacks/envoy-gateway](
 installs that instead. The bundle creates the three `HelmRelease`s itself, under the names they had,
 `${cluster_name}-gateway-api-crds`, `${cluster_name}-envoy-gateway` and `${cluster_name}-gateway-api-config`, and adds
 `${cluster_name}-gateway-api-state-metrics`. A cluster's values keep their names too:
-`${cluster_name}-<app>-user-values` and `${cluster_name}-<app>-user-secrets`. Of the base's defaults, only `${cluster_name}-gateway-api-config-values` is still
-read. If you changed `default_config_gateway_api_crds.yaml` or `default_config_envoy_gateway.yaml`, move those values
-into the app's `-user-values` ConfigMap, or they're gone after the move, without an error.
+`${cluster_name}-<app>-user-values` and `${cluster_name}-<app>-user-secrets`. Of the base's defaults, only
+`${cluster_name}-gateway-api-config-values` is still read. If you changed `default_config_gateway_api_crds.yaml` or
+`default_config_envoy_gateway.yaml`, move those values into the app's `-user-values` ConfigMap, or they're gone after
+the move, without an error.
 
 The names stay, but the owner changes. Flux prunes the three `HelmRelease`s it applied from Git, and the bundle
 creates them again. A pruned `HelmRelease` uninstalls its release, so in a single commit the move takes the Gateway
