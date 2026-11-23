@@ -109,7 +109,7 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     stores a release in the namespace it installs into, so they nearly always are. If they're somewhere else, use that
     namespace for `storageNamespace` below instead of `APP_NAMESPACE`.
 
-    > [!Caution]
+    > **Caution:**
     > If there are no Secrets, the release may be stored in ConfigMaps (`HELM_DRIVER=configmap`). helm-controller
     > only reads Secrets, so it wouldn't find the release. What it does then on a live cluster isn't confirmed here:
     > ask Giant Swarm before you go on.
@@ -192,7 +192,7 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     flux suspend helmrelease ${WC_NAME}-${APP_NAME} -n org-${ORG_NAME}
     ```
 
-    > [!Caution]
+    > **Caution:**
     > How to untangle two releases that claim the same objects isn't covered here. Ask Giant Swarm before you
     > uninstall either of them.
 
@@ -200,7 +200,7 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     template's `upgrade.remediation` rolls back and retries, see
     [A `HelmRelease` has run out of retries](./troubleshooting.md#a-helmrelease-has-run-out-of-retries).
 
-    > [!Caution]
+    > **Caution:**
     > helm-controller records the release it supersedes, so its rollback should go back to the revision installed by
     > hand. That isn't confirmed by a test here. Before you adopt something that matters, try the steps on a copy of
     > it in a test cluster.
@@ -287,7 +287,7 @@ the `App`'s name.
    key the tool's `valuesFrom` names, into `override_config.yaml`, and those of its user Secret into the
    `-user-secrets` Secret. Add an entry to `valuesFrom` for each `extraConfigs` source the tool lists.
 
-    > [!Caution]
+    > **Caution:**
     > Whether the `App`'s `spec.config` ConfigMap always holds the same values as the template's first layer,
     > `${cluster_name}-cluster-values`, isn't confirmed here. If the tool's `valuesFrom` names another ConfigMap or a
     > Secret there, ask Giant Swarm which to use before you commit.
@@ -331,7 +331,7 @@ the `App`'s name.
     If your values come to the same as the `App`'s, Flux finds nothing to change and the release stays at its
     revision. If they don't, Flux upgrades it to what Git says: check the values before you push.
 
-    > [!Caution]
+    > **Caution:**
     > Whether a field the tool set and Git doesn't, such as an annotation carried over from the `App`, stays on the
     > `HelmRelease` after Flux applies it isn't confirmed here. Compare the object on the cluster with the file in
     > Git, and ask Giant Swarm about anything left over that changes how the release is reconciled.
