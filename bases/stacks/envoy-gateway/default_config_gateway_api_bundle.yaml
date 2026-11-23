@@ -2,6 +2,13 @@
 # and where each app reads its values
 clusterID: ${cluster_name}
 organization: ${organization}
+# The bundle's hooks move a bundle that was installed as App CRs over to
+# HelmReleases: on every upgrade they run two Jobs here that reach the workload
+# cluster. A bundle this stack installs was never App CRs, so they're off. Turn
+# them on for the one upgrade that moves an App-installed bundle to this stack.
+migration:
+  appToHelmRelease:
+    enabled: false
 # `extraConfigs` adds ConfigMaps and Secrets of the organisation's namespace to an
 # app's values. The bundle sorts them by `priority`, and a Secret after every
 # ConfigMap, so each app's values are merged in this order, later ones win:
