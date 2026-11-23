@@ -13,6 +13,7 @@ updates them here. Each file is one CRD, copied unchanged from the upstream file
 | --- | --- | --- |
 | `ciliumnetworkpolicies.cilium.io.yaml` | gateway-api-crds, envoy-gateway | [Cilium v1.18.4](https://raw.githubusercontent.com/cilium/cilium/v1.18.4/pkg/k8s/apis/cilium.io/client/crds/v2/ciliumnetworkpolicies.yaml) |
 | `podmonitors.monitoring.coreos.com.yaml` | envoy-gateway | [prometheus-operator v0.86.2](https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.86.2/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml) |
+| `servicemonitors.monitoring.coreos.com.yaml` | gateway-api-state-metrics | [prometheus-operator v0.86.2](https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.86.2/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml) |
 | `podlogs.monitoring.grafana.com.yaml` | envoy-gateway | [Grafana Alloy v1.11.3](https://raw.githubusercontent.com/grafana/alloy/v1.11.3/operations/helm/charts/alloy/charts/crds/crds/monitoring.grafana.com_podlogs.yaml) |
 | `certificates.cert-manager.io.yaml`, `issuers.cert-manager.io.yaml` | gateway-api-config | the two CRDs of that name in [cert-manager v1.19.1](https://github.com/cert-manager/cert-manager/releases/download/v1.19.1/cert-manager.crds.yaml) |
 | `clusterpolicies.kyverno.io.yaml` | gateway-api-config | [Kyverno v1.15.2](https://raw.githubusercontent.com/kyverno/kyverno/v1.15.2/config/crds/kyverno/kyverno.io_clusterpolicies.yaml), reduced, see below |

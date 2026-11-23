@@ -1,0 +1,62 @@
+# A bundle: a chart that renders a HelmRelease for each of its apps on the management cluster.
+# The values of the bundle are fine, and the values the bundle hands to one of its apps, from a
+# ConfigMap in `extraConfigs`, are not: `subdomains` is a list. tools/test-all-ff checks that
+# tools/validate-helm-values renders the app's chart too, and reports it.
+apiVersion: v1
+data:
+  values: |
+    clusterID: demo
+    organization: demo
+    apps:
+      gatewayApiConfig:
+        extraConfigs:
+          - name: demo-gateway-api-config-values
+            priority: 75
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: demo-gateway-api-bundle-values
+  namespace: org-demo
+---
+apiVersion: v1
+data:
+  values: |
+    gateways:
+      default:
+        listeners:
+          https:
+            subdomains: hello
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: demo-gateway-api-config-values
+  namespace: org-demo
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: demo-gateway-api-bundle
+  namespace: org-demo
+spec:
+  interval: 10m
+  ref:
+    tag: 2.1.0
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: demo-gateway-api-bundle
+  namespace: org-demo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: demo-gateway-api-bundle
+  interval: 5m
+  serviceAccountName: automation
+  valuesFrom:
+    - kind: ConfigMap
+      name: demo-gateway-api-bundle-values
+      valuesKey: values

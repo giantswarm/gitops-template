@@ -1,0 +1,45 @@
+# values for the gateway-api-bundle chart: which workload cluster its apps go to,
+# and where each app reads its values
+clusterID: ${cluster_name}
+organization: ${organization}
+# `extraConfigs` adds ConfigMaps and Secrets of the organisation's namespace to an
+# app's values. The bundle sorts them by `priority`, and a Secret after every
+# ConfigMap, so each app's values are merged in this order, later ones win:
+#   1. ${cluster_name}-cluster-values        cluster values (baseDomain, provider, ...),
+#                                            created for every workload cluster (50)
+#   2. ${cluster_name}-<app>-values          this stack's defaults (75)
+#   3. ${cluster_name}-<app>-user-values     (optional) overrides, like an App CR's userConfig (125)
+#   4. ${cluster_name}-<app>-user-secrets    (optional) the same, as an encrypted Secret (125)
+# The bundle's own `userConfig` of an app is at 100. Leave it empty for these three
+# apps: the bundle would create a `-user-values` ConfigMap or `-user-secrets` Secret
+# of the names above for it.
+apps:
+  gatewayApiCrds:
+    extraConfigs:
+      - name: ${cluster_name}-gateway-api-crds-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-gateway-api-crds-user-secrets
+        optional: true
+        priority: 125
+  envoyGateway:
+    extraConfigs:
+      - name: ${cluster_name}-envoy-gateway-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-envoy-gateway-user-secrets
+        optional: true
+        priority: 125
+  gatewayApiConfig:
+    extraConfigs:
+      - name: ${cluster_name}-gateway-api-config-values
+        priority: 75
+      - name: ${cluster_name}-gateway-api-config-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-gateway-api-config-user-secrets
+        optional: true
+        priority: 125

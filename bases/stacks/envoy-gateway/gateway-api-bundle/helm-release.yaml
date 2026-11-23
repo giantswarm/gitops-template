@@ -1,0 +1,48 @@
+# The bundle is installed on the management cluster, into the organisation's
+# namespace, as the namespace's `automation` account. What it installs there is a
+# HelmRelease and an OCIRepository for each of its apps, and those HelmReleases
+# install the apps into the workload cluster through its kubeconfig Secret.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-gateway-api-bundle
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}-gateway-api-bundle
+    namespace: org-${organization}
+  install:
+    # the bundle's HelmReleases get ready when the workload cluster has their apps,
+    # which is long after the bundle has created them: don't wait for them
+    disableWait: true
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
+  # one release per cluster in the organisation's namespace
+  releaseName: ${cluster_name}-gateway-api-bundle
+  serviceAccountName: automation
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}
+  timeout: 10m
+  upgrade:
+    disableWait: true
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: ${cluster_name}-gateway-api-bundle-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: ${cluster_name}-gateway-api-bundle-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: ${cluster_name}-gateway-api-bundle-user-secrets
+      optional: true
+      valuesKey: values

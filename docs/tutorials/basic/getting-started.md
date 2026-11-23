@@ -903,9 +903,10 @@ outside: on Giant Swarm, that's the Gateway API with Envoy Gateway, which a rele
 as the [envoy-gateway](../../../bases/stacks/envoy-gateway) stack, so the cluster gets that first, and hello-world gets
 an `HTTPRoute` on its Gateway.
 
-1. Give the cluster Envoy Gateway. The stack is three charts that install in order: the Gateway API CRDs, the Envoy
-   Gateway controller, and the `giantswarm-default` Gateway that apps attach their routes to. The Gateway only gets a
-   DNS record and a certificate for the subdomains it lists, so give it `hello`, for hello-world. First the values:
+1. Give the cluster Envoy Gateway. The stack is one chart, Giant Swarm's `gateway-api-bundle`, which installs the
+   rest in order: the Gateway API CRDs, the Envoy Gateway controller, the `giantswarm-default` Gateway that apps
+   attach their routes to, and metrics of it all. The Gateway only gets a DNS record and a certificate for the
+   subdomains it lists, so give it `hello`, for hello-world. First the values:
 
     ```sh
     mkdir -p ${WC_DIR}/apps/envoy-gateway
@@ -920,7 +921,7 @@ an `HTTPRoute` on its Gateway.
     ```
 
     Then a `kustomization.yaml` that lists the stack and turns the values into the
-    `${cluster_name}-gateway-api-config-user-values` ConfigMap, which the stack's Gateway release reads last, so your
+    `${cluster_name}-gateway-api-config-user-values` ConfigMap, which the bundle's Gateway release reads last, so your
     values win over the stack's:
 
     ```sh
@@ -1113,8 +1114,9 @@ kubectl get externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME
 
 If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
 
-Four releases are `Ready` on the management cluster: the three of Envoy Gateway, one after the other, then
-hello-world, which waits for the Gateway API CRDs. It takes a few minutes:
+Six releases are `Ready` on the management cluster: the bundle straight away, as all it does is create the next
+four, then those four of Envoy Gateway, one after the other, then hello-world, which waits for the Gateway API CRDs.
+It takes a few minutes:
 
 ```sh
 flux get helmreleases -n org-${ORG_NAME} | grep ${WC_NAME}-

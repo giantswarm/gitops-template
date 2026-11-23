@@ -1,5 +1,3 @@
-# Same shape as the HelmReleases of the envoy-gateway stack, see bases/stacks/envoy-gateway.
-#
 # Values are merged in `valuesFrom` order, later entries win (maps are merged,
 # lists are replaced):
 #   1. ${cluster_name}-cluster-values            cluster values (baseDomain, provider, ...),

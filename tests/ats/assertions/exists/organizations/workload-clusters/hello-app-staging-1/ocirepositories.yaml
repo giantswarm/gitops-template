@@ -1,51 +1,19 @@
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
+kind: Ohello-app-staging-1IRepository
 metadata:
   labels:
     giantswarm.io/cluster: hello-app-staging-1
     giantswarm.io/managed-by: flux
     kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-staging-1
     kustomize.toolkit.fluxcd.io/namespace: org-org-name
-  name: hello-app-staging-1-gateway-api-crds
+  name: hello-app-staging-1-gateway-api-bundle
   namespace: org-org-name
 spec:
   provider: generic
   ref:
-    tag: "1.9.1"
-  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-crds
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  labels:
-    giantswarm.io/cluster: hello-app-staging-1
-    giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-staging-1
-    kustomize.toolkit.fluxcd.io/namespace: org-org-name
-  name: hello-app-staging-1-envoy-gateway
-  namespace: org-org-name
-spec:
-  provider: generic
-  ref:
-    tag: "1.10.5"
-  url: oci://gsoci.azurecr.io/charts/giantswarm/envoy-gateway
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  labels:
-    giantswarm.io/cluster: hello-app-staging-1
-    giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-staging-1
-    kustomize.toolkit.fluxcd.io/namespace: org-org-name
-  name: hello-app-staging-1-gateway-api-config
-  namespace: org-org-name
-spec:
-  provider: generic
-  ref:
-    tag: "1.13.1"
-  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-config
+    tag: "2.1.0"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository

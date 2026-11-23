@@ -12,7 +12,7 @@ Nothing applies this directory directly. The stage and region examples, `HELLO_A
 ## What's here
 
 - `kustomization.yaml`: lists the two bases, makes hello-world wait for the Gateway API CRDs (`dependsOn`), and pins
-  the four chart versions that work together.
+  the two chart versions that work together, the bundle's and hello-world's.
 - `gateway_api_config.yaml`: the Gateway's values, with the `hello` subdomain.
 - `hello_world.yaml`: hello-world's values, with its hostname and the Gateway it attaches to.
 

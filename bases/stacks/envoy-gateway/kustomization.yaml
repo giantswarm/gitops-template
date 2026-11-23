@@ -1,31 +1,23 @@
-# Envoy Gateway is installed as three charts, in this order:
-#   gateway-api-crds   -> the Gateway API CRDs (Gateway, HTTPRoute, ...)
-#   envoy-gateway      -> the Envoy Gateway controller
-#   gateway-api-config -> the `giantswarm-default` GatewayClass and Gateway
-# Each chart has its own directory with a `helm-release.yaml` and an
-# `oci-repository.yaml`, the file names `kubectl gs gitops` uses for an app.
-# The HelmReleases run on the management cluster and install into the workload
-# cluster through its kubeconfig secret. The fields follow what
-# giantswarm/appcr-to-helmrelease-converter emits for a migrated App CR, except
-# install retries and `createNamespace`. The OCIRepositories pin the chart
-# version in `spec.ref.tag`.
+# Envoy Gateway is installed the way Giant Swarm supports it: as the
+# gateway-api-bundle chart, which installs these apps in order:
+#   gateway-api-crds          -> the Gateway API CRDs (Gateway, HTTPRoute, ...)
+#   envoy-gateway             -> the Envoy Gateway controller
+#   gateway-api-config        -> the `giantswarm-default` GatewayClass and Gateway
+#   gateway-api-state-metrics -> metrics of the Gateway API objects
+# The bundle has a directory with a `helm-release.yaml` and an
+# `oci-repository.yaml`, the file names `kubectl gs gitops` uses for an app. Its
+# HelmRelease runs on the management cluster and creates a HelmRelease for each
+# app there, named `${cluster_name}-<app>`, which installs the app into the
+# workload cluster through its kubeconfig secret. The OCIRepository pins the
+# bundle's version in `spec.ref.tag`, and the bundle pins the apps' versions.
 #
-# Values are merged in `valuesFrom` order, later entries win (maps are merged,
-# lists are replaced):
-#   1. ${cluster_name}-cluster-values        cluster values (baseDomain, provider, ...),
-#                                            created for every workload cluster
-#   2. ${cluster_name}-<chart>-values        this stack's defaults
-#   3. ${cluster_name}-<chart>-user-values   (optional) overrides, like an App CR's userConfig
-#   4. ${cluster_name}-<chart>-user-secrets  (optional) the same, as an encrypted Secret
+# default_config_gateway_api_bundle.yaml lists where each app reads its values.
 apiVersion: kustomize.config.k8s.io/v1beta1
 buildMetadata: [originAnnotations]
 configMapGenerator:
   - files:
-      - values=default_config_gateway_api_crds.yaml
-    name: ${cluster_name}-gateway-api-crds-values
-  - files:
-      - values=default_config_envoy_gateway.yaml
-    name: ${cluster_name}-envoy-gateway-values
+      - values=default_config_gateway_api_bundle.yaml
+    name: ${cluster_name}-gateway-api-bundle-values
   - files:
       - values=default_config_gateway_api_config.yaml
     name: ${cluster_name}-gateway-api-config-values
@@ -36,9 +28,5 @@ generatorOptions:
     reconcile.fluxcd.io/watch: Enabled
 kind: Kustomization
 resources:
-  - gateway-api-crds/oci-repository.yaml
-  - envoy-gateway/oci-repository.yaml
-  - gateway-api-config/oci-repository.yaml
-  - gateway-api-crds/helm-release.yaml
-  - envoy-gateway/helm-release.yaml
-  - gateway-api-config/helm-release.yaml
+  - gateway-api-bundle/oci-repository.yaml
+  - gateway-api-bundle/helm-release.yaml

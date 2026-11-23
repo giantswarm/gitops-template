@@ -24,7 +24,8 @@ Three workflows check a pull request. [validate.yaml](../../.github/workflows/va
   output through `yamllint` and `kubeconform`, so it fails on YAML that isn't valid and on objects that don't match
   their schemas. It also renders the chart of every `HelmRelease` with its merged values (see
   [validate-helm-values](../../tools/README.md#validate-helm-values)), so values the chart's schema rejects fail the
-  job. It attaches a validation report as a comment to your pull request.
+  job. That includes the `HelmRelease`s a bundle's chart renders, such as the apps of `gateway-api-bundle`. It
+  attaches a validation report as a comment to your pull request.
 
   An object a `ResourceSet` renders that keeps a `<< ... >>` template, such as one named after an entry of its
   `spec.inputs`, can't be checked without Flux Operator: the report names it as left out, and only the kind test
@@ -457,10 +458,10 @@ The test also creates what they need:
 - the `out-of-band-no-flux-cluster-values` ConfigMap, which a management cluster creates for every workload
   cluster. Its values are [tools/values-stubs/cluster-values.yaml](../../tools/values-stubs/cluster-values.yaml).
 - in the vCluster, the CRDs that a Giant Swarm workload cluster gets from its default apps and the apps create objects
-  of: Cilium's `CiliumNetworkPolicy`, `PodMonitor`, Grafana's `PodLogs`, cert-manager's `Certificate` and `Issuer`,
-  Kyverno's `ClusterPolicy` and external-dns' `DNSEndpoint`. Only the CRDs: nothing in the test needs their
-  controllers. They're kept in [tests/ats/fixtures/crds](../../tests/ats/fixtures/crds/README.md), which says where
-  each comes from, so the test doesn't download them.
+  of: Cilium's `CiliumNetworkPolicy`, `PodMonitor`, `ServiceMonitor`, Grafana's `PodLogs`, cert-manager's
+  `Certificate` and `Issuer`, Kyverno's `ClusterPolicy` and external-dns' `DNSEndpoint`. Only the CRDs: nothing in the
+  test needs their controllers. They're kept in [tests/ats/fixtures/crds](../../tests/ats/fixtures/crds/README.md),
+  which says where each comes from, so the test doesn't download them.
 - in the vCluster, the `giantswarm-critical` PriorityClass, which the cluster chart creates in every Giant Swarm
   workload cluster. The `envoy-gateway` Deployment's pods can't be created without it.
 

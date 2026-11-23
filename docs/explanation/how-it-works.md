@@ -125,10 +125,11 @@ rules. Why some layers are bases and others components is in [Composition](./com
 
 An app goes into one of two directories of the cluster, and the choice decides when it installs.
 
-A base app is one the cluster needs from the start, such as the Gateway API charts of the envoy-gateway stack in the
+A base app is one the cluster needs from the start, such as the Gateway API bundle of the envoy-gateway stack in the
 out-of-band examples. It goes into `cluster/apps`, and the cluster's `Kustomization`, `WC_NAME.yaml`, applies it with
-the cluster. Its `HelmRelease` exists before the cluster does, fails while there's no kubeconfig Secret, and installs as
-soon as the cluster can take it.
+the cluster. The `HelmRelease` that installs into the workload cluster, which for a bundle is each one the bundle
+creates, exists before the cluster does, fails while there's no kubeconfig Secret, and installs as soon as the cluster
+can take it.
 
 A secondary app goes into `apps`, which the cluster's apps `Kustomization`, `WC_NAME-apps.yaml`, applies once the
 cluster's control plane is up, because its `dependsOn` waits for the cluster's `Kustomization`. Most apps are

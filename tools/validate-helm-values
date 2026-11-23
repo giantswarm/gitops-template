@@ -23,6 +23,15 @@
 #
 # The chart comes from the OCIRepository or HelmRepository in the manifest.
 #
+# A chart can render HelmReleases of its own, as a Giant Swarm bundle does for each of its
+# apps. Those are checked like the ones in the manifest, with the sources, ConfigMaps and
+# Secrets the chart renders beside them, when the HelmRelease that installs the chart has no
+# `kubeConfig`: its objects are then on the management cluster, next to the values from the
+# repository that they name. The watch label is only checked on what the repository holds, as
+# what a chart renders isn't the repository's to label. The apps of a Giant Swarm release chart,
+# `release-<provider>`, are left out: their versions come from the Release resource on the
+# management cluster.
+#
 # The OCIRepositories and HelmReleases that a Flux Operator ResourceSet renders are checked
 # too. Their tag comes from the ResourceSetInputProvider the ResourceSet reads, and which tag
 # that picks is only known on the cluster, so an OCIRepository whose `spec.ref` is a template
@@ -126,9 +135,10 @@ function ignored() {
 }
 
 # Fail unless the valuesFrom object (YAML) has the reconcile.fluxcd.io/watch: Enabled label, so
-# helm-controller reconciles its HelmRelease when it changes. Uses the loop's id, kind, ns and
-# ref_name.
+# helm-controller reconciles its HelmRelease when it changes. An object a chart rendered is left
+# alone. Uses the loop's id, kind, ns and ref_name.
 function check_watch_label() {
+	[ -n "${from_chart["${kind} ${ns}/${ref_name}"]}" ] && return
 	if [ "$(yq '.metadata.labels["reconcile.fluxcd.io/watch"] // ""' <<<"$1")" != "Enabled" ]; then
 		echo "${id}: ${kind} ${ns}/${ref_name} from valuesFrom has no label reconcile.fluxcd.io/watch: Enabled"
 		failed=1
@@ -172,8 +182,14 @@ fi
 
 failed=0
 count=0
+# the ConfigMaps and Secrets a chart rendered, as "<kind> <namespace>/<name>"
+declare -A from_chart=()
 
-while IFS=/ read -r ns name; do
+# the HelmReleases of the manifest; the ones their charts render are added while they are checked
+mapfile -t releases < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
+
+for ((r = 0; r < ${#releases[@]}; r++)); do
+	IFS=/ read -r ns name <<<"${releases[r]}"
 	[ -z "${name}" ] && continue
 	count=$((count + 1))
 	id="HelmRelease ${ns}/${name}"
@@ -293,15 +309,18 @@ while IFS=/ read -r ns name; do
 		files+=("${work_dir}/values-inline.yaml")
 	fi
 
+	target_ns=$(yq ".spec.targetNamespace // \"${ns}\"" "${hr}")
+	rendered="${work_dir}/rendered.yaml"
 	args=(template "$(yq ".spec.releaseName // \"${name}\"" "${hr}")" "${archive}"
-	--namespace "$(yq ".spec.targetNamespace // \"${ns}\"" "${hr}")"
+	--namespace "${target_ns}"
 	--kube-version "${kube_version}")
 	for f in "${files[@]}"; do
 		args+=(-f "${f}")
 	done
 
 	label="${id} (${chart_name} $(basename "${archive}" .tgz | sed "s/^${chart_name}-//"))"
-	if ! helm "${args[@]}" >/dev/null 2>"${work_dir}/helm.log"; then
+	if ! helm "${args[@]}" >"${rendered}" 2>"${work_dir}/helm.log"; then
+		: >"${rendered}"
 		if ignored "${ns}/${name}"; then
 			echo "${label}: known failure, listed in $(basename "${ignore_file}"):"
 		else
@@ -316,7 +335,23 @@ while IFS=/ read -r ns name; do
 	for n in "${notes[@]}"; do
 		echo "${id}: ${n}"
 	done
-done < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .metadata.name' "${manifest}")
+
+	# The HelmReleases the chart renders on the management cluster, and what they read.
+	[ "$(yq '.spec.kubeConfig // {} | length' "${hr}")" != "0" ] && continue
+	[[ "${chart_name}" == release-* ]] && continue
+	nested="${work_dir}/nested.yaml"
+	NS="${target_ns}" yq 'select(.kind == "HelmRelease" or .kind == "OCIRepository" or .kind == "HelmRepository" or .kind == "ConfigMap" or .kind == "Secret") | .metadata.namespace = (.metadata.namespace // strenv(NS))' "${rendered}" >"${nested}"
+	mapfile -t nested_releases < <(yq -N 'select(.kind == "HelmRelease") | .metadata.namespace + "/" + .metadata.name' "${nested}")
+	[ "${#nested_releases[@]}" -eq 0 ] && continue
+	while IFS= read -r object; do
+		[ -n "${object}" ] && from_chart["${object}"]=1
+	done < <(yq -N 'select(.kind == "ConfigMap" or .kind == "Secret") | .kind + " " + .metadata.namespace + "/" + .metadata.name' "${nested}")
+	{
+		echo "---"
+		cat "${nested}"
+	} >>"${manifest}"
+	releases+=("${nested_releases[@]}")
+done
 
 for n in "${left_out[@]}"; do
 	echo "${n}"
