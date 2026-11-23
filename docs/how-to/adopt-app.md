@@ -109,11 +109,6 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     stores a release in the namespace it installs into, so they nearly always are. If they're somewhere else, use that
     namespace for `storageNamespace` below instead of `APP_NAMESPACE`.
 
-    > **Caution:**
-    > If there are no Secrets, the release may be stored in ConfigMaps (`HELM_DRIVER=configmap`). helm-controller
-    > only reads Secrets, so it wouldn't find the release. What it does then on a live cluster isn't confirmed here:
-    > ask Giant Swarm before you go on.
-
 1. Read the chart and version that run, and the values that were set:
 
     ```sh
