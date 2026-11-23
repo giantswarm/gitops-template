@@ -83,6 +83,11 @@ do here and why.
   rest are set in `spec.postBuild.substitute`. A variable that comes out empty is missing there.
 - **An organisation owns many clusters.** It's a unit such as a department. Apps for all of an organisation's
   clusters at once go in its `multicluster/` directory, as a `ResourceSet`.
+- **One reconciler per object.** Every object has exactly one thing that applies it: one `Kustomization`, one
+  `HelmRelease` per release, one route per Secret. Two tools, or one `Kustomization` told twice, keep undoing each
+  other and nothing reports an error. Before you add an object, an app or a Secret, check that nothing delivers it
+  already: an `App`, a `ResourceSet`, a Kyverno policy, an `ExternalSecret` or a SOPS file. See
+  `docs/explanation/one-owner.md`.
 
 ## Deleting is the dangerous direction
 
@@ -118,6 +123,16 @@ own namespaces, however sensible the rule looks.
 SOPS, External Secrets Operator, or both: all three are valid, and `docs/explanation/secrets.md` says which secret
 suits which. Don't remove one in favour of the other.
 
+- **Stay away from secret values; hand them to a person.** Never ask for, type, read or decrypt a secret value.
+  Whatever you see is in your transcript, and a value in a command you run is in the process list. Prepare everything
+  around the value: the file's path and its entry in `kustomization.yaml`, the `.sops.yaml` rule, and the manifest,
+  either an `ExternalSecret` or the exact `read -rs ... | sops --encrypt ...` command from `docs/how-to/sops.md`,
+  "Encrypt an app's values". Then hand the one step that carries the value to the engineer: say exactly what to run,
+  and what the result should look like, such as a `*.enc.yaml` with a `sops:` section and `ENC[...]` values. Never
+  decrypt an existing file to look at it either; its names, keys and metadata are readable without decrypting.
+- **One route per Secret.** A Secret comes from an `ExternalSecret` or from a SOPS file, never both: the two
+  overwrite each other. Where a cluster uses both tools, an app's Secret comes from External Secrets Operator.
+
 - **Nothing in plain text, not even for a moment.** Pipe a Secret into `sops` so it's encrypted on its way into the
   file, as `docs/how-to/sops.md` shows. Never write the plain file first and encrypt it after.
 - **Don't edit an encrypted file by hand.** `sops` covers every value in the file with its MAC, the clear-text name,
@@ -127,8 +142,8 @@ suits which. Don't remove one in favour of the other.
   `kustomization.yaml`, `targetNamespace` or `postBuild` variables, changes what Flux applies, not the file, and Flux
   doesn't check the MAC. That's how the `WC_NAME` example's `apps/cert-manager/secret.enc.yaml` names no namespace and
   gets it, and its labels, from `apps/kustomization.yaml`.
-- **A decrypted value stays on the machine.** Decrypt only to change a value, as `docs/how-to/sops.md` describes,
-  and never put one in a commit, a pull request, a comment or a log.
+- **A decrypted value stays on the machine.** A person decrypts only to change a value, as `docs/how-to/sops.md`
+  describes, and never puts one in a commit, a pull request, a comment or a log.
 - **A `SecretStore` is not a Secret.** Anyone who can read the management cluster can read what it holds, so a test
   store holds dummy values only.
 - **A fork's CI runs with the real master key.** There's no test mode. Don't propose a "test key".

@@ -35,11 +35,17 @@ that reads it. ESO gives the app its secret values. If you only want one of them
   repository instead, in the `${cluster_name}-hello-world-user-secrets` Secret the `HelmRelease` already reads, with a
   key of the cluster's own: see
   [Add a workload cluster key (age)](../../how-to/sops.md#add-a-workload-cluster-key-age) and
-  [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values).
+  [Encrypt an app's values](../../how-to/sops.md#encrypt-an-apps-values). It's the same Secret ESO would write: the
+  `values` key, the `reconcile.fluxcd.io/watch` label, and the values the stand-in store holds, `podAnnotations` with
+  `example.com/source: secret-manager`, so the pods in step 4 get the same annotation.
 - **ESO only:** in step 1, skip the master key, the `.sops.yaml` rules and the `${MC_DIR}/secrets` directory, and
   leave the `decryption` field out of `${MC_DIR}/${MC_NAME}.yaml`. In step 2, leave it out of `${ORG_DIR}/namespace.yaml`
   too. Flux's token then comes from your secret manager:
   [Keep the repository token in your secret manager](../../how-to/external-secrets.md#keep-the-repository-token-in-your-secret-manager).
+
+> [!Caution]
+> Give each Secret one route. If an `ExternalSecret` and a SOPS-encrypted file both write the same Secret, Flux and ESO
+> overwrite each other and the Secret flaps. See [One owner per object](../../explanation/one-owner.md).
 
 Which secret belongs where, and what each way costs you, is in [Secrets](../../explanation/secrets.md).
 

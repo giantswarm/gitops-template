@@ -750,6 +750,10 @@ once it holds nothing you need.
 Nothing forces you to move. `kubectl gs gitops add base` writes `bases/clusters/PROVIDER` from X.Y.Z on, and an
 existing cluster that names `bases/clusters/capa/template` with `--base` keeps working.
 
+> [!Caution]
+> Keep one `HelmRelease` per release while you move. Two `HelmRelease`s for the same release, or a `HelmRelease` and
+> an `App`, upgrade over each other without an error. See [One owner per object](../explanation/one-owner.md).
+
 What matters when you do move is that the objects keep their names and their values. A `HelmRelease` that keeps its
 name and namespace is updated in place; one whose name changes is a new release, and the old one is uninstalled. So
 render each cluster before and after, and compare:

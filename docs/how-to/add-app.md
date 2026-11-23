@@ -25,6 +25,11 @@ The [basic tutorial](../tutorials/basic/getting-started.md#4-deploy-an-app) walk
 - base apps from a [stack](../tutorials/intermediate/stacks.md), with plain and SOPS-encrypted overrides:
   [cluster/apps/envoy-gateway-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster/apps/envoy-gateway-from-template/).
 
+> [!Caution]
+> If the app is already installed in the cluster, by an `App`, another `HelmRelease` or a `ResourceSet`, don't add a
+> second one for the same release: they upgrade over each other for ever. Take the release away from the other first.
+> See [One owner per object](../explanation/one-owner.md).
+
 Export the names the commands use, then create the app's directory and go into it:
 
 ```sh

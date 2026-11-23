@@ -420,6 +420,11 @@ Values you'd rather not keep in plain text go into the app's `-user-secrets` Sec
 The app's `HelmRelease` reads it last, see [App values](../reference/values.md#app-values). The cluster needs a key
 first, with the rule for its `apps` directory.
 
+> [!Caution]
+> If an `ExternalSecret` already writes the app's `-user-secrets`, don't add a SOPS copy of it: the two would overwrite
+> each other. Put the value in your secret manager, or in a Secret of another name, see
+> [One Secret, one route](../explanation/secrets.md#one-secret-one-route).
+
 1. In the app's directory, put the Helm values into the `values` key of the Secret, encrypted with the cluster's key,
    which the cluster's rule picks. Keep the `reconcile.fluxcd.io/watch` label, so a change reaches the app at once: CI
    fails without it. A GPG key has to be in your keyring for `sops` to encrypt with it, so import the cluster's public

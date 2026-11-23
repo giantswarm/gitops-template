@@ -647,6 +647,21 @@ apply it. `tools/test-all-ff validate` checks the manifests of every such direct
 kinds. That includes the [application team](../tutorials/advanced/teams.md) `hello-team-wc`, whose Flux runs in the
 workload cluster.
 
+### Secrets by two routes
+
+`tests/ats/test_secret_routes.py` checks, without a cluster, the two routes to a Secret, SOPS and External Secrets
+Operator (see [One Secret, one route](../explanation/secrets.md#one-secret-one-route)):
+
+- `test_examples_show_one_secret_the_same_way_by_both_routes` reads the files of every example bound in
+  `kind-test.yaml`, listed or not. Where an `ExternalSecret` and a SOPS-encrypted file give the same Secret, the
+  Secret the `ExternalSecret` writes and the SOPS one have to agree on name, namespace, type, key names and labels.
+  It reads the SOPS file without decrypting it. The template's examples have no such pair today, so it passes on
+  nothing; it's there for the day one does.
+- `test_no_secret_is_delivered_by_both_routes` builds what each management cluster's root applies, and every
+  `Kustomization` below it that reads the same repository, with its `postBuild` variables and `targetNamespace`. It
+  fails if one Secret, by cluster, namespace and name, comes from both an applied `ExternalSecret` and an applied SOPS
+  file. It doesn't see what a `ResourceSet` renders or a Kyverno policy generates.
+
 ### Object names
 
 A schema doesn't cover an object's name, and the API server refuses one that isn't a lowercase RFC 1123 subdomain.
