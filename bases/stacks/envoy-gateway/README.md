@@ -43,16 +43,12 @@ The bundle creates a `HelmRelease` and an `OCIRepository` in the organisation's 
 Flux doesn't apply those objects from Git, the bundle does, so `flux trace` leads from one of them to the bundle's
 `HelmRelease`, and the bundle's version decides the version of each app.
 
-`dependsOn` orders installs and upgrades, but not deletes: when a `Kustomization` prunes the stack, the bundle deletes
-its `HelmRelease`s and helm-controller uninstalls the apps at once. So the bundle's `HelmRelease` patches the one for
-`gateway-api-config`, through `spec.postRenderers`, to set `spec.uninstall.disableWait`, and its uninstall doesn't
-wait for the GatewayClass to go. If Envoy Gateway is gone before it has cleared the GatewayClass's finalizer, the
-GatewayClass stays `Terminating`. That only matters when you remove the stack from a workload cluster that stays up.
-Clear the finalizer there with:
-
-```sh
-kubectl patch gatewayclass giantswarm-default --type=merge -p '{"metadata":{"finalizers":null}}'
-```
+`dependsOn` orders installs and upgrades, but not deletes. So when a `Kustomization` prunes the stack, the bundle's
+`pre-delete` hook first uninstalls `gateway-api-config`, while Envoy Gateway still runs and clears the GatewayClass's
+finalizer, and only then are the other apps uninstalled. The hook waits as long as the `gateway-api-config`
+`HelmRelease`'s timeout, 10m, so the bundle's `HelmRelease` sets `spec.uninstall.timeout` to 12m. Keep it at least
+2m above that timeout if you change it. When the hook runs out of time, the bundle's uninstall fails and Envoy
+Gateway stays; the comment in the bundle's `templates/gateway-cleanup-hook.yaml` says what to do then.
 
 ## When you copy it
 

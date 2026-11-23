@@ -22,27 +22,18 @@ spec:
       remediateLastFailure: false
       retries: 10
   interval: 5m
-  # helm-controller ignores dependsOn on delete, so when the stack is pruned the
-  # bundle's HelmReleases are uninstalled at once; if envoy-gateway goes first, the
-  # GatewayClass keeps its finalizer, and a waiting uninstall of gateway-api-config
-  # would hold up the bundle's own until it times out
-  postRenderers:
-    - kustomize:
-        patches:
-          - patch: |-
-              - op: add
-                path: /spec/uninstall
-                value:
-                  disableWait: true
-            target:
-              kind: HelmRelease
-              name: ${cluster_name}-gateway-api-config
   # one release per cluster in the organisation's namespace
   releaseName: ${cluster_name}-gateway-api-bundle
   serviceAccountName: automation
   storageNamespace: org-${organization}
   targetNamespace: org-${organization}
   timeout: 10m
+  uninstall:
+    # helm-controller ignores dependsOn on delete. Before the bundle's HelmReleases
+    # go, its pre-delete hook uninstalls gateway-api-config while Envoy Gateway still
+    # clears the GatewayClass's finalizer, and waits up to that HelmRelease's timeout
+    # (10m) for it: the bundle's uninstall needs that plus 2m
+    timeout: 12m
   upgrade:
     disableWait: true
     remediation:
