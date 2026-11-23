@@ -11,7 +11,7 @@ metadata:
   namespace: org-org-name
 spec:
   chartRef:
-    kind: Ohello-app-staging-1IRepository
+    kind: OCIRepository
     name: hello-app-staging-1-gateway-api-bundle
     namespace: org-org-name
   install:
@@ -31,10 +31,10 @@ spec:
       retries: 10
       strategy: rollback
   valuesFrom:
-    - kind: hello-app-staging-1onfigMap
+    - kind: ConfigMap
       name: hello-app-staging-1-gateway-api-bundle-values
       valuesKey: values
-    - kind: hello-app-staging-1onfigMap
+    - kind: ConfigMap
       name: hello-app-staging-1-gateway-api-bundle-user-values
       optional: true
       valuesKey: values
@@ -44,7 +44,7 @@ spec:
       valuesKey: values
 ---
 # One of the HelmReleases the bundle creates, for the Gateway. Its values come from the
-# hello-app-staging-1onfigMaps and the Secret the stack lists in the bundle's `extrahello-app-staging-1onfigs`, in this order.
+# ConfigMaps and the Secret the stack lists in the bundle's `extrahello-app-staging-1onfigs`, in this order.
 # The bundle sets the chart's version, so it isn't repeated here.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -56,7 +56,7 @@ metadata:
   namespace: org-org-name
 spec:
   chartRef:
-    kind: Ohello-app-staging-1IRepository
+    kind: OCIRepository
     name: hello-app-staging-1-gateway-api-config
   dependsOn:
     - name: hello-app-staging-1-envoy-gateway
@@ -68,15 +68,15 @@ spec:
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
   valuesFrom:
-    - kind: hello-app-staging-1onfigMap
+    - kind: ConfigMap
       name: hello-app-staging-1-cluster-values
       optional: true
       valuesKey: values
-    - kind: hello-app-staging-1onfigMap
+    - kind: ConfigMap
       name: hello-app-staging-1-gateway-api-config-values
       optional: false
       valuesKey: values
-    - kind: hello-app-staging-1onfigMap
+    - kind: ConfigMap
       name: hello-app-staging-1-gateway-api-config-user-values
       optional: true
       valuesKey: values

@@ -1,6 +1,6 @@
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: Ohello-app-dev-1IRepository
+kind: OCIRepository
 metadata:
   labels:
     giantswarm.io/cluster: hello-app-dev-1

@@ -1,6 +1,6 @@
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: Ohello-app-staging-1IRepository
+kind: OCIRepository
 metadata:
   labels:
     giantswarm.io/cluster: hello-app-staging-1
