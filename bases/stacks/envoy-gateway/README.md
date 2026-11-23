@@ -50,6 +50,12 @@ finalizer, and only then are the other apps uninstalled. The hook waits as long 
 2m above that timeout if you change it. When the hook runs out of time, the bundle's uninstall fails and Envoy
 Gateway stays; the comment in the bundle's `templates/gateway-cleanup-hook.yaml` says what to do then.
 
+The hook waits inside a helm-controller worker, and the `gateway-api-config` uninstall it waits for needs another
+worker of the same helm-controller, which is Giant Swarm's and serves every `HelmRelease` on the management cluster.
+So don't remove the stack from as many clusters at once as helm-controller has workers: the hooks can then hold every
+worker until they time out, and every other `HelmRelease` on the management cluster waits with them. Remove it from a
+few clusters per commit instead.
+
 ## When you copy it
 
 List the stack as it is, and give a cluster its own values for an app in `${cluster_name}-<app>-user-values`, as the

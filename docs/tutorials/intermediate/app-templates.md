@@ -320,9 +320,10 @@ Commit and push, and check the release again.
 
 Some charts need something another release installs first, usually its CRDs. hello-world is one of them: its
 `HTTPRoute` needs the Gateway API CRDs, which the `gateway-api-crds` release installs. That release is one of those
-the bundle of the [envoy-gateway](/bases/stacks/envoy-gateway/) stack creates. You tell Flux with `dependsOn` on the `HelmRelease`.
-helm-controller checks it on every reconciliation, so every install and upgrade waits until the other release is
-`Ready`. The install retries can stay bounded, so a broken install still fails rather than retrying forever.
+the bundle of the [envoy-gateway](/bases/stacks/envoy-gateway/) stack creates. You tell Flux with `dependsOn` on the
+`HelmRelease`. helm-controller checks it on every reconciliation, so every install and upgrade waits until the other
+release is `Ready`. The install retries can stay bounded, so a broken install still fails rather than retrying
+forever.
 
 The catch is that a `HelmRelease` named in `dependsOn` has to exist, or the release waits forever. So a template that
 should work on its own leaves the dependency out, and the layer that installs both releases adds it. hello-world's
