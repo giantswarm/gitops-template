@@ -21,6 +21,7 @@ that failed. The trick is finding that object, because one failure makes everyth
 - [A cluster's first install failed](#a-clusters-first-install-failed)
 - [SOPS can't decrypt](#sops-cant-decrypt)
 - [A `SecretStore` or `ExternalSecret` isn't `Ready`](#a-secretstore-or-externalsecret-isnt-ready)
+- [Something keeps changing back](#something-keeps-changing-back)
 - [Suspend and resume](#suspend-and-resume)
 - [Something is stuck Terminating](#something-is-stuck-terminating)
 
@@ -379,6 +380,27 @@ kubectl annotate externalsecret NAME -n NS force-sync=$(date +%s) --overwrite
 
 External Secrets Operator itself, and the cluster-wide stores, are Giant Swarm's (see
 [Secrets](../explanation/secrets.md)).
+
+## Something keeps changing back
+
+Everything is `Ready`, and yet a value keeps changing back: a Secret holds one value, then another, a release's
+revision climbs with no change in Git, the `kustomize.toolkit.fluxcd.io/name` label switches between two
+`Kustomization`s, or an object disappears while its file is still in Git and comes back a few minutes later.
+
+> [!Caution]
+> Two reconcilers are writing the same object, or one is writing it twice, and nothing reports it as an error. See
+> [One owner per object](../explanation/one-owner.md).
+
+Find both writers: [find what applied the object](#find-what-applied-an-object), then list everything that has
+written to it:
+
+```sh
+kubectl get KIND NAME -n NS --show-managed-fields -o yaml
+```
+
+Then take the object away from all but one of them, in Git. A Secret that both an `ExternalSecret` and a
+SOPS-encrypted file write is the commonest case here, see
+[One Secret, one route](../explanation/secrets.md#one-secret-one-route).
 
 ## Suspend and resume
 

@@ -14,6 +14,11 @@ only in an upgrade window. It builds on [Scheduled upgrades](./scheduled-upgrade
 `ResourceSetInputProvider` and the `ResourceSet`. It creates no cluster: the app goes on the clusters you already
 have.
 
+> [!Caution]
+> A cluster that already has an app in its own `apps` mustn't get it from a `ResourceSet` too: two `HelmRelease`s for
+> one release keep upgrading over each other. Take the app out of the cluster's `apps` before you list the cluster
+> here. See [One owner per object](../../explanation/one-owner.md#two-helmreleases-for-one-release).
+
 - [The multicluster directory](#the-multicluster-directory)
 - [List the clusters](#list-the-clusters)
 - [Add an app](#add-an-app)

@@ -56,12 +56,15 @@ Each entry: what upstream documentation or common practice suggests, what to do 
 - **Here:** an `OCIRepository` per chart, and a `HelmRelease` with `chartRef`.
 - **Why:** it's what the examples, Renovate's rules and the tests are built around.
 
-## Two tools managing one release
+## Two reconcilers on one object
 
-- **Habit:** add a `HelmRelease` for something already installed another way, or keep both during a migration.
-- **Here:** one reconciler per release. Adopting an existing release with a `HelmRelease` is fine; two objects
-  reconciling the same chart is not.
-- **Why:** each undoes the other's changes, and the release flaps.
+- **Habit:** add a `HelmRelease` for something already installed another way, or keep both during a migration; list a
+  file wherever it's needed; write a Secret from Git and from a secret manager to be safe.
+- **Here:** one reconciler per object. One `Kustomization` builds each object, one `HelmRelease` installs each release,
+  one route delivers each Secret, and nothing in Git applies what a Kyverno policy generates. Adopting an existing
+  release with a `HelmRelease` is fine, once nothing else reconciles it.
+- **Why:** a reconciler can't tell whether it really owns an object. Two of them, or one told twice, keep undoing each
+  other, the object flaps and nothing reports an error, see `docs/explanation/one-owner.md`.
 - **Steps:** `docs/how-to/adopt-app.md`, for a release installed with Helm and for one an `App` manages, in an order
   that never has two reconcilers.
 
