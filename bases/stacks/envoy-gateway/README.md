@@ -5,6 +5,16 @@
 Envoy Gateway, so apps in a workload cluster can be reached over HTTPS through the Gateway API. It's three charts that
 install in a set order, each waiting for the one before it with `dependsOn`.
 
+It needs two things a Giant Swarm release doesn't set up:
+
+- On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which isn't part of a Giant Swarm
+  release. Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
+  [its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to.
+- cert-manager's Gateway API support, for the Gateway's certificate:
+  `global.apps.certManager.values.cert-manager.config.enableGatewayAPI: true` in the cluster's values, once the Gateway
+  API CRDs are in, and a restart of cert-manager. Step 4 of the
+  [basic tutorial](/docs/tutorials/basic/getting-started.md#4-deploy-an-app) does both in order.
+
 Nothing applies this directory directly. A cluster or another stack lists it under `resources:`, and the Flux
 `Kustomization` that applies that directory puts its objects into the organisation's namespace, `org-<name>`. The
 `HelmRelease`s install into the workload cluster through its `${cluster_name}-kubeconfig` Secret.

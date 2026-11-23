@@ -26,12 +26,13 @@ A new provider has no version until its first window opens. To install at once, 
 
 ## When you copy it
 
-Put your clusters' names in `clusters.yaml`. For a new app, copy `hello-world-scheduled/` to a directory named after
-it, change the chart, the version range, the window and the names, and list both files in `kustomization.yaml`. Keep
-one `ResourceSet` per app: a `ResourceSet` deletes what it rendered for an input that's gone, so apps that shared one
-would go together. To give one app its own list of clusters, add a patch after `clusters.yaml` that targets its
-`ResourceSet` by name. To take an app off every cluster, remove it from `kustomization.yaml`. To upgrade production
-later than the rest, see
+Put your clusters' names in `clusters.yaml`. hello-world-scheduled serves its `HTTPRoute` at
+`hello-scheduled.<base domain>`, so every cluster you list needs envoy-gateway and `hello-scheduled` in its Gateway's
+`listeners.https.subdomains`. For a new app, copy `hello-world-scheduled/` to a directory named after it, change the
+chart, the version range, the window and the names, and list both files in `kustomization.yaml`. Keep one `ResourceSet`
+per app: a `ResourceSet` deletes what it rendered for an input that's gone, so apps that shared one would go together.
+To give one app its own list of clusters, add a patch after `clusters.yaml` that targets its `ResourceSet` by name. To
+take an app off every cluster, remove it from `kustomization.yaml`. To upgrade production later than the rest, see
 [Upgrade production later](/docs/tutorials/advanced/multicluster-apps.md#upgrade-production-later).
 
 ## Read more

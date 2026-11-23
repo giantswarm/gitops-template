@@ -24,6 +24,7 @@ that failed. The trick is finding that object, because one failure makes everyth
 - [Something keeps changing back](#something-keeps-changing-back)
 - [Suspend and resume](#suspend-and-resume)
 - [Something is stuck Terminating](#something-is-stuck-terminating)
+- [An app is `Ready` but doesn't answer](#an-app-is-ready-but-doesnt-answer)
 
 The messages quoted here are those of Flux 2.7 and External Secrets Operator 2.14, the versions on Giant Swarm
 management clusters today. `NS`, `NAME` and the like stand for the real names in your messages.
@@ -456,3 +457,62 @@ waiting for its contents or a `GatewayClass` waiting for its `Gateway`s (see
 [envoy-gateway](/bases/stacks/envoy-gateway/README.md)). Those are yours to look at, as the cluster's admin. An object
 on the management cluster waiting for a finalizer of Giant Swarm's controllers, such as a cluster's resources while
 Cluster API deletes it, is Giant Swarm's to look at if it doesn't move.
+
+## An app is `Ready` but doesn't answer
+
+**What you see.** Every `HelmRelease` is `Ready`, but the app's address doesn't resolve, times out, or comes with a
+certificate the browser doesn't trust.
+
+**What it means.** An app served through Envoy Gateway needs four things that `Ready` doesn't check: the
+`giantswarm-default` Gateway has an address, a DNS record points the app's hostname at it, the Gateway's certificate
+covers the hostname, and the app's `HTTPRoute` is attached to the Gateway. A different controller on the workload
+cluster sees to each one, and none of them reports back to Flux. The record and the certificate take five to ten
+minutes after the Gateway gets its address, so give them that first.
+
+**What you can do.** Check them in order, on the workload cluster:
+
+1. The Gateway has an address:
+
+    ```sh
+    kubectl get gateway giantswarm-default -n envoy-gateway-system
+    ```
+
+    An empty `ADDRESS`, with `PROGRAMMED` `False`, means the Gateway's Service has no load balancer, and nothing after
+    it can work. On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which isn't part of a
+    Giant Swarm release. Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
+    [its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to.
+
+1. The hostname has a DNS record. The Gateway only creates records, and certificate entries, for the subdomains in
+   `gateways.default.listeners.https.subdomains` of the `gateway-api-config` values. The records it asks external-dns
+   for are in its `DNSEndpoint`:
+
+    ```sh
+    kubectl get dnsendpoint gateway-giantswarm-default-https -n envoy-gateway-system -o jsonpath='{.spec.endpoints[*].dnsName}'
+    ```
+
+    A hostname that isn't listed there gets no record: add its subdomain to the values.
+
+1. The certificate is `Ready`:
+
+    ```sh
+    kubectl get certificate -n envoy-gateway-system
+    ```
+
+    If it stays `False`, `kubectl describe` it. The Gateway's issuer solves Let's Encrypt's challenge through the
+    Gateway, which needs cert-manager's Gateway API support:
+    `global.apps.certManager.values.cert-manager.config.enableGatewayAPI: true` in the cluster's values, and a restart
+    of cert-manager once the Gateway API CRDs are in, as
+    [the basic tutorial](../tutorials/basic/getting-started.md#4-deploy-an-app) does.
+
+1. The route is attached. Each entry under the route's `status.parents` should have `Accepted` and `ResolvedRefs`
+   `True`:
+
+    ```sh
+    kubectl get httproute NAME -n NS -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} ({.reason}){"\n"}{end}'
+    ```
+
+    Giant Swarm's [route requirements](https://docs.giantswarm.io/tutorials/connectivity/gateway-api/route-requirements/)
+    say what each reason means.
+
+The Gateway, its values and the cluster's values are yours. If cert-manager or external-dns themselves don't run, or
+the bundle doesn't install, that's Giant Swarm's.

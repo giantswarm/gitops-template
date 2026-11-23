@@ -34,8 +34,8 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
 
 1. Create the app with a fixed version, as in the basic tutorial. `3.2.2` is the oldest hello-world that takes the
    cluster values: earlier versions have a values schema that refuses them. Starting there leaves the range something
-   to do. Its Ingress is switched off, as in the basic tutorial, so that it doesn't claim the host of the cluster's
-   other hello-world:
+   to do. Its Ingress is switched off and it gets no route: it's there for its versions, not to be opened, and it
+   leaves the address to the cluster's other hello-world:
 
     ```sh
     export APP_DIR=${WC_DIR}/apps/hello-world-auto

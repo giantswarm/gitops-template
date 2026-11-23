@@ -1,9 +1,10 @@
 # Getting started
 
 By the end of this tutorial you'll have one organisation, one workload cluster in it and one app running on that
-cluster, all described in files in your fork of this repository and applied by Flux. You build it up a step at a time:
-connect the management cluster, add the organisation, create the cluster, deploy the app and update it. If you'd like
-your cloud bill back afterwards, the last step deletes the cluster again.
+cluster, all described in files in your fork of this repository and applied by Flux. The app is a web page, and you
+finish by opening it in your browser, over HTTPS, at an address of its own. You build it up a step at a time: connect
+the management cluster, add the organisation, create the cluster, deploy the app and update it. If you'd like your
+cloud bill back afterwards, the last step deletes the cluster again.
 
 Every change goes the same way: you write a file, commit it and push, and Flux on the management cluster applies it.
 Think of the repository as a planting plan and Flux as the gardener. Every few minutes it walks round, plants whatever
@@ -68,7 +69,9 @@ management-clusters/${MC_NAME}/
         ├── ${WC_NAME}-apps.yaml           applies its apps once the cluster is up
         └── ${WC_NAME}/
             ├── cluster/                   the cluster, from the CAPA cluster base
-            └── apps/hello-world/          the app                                        (step 4)
+            │                              and its values for cert-manager                (step 4)
+            ├── apps/envoy-gateway/        Envoy Gateway, from the envoy-gateway stack    (step 4)
+            └── apps/hello-world/          the app
 ```
 
 - [Before you start](#before-you-start)
@@ -98,6 +101,13 @@ You need:
   **Use this template** on GitHub, as the [README](../../README.md) explains, because a GitHub fork of this public
   repository can't be made private. A public fork is fine for following along with placeholder names. The docs call
   your copy "your fork" either way.
+
+The app you open at the end reaches your browser through a Gateway on the workload cluster, from Envoy Gateway, and
+this tutorial's cluster runs on AWS. On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which
+isn't part of a Giant Swarm release. Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
+[its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to. The
+cluster has to exist first, so do it once step 3 is done and before step 4. Without the controller, everything in
+this tutorial still gets `Ready`, but the app never answers, and step 4 shows you how to tell.
 
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
 them where they are, as complete examples to check your own files against. CI's kind test doesn't ignore them, though:
@@ -888,6 +898,49 @@ Git and one secret value from the organisation's store.
 > command. Never run it without `--dry-run` here: it would apply them to the management cluster directly, behind
 > Git's back.
 
+hello-world serves a web page, and a page is only any use if you can open it. A new cluster has no way in from
+outside: on Giant Swarm, that's the Gateway API with Envoy Gateway, which a release doesn't bring. Your fork ships it
+as the [envoy-gateway](../../../bases/stacks/envoy-gateway) stack, so the cluster gets that first, and hello-world gets
+an `HTTPRoute` on its Gateway.
+
+1. Give the cluster Envoy Gateway. The stack is three charts that install in order: the Gateway API CRDs, the Envoy
+   Gateway controller, and the `giantswarm-default` Gateway that apps attach their routes to. The Gateway only gets a
+   DNS record and a certificate for the subdomains it lists, so give it `hello`, for hello-world. First the values:
+
+    ```sh
+    mkdir -p ${WC_DIR}/apps/envoy-gateway
+    cat <<'EOF' > ${WC_DIR}/apps/envoy-gateway/user_config_gateway_api_config.yaml
+    gateways:
+      default:
+        listeners:
+          https:
+            subdomains:
+              - hello
+    EOF
+    ```
+
+    Then a `kustomization.yaml` that lists the stack and turns the values into the
+    `${cluster_name}-gateway-api-config-user-values` ConfigMap, which the stack's Gateway release reads last, so your
+    values win over the stack's:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/apps/envoy-gateway/kustomization.yaml
+    apiVersion: kustomize.config.k8s.io/v1beta1
+    kind: Kustomization
+    namespace: org-${organization}
+    configMapGenerator:
+      - name: ${cluster_name}-gateway-api-config-user-values
+        files:
+          - values=user_config_gateway_api_config.yaml
+    generatorOptions:
+      disableNameSuffixHash: true
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+    resources:
+      - ../../../../../../../../bases/stacks/envoy-gateway
+    EOF
+    ```
+
 1. Create the app's directory, `APP_DIR` from your exports:
 
     ```sh
@@ -926,6 +979,8 @@ Git and one secret value from the organisation's store.
       chartRef:
         kind: OCIRepository
         name: ${cluster_name}-hello-world
+      dependsOn:
+        - name: ${cluster_name}-gateway-api-crds
       install:
         createNamespace: true
       interval: 5m
@@ -955,12 +1010,25 @@ Git and one secret value from the organisation's store.
     Flux installs the chart without it, and upgrades the release as soon as it appears. For every layer an app can
     have, see [App values](../../reference/values.md#app-values).
 
-1. Put the app's values in `override_config.yaml`:
+    `dependsOn` has every install and upgrade wait until the Gateway API CRDs are in, as the chart's `HTTPRoute`
+    needs them.
+
+1. Put the app's values in `override_config.yaml`. They switch off the chart's `Ingress`, which expects an Ingress
+   controller the cluster doesn't have, and switch on its `HTTPRoute`, on the `giantswarm-default` Gateway, at
+   `hello.` and the cluster's base domain. The chart fills in `{{ .Values.baseDomain }}` from the cluster values, and
+   `hello` is the subdomain the Gateway lists:
 
     ```sh
     cat <<'EOF' > ${APP_DIR}/override_config.yaml
     ingress:
       enabled: false
+    route:
+      enabled: true
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames:
+        - "hello.{{ .Values.baseDomain }}"
     EOF
     ```
 
@@ -1021,10 +1089,10 @@ Git and one secret value from the organisation's store.
     EOF
     ```
 
-1. Add the app to the cluster's list of apps:
+1. Add Envoy Gateway and the app to the cluster's list of apps:
 
     ```sh
-    yq -i '.resources += ["hello-world"]' ${WC_DIR}/apps/kustomization.yaml
+    yq -i '.resources += ["envoy-gateway", "hello-world"]' ${WC_DIR}/apps/kustomization.yaml
     ```
 
 1. Commit and push, with the same check as in step 1, for an app whose secret values you've encrypted:
@@ -1045,10 +1113,11 @@ kubectl get externalsecret ${WC_NAME}-hello-world-user-secrets -n org-${ORG_NAME
 
 If it doesn't get there, see [When something isn't Ready](../../how-to/troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
 
-The release is `Ready` on the management cluster:
+Four releases are `Ready` on the management cluster: the three of Envoy Gateway, one after the other, then
+hello-world, which waits for the Gateway API CRDs. It takes a few minutes:
 
 ```sh
-flux get helmreleases ${WC_NAME}-hello-world -n org-${ORG_NAME}
+flux get helmreleases -n org-${ORG_NAME} | grep ${WC_NAME}-
 ```
 
 The pods run in the workload cluster, with the annotation from the store:
@@ -1057,6 +1126,105 @@ The pods run in the workload cluster, with the annotation from the store:
 kubectl --context ${WC_CONTEXT} get pods -n hello-world \
   -o custom-columns='NAME:.metadata.name,SOURCE:.metadata.annotations.example\.com/source'
 ```
+
+Now the certificate. The Gateway gets its certificate from Let's Encrypt through cert-manager, which every release
+installs, but with its Gateway API support switched off. cert-manager only looks for the Gateway API CRDs when it
+starts, so switch it on now that they're in, and then restart it. The setting goes into the cluster's own values, a
+ConfigMap that comes last in the cluster's values, so it wins; [Give one cluster its own values](../../how-to/cluster-values.md)
+explains the layer.
+
+1. Write the cluster's values ConfigMap:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/cluster/cluster_userconfig.yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+      name: ${cluster_name}-cluster-userconfig
+      namespace: org-${organization}
+    data:
+      values: |
+        global:
+          apps:
+            certManager:
+              values:
+                cert-manager:
+                  config:
+                    enableGatewayAPI: true
+    EOF
+    ```
+
+1. Add it to the end of the cluster's `valuesFrom` with a patch, and list both in the cluster's `kustomization.yaml`:
+
+    ```sh
+    cat <<'EOF' > ${WC_DIR}/cluster/patch_cluster_userconfig.yaml
+    - op: add
+      path: /spec/valuesFrom/-
+      value:
+        kind: ConfigMap
+        name: ${cluster_name}-cluster-userconfig
+        valuesKey: values
+    EOF
+    yq -i '.resources += ["cluster_userconfig.yaml"] |
+      .patches += [{"path": "patch_cluster_userconfig.yaml",
+        "target": {"group": "helm.toolkit.fluxcd.io", "kind": "HelmRelease", "name": "\\${cluster_name}"}}]' \
+      ${WC_DIR}/cluster/kustomization.yaml
+    ```
+
+1. Commit and push, with the same check as in step 1:
+
+    ```sh
+    if find ${WC_DIR}/cluster -name '*.enc.yaml' -exec grep -L '^sops:' {} + | grep .; then
+      echo "Not committed: encrypt the files above first"
+    else
+      git add ${WC_DIR}/cluster && git commit -m "Switch on cert-manager's Gateway API support on ${WC_NAME}" && git push
+    fi
+    ```
+
+1. The cluster's release passes the setting on to cert-manager's, which takes a few minutes. Once cert-manager's
+   configuration on the workload cluster says `enableGatewayAPI: true`:
+
+    ```sh
+    kubectl --context ${WC_CONTEXT} get configmap cert-manager-app -n kube-system -o jsonpath='{.data.config\.yaml}'
+    ```
+
+    restart it, so that it reads it:
+
+    ```sh
+    kubectl --context ${WC_CONTEXT} rollout restart deployment cert-manager-app -n kube-system
+    ```
+
+So, to the page itself. Once cert-manager is back, the Gateway asks Let's Encrypt for its certificate, and
+external-dns creates the DNS record for `hello`. Give them five to ten minutes. The app's address is the hostname in
+its route:
+
+```sh
+export HELLO_URL=https://$(kubectl --context ${WC_CONTEXT} get httproute hello-world -n hello-world -o jsonpath='{.spec.hostnames[0]}')
+echo ${HELLO_URL}
+```
+
+Open it in your browser, or ask from the shell:
+
+```sh
+curl -s ${HELLO_URL} | head
+```
+
+You get hello-world's static Hello World page, over HTTPS, with a certificate your browser trusts. Before that, the
+name may not resolve yet, or the browser may warn about the certificate: both clear up on their own while the record
+and the certificate arrive.
+
+If it still doesn't answer after ten minutes, check that the Gateway has an address:
+
+```sh
+kubectl --context ${WC_CONTEXT} get gateway giantswarm-default -n envoy-gateway-system
+```
+
+An empty `ADDRESS`, with `PROGRAMMED` `False`, means the Gateway's Service has no load balancer. On AWS, that's the AWS
+Load Balancer Controller from [Before you start](#before-you-start), and no amount of waiting for DNS changes it. If
+the Gateway has an address, see
+[An app is `Ready` but doesn't answer](../../how-to/troubleshooting.md#an-app-is-ready-but-doesnt-answer).
 
 Learn more:
 [Deploying an app with a Flux HelmRelease](https://docs.giantswarm.io/tutorials/fleet-management/app-platform/deploy-app-helmrelease/).
@@ -1191,6 +1359,9 @@ out-of-band resources or an application team needs more, see
         --field-selector metadata.name!=${WC_NAME} -o name)" ]; do sleep 10; done
     ```
 
+1. If you applied the `aws-lb-controller-bundle` yourself, it isn't in your fork, so Flux leaves it alone. Delete it
+   now, while the cluster is still there, with `kubectl delete -f` and the file you applied.
+
 1. Finally, delete the cluster's `HelmRelease`, which no longer has the label. This deletes the cluster. Then delete
    its `OCIRepository`:
 
@@ -1204,7 +1375,8 @@ next cluster.
 
 ## Next steps
 
-You've built the whole path once, from a commit to an app on a cluster. The intermediate tutorials build on it:
+You've built the whole path once, from a commit to an app on a cluster that answers in your browser. The
+intermediate tutorials build on it:
 
 - Reuse an app's configuration across clusters: [App Templates](../intermediate/app-templates.md).
 - Deploy several apps together: [Stacks](../intermediate/stacks.md).

@@ -262,12 +262,28 @@ the provider's under `inputs.hello_world_scheduled_version`.
                 remediateLastFailure: true
                 retries: 10
                 strategy: rollback
+            values:
+              ingress:
+                enabled: false
+              route:
+                enabled: true
+                parentRefs:
+                  - name: giantswarm-default
+                    namespace: envoy-gateway-system
+                hostnames:
+                  - "hello-scheduled.{{ .Values.baseDomain }}"
             valuesFrom:
               - kind: ConfigMap
                 name: << inputs.hello_world_scheduled.cluster >>-cluster-values
                 valuesKey: values
     EOF
     ```
+
+    hello-world gets an `HTTPRoute` at `hello-scheduled.<base domain>` on each cluster's `giantswarm-default`
+    Gateway. `{{ .Values.baseDomain }}` is Helm's, not the `ResourceSet`'s, whose placeholders are `<< >>`. Each
+    listed cluster's Gateway has to list `hello-scheduled` in `listeners.https.subdomains`, or the hostname gets no DNS
+    record and no certificate: the out-of-band example clusters list it in
+    `cluster/apps/envoy-gateway-from-template/user_config_gateway_api_config.yaml`.
 
     A `ResourceSet` deletes what it rendered for an input that has gone, which is how removing a cluster from
     `clusters.yaml` uninstalls the app there. It's also why every app has a `ResourceSet` of its own: apps that shared

@@ -85,6 +85,16 @@ spec:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  values:
+    ingress:
+      enabled: false
+    route:
+      enabled: true
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames:
+        - "hello-standalone.{{ .Values.baseDomain }}"
   valuesFrom:
     - kind: ConfigMap
       name: out-of-band-flux-app-cluster-values
@@ -133,6 +143,16 @@ spec:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  values:
+    ingress:
+      enabled: false
+    route:
+      enabled: true
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames:
+        - "hello-auto.{{ .Values.baseDomain }}"
   valuesFrom:
     - kind: ConfigMap
       name: out-of-band-flux-app-cluster-values

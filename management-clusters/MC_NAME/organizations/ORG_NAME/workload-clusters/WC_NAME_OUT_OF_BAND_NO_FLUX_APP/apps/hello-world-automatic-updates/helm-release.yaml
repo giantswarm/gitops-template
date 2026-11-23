@@ -10,8 +10,8 @@ spec:
     kind: OCIRepository
     name: ${cluster_name}-hello-world-app-auto
     namespace: org-${organization}
-  # the HTTPRoute needs the Gateway API CRDs: every install and upgrade waits
-  # until the gateway-api-crds release of the envoy-gateway stack is ready
+  # the HTTPRoute below needs the Gateway API CRDs: every install and upgrade
+  # waits until the gateway-api-crds release of the envoy-gateway stack is ready
   dependsOn:
     - name: ${cluster_name}-gateway-api-crds
   install:
@@ -33,6 +33,20 @@ spec:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  # hello-world's web front end, on the cluster's Gateway (these values win
+  # over `valuesFrom`) at
+  # `hello-auto.<cluster base domain>`; `hello-auto` is in the Gateway's
+  # `listeners.https.subdomains`, see cluster/apps/envoy-gateway-from-template
+  values:
+    ingress:
+      enabled: false
+    route:
+      enabled: true
+      parentRefs:
+        - name: giantswarm-default
+          namespace: envoy-gateway-system
+      hostnames:
+        - "hello-auto.{{ .Values.baseDomain }}"
   valuesFrom:
     - kind: ConfigMap
       name: ${cluster_name}-cluster-values

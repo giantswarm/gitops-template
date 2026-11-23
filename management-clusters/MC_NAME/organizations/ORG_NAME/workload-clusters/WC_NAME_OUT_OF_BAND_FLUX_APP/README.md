@@ -25,7 +25,8 @@ the GPG key `sops-gpg-wc-name`, from the organisation's `namespace/secrets/`:
 - [`cluster/apps/envoy-gateway-from-template/`](cluster/apps/envoy-gateway-from-template/): the envoy-gateway stack.
 - `apps/`: the secondary apps, installed once the cluster is up. Its `kustomization.yaml` lists them.
 - [`apps/flux/`](apps/flux/): flux-app in the workload cluster.
-- `apps/hello-world/`: hello-world written out in full, as an `oci-repository.yaml` and a `helm-release.yaml`.
+- `apps/hello-world/`: hello-world written out in full, as an `oci-repository.yaml` and a `helm-release.yaml`, with
+  an `HTTPRoute` at `hello-standalone.<base domain>`.
 - [`apps/hello-world-automatic-updates/`](apps/hello-world-automatic-updates/): hello-world following a version range.
 - [`apps/hello-world-from-template/`](apps/hello-world-from-template/): hello-world from its App Template.
 - `out-of-band/`: what the workload cluster's own Flux applies. The management cluster never does.

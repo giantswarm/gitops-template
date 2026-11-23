@@ -61,7 +61,7 @@ spec:
         chartRef:
           kind: OCIRepository
           name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
-        # the HTTPRoute needs the Gateway API CRDs: every install and upgrade waits
+        # the HTTPRoute below needs the Gateway API CRDs: every install and upgrade waits
         # until the gateway-api-crds release of the cluster's envoy-gateway is ready.
         # That also holds the app back on a listed cluster that doesn't exist or
         # isn't ready yet: helm-controller retries until the release is ready.
@@ -86,6 +86,19 @@ spec:
             remediateLastFailure: true
             retries: 10
             strategy: rollback
+        # hello-world's web front end, on the cluster's Gateway at
+        # `hello-scheduled.<cluster base domain>`: every cluster in ../clusters.yaml
+        # needs `hello-scheduled` in its Gateway's `listeners.https.subdomains`
+        values:
+          ingress:
+            enabled: false
+          route:
+            enabled: true
+            parentRefs:
+              - name: giantswarm-default
+                namespace: envoy-gateway-system
+            hostnames:
+              - "hello-scheduled.{{ .Values.baseDomain }}"
         valuesFrom:
           - kind: ConfigMap
             name: << inputs.hello_world_scheduled.cluster >>-cluster-values

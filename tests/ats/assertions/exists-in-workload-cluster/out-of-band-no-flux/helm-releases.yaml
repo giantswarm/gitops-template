@@ -83,3 +83,45 @@ metadata:
   annotations:
     meta.helm.sh/release-name: hello-world-scheduled
     meta.helm.sh/release-namespace: hello-world-scheduled
+---
+# Each hello-world's HTTPRoute, with the hostname of its own that the Gateway lists. kind has
+# no load balancer, so nothing answers at the hostname; the route only has to exist.
+helmRelease: org-org-name/out-of-band-no-flux-hello-world
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world
+  namespace: hello-world
+spec:
+  hostnames:
+    - hello.wc-name.example.com
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-standalone
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world-standalone
+  namespace: hello-world
+spec:
+  hostnames:
+    - hello-standalone.wc-name.example.com
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-app-auto
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world-app-auto
+  namespace: hello-world-auto
+spec:
+  hostnames:
+    - hello-auto.wc-name.example.com
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-scheduled
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world-scheduled
+  namespace: hello-world-scheduled
+spec:
+  hostnames:
+    - hello-scheduled.wc-name.example.com
