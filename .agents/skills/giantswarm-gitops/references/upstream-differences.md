@@ -62,6 +62,8 @@ Each entry: what upstream documentation or common practice suggests, what to do 
 - **Here:** one reconciler per release. Adopting an existing release with a `HelmRelease` is fine; two objects
   reconciling the same chart is not.
 - **Why:** each undoes the other's changes, and the release flaps.
+- **Steps:** `docs/how-to/adopt-app.md`, for a release installed with Helm and for one an `App` manages, in an order
+  that never has two reconcilers.
 
 ## One `Kustomization` for everything
 

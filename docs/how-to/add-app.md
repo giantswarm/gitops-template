@@ -14,6 +14,9 @@ The app's directory comes in one of two layouts:
   or a stack needs it, to list the base and patch it. So does an app whose values a `configMapGenerator` makes from
   `override_config.yaml`, as the steps below do.
 
+If the app is already installed in the cluster, by hand with `helm install` or through an `App`, don't add it as a new
+app: [Adopt an app that's already installed](./adopt-app.md) takes it over without installing it again.
+
 The [basic tutorial](../tutorials/basic/getting-started.md#4-deploy-an-app) walks through a first app step by step, and
 [Reuse an app's configuration](../tutorials/intermediate/app-templates.md) explains App Templates. Examples:
 

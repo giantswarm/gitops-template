@@ -40,6 +40,8 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 - [When something isn't Ready](./how-to/troubleshooting.md): what a red status means, and how to recover.
 - [Add an app](./how-to/add-app.md) to one cluster.
 - [Change an app](./how-to/update-app.md): its version, how it's installed, or its values.
+- [Adopt an app that's already installed](./how-to/adopt-app.md), by hand or through an `App`, without
+  installing it again.
 - [Give one cluster its own values](./how-to/cluster-values.md).
 - [Keep secrets in the repository](./how-to/sops.md) with SOPS.
 - [Read secrets from a secret manager with External Secrets Operator](./how-to/external-secrets.md).
