@@ -24,8 +24,11 @@ jobs:
   # Whether a pull request needs the full run, or only the light one because
   # it changes nothing validate or the kind test reads: tests/ats/ci_scope.py
   # decides, and the job summary says why. It compares the pull request's head
-  # with its merge base, as GitHub's list of its files does. Any failure on the
-  # way leaves the scope empty, which means the full run, as on a push.
+  # with its merge base, as GitHub's list of its files does. The script that
+  # decides is the merge base's copy, so a pull request that changes the rules
+  # is judged by the rules it found, and one that adds the script gets the full
+  # run. Any failure on the way leaves the scope empty, which means the full
+  # run, as on a push.
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -66,13 +69,16 @@ jobs:
           git worktree add --detach "${work}/base" "$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")"
           git worktree add --detach "${work}/head" "${HEAD_SHA}"
           python -m pip install --quiet "pyyaml==${PYYAML_VERSION}"
-          python tests/ats/ci_scope.py --files "${work}/files.json" --changed "${CHANGED_FILES}" \
+          python "${work}/base/tests/ats/ci_scope.py" --files "${work}/files.json" --changed "${CHANGED_FILES}" \
             --base "${work}/base" --head "${work}/head"
 
-  # Everything but a pull request that needs only the light run.
+  # Everything but a pull request that needs only the light run. `!cancelled()`
+  # keeps it running when the changes job itself fails: without a status
+  # function GitHub adds `success()`, and both callers would be skipped, with
+  # the required checks waiting for a run that never comes.
   validate:
     needs: changes
-    if: needs.changes.outputs.scope != 'light'
+    if: ${{ !cancelled() && needs.changes.outputs.scope != 'light' }}
     uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@d928b86e68e050d9f9e96f9a8066d44ce9353915 # main
     with:
       # Matches [requires] python_version in tests/ats/Pipfile.

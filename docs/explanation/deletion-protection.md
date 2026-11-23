@@ -41,7 +41,8 @@ it as not ready. To delete it on purpose, remove the label with a push first, th
   cluster's `OCIRepository`, so that the `HelmRelease` keeps its chart, and sets `global.metadata.preventDeletion` so
   that the chart puts the label on the `Cluster`. Its install remediation is off,
   `install.remediation.remediateLastFailure: false`: Flux remediates a failed install by uninstalling it, which would
-  delete the cluster it was installing.
+  delete the cluster it was installing. Its upgrade remediation is off too: a rollback goes back to the Giant Swarm
+  release the cluster had, which rolls its nodes a second time.
 - The `Organization`, such as `organizations/demoorg/demoorg.yaml`. Deleting it deletes the `org-demoorg` namespace,
   with every cluster in it. Its file can't go on its own anyway: the organisation's `kustomization.yaml` takes the
   organisation's name from it, so without it the management cluster's `Kustomization` fails to build, and applies and
