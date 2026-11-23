@@ -220,10 +220,8 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     template's `upgrade.remediation` rolls back and retries, see
     [A `HelmRelease` has run out of retries](./troubleshooting.md#a-helmrelease-has-run-out-of-retries).
 
-    > **Caution:**
-    > helm-controller records the release it supersedes, so its rollback should go back to the revision installed by
-    > hand. That isn't confirmed by a test here. Before you adopt something that matters, try the steps on a copy of
-    > it in a test cluster.
+    Before you adopt something that matters, try these steps on a copy of it in a test cluster, a failed first
+    upgrade included.
 
 From here the app is an ordinary app of the repository. Change it as [Change an app](./update-app.md) says.
 
