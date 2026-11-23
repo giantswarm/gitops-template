@@ -44,7 +44,7 @@ spec:
       valuesKey: values
 ---
 # One of the HelmReleases the bundle creates, for the Gateway. Its values come from the
-# ConfigMaps and the Secret the stack lists in the bundle's `extrahello-app-prod-uswonfigs`, in this order.
+# ConfigMaps and the Secret the stack lists in the bundle's `extraConfigs`, in this order.
 # The bundle sets the chart's version, so it isn't repeated here.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -61,7 +61,7 @@ spec:
   dependsOn:
     - name: hello-app-prod-usw-envoy-gateway
       namespace: org-org-name
-  kubehello-app-prod-uswonfig:
+  kubeConfig:
     secretRef:
       name: hello-app-prod-usw-kubeconfig
   releaseName: gateway-api-config
