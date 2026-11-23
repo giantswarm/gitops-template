@@ -69,5 +69,7 @@ The tutorials are routes through the same repository, in three tiers. Each one b
   where.
 - [Deletion protection](./explanation/deletion-protection.md): what keeps clusters, organisations and keys from being
   deleted.
+- [One owner per object](./explanation/one-owner.md): why two tools, or one tool told twice, must never reconcile the
+  same object, and how to tell when they do.
 - [Composition](./explanation/composition.md): why environments are directories, and when to use a base, a Component
   or a stack.

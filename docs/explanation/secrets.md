@@ -9,12 +9,34 @@ handle them, and they aren't rivals:
   Key Vault. The repository holds only an `ExternalSecret` that says which secret goes where, and ESO copies the value
   into a Kubernetes Secret.
 
-You can use SOPS only, ESO only, or both. Nothing in the template needs both, and nothing stops you mixing them, even
-within one app. The examples show both side by side, so you can pick per secret.
+You can use SOPS only, ESO only, or both. Nothing in the template needs both. The examples show both side by side,
+each delivering Secrets of its own, so you can pick per secret. What you pick is a route for each Secret, not a
+second copy of it: see [One Secret, one route](#one-secret-one-route).
 
 The [basic tutorial](../tutorials/basic/getting-started.md) uses both: SOPS for the secrets Flux needs to start, and
 ESO for the app's. That's the combination this page recommends when you have a secret manager, and the rest of the
 page explains why.
+
+## One Secret, one route
+
+> [!Caution]
+> Each Secret comes from SOPS or from ESO, never from both. kustomize-controller applies the SOPS Secret and ESO
+> writes its own over it, each overwrites the other, the Secret flaps, and whichever wrote last wins. See
+> [One owner per object](./one-owner.md#flux-and-external-secrets-operator).
+
+Where the docs show one Secret both ways, such as an app's `-user-secrets` or the commit status token, they show two
+routes to the same Secret: the same name, namespace, type, keys and labels, and values of the same shape. You apply
+one of them. Where you use both tools, an app's Secret comes from ESO, and the SOPS copy is the alternative for a
+cluster without a secret manager. Flux's repository token differs by two labels: the SOPS copy gets
+`giantswarm.io/managed-by` and `giantswarm.io/prevent-deletion` from its directory, to protect a Secret Flux applies
+from a file, and the ESO copy has neither, as its `ExternalSecret` writes it again if it's deleted, see
+[Keep the repository token in your secret manager](../how-to/external-secrets.md#keep-the-repository-token-in-your-secret-manager).
+
+If an app needs a value that only the other tool has, don't give its Secret a second deliverer. Put the value in the
+same source, your secret manager or the encrypted file, or in a second Secret with its own name and its own entry in
+the app's `valuesFrom`. helm-controller merges the entries in order, so the second Secret's values win over the first's
+where both set a key, see [App values](../reference/values.md#app-values). An app from an App Template gets the entry
+with a patch of its `HelmRelease`.
 
 ## Bootstrap secrets with SOPS
 
