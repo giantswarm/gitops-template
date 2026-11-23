@@ -27,7 +27,10 @@ page explains why.
 Where the docs show one Secret both ways, such as an app's `-user-secrets` or the commit status token, they show two
 routes to the same Secret: the same name, namespace, type, keys and labels, and values of the same shape. You apply
 one of them. Where you use both tools, an app's Secret comes from ESO, and the SOPS copy is the alternative for a
-cluster without a secret manager.
+cluster without a secret manager. Flux's repository token differs by two labels: the SOPS copy gets
+`giantswarm.io/managed-by` and `giantswarm.io/prevent-deletion` from its directory, to protect a Secret Flux applies
+from a file, and the ESO copy has neither, as its `ExternalSecret` writes it again if it's deleted, see
+[Keep the repository token in your secret manager](../how-to/external-secrets.md#keep-the-repository-token-in-your-secret-manager).
 
 If an app needs a value that only the other tool has, don't give its Secret a second deliverer. Put the value in the
 same source, your secret manager or the encrypted file, or in a second Secret with its own name and its own entry in

@@ -451,6 +451,29 @@ first, with the rule for its `apps` directory.
     Run it as it is, then put the real values in with `sops edit`, see
     [Change encrypted values](#change-encrypted-values): typed into the command, they'd land in your shell history.
 
+    `sops edit` needs the cluster's private key. Encrypting needs only its public key, imported above for a GPG key, so
+    if that's all you have, put the value in as you encrypt instead. `read -rs` reads it without it landing in your
+    shell history or on the screen, and the heredoc and the pipe hand it to `sops` on standard input, so it's on no
+    command line in the process list either. Replace `KEY` with where the app's values expect it. The single quotes keep
+    YAML from reading anything into the value, so type a `'` in it twice:
+
+    ```sh
+    read -rs APP_SECRET
+    cat <<EOF | sops --encrypt --filename-override secret.enc.yaml /dev/stdin > secret.enc.yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
+      name: \${cluster_name}-${APP_NAME}-user-secrets
+      namespace: org-\${organization}
+    stringData:
+      values: |
+        KEY: '${APP_SECRET}'
+    EOF
+    unset APP_SECRET
+    ```
+
 1. List it, and push. An app with a `kustomization.yaml` of its own lists it there. An app whose files the cluster's
    `apps/kustomization.yaml` lists one by one, such as `WC_NAME/apps/cert-manager`, gets it listed there, as
    `APP_NAME/secret.enc.yaml`:

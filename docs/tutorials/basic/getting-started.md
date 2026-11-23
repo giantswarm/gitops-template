@@ -317,12 +317,14 @@ yourself, once, and from then on Flux keeps them up to date from Git like everyt
     > ```
 
     Read the token without it landing in your shell history, then write the Secret, encrypted, and apply it, the same
-    way as the master key:
+    way as the master key. `printf` hands the token to `kubectl` on standard input, so it's on no command line in the
+    process list:
 
     ```sh
     read -rs GITHUB_TOKEN
-    SECRET_YAML=$(kubectl create secret generic ${GIT_SECRET} --namespace=default \
-      --from-literal=username=git --from-literal=password="${GITHUB_TOKEN}" --dry-run=client -o yaml) &&
+    SECRET_YAML=$(printf '%s' "${GITHUB_TOKEN}" |
+      kubectl create secret generic ${GIT_SECRET} --namespace=default \
+      --from-literal=username=git --from-file=password=/dev/stdin --dry-run=client -o yaml) &&
       echo "${SECRET_YAML}" | sops --encrypt --filename-override ${MC_DIR}/secrets/${GIT_SECRET}.enc.yaml \
       /dev/stdin > ${MC_DIR}/secrets/${GIT_SECRET}.enc.yaml &&
       echo "${SECRET_YAML}" | kubectl apply -f -

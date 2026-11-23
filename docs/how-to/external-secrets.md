@@ -157,7 +157,12 @@ otherwise in the `GitRepository`'s `secretRef`. Instead of creating it by hand o
 encrypted, let ESO write it from your secret manager, through the `SecretStore` in `default`. That has to be your
 secret manager's store, not the [test store](#a-secret-store-for-testing). It's the same Secret the
 [basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster) encrypts with SOPS, with the
-keys `username` and `password`: use one route for it, not both.
+keys `username` and `password`: use one route for it, not both. The two copies differ in two labels only. The SOPS
+copy is an object Flux applies from a file in `secrets/`, so it gets the `giantswarm.io/managed-by` and
+`giantswarm.io/prevent-deletion` labels that directory's `kustomization.yaml` gives its files, which protect it when
+its file goes. The ESO copy belongs to its `ExternalSecret`, which writes it again if it's deleted, at the latest at
+its next refresh, and `prevent-deletion` on it would keep it from being cleaned up with its `ExternalSecret` when
+you delete that.
 
 1. Create a GitHub token with read access to the repository's contents, for example a
    [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)
