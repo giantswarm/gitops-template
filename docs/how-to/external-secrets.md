@@ -152,10 +152,12 @@ kubectl delete secretstore gitops-test -n org-${ORG_NAME}
 
 ## Keep the repository token in your secret manager
 
-Flux reads the repository with the `github-https-credentials` Secret in the `default` namespace. Instead of creating
-it by hand or keeping it in the repository encrypted, let ESO write it from your secret manager, through the
-`SecretStore` in `default`. That has to be your secret manager's store, not the
-[test store](#a-secret-store-for-testing).
+Flux reads the repository with a Secret in the `default` namespace, `github-https-credentials` unless you named it
+otherwise in the `GitRepository`'s `secretRef`. Instead of creating it by hand or keeping it in the repository
+encrypted, let ESO write it from your secret manager, through the `SecretStore` in `default`. That has to be your
+secret manager's store, not the [test store](#a-secret-store-for-testing). It's the same Secret the
+[basic tutorial](../tutorials/basic/getting-started.md#1-connect-the-management-cluster) encrypts with SOPS, with the
+keys `username` and `password`: use one route for it, not both.
 
 1. Create a GitHub token with read access to the repository's contents, for example a
    [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token)
@@ -164,9 +166,10 @@ it by hand or keeping it in the repository encrypted, let ESO write it from your
 
     ```sh
     export GITHUB_TOKEN_KEY=gitops/github-token
+    export GIT_SECRET=github-https-credentials
     ```
 
-1. Create an `ExternalSecret`. ESO reads the token and writes it into the `github-https-credentials` Secret, in the
+1. Create an `ExternalSecret`. ESO reads the token and writes it into the Secret named in `GIT_SECRET`, in the
    format Flux expects: GitHub accepts the token as the password of any user name.
 
     ```sh
@@ -174,7 +177,7 @@ it by hand or keeping it in the repository encrypted, let ESO write it from your
     apiVersion: external-secrets.io/v1
     kind: ExternalSecret
     metadata:
-      name: github-https-credentials
+      name: ${GIT_SECRET}
       namespace: default
     spec:
       refreshInterval: 1h
@@ -182,7 +185,7 @@ it by hand or keeping it in the repository encrypted, let ESO write it from your
         kind: SecretStore
         name: ${SECRET_STORE}
       target:
-        name: github-https-credentials
+        name: ${GIT_SECRET}
         template:
           data:
             username: git
@@ -199,20 +202,25 @@ it by hand or keeping it in the repository encrypted, let ESO write it from your
 1. **Check:** the `ExternalSecret` reports `SecretSynced`:
 
     ```sh
-    kubectl get externalsecret github-https-credentials -n default
+    kubectl get externalsecret ${GIT_SECRET} -n default
     ```
 
     If it doesn't get there, see [When something isn't Ready](./troubleshooting.md#a-secretstore-or-externalsecret-isnt-ready).
 
 Apply it by hand, as above, before Flux reads the repository for the first time. To keep it in Git from then on, save
-the same manifest in `management-clusters/${MC_NAME}`, with `${SECRET_STORE}` and `${GITHUB_TOKEN_KEY}` written out,
-and the management cluster's `Kustomization` applies it with the rest. When you rotate the token, change it in your
-secret manager: ESO copies it within the `refreshInterval`.
+the same manifest in `management-clusters/${MC_NAME}`, with `${GIT_SECRET}`, `${SECRET_STORE}` and
+`${GITHUB_TOKEN_KEY}` written out, and the management cluster's `Kustomization` applies it with the rest. When you
+rotate the token, change it in your secret manager: ESO copies it within the `refreshInterval`.
 
 ## Give an app secret values
 
 An app reads its secret values from its `${cluster_name}-APP_NAME-user-secrets` Secret, the last layer of its values,
 see [App values](../reference/values.md#app-values). An `ExternalSecret` next to the app writes that Secret.
+
+> [!Caution]
+> If the app already has that Secret as a SOPS-encrypted `secret.enc.yaml`, don't add an `ExternalSecret` for it as
+> well: the two would overwrite each other. Replace the file, or use a Secret of another name, see
+> [One Secret, one route](../explanation/secrets.md#one-secret-one-route).
 
 1. Store the values in your secret manager as Helm values in YAML. For the hello-world chart, which has no secret
    settings, this works as an example:
@@ -292,7 +300,7 @@ For a complete example, see the
 [`ExternalSecret` of hello-world](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world/externalsecret.yaml)
 in the example cluster `WC_NAME_OUT_OF_BAND_NO_FLUX_APP`. It reads the [store for testing](#a-secret-store-for-testing).
 The same cluster keeps the secret values of envoy-gateway in a SOPS-encrypted Secret, so it shows both ways side by
-side.
+side, each for a Secret of its own.
 
 ## Change a secret value
 

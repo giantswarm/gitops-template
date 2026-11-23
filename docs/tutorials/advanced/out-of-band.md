@@ -43,8 +43,10 @@ never is: `${WC_DIR}/kustomization.yaml` lists `cluster/` or `apps/`, never `out
   example. Delivery goes on while the management cluster is unavailable, and the cluster's users see the state where
   they work, at the cost of a Flux installation in the cluster to keep up to date.
 
-Use one of them for a cluster's `out-of-band` directory, never both: two Flux installations applying the same
-directory to the same cluster fight over the same objects.
+> [!Caution]
+> Use one of them for a cluster's `out-of-band` directory, never both. Pushed and pulled at once, two Flux
+> installations apply the same objects to the same cluster and keep undoing each other, without an error. See
+> [One owner per object](../../explanation/one-owner.md).
 
 ## Add the out-of-band directory
 

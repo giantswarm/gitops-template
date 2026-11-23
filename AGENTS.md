@@ -83,7 +83,10 @@ The repository's author is not a cluster admin:
   [Deletion protection](docs/explanation/deletion-protection.md).
 - Don't take charts from upstream registries. Apps and clusters come from Giant Swarm's charts on
   `gsoci.azurecr.io`, at versions Giant Swarm ships.
-- Don't let two things reconcile one chart, such as an `App` and a `HelmRelease` for the same release.
+- Don't let two things reconcile one object. Each object has one reconciler: one `Kustomization` builds it, one
+  `HelmRelease` installs a release, one route delivers a Secret. Not an `App` and a `HelmRelease` for the same
+  release, not a file in the builds of two `Kustomization`s, not an `ExternalSecret` and a SOPS file for the same
+  Secret. See [One owner per object](docs/explanation/one-owner.md).
 - Clusters are Cluster API clusters, `cluster.x-k8s.io/v1beta2`. There are no other kinds of cluster here.
 
 ### What the layout means
@@ -116,6 +119,15 @@ namespaces.
 ### Secrets
 
 SOPS and External Secrets Operator are both supported, alone or together. Don't remove either.
+
+- Stay away from secret values, and hand them to a person. Never ask for, type, read or decrypt a secret value:
+  anything you see is in your transcript, and a value in a command you run is in the process list. Prepare everything
+  around it (the file's path and its `kustomization.yaml` entry, the `.sops.yaml` rule, the `ExternalSecret` or the
+  exact `read -rs ... | sops --encrypt ...` command from [SOPS](docs/how-to/sops.md#encrypt-an-apps-values)), then
+  tell the engineer exactly what to run and what the result should look like. Don't decrypt an existing file to look
+  at it.
+- One route per Secret: an `ExternalSecret` or a SOPS file, never both, see
+  [One Secret, one route](docs/explanation/secrets.md#one-secret-one-route).
 
 - Never write a secret in plain text into the repository, not even for a moment. Encrypt on the way into the file,
   as [SOPS](docs/how-to/sops.md) shows. `tools/check-sops-encrypted` runs in `pre-commit` and refuses a `*.enc.yaml`
