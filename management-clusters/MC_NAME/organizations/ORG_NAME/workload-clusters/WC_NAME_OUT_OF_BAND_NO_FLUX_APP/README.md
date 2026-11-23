@@ -28,8 +28,8 @@ The first two decrypt with the GPG key `sops-gpg-from-template-wc-name`, from th
 - `cluster/apps/`: the base apps, installed with the cluster. Its `kustomization.yaml` lists them.
 - [`cluster/apps/envoy-gateway-from-template/`](cluster/apps/envoy-gateway-from-template/): the envoy-gateway stack.
 - `apps/`: the secondary apps, installed once the cluster is up. Its `kustomization.yaml` lists them.
-- `apps/hello-world/`: hello-world written out in full, with an `externalsecret.yaml` that reads its secret values
-  from your secret manager.
+- `apps/hello-world/`: hello-world written out in full, with an `HTTPRoute` at `hello-standalone.<base domain>` and
+  an `externalsecret.yaml` that reads its secret values from your secret manager.
 - [`apps/hello-world-automatic-updates/`](apps/hello-world-automatic-updates/): hello-world following a version range.
 - [`apps/hello-world-from-template/`](apps/hello-world-from-template/): hello-world from its App Template.
 - [`apps/workload-cluster-secrets/`](apps/workload-cluster-secrets/): secrets pushed into the cluster through a store

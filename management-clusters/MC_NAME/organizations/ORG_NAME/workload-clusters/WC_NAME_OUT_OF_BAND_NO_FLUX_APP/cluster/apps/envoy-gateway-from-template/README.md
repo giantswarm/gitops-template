@@ -14,8 +14,8 @@ the cluster, through `cluster/apps/kustomization.yaml`.
 - `kustomization.yaml`: lists the stack, turns the values below into the
   `${cluster_name}-gateway-api-config-user-values` ConfigMap, and labels the encrypted Secret so a change reaches
   the `HelmRelease` at once.
-- `user_config_gateway_api_config.yaml`: the Gateway's `hello` subdomain, for hello-world, and an example
-  annotation.
+- `user_config_gateway_api_config.yaml`: the Gateway's subdomains, one for each hello-world on the cluster, and an
+  example annotation.
 - `secret.enc.yaml`: more values for `gateway-api-config`, in the `${cluster_name}-gateway-api-config-user-secrets`
   Secret, encrypted with SOPS and the cluster's GPG key.
 

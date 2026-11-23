@@ -17,7 +17,7 @@ The app's directory comes in one of two layouts:
 The [basic tutorial](../tutorials/basic/getting-started.md#4-deploy-an-app) walks through a first app step by step, and
 [Reuse an app's configuration](../tutorials/intermediate/app-templates.md) explains App Templates. Examples:
 
-- an app without configuration, its files listed one by one in the cluster's
+- an app with its values in the `HelmRelease`, its files listed one by one in the cluster's
   [apps/kustomization.yaml](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/kustomization.yaml):
   [WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/apps/hello-world/);
 - an app from an App Template, with a `kustomization.yaml` of its own:

@@ -13,7 +13,8 @@ namespace.
 
 - `oci-repository.yaml`: the chart, with `spec.ref.semver: '>=3.2.2 <4.0.0'` instead of a fixed tag: stable releases
   from 3.2.2, the first that accepts the cluster values, up to the next major version.
-- `helm-release.yaml`: installs it, once the cluster's Gateway API CRDs are ready.
+- `helm-release.yaml`: installs it, once the cluster's Gateway API CRDs are ready, with an `HTTPRoute` at
+  `hello-auto.<base domain>` on the cluster's Gateway.
 
 ## When you copy it
 

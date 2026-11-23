@@ -479,6 +479,8 @@ files in `tests/ats/assertions/exists`. They list the main workload of each app:
   stand-in creates with the rights a Giant Swarm management cluster gives it.
 - The `giantswarm-default` `Gateway` of the `gateway-api-config` app only has to exist. kind has no load balancer for
   its Service, so the `Gateway` can't be `Programmed`. Its `HelmRelease` gets `Ready` all the same.
+- Each hello-world's `HTTPRoute` has to exist, with the hostname of its own that the `Gateway` lists. Nothing answers
+  at the hostname, for the same reason: the test checks the route, not that the app can be reached through it.
 
 The kind cluster is one node on a CI runner, so the vCluster's pods take their CPU requests from the same 4 CPUs as
 everything else. After the `HelmRelease`s are `Ready`, `test_kind_node_has_room` checks that the node can still take

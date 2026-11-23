@@ -2,10 +2,15 @@ gateways:
   default:
     listeners:
       https:
-        # DNS record and certificate entry for the hello-world app's hostname,
-        # `hello.<cluster base domain>`
+        # a DNS record and a certificate entry for each hello-world's hostname,
+        # `<subdomain>.<cluster base domain>`: hello-world-from-template,
+        # hello-world, hello-world-automatic-updates, and the organisation's
+        # multicluster hello-world-scheduled
         subdomains:
           - hello
+          - hello-standalone
+          - hello-auto
+          - hello-scheduled
     # an example override on top of the stack defaults
     service:
       annotations:
