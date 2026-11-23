@@ -187,9 +187,34 @@ You need `helm` 3.13 or newer for `helm get metadata`, and the workload cluster'
     flux suspend helmrelease ${WC_NAME}-${APP_NAME} -n org-${ORG_NAME}
     ```
 
+    Then make Helm forget the release you installed by hand, without touching what it installed. Don't run
+    `helm uninstall` on it, not even with `--cascade orphan`: uninstall deletes every object of the release, and
+    `orphan` only spares what those objects own, such as a Deployment's Pods. Helm keeps a release as Secrets, one
+    per revision, labelled `owner=helm` and `name=` the release's name. Delete those of the old release and nothing
+    else:
+
+    ```sh
+    helm list -A --kube-context ${WC_CONTEXT}  # the two releases, with their names and namespaces
+    kubectl get secret -n OLD_NAMESPACE -l owner=helm,name=OLD_RELEASE_NAME --context ${WC_CONTEXT}
+    kubectl delete secret -n OLD_NAMESPACE -l owner=helm,name=OLD_RELEASE_NAME --context ${WC_CONTEXT}
+    ```
+
+    `OLD_NAMESPACE` and `OLD_RELEASE_NAME` are those of the release you installed by hand. Where both releases have
+    the same name, in two namespaces, the namespace tells them apart; where they're in one namespace, the name does.
+    Read what the second command lists before you run the third: it should be the old release's revisions,
+    `sh.helm.release.v1.OLD_RELEASE_NAME.v1` and on, and no other.
+
+    **Check:** `helm list -A` shows one release, the one Flux installed, and the app's objects are as they were. Then
+    resume the `HelmRelease`:
+
+    ```sh
+    flux resume helmrelease ${WC_NAME}-${APP_NAME} -n org-${ORG_NAME}
+    ```
+
     > **Caution:**
-    > How to untangle two releases that claim the same objects isn't covered here. Ask Giant Swarm before you
-    > uninstall either of them.
+    > This is for two releases that list the same objects, which `helm get manifest` shows for each. If the chart
+    > names its objects after the release and the names differed, the new release made a second copy of the app
+    > beside the first. Ask Giant Swarm before you remove either one.
 
     **If the upgrade fails,** the message is `Helm upgrade failed for release ...` with Helm's error, and the
     template's `upgrade.remediation` rolls back and retries, see
