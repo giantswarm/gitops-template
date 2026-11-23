@@ -711,7 +711,9 @@ filled in.
 
 [tests/ats/ci_scope.py](../../tests/ats/ci_scope.py) decides, for the `changes` job of `validate.yaml`, whether a pull
 request gets the full run or the light one. It reads GitHub's list of the pull request's files, and checkouts of its
-merge base and its head. The light run happens only when every file is one of these:
+merge base and its head. The job runs the merge base's copy of the script, so a pull request that changes these rules
+is judged by the rules it found, and gets its own only once it's merged. The light run happens only when every file is
+one of these:
 
 | The file | Why it doesn't count |
 | --- | --- |
