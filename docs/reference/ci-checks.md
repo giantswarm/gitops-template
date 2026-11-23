@@ -180,9 +180,9 @@ every example, and `test_the_template_binds_every_example_it_has`, which also ch
 assertion file in the template belongs to an example. The template is recognised by that repository name and nothing
 else, so a copy under another name, a renamed template included, skips where the template would fail.
 
-The checks that need no cluster work the same way: the ones of the repository's structure, in `test_root_build.py` and
-`test_namespace_build.py`, run on the root of every management cluster the test applies; the ones that pin the
-examples' files are bound to the examples.
+The checks that need no cluster work the same way: the ones of the repository's structure, in `test_root_build.py`,
+`test_namespace_build.py` and `test_one_owner.py`, run on the root of every management cluster the test applies; the
+ones that pin the examples' files are bound to the examples.
 
 ### What the test proves, and what it can't
 
@@ -661,6 +661,44 @@ Operator (see [One Secret, one route](../explanation/secrets.md#one-secret-one-r
   `Kustomization` below it that reads the same repository, with its `postBuild` variables and `targetNamespace`. It
   fails if one Secret, by cluster, namespace and name, comes from both an applied `ExternalSecret` and an applied SOPS
   file. It doesn't see what a `ResourceSet` renders or a Kyverno policy generates.
+
+### Objects in two builds
+
+`tests/ats/test_one_owner.py` checks, without a cluster, that every object has one Flux owner (see
+[One owner per object](../explanation/one-owner.md#the-same-controller-twice)). Its
+`test_no_object_has_two_kustomizations` runs on the root of every management cluster the test applies, so a fork that
+deleted the examples gets its own repository checked. It builds what the root applies, and every `Kustomization` below
+it that reads the same repository, with its `postBuild` variables and `targetNamespace`, the same way as
+`test_no_secret_is_delivered_by_both_routes`. It fails when two owners apply one object, and names the object and each
+owner with the file that defines it and its `spec.path`.
+
+An object is its target cluster, API group, kind, namespace and name, as Flux applies it. The version doesn't count.
+The target cluster is the management cluster, or, for a `Kustomization` with `spec.kubeConfig`, the cluster its
+kubeconfig Secret reaches, named by that Secret's namespace and name. So:
+
+- one base for two clusters, with `${cluster_name}` in its names, is two objects and passes. Without the cluster in a
+  name, two clusters of one organisation apply the same object in `org-<name>`, and it fails;
+- a Flux `Kustomization` in the build of two others fails, as any other object does;
+- an object a `ResourceSet` renders that a `Kustomization` also applies fails. The test renders the name and
+  namespace with each entry of the `ResourceSet`'s own `spec.inputs`, under its name for `inputStrategy: Permute`,
+  and with the `ResourceSet`'s namespace for its provider's. An object whose name needs another input from a
+  `ResourceSetInputProvider` isn't checked: the test says so in a warning, and passes;
+- `out-of-band/` applied by a cluster's own `Kustomization` and by its `-direct` one is on two clusters, the management
+  cluster and the workload cluster, so it passes this test, although it's a mistake of its own: what's meant for the
+  workload cluster lands on the management cluster. Applied by two `-direct` `Kustomization`s, or by one and by the
+  workload cluster's own Flux, it fails;
+- the workload cluster's own Flux is the flux-app chart, installed by a `HelmRelease` with `spec.kubeConfig`. The test
+  reads the `kustomizations` of its values, from `spec.values` and the `valuesFrom` `ConfigMap`s in the same build, and
+  builds each `path` from this repository. A `path` that isn't in the repository isn't checked: the test says so in a
+  warning.
+
+It doesn't see:
+
+- the same cluster reached by two kubeconfig Secrets with different names;
+- what a `Kustomization` with another source applies, such as an application team's;
+- what a chart installs, what a Kyverno policy generates, and what External Secrets Operator writes, which
+  `test_no_secret_is_delivered_by_both_routes` covers for Secrets;
+- two `HelmRelease`s with different names for one Helm release, or an `App` and a `HelmRelease` for one release.
 
 ### Object names
 

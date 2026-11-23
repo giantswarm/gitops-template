@@ -153,9 +153,15 @@ and look for it in each:
 tools/fake-flux build KUSTOMIZATION_NAME:NAMESPACE -M | grep -n 'name: OBJECT_NAME'
 ```
 
-`tools/fake-flux` stops with `is applied by more than one Kustomization` when one Flux `Kustomization` is in two builds,
-and the tests in `tests/ats` fail when one Secret comes from both an `ExternalSecret` and a SOPS file. Nothing checks
-any other object for two builds, so look.
+CI looks for the first of those forms for you. `test_no_object_has_two_kustomizations`, in
+`tests/ats/test_one_owner.py`, builds what every Flux `Kustomization` of each management cluster applies, as Flux
+builds it, and fails when two of them apply the same object to the same cluster, naming the object and both
+`Kustomization`s. It counts what a `ResourceSet` renders and what a workload cluster's own Flux applies from your
+repository too, and needs no cluster, so you can run it before you push. It doesn't see what a chart installs, what
+Kyverno generates or what anything outside Flux writes (see [Objects in two builds](../reference/ci-checks.md#objects-in-two-builds)
+for the whole list), so the other forms are still yours to look for. `tools/fake-flux` stops with
+`is applied by more than one Kustomization` when one Flux `Kustomization` is in two builds, and the tests in
+`tests/ats` fail when one Secret comes from both an `ExternalSecret` and a SOPS file.
 
 To hand an object from one reconciler to another, take it away from the first before the second starts, and keep what
-it installed: adopting is handing over, not sharing.
+it installed: [adopting is handing over](../how-to/adopt-app.md), not sharing.
