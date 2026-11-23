@@ -88,10 +88,11 @@ spec:
         targetNamespace: org-${organization}
         timeout: 10m0s
         upgrade:
+          # A rollback goes back to the Giant Swarm release the cluster had, which rolls
+          # its nodes a second time. Keep a failed upgrade failed, for a person to look at.
           remediation:
-            remediateLastFailure: true
-            retries: 10
-            strategy: rollback
+            remediateLastFailure: false
+            retries: 0
         valuesFrom:
           - kind: ConfigMap
             name: cluster-app-installation-values

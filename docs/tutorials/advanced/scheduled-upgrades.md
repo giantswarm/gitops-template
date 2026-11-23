@@ -323,9 +323,8 @@ picks, and a patch drops the base's two. Another patch appends the cluster's own
             timeout: 10m0s
             upgrade:
               remediation:
-                remediateLastFailure: true
-                retries: 10
-                strategy: rollback
+                remediateLastFailure: false
+                retries: 0
             valuesFrom:
               - kind: ConfigMap
                 name: cluster-app-installation-values

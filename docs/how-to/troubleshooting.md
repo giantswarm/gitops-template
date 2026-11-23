@@ -18,6 +18,7 @@ that failed. The trick is finding that object, because one failure makes everyth
 - [A new cluster's apps started before its nodes joined](#a-new-clusters-apps-started-before-its-nodes-joined)
 - [A `HelmRelease` can't find its values](#a-helmrelease-cant-find-its-values)
 - [A `HelmRelease` has run out of retries](#a-helmrelease-has-run-out-of-retries)
+- [A cluster's upgrade failed](#a-clusters-upgrade-failed)
 - [A cluster's first install failed](#a-clusters-first-install-failed)
 - [SOPS can't decrypt](#sops-cant-decrypt)
 - [A `SecretStore` or `ExternalSecret` isn't `Ready`](#a-secretstore-or-externalsecret-isnt-ready)
@@ -299,6 +300,24 @@ flux reconcile helmrelease NAME -n NS --reset
 
 `--reset` clears the failure count, so the `HelmRelease` gets its retries back. `--force` instead makes one install or
 upgrade attempt even though the retries are spent.
+
+## A cluster's upgrade failed
+
+**What you see.** A cluster's `HelmRelease` is `False` with `UpgradeFailed` and Helm's error, and it doesn't try again.
+
+**What it means.** The cluster base turns upgrade remediation off on purpose, with `upgrade.remediation.retries: 0`.
+Flux remediates a failed upgrade by rolling the chart back, and for a cluster that's the Giant Swarm release it had:
+the nodes that already rolled would roll a second time, with nobody watching. So a failed upgrade stays failed, for you
+to look at.
+
+**What you can do.** Read Helm's error in the `Ready` condition, and look at the cluster as in
+[A cluster's `Kustomization` waits on its health check](#a-clusters-kustomization-waits-on-its-health-check). Fix the
+cause in Git, or go back to the release the cluster had by reverting the commit, push, and once Flux has applied it,
+start again:
+
+```sh
+flux reconcile helmrelease CLUSTER_NAME -n org-ORG_NAME --reset
+```
 
 ## A cluster's first install failed
 
