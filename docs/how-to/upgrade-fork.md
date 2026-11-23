@@ -46,6 +46,11 @@ sections that move objects Flux manages are worth reading twice before you push.
 
 Changes to examples you don't use, such as new apps under `bases/`, need nothing from you.
 
+If your fork has `App` custom resources of its own, Giant Swarm is
+[deprecating the App Platform](https://docs.giantswarm.io/overview/fleet-management/app-management/app-platform-deprecation/)
+that runs them, and `kubectl gs gitops upgrade` fails on any `App` it finds. To move an app to a `HelmRelease` without
+installing it again, see [Adopt a release managed by an `App`](./adopt-app.md#adopt-a-release-managed-by-an-app).
+
 ## The path from main
 
 Do the mandatory steps in this order. Take the optional ones once step 5 is done, one at a time, each in its own pull

@@ -65,6 +65,8 @@ Each entry: what upstream documentation or common practice suggests, what to do 
   release with a `HelmRelease` is fine, once nothing else reconciles it.
 - **Why:** a reconciler can't tell whether it really owns an object. Two of them, or one told twice, keep undoing each
   other, the object flaps and nothing reports an error, see `docs/explanation/one-owner.md`.
+- **Steps:** `docs/how-to/adopt-app.md`, for a release installed with Helm and for one an `App` manages, in an order
+  that never has two reconcilers.
 
 ## One `Kustomization` for everything
 
