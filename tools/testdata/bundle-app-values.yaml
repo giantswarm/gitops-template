@@ -42,7 +42,7 @@ metadata:
 spec:
   interval: 10m
   ref:
-    tag: 2.1.1
+    tag: 2.2.0
   url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2

@@ -151,7 +151,7 @@ bases/stacks/hello-web
           - op: replace
             path: /spec/ref/tag
             # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle versioning=docker
-            value: "2.1.1"
+            value: "2.2.0"
         target:
           kind: OCIRepository
           name: \${cluster_name}-gateway-api-bundle

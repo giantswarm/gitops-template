@@ -12,7 +12,7 @@ metadata:
 spec:
   provider: generic
   ref:
-    tag: "2.1.1"
+    tag: "2.2.0"
   url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
