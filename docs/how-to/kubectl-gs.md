@@ -8,8 +8,8 @@ files no command writes, see [What kubectl-gs writes](../reference/repo-structur
 
 The commands below need kubectl-gs X.Y.Z or newer, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version).
 Older releases write structure version 2, with a `mapi` directory;
-[Bring an older fork up to date](./upgrade-fork.md) moves a fork on from it. Run the commands from the root of your
-clone, and pass `--dry-run` to see what a command would write first. `kubectl gs gitops init` creates
+[Migrate a fork from structure version 2](./upgrade-fork.md) moves a fork on from it. Run the commands from the root
+of your clone, and pass `--dry-run` to see what a command would write first. `kubectl gs gitops init` creates
 `.gitops-metadata.yaml` and `.sops.yaml` in a new repository, and a Git `pre-commit` hook that refuses `*.enc.yaml`
 files `sops` hasn't encrypted; a fork of this template has the files already.
 

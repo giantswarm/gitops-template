@@ -38,6 +38,8 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 ## How-to guides
 
 - [When something isn't Ready](./how-to/troubleshooting.md): what a red status means, and how to recover.
+- [Migrate a fork from structure version 2](./how-to/upgrade-fork.md): from `mapi` directories and `Kustomization`s
+  in `default` to the layout these docs describe.
 - [Add an app](./how-to/add-app.md) to one cluster.
 - [Change an app](./how-to/update-app.md): its version, how it's installed, or its values.
 - [Adopt an app that's already installed](./how-to/adopt-app.md), by hand or through an `App`, without
@@ -54,7 +56,6 @@ The tutorials are routes through the same repository, in three tiers. Each one b
   Director, from the cluster's values to the Gateway's address.
 - [Move a running cluster to scheduled upgrades](./how-to/scheduled-upgrades-existing-cluster.md) without changing it.
 - [Report reconcile status on GitHub commits](./how-to/commit-statuses.md).
-- [Bring an older fork up to date](./how-to/upgrade-fork.md).
 - [Check a change before you push](./how-to/check-changes.md).
 - [Configure CI in a fork](./how-to/configure-ci.md).
 
