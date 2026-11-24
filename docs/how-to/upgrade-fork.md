@@ -1,7 +1,10 @@
-# Bring an older fork up to date
+# Migrate a fork from structure version 2
 
-A fork of this template doesn't follow the template by itself. This page takes a fork of the template's `main` branch,
-at [structure version](../reference/repo-structure.md#structure-version) 2, to the layout the docs describe, version 3.
+A fork of this template doesn't follow the template by itself. If yours has a `mapi` directory in each workload
+cluster, and its clusters' Flux `Kustomization`s in the `default` namespace, it's at
+[structure version](../reference/repo-structure.md#structure-version) 2, the layout the template had before this
+release. This page migrates it to version 3, the layout the docs describe: no `mapi`, and each organisation's objects
+in its own namespace, `org-<name>`.
 
 Flux doesn't care which version your repository is at: a fork you leave alone keeps reconciling exactly as it does
 today. kubectl-gs does care. From kubectl-gs X.Y.Z on, `kubectl gs gitops add workload-cluster` and

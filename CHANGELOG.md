@@ -8,9 +8,9 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 This release rebuilds the template: its layout, its examples, its tests and its documentation. The repository is now
 at [structure version](docs/reference/repo-structure.md#structure-version) 3, the layout kubectl-gs X.Y.Z and newer
 write. Clusters and apps are Flux `HelmRelease`s from Giant Swarm's charts on `gsoci.azurecr.io`, and every example
-gets `Ready` in CI. To bring an existing fork up to date, follow
-[Bring an older fork up to date](docs/how-to/upgrade-fork.md), which says what each step changes on a running
-management cluster.
+gets `Ready` in CI. To migrate an existing fork, with its `mapi` directories and its `Kustomization`s in `default`,
+follow [Migrate a fork from structure version 2](docs/how-to/upgrade-fork.md), which says what each step changes on a
+running management cluster.
 
 **Breaking changes.** A fork has to make these changes, listed under
 [What's mandatory](docs/how-to/upgrade-fork.md#whats-mandatory):

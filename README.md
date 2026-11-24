@@ -16,6 +16,11 @@ Giant Swarm maintains this template. Its layout has a version, the
 [structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check`, from
 kubectl-gs X.Y.Z on, tells you when your fork has fallen behind it.
 
+Already have a fork, with a `mapi` directory in each workload cluster and its clusters' Flux `Kustomization`s in the
+`default` namespace? That's structure version 2, and
+[Migrate a fork from structure version 2](docs/how-to/upgrade-fork.md) takes it to the layout these docs describe,
+one step at a time, and says what each step changes on a running management cluster.
+
 ## Get started
 
 [Getting started](docs/tutorials/basic/getting-started.md) takes you from a fork of this repository to a workload
