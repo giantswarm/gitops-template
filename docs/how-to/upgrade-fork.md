@@ -821,15 +821,23 @@ versions the cluster runs, or newer, from the table in the
 1. Only then list `bases/stacks/envoy-gateway` in that `kustomization.yaml` instead, and take the patch out. Commit
    and push.
 
-    Flux deletes the three suspended `HelmRelease`s. Until they're gone, the bundle's `HelmRelease`,
-    `${cluster_name}-gateway-api-bundle`, fails with a message that they exist and can't be imported into its
-    release. It retries, creates them, and each one upgrades the release it finds.
+    Flux deletes the three suspended `HelmRelease`s and their `OCIRepository`s, which have the names the bundle's
+    have too. Until they're gone, the bundle's `HelmRelease`, `${cluster_name}-gateway-api-bundle`, fails with a
+    message that they exist and can't be imported into its release. It retries, creates them, and each one upgrades
+    the release it finds.
 
     **Check:** the bundle's `HelmRelease` is `Ready`, and the three say `Helm upgrade succeeded`. `Helm install
     succeeded` would mean a release was uninstalled and installed again:
 
     ```sh
     flux get helmreleases -n org-${ORG_NAME} | grep gateway
+    ```
+
+    If the bundle's `HelmRelease` says `Stalled` instead, the old objects took longer to go than its 10 install
+    retries last. Once they're gone, start it again, with the cluster's name for `WC_NAME`:
+
+    ```sh
+    flux reconcile helmrelease WC_NAME-gateway-api-bundle -n org-${ORG_NAME} --reset
     ```
 
 Try the two steps on a test cluster before you do them where the Gateway matters.

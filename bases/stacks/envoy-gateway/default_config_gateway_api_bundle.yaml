@@ -9,6 +9,16 @@ organization: ${organization}
 migration:
   appToHelmRelease:
     enabled: false
+# What the apps' HelmReleases do when an install or upgrade fails. Installs retry
+# forever, the bundle's default: a new cluster only gets the Kyverno, cert-manager
+# and monitoring CRDs the apps render once its default apps are installed. A failed
+# upgrade rolls back to the release that worked, after 10 retries; the bundle's own
+# default gives up after 3 and leaves the failed release in place.
+remediation:
+  upgrade:
+    retries: 10
+    remediateLastFailure: true
+    strategy: rollback
 # `extraConfigs` adds ConfigMaps and Secrets of the organisation's namespace to an
 # app's values. The bundle sorts them by `priority`, and a Secret after every
 # ConfigMap, so each app's values are merged in this order, later ones win:

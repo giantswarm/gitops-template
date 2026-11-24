@@ -47,7 +47,8 @@ spec:
 ---
 # One of the HelmReleases the bundle creates, for the Gateway. Its values come from the
 # ConfigMaps and the Secret the stack lists in the bundle's `extraConfigs`, in this order.
-# The bundle sets the chart's version, so it isn't repeated here.
+# The bundle sets the chart's version, so it isn't repeated here. Installs retry forever, the
+# bundle's default, and upgrades roll back as the stack's bundle values say.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -63,12 +64,20 @@ spec:
   dependsOn:
     - name: hello-app-prod-usw-envoy-gateway
       namespace: org-org-name
+  install:
+    remediation:
+      retries: -1
   kubeConfig:
     secretRef:
       name: hello-app-prod-usw-kubeconfig
   releaseName: gateway-api-config
   storageNamespace: envoy-gateway-system
   targetNamespace: envoy-gateway-system
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
   valuesFrom:
     - kind: ConfigMap
       name: hello-app-prod-usw-cluster-values
