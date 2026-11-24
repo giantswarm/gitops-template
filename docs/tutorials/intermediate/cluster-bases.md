@@ -31,7 +31,10 @@ It installs the `release-aws` chart, which exists for every Giant Swarm release 
 [readme](/bases/clusters/capa/readme.md) lists the variables it expects and how it differs from what
 `kubectl gs gitops add base` writes.
 
-For another provider, write its base first, see [Create a cluster base for another provider](../../how-to/cluster-base-provider.md).
+For another provider, write its base first, see
+[Create a cluster base for another provider](../../how-to/cluster-base-provider.md). The node sizes and the
+`--provider capa` on this page are AWS's:
+[Run the template on another provider](../../how-to/other-providers.md) has what to use instead.
 
 Export the base you build on:
 

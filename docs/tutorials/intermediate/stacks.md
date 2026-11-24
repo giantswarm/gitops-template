@@ -36,8 +36,9 @@ The fork ships two stacks:
 On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which isn't part of a Giant Swarm release.
 Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
 [its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to. The
-cluster from the basic tutorial has it already. The Gateway also needs cert-manager's Gateway API support, which step
-4 of the basic tutorial switches on.
+cluster from the basic tutorial has it already. Other providers bring the load balancer with the release, see
+[The Gateway's address](../../how-to/other-providers.md#the-gateways-address). The Gateway also needs cert-manager's
+Gateway API support, which step 4 of the basic tutorial switches on.
 
 Run the commands from the root of your clone, with the variables the basic tutorial exported still set: those from
 [Before you start](../basic/getting-started.md#before-you-start), and the ones its steps add, such as `WC_CONTEXT`.

@@ -510,6 +510,9 @@ minutes after the Gateway gets its address, so give them that first.
     it can work. On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which isn't part of a
     Giant Swarm release. Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
     [its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to.
+    On Azure and Cloud Director the release provides the load balancer. On vSphere it does too, from an address pool
+    on the management cluster that is Giant Swarm's to create: with no pool, or no address left in it, the Gateway
+    gets none. See [The Gateway's address](./other-providers.md#the-gateways-address).
 
 1. The hostname has a DNS record. The Gateway only creates records, and certificate entries, for the subdomains in
    `gateways.default.listeners.https.subdomains` of the `gateway-api-config` values. The records it asks external-dns

@@ -27,3 +27,4 @@ three files. Keep the deletion protection on the `HelmRelease` and `OCIRepositor
 
 - [Cluster bases tutorial](/docs/tutorials/intermediate/cluster-bases.md)
 - [Create a cluster base for another provider](/docs/how-to/cluster-base-provider.md)
+- [Run the template on another provider](/docs/how-to/other-providers.md)

@@ -3,7 +3,8 @@
 `bases/environments/regions`
 
 One Component per region. Every cluster lists exactly one, as the `release-aws` chart otherwise creates the cluster in
-the management cluster's own region. Each region has the same shape, so this README covers them all.
+the management cluster's own region. Each region has the same shape, so this README covers them all. They set AWS
+regions: for Azure, vSphere and Cloud Director, see [Regions](/docs/how-to/other-providers.md#regions).
 
 Nothing applies this directory directly. A cluster lists a region under `components:` in its
 `cluster/kustomization.yaml`, and the cluster's Flux `Kustomization` applies the result into the organisation's

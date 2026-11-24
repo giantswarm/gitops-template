@@ -4,7 +4,8 @@
 
 External Secrets Operator `SecretStore`s for cloud secret managers that keep no credential anywhere. Each one signs in
 with a token Kubernetes issues for a ServiceAccount, so there's no access key in the cluster or in Git to leak or
-rotate.
+rotate. That needs a cloud's workload identity, which AWS and Azure have. On vSphere and Cloud Director, see
+[Secret stores](/docs/how-to/other-providers.md#secret-stores).
 
 Nothing applies this directory directly. The bases have no namespace: a `kustomization.yaml` in your organisation's
 `namespace/` lists one, and the Flux `Kustomization` for the organisation's namespace, `namespace.yaml`, applies it into

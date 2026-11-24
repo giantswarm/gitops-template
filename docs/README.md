@@ -50,6 +50,8 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 - [Delete a workload cluster](./how-to/delete-cluster.md) and everything it uses.
 - [Let kubectl-gs write the files](./how-to/kubectl-gs.md), and what to fix afterwards.
 - [Create a cluster base for another provider](./how-to/cluster-base-provider.md), other than CAPA.
+- [Run the template on another provider](./how-to/other-providers.md): what differs on Azure, vSphere and Cloud
+  Director, from the cluster's values to the Gateway's address.
 - [Move a running cluster to scheduled upgrades](./how-to/scheduled-upgrades-existing-cluster.md) without changing it.
 - [Report reconcile status on GitHub commits](./how-to/commit-statuses.md).
 - [Bring an older fork up to date](./how-to/upgrade-fork.md).

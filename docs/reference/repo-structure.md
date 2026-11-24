@@ -196,7 +196,7 @@ Files and resources use the names `kubectl gs gitops` generates, so it recognise
 | An app's values for one cluster | `override_config.yaml`, which the app's `kustomization.yaml` turns into the `${cluster_name}-APP_NAME-user-values` ConfigMap, and `secret.enc.yaml` with the `${cluster_name}-APP_NAME-user-secrets` Secret, see [App values](./values.md#app-values) |
 | A workload cluster's values | `cluster_userconfig.yaml` with the `${cluster_name}-cluster-userconfig` ConfigMap, in `cluster` |
 | The patch that adds them to the cluster's `HelmRelease` | `patch_cluster_userconfig.yaml`, in `cluster` |
-| A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `cluster/kustomization.yaml`. Every cluster needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../tutorials/intermediate/stages-and-regions.md#regions). `kubectl gs gitops` doesn't generate it |
+| A workload cluster's region | a `components:` entry for `bases/environments/regions/REGION`, in `cluster/kustomization.yaml`. Every cluster on AWS needs one, or it would be created in the management cluster's region and CI fails, see [Regions](../tutorials/intermediate/stages-and-regions.md#regions). For other providers, see [Regions](../how-to/other-providers.md#regions). `kubectl gs gitops` doesn't generate it |
 | A workload cluster's stage | a `components:` entry for `bases/environments/stages/STAGE`, in `cluster/kustomization.yaml`, optional, see [Stages](../tutorials/intermediate/stages-and-regions.md#stages). `kubectl gs gitops` doesn't generate it |
 | A provider's cluster base | `cluster.yaml`, `cluster_config.yaml` and `kustomization.yaml`, in `bases/clusters/PROVIDER` |
 | A cluster base built on a provider's base | `kustomization.yaml` and its own files, in `bases/clusters/BASE_NAME`, next to the provider's base and never inside it, see [Cluster bases](../tutorials/intermediate/cluster-bases.md) |
@@ -497,7 +497,7 @@ The bases use variables where every cluster needs its own value, such as `${clus
 
 | Variable | What it's for |
 | --- | --- |
-| `cluster_name` | The workload cluster's name. It names the cluster's resources and its apps, such as `${cluster_name}-hello-world`, and the `<cluster>-kubeconfig` Secret and `<cluster>-cluster-values` ConfigMap the apps read. `release-aws` rejects a name longer than 20 characters. |
+| `cluster_name` | The workload cluster's name. It names the cluster's resources and its apps, such as `${cluster_name}-hello-world`, and the `<cluster>-kubeconfig` Secret and `<cluster>-cluster-values` ConfigMap the apps read. `release-aws` rejects a name longer than 20 characters; the other providers' charts set no limit. |
 | `organization` | The organisation the cluster belongs to. Its resources go into the `org-${organization}` namespace, and `bases/clusters/capa` sets it as `global.metadata.organization` in the chart values. `namespace.yaml` fills it in from the organisation's `Organization`, see [The organisation's name](#the-organisations-name). |
 | `release` | The Giant Swarm release the cluster runs: the version of the `release-aws` chart in `bases/clusters/capa`. Without it, the `OCIRepository` has no chart version to pull and the cluster doesn't install. |
 | `cluster_description` | A free-text description of the cluster, set as `global.metadata.description` by `bases/clusters/capa`. |

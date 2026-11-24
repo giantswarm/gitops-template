@@ -188,7 +188,9 @@ Some values don't exist until the cluster runs. They are replaced by stubs in [v
   kind test creates its stand-in from the same file.
 - `charts/<chart>.yaml` holds values a chart can't render without the management cluster, such as
   `release-aws`'s switch to render without looking up its Release resource. It is the first values file, so values
-  from the repository override it. It doesn't set the region, so that a cluster without one fails.
+  from the repository override it. It doesn't set the region, so that a cluster without one fails. The template has
+  one for `release-aws`; a fork with clusters on another provider adds one for that chart, see
+  [Checks and CI](/docs/how-to/other-providers.md#checks-and-ci).
 
 Because the stub doesn't set a region, a `release-aws` `HelmRelease` without `global.providerSpecific.region` fails
 with the chart's own error, "Unable to default the region". On a management cluster, `release-aws` would take the

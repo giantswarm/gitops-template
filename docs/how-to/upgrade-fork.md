@@ -345,7 +345,8 @@ region of the management cluster's nodes from `release-aws`, which is rarely wha
 A running cluster has to keep the region it runs in. A region Component that names another one tries to build the
 cluster somewhere else, so set each cluster's region to where it is now.
 
-1. Find the region each cluster runs in:
+1. Find the region each cluster runs in. This is for clusters on AWS; on another provider, see
+   [Regions](./other-providers.md#regions) for what a cluster needs in its place:
 
     ```sh
     kubectl get awsclusters -n org-ORG_NAME -o custom-columns=NAME:.metadata.name,REGION:.spec.region

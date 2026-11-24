@@ -111,7 +111,8 @@ Documentation:
   (basic, intermediate, advanced), how-to guides, reference and explanation. The pages under `docs/` and `docs/guides`
   that they replace link to their new places.
 - How-to guides for troubleshooting and recovery, adding, changing and adopting apps, deleting a cluster, kubectl-gs,
-  another provider's cluster base, checking a change, configuring CI in a fork and upgrading a fork.
+  another provider's cluster base, running the template on Azure, vSphere or Cloud Director, checking a change,
+  configuring CI in a fork and upgrading a fork.
 - [One owner per object](docs/explanation/one-owner.md) explains why two reconcilers must never manage one object, and
   [When something isn't Ready](docs/how-to/troubleshooting.md) how to find which Flux object applied a resource.
 - Every example directory under `bases/` and `management-clusters/` has a README saying what it shows and what to change
