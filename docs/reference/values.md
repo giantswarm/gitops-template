@@ -40,7 +40,7 @@ A cluster's `HelmRelease`, in the [cluster base](/bases/clusters/capa/cluster.ya
 | --- | --- | --- | --- |
 | 1 | ConfigMap `cluster-app-installation-values`, key `values.yaml` | the management cluster, see [Objects the management cluster provides](./repo-structure.md#objects-the-management-cluster-provides) | `global.managementCluster`, `global.connectivity.baseDomain` and what else the management cluster knows |
 | 2 | ConfigMap `${cluster_name}-config` | the cluster base, from its `cluster_config.yaml`, or a [base with your own defaults](../tutorials/intermediate/cluster-bases.md#create-a-base-with-your-own-defaults), which replaces it whole | the defaults of every cluster made from the base |
-| 3 | ConfigMap `${cluster_name}-region-config` | a region component in [bases/environments/regions](/bases/environments/regions/) | `global.providerSpecific.region`. Every cluster needs one |
+| 3 | ConfigMap `${cluster_name}-region-config` | a region component in [bases/environments/regions](/bases/environments/regions/) | `global.providerSpecific.region`. Every cluster on AWS needs one; for other providers, see [Regions](../how-to/other-providers.md#regions) |
 | 4 | more components, optional, such as `${cluster_name}-region-node-pool-config` | a component, such as a region's [node_pool](/bases/environments/regions/eu_central/node_pool/) | an extra node pool |
 | 5 | ConfigMap `${cluster_name}-cluster-userconfig` | the cluster, from `cluster/cluster_userconfig.yaml` and `cluster/patch_cluster_userconfig.yaml` | the cluster's own values |
 

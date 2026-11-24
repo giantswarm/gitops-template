@@ -24,8 +24,9 @@ write them, see [Workload cluster](./kubectl-gs.md#workload-cluster), and fix wh
     ```
 
 1. Write the values. Everything in them is optional and only overrides the defaults. They follow the `values.yaml`
-   schema of the cluster chart, `cluster-aws` for `release-aws`. Don't set `global.release.version`, because the chart
-   sets it from the release:
+   schema of the cluster chart, `cluster-aws` for `release-aws`. For what another provider's chart needs, see
+   [What the cluster's values need](./other-providers.md#what-the-clusters-values-need). Don't set
+   `global.release.version`, because the chart sets it from the release:
 
     ```sh
     cat <<'EOF' > /tmp/values.yaml

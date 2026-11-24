@@ -46,6 +46,10 @@ Every cluster has to say which region it runs in. Without `global.providerSpecif
 takes the region of the management cluster's nodes, so a cluster would quietly be created next to its management
 cluster. `tools/validate-helm-values` fails for a cluster without a region, so CI catches it before Flux does.
 
+That's AWS, as are the instance types and the availability zones on this page. Azure calls it a location, and
+vSphere and Cloud Director have no region at all, though the Component is still how you say where a cluster runs: see
+[Regions](../../how-to/other-providers.md#regions) and [Node pools](../../how-to/other-providers.md#node-pools).
+
 A region creates the `${cluster_name}-region-config` ConfigMap with the region, and appends it to the cluster's
 `HelmRelease` `valuesFrom`, after the base's values.
 

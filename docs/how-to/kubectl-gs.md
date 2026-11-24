@@ -135,7 +135,8 @@ an organisation that hasn't moved them yet, and links to
 Then:
 
 1. Add the cluster's region. The command doesn't, and a cluster without one is created in the management cluster's
-   region, see [Regions](../tutorials/intermediate/stages-and-regions.md#regions):
+   region, see [Regions](../tutorials/intermediate/stages-and-regions.md#regions). That's on AWS: for another
+   provider, see [Regions](./other-providers.md#regions):
 
     ```sh
     export WC_DIR=management-clusters/${MC_NAME}/organizations/${ORG_NAME}/workload-clusters/${WC_NAME}

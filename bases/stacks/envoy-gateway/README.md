@@ -10,6 +10,8 @@ It needs two things a Giant Swarm release doesn't set up:
 - On AWS, the Gateway gets its address from the AWS Load Balancer Controller, which isn't part of a Giant Swarm
   release. Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as
   [its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to.
+  On Azure, vSphere and Cloud Director the release provides the load balancer, see
+  [The Gateway's address](/docs/how-to/other-providers.md#the-gateways-address).
 - cert-manager's Gateway API support, for the Gateway's certificate:
   `global.apps.certManager.values.cert-manager.config.enableGatewayAPI: true` in the cluster's values, once the Gateway
   API CRDs are in, and a restart of cert-manager. Step 4 of the

@@ -3,7 +3,9 @@
 The template ships one provider's base, [bases/clusters/capa](/bases/clusters/capa/), for AWS. For clusters on another
 provider, such as Azure with CAPZ, create a base for it next to the CAPA one. `kubectl gs gitops add base` writes most
 of it; this page covers the rest. To build a base with your own defaults on top of a provider's base, see
-[Share cluster defaults](../tutorials/intermediate/cluster-bases.md).
+[Share cluster defaults](../tutorials/intermediate/cluster-bases.md). The base is the first thing that differs on
+another provider, and not the last: [Run the template on another provider](./other-providers.md) lists the others,
+and says how to write a base for Cloud Director, which the command doesn't know.
 
 ## Write the base
 

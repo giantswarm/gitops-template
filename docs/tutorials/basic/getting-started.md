@@ -109,6 +109,10 @@ isn't part of a Giant Swarm release. Install Giant Swarm's `aws-lb-controller-bu
 cluster has to exist first, so do it once step 3 is done and before step 4. Without the controller, everything in
 this tutorial still gets `Ready`, but the app never answers, and step 4 shows you how to tell.
 
+On Azure, vSphere or Cloud Director you can follow the same steps, and skip that one: the release brings the load
+balancer there. A handful of other things differ too, the cluster's base and its values first among them, and
+[Run the template on another provider](../../how-to/other-providers.md) lists them in the order you'll meet them here.
+
 The fork comes with example directories named `MC_NAME`, `ORG_NAME`, `WC_NAME` and so on. Flux ignores them, so leave
 them where they are, as complete examples to check your own files against. CI's kind test doesn't ignore them, though:
 [Configure CI](../../how-to/configure-ci.md#the-kind-test-in-your-fork) says what to delete, or set, before your first
@@ -147,7 +151,7 @@ export WC_CONTEXT=gs-${MC_NAME}-${WC_NAME}-clientcert
 | --- | --- |
 | `MC_NAME` | The management cluster's codename. |
 | `ORG_NAME` | The organisation's name, without the `org-` prefix. |
-| `WC_NAME` | The new workload cluster's name: lowercase letters and digits, at most 20 characters. |
+| `WC_NAME` | The new workload cluster's name: lowercase letters and digits, at most 20 characters, which is as long as `release-aws` allows. |
 | `GITOPS_REPO` | A name for the Flux `GitRepository`, for example `gitops`. |
 | `GITOPS_REPO_URL` | Your fork, over HTTPS. This tutorial reads it from GitHub with a personal access token; on another Git host, use its HTTPS URL, and the username and token that host gives you in step 1. |
 | `GIT_SECRET` | The Secret Flux reads the repository with, see step 1. |
@@ -673,7 +677,9 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
     kubectl get releases.release.giantswarm.io
     ```
 
-    Export the release you picked, without the `aws-` prefix. The version below is only an example:
+    Export the release you picked, without the `aws-` prefix. The version below is only an example. On another
+    provider the releases have that provider's prefix and their own chart, see
+    [The release](../../how-to/other-providers.md#the-release):
 
     ```sh
     export RELEASE_VERSION=36.2.0
@@ -682,7 +688,8 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
 1. Pick the cluster's region from [bases/environments/regions](../../../bases/environments/regions). Every cluster
    needs one. Without it, the chart creates the cluster wherever the management cluster's nodes happen to be, and
    `tools/test-all-ff` fails. To add a region, see
-   [Regions](../intermediate/stages-and-regions.md#regions).
+   [Regions](../intermediate/stages-and-regions.md#regions). A region is an AWS one here: for what stands in for it
+   elsewhere, see [Regions](../../how-to/other-providers.md#regions).
 
     ```sh
     export REGION=eu_central
@@ -710,8 +717,10 @@ the rest of `${WC_DIR}`, but only after that, so the apps never try to install i
 
     The cluster runs with the base's defaults. To give it values of its own, see
     [Give a cluster its own values](../../how-to/cluster-values.md#write-the-clusters-values-configmap). Don't set
-    `global.release.version` in them, because the chart sets it. For another provider, see
-    [Create a cluster base for a provider other than CAPA](../../how-to/cluster-base-provider.md).
+    `global.release.version` in them, because the chart sets it. For another provider, the base is yours to write
+    first, and its chart needs values this one doesn't: see
+    [The cluster base](../../how-to/other-providers.md#the-cluster-base) and
+    [What the cluster's values need](../../how-to/other-providers.md#what-the-clusters-values-need).
 
 1. Create the cluster's list of apps. It starts empty, and you add an app to it in the next step. First, create its
    directory:
@@ -1222,8 +1231,10 @@ kubectl --context ${WC_CONTEXT} get gateway giantswarm-default -n envoy-gateway-
 ```
 
 An empty `ADDRESS`, with `PROGRAMMED` `False`, means the Gateway's Service has no load balancer. On AWS, that's the AWS
-Load Balancer Controller from [Before you start](#before-you-start), and no amount of waiting for DNS changes it. If
-the Gateway has an address, see
+Load Balancer Controller from [Before you start](#before-you-start), and no amount of waiting for DNS changes it. On
+another provider, [The Gateway's address](../../how-to/other-providers.md#the-gateways-address) says where it comes
+from, and [DNS and certificates](../../how-to/other-providers.md#dns-and-certificates) what vSphere and Cloud
+Director leave to you. If the Gateway has an address, see
 [An app is `Ready` but doesn't answer](../../how-to/troubleshooting.md#an-app-is-ready-but-doesnt-answer).
 
 Learn more:
