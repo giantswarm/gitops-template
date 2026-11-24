@@ -43,6 +43,8 @@ metadata:
     meta.helm.sh/release-name: hello-world
     meta.helm.sh/release-namespace: hello-world
 ---
+# The four releases below are the gateway-api-bundle's: its HelmRelease on the management
+# cluster creates a HelmRelease for each.
 # gateway-api-crds runs no workload: a Job of the chart installs the Gateway API CRDs, which
 # are what the release is for
 helmRelease: org-org-name/out-of-band-no-flux-gateway-api-crds
@@ -71,6 +73,16 @@ metadata:
   namespace: envoy-gateway-system
   annotations:
     meta.helm.sh/release-name: gateway-api-config
+    meta.helm.sh/release-namespace: envoy-gateway-system
+---
+helmRelease: org-org-name/out-of-band-no-flux-gateway-api-state-metrics
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api-state-metrics
+  namespace: envoy-gateway-system
+  annotations:
+    meta.helm.sh/release-name: gateway-api-state-metrics
     meta.helm.sh/release-namespace: envoy-gateway-system
 ---
 # of the organization's hello-world-scheduled ResourceSet, not of the cluster's Kustomizations

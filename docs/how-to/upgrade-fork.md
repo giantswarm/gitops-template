@@ -25,6 +25,7 @@ sections that move objects Flux manages are worth reading twice before you push.
 - [Turn on pruning for the clusters](#turn-on-pruning-for-the-clusters)
 - [Install apps into their own namespace](#install-apps-into-their-own-namespace)
 - [Replace App Sets and Cluster Templates](#replace-app-sets-and-cluster-templates)
+- [Move Envoy Gateway to the bundle](#move-envoy-gateway-to-the-bundle)
 
 ## What's mandatory
 
@@ -43,6 +44,7 @@ sections that move objects Flux manages are worth reading twice before you push.
 | [`prune: true` on the clusters' `Kustomization`s](#turn-on-pruning-for-the-clusters) | Deleting an app's files uninstalls it. With `prune: false`, as on `main`, it stays, unmanaged |
 | [Apps in their own namespace](#install-apps-into-their-own-namespace) | Apps no longer create an `org-<name>` namespace in the workload cluster. It reinstalls them |
 | [Stacks and cluster bases](#replace-app-sets-and-cluster-templates) instead of `bases/app_sets` and `bases/cluster_templates` | One indirection fewer, and the layout the tutorials teach |
+| [Envoy Gateway from the `gateway-api-bundle`](#move-envoy-gateway-to-the-bundle) instead of three charts | The bundle is how Giant Swarm supports Envoy Gateway |
 
 Changes to examples you don't use, such as new apps under `bases/`, need nothing from you.
 
@@ -185,7 +187,7 @@ clusters, don't change.
 | The ConfigMap's name | `${cluster_name}-user-config` | `${cluster_name}-cluster-userconfig` |
 | A workload cluster's Flux `Kustomization` | `clusters-WC_NAME` | `MC_NAME-clusters-WC_NAME` |
 | The CAPA cluster base | `helmrelease.yaml`, `ocirepository.yaml` | `cluster.yaml` |
-| The envoy-gateway stack | `helmreleases.yaml`, `ocirepositories.yaml` | one directory per chart |
+| The envoy-gateway stack | `helmreleases.yaml`, `ocirepositories.yaml` | a directory for its one chart, the bundle |
 
 `kubectl gs gitops` relies on the app and cluster user config names. It doesn't read the `Kustomization` names or
 the files of the cluster base, so renaming those is optional and only makes your repository look like what
@@ -227,8 +229,8 @@ Every command below runs from the root of the clone.
     On macOS, use `sed -i ''`.
 
 1. If a base keeps several `HelmRelease`s or `OCIRepository`s in one file, like the envoy-gateway stack did, split
-   it into a directory per chart, each with a `helm-release.yaml` and an `oci-repository.yaml`. See
-   [bases/stacks/envoy-gateway](/bases/stacks/envoy-gateway/kustomization.yaml).
+   it into a directory per chart, each with a `helm-release.yaml` and an `oci-repository.yaml`, as
+   [bases/stacks/envoy-gateway](/bases/stacks/envoy-gateway/kustomization.yaml) has for its bundle.
 
 Nothing changes in the clusters: Flux applies the same resources from the new files.
 
@@ -750,7 +752,7 @@ once it holds nothing you need.
 | `bases/app_sets`, listed in a cluster's `mapi/app_sets` | `bases/stacks`, listed in the cluster's `apps` or `cluster/apps` | [Stacks](../tutorials/intermediate/stacks.md) |
 | `bases/cluster_templates`, with stages in `bases/environments/stages/*/hello_app_cluster` | A cluster base in `bases/clusters`, with stage and region Components | [Cluster bases](../tutorials/intermediate/cluster-bases.md), [Stages and regions](../tutorials/intermediate/stages-and-regions.md) |
 | `bases/clusters/capa/template` | `bases/clusters/capa` | [Align the CAPA cluster base](#align-the-capa-cluster-base-optional) |
-| `bases/apps/envoy-gateway` | `bases/stacks/envoy-gateway`, a directory per chart | [Stacks](../tutorials/intermediate/stacks.md) |
+| `bases/apps/envoy-gateway`, three charts | `bases/stacks/envoy-gateway`, the `gateway-api-bundle` chart | [Move Envoy Gateway to the bundle](#move-envoy-gateway-to-the-bundle) |
 
 Nothing forces you to move. `kubectl gs gitops add base` writes `bases/clusters/PROVIDER` from X.Y.Z on, and an
 existing cluster that names `bases/clusters/capa/template` with `--base` keeps working.
@@ -771,3 +773,71 @@ Make the change, then build again into `/tmp/after.yaml`, and compare the two wi
 `HelmRelease`s and `OCIRepository`s, and the merged values, should be the same; labels and annotations may differ.
 For a cluster from a Cluster Template, the stage's patches move into a stage Component that the cluster lists after
 its region, and the template's own values into the cluster's `cluster_userconfig.yaml`, so that they come last.
+
+## Move Envoy Gateway to the bundle
+
+`main`'s `bases/apps/envoy-gateway` installs three charts, with a `HelmRelease` in Git for each. Giant Swarm supports
+Envoy Gateway only as the `gateway-api-bundle`, so [bases/stacks/envoy-gateway](/bases/stacks/envoy-gateway/README.md)
+installs that instead. The bundle creates the three `HelmRelease`s itself, under the names they had,
+`${cluster_name}-gateway-api-crds`, `${cluster_name}-envoy-gateway` and `${cluster_name}-gateway-api-config`, and adds
+`${cluster_name}-gateway-api-state-metrics`. A cluster's values keep their names too:
+`${cluster_name}-<app>-user-values` and `${cluster_name}-<app>-user-secrets`. Of the base's defaults, only
+`${cluster_name}-gateway-api-config-values` is still read. If you changed `default_config_gateway_api_crds.yaml` or
+`default_config_envoy_gateway.yaml`, move those values into the app's `-user-values` ConfigMap, or they're gone after
+the move, without an error.
+
+The names stay, but the owner changes. Flux prunes the three `HelmRelease`s it applied from Git, and the bundle
+creates them again. A pruned `HelmRelease` uninstalls its release, so in a single commit the move takes the Gateway
+down, with its load balancer and its DNS records, and brings it back at a new address. To keep the releases running,
+suspend them first: a suspended `HelmRelease` is deleted without uninstalling anything, and the one the bundle
+creates then [adopts the release](./adopt-app.md#how-a-helmrelease-adopts-a-release) that's there.
+
+The bundle sets the version of each app, and the adoption upgrades to it. Pick a bundle version whose apps are the
+versions the cluster runs, or newer, from the table in the
+[bundle's README](https://github.com/giantswarm/gateway-api-bundle#compatibility).
+
+1. Suspend the three `HelmRelease`s, with a patch in the `kustomization.yaml` of the cluster's directory that lists
+   `bases/apps/envoy-gateway`:
+
+    ```yaml
+    patches:
+      - patch: |-
+          - op: add
+            path: /spec/suspend
+            value: true
+        target:
+          kind: HelmRelease
+          name: .*-(gateway-api-crds|envoy-gateway|gateway-api-config)
+    ```
+
+    Commit and push.
+
+    **Check:** all three are suspended on the management cluster:
+
+    ```sh
+    kubectl get helmrelease -n org-${ORG_NAME} -o custom-columns='NAME:.metadata.name,SUSPENDED:.spec.suspend' | grep gateway
+    ```
+
+1. Only then list `bases/stacks/envoy-gateway` in that `kustomization.yaml` instead, and take the patch out. Commit
+   and push.
+
+    Flux deletes the three suspended `HelmRelease`s and their `OCIRepository`s, which have the names the bundle's
+    have too. Until they're gone, the bundle's `HelmRelease`, `${cluster_name}-gateway-api-bundle`, fails with a
+    message that they exist and can't be imported into its release. It retries, creates them, and each one upgrades
+    the release it finds.
+
+    **Check:** the bundle's `HelmRelease` is `Ready`, and the three say `Helm upgrade succeeded`. `Helm install
+    succeeded` would mean a release was uninstalled and installed again:
+
+    ```sh
+    flux get helmreleases -n org-${ORG_NAME} | grep gateway
+    ```
+
+    If the bundle's `HelmRelease` says `Stalled` instead, the old objects took longer to go than its 10 install
+    retries last. Once they're gone, start it again, with the cluster's name for `WC_NAME`:
+
+    ```sh
+    flux reconcile helmrelease WC_NAME-gateway-api-bundle -n org-${ORG_NAME} --reset
+    ```
+
+Try the two steps on a test cluster before you do them where the Gateway matters.

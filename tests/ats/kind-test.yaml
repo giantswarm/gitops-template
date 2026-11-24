@@ -107,16 +107,12 @@ nodePools:
     scheduled-upgrades: [workers]
 
 # The HelmReleases a cluster's Kustomization applies while its Cluster isn't Available,
-# by the Cluster's namespace/name: the Gateway API stack of bases/stacks/envoy-gateway.
+# by the Cluster's namespace/name: the gateway-api-bundle of bases/stacks/envoy-gateway.
 clusterBaseApps:
   org-org-name/out-of-band-flux-app:
-    - out-of-band-flux-app-gateway-api-crds
-    - out-of-band-flux-app-envoy-gateway
-    - out-of-band-flux-app-gateway-api-config
+    - out-of-band-flux-app-gateway-api-bundle
   org-org-name/out-of-band-no-flux:
-    - out-of-band-no-flux-gateway-api-crds
-    - out-of-band-no-flux-envoy-gateway
-    - out-of-band-no-flux-gateway-api-config
+    - out-of-band-no-flux-gateway-api-bundle
 
 # A secret store with the fake provider, standing in for your secret manager: the test
 # creates it in `default` and in every organisation's namespace, with these values.

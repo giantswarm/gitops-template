@@ -448,6 +448,22 @@ function test() {
 	fi
 
 	if [ "${mode}" == "validate" ]; then
+		# validate-helm-values must render the HelmReleases a bundle's chart renders, and fail
+		# for an app of the bundle whose values its chart rejects.
+		echo -n "helm values, a bundle's app with wrong values: "
+		status=0
+		output=$("$(dirname $0)/validate-helm-values" "$(dirname $0)/testdata/bundle-app-values.yaml" 2>&1) || status=$?
+		if [ "${status}" -ne 0 ] && grep -q "HelmRelease org-demo/demo-gateway-api-config (" <<<"${output}" &&
+			grep -q "subdomains': got string, want array" <<<"${output}"; then
+			echo "OK, reported"
+		else
+			echo "not reported:"
+			echo "${output}"
+			has_validation_errors=1
+		fi
+	fi
+
+	if [ "${mode}" == "validate" ]; then
 		# validate-helm-values must fail for a valuesFrom ConfigMap without the watch label.
 		echo -n "helm values, ConfigMap without the watch label: "
 		status=0

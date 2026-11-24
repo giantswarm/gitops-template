@@ -46,27 +46,11 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/ref/tag
-        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-crds versioning=docker
-        value: "1.9.1"
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle versioning=docker
+        value: "2.2.0"
     target:
       kind: OCIRepository
-      name: \${cluster_name}-gateway-api-crds
-  - patch: |-
-      - op: replace
-        path: /spec/ref/tag
-        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/envoy-gateway versioning=docker
-        value: "1.10.5"
-    target:
-      kind: OCIRepository
-      name: \${cluster_name}-envoy-gateway
-  - patch: |-
-      - op: replace
-        path: /spec/ref/tag
-        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-config versioning=docker
-        value: "1.13.1"
-    target:
-      kind: OCIRepository
-      name: \${cluster_name}-gateway-api-config
+      name: \${cluster_name}-gateway-api-bundle
   - patch: |-
       - op: replace
         path: /spec/ref/tag
