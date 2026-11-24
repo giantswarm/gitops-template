@@ -92,7 +92,8 @@ examples, as they're no use to you.
   replaces it, and its `ExternalSecret`s can't sync in kind.
 - `managementClusters`: which of your management clusters the test applies, when not all of them.
 
-For a cluster `prod1` in the organisation `acme`, with its own pool and the Gateway API CRDs installed with the cluster:
+For a cluster `prod1` in the organisation `acme`, with its own pool and the Gateway API bundle installed with the
+cluster:
 
 ```yaml
 nodePools:
@@ -100,7 +101,7 @@ nodePools:
     prod1: [nodepool0]
 clusterBaseApps:
   org-acme/prod1:
-    - prod1-gateway-api-crds
+    - prod1-gateway-api-bundle
 ```
 
 The rest of `kind-test.yaml`, under `examples`, binds the template's examples. You can leave it: with the examples

@@ -733,6 +733,7 @@ def test_install_crds_from_the_fixtures_directory(
         "issuers.cert-manager.io",
         "podlogs.monitoring.grafana.com",
         "podmonitors.monitoring.coreos.com",
+        "servicemonitors.monitoring.coreos.com",
     ]
 
 

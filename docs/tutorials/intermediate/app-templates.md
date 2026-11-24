@@ -319,10 +319,11 @@ Commit and push, and check the release again.
 ## Order it after another release
 
 Some charts need something another release installs first, usually its CRDs. hello-world is one of them: its
-`HTTPRoute` needs the Gateway API CRDs, which the `gateway-api-crds` release of the
-[envoy-gateway](/bases/stacks/envoy-gateway/) stack installs. You tell Flux with `dependsOn` on the `HelmRelease`.
-helm-controller checks it on every reconciliation, so every install and upgrade waits until the other release is
-`Ready`. The install retries can stay bounded, so a broken install still fails rather than retrying forever.
+`HTTPRoute` needs the Gateway API CRDs, which the `gateway-api-crds` release installs. That release is one of those
+the bundle of the [envoy-gateway](/bases/stacks/envoy-gateway/) stack creates. You tell Flux with `dependsOn` on the
+`HelmRelease`. helm-controller checks it on every reconciliation, so every install and upgrade waits until the other
+release is `Ready`. The install retries can stay bounded, so a broken install still fails rather than retrying
+forever.
 
 The catch is that a `HelmRelease` named in `dependsOn` has to exist, or the release waits forever. So a template that
 should work on its own leaves the dependency out, and the layer that installs both releases adds it. hello-world's
@@ -346,16 +347,12 @@ since [Deploy it to a cluster](#deploy-it-to-a-cluster), and as
 [apps/hello-world-from-template](/management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/apps/hello-world-from-template/kustomization.yaml)
 in the `out-of-band-no-flux` example does.
 
-`dependsOn` orders installs and upgrades, not deletes. When a `Kustomization` prunes several `HelmRelease`s at once,
-such as a stack's, helm-controller uninstalls them all together. In the envoy-gateway stack, the `gateway-api-config`
-release therefore sets `spec.uninstall.disableWait`, so that its uninstall doesn't wait for the `giantswarm-default`
-`GatewayClass` to go. If Envoy Gateway is gone before it has cleared the `GatewayClass`'s finalizer, the `GatewayClass`
-stays `Terminating`. That only matters when you remove the envoy-gateway stack from a workload cluster that stays up.
-Clear the finalizer there with:
-
-```sh
-kubectl --context ${WC_CONTEXT} patch gatewayclass giantswarm-default --type=merge -p '{"metadata":{"finalizers":null}}'
-```
+`dependsOn` orders installs and upgrades, not deletes. When several `HelmRelease`s are deleted at once, such as a
+stack's when a `Kustomization` prunes it, helm-controller uninstalls them all together, in no order you chose. A chart
+that minds has to say so itself. The bundle of the envoy-gateway stack does: before its `HelmRelease`s go, a
+`pre-delete` hook uninstalls `gateway-api-config` while Envoy Gateway is still there to clear the finalizer of the
+`giantswarm-default` `GatewayClass`. The [stack's README](/bases/stacks/envoy-gateway/README.md) has the timeout that
+goes with it.
 
 ## Next steps
 

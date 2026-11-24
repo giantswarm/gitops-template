@@ -23,12 +23,13 @@ releases in place.
 
 The fork ships two stacks:
 
-- [envoy-gateway](/bases/stacks/envoy-gateway/) installs Envoy Gateway as three charts, in order: `gateway-api-crds`,
-  the Gateway API CRDs; `envoy-gateway`, the controller, which `dependsOn` the CRDs; and `gateway-api-config`, the
-  `giantswarm-default` `GatewayClass` and `Gateway`, which `dependsOn` the controller. Each chart has a directory of its
-  own, with a `helm-release.yaml` and an `oci-repository.yaml`, so every file holds a single resource, as the files
-  `kubectl gs gitops` writes do, and a command like `yq -i '.spec.ref.tag = "NEW_VERSION"' oci-repository.yaml` changes
-  only the chart you mean.
+- [envoy-gateway](/bases/stacks/envoy-gateway/) installs Envoy Gateway the way Giant Swarm supports it, as the
+  `gateway-api-bundle` chart. The bundle is a stack somebody else has tied together for you: its `HelmRelease` on the
+  management cluster creates a `HelmRelease` for each of its apps, in order. `gateway-api-crds` is the Gateway API
+  CRDs; `envoy-gateway`, the controller, `dependsOn` the CRDs; `gateway-api-config`, the `giantswarm-default`
+  `GatewayClass` and `Gateway`, `dependsOn` the controller; and `gateway-api-state-metrics` gives you metrics of the
+  lot. The bundle has a directory of its own, with a `helm-release.yaml` and an `oci-repository.yaml`, so every file
+  holds a single resource, as the files `kubectl gs gitops` writes do.
 - [hello-web](/bases/stacks/hello-web/) is a stack built from a stack and an app: hello-world, served over HTTPS
   through the envoy-gateway stack. It's the one this tutorial builds and installs.
 
@@ -117,7 +118,7 @@ bases/stacks/hello-web
 
 1. Write the `kustomization.yaml`. It lists the envoy-gateway stack and the hello-world template, replaces their two
    `-values` ConfigMaps with the files above, makes hello-world wait for the Gateway API CRDs, and pins the version of
-   each chart:
+   the bundle and of hello-world. The bundle pins its own apps:
 
     ```sh
     cat <<'EOF' > bases/stacks/hello-web/kustomization.yaml
@@ -150,27 +151,11 @@ bases/stacks/hello-web
       - patch: |-
           - op: replace
             path: /spec/ref/tag
-            # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-crds versioning=docker
-            value: "1.9.1"
+            # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle versioning=docker
+            value: "2.2.0"
         target:
           kind: OCIRepository
-          name: \${cluster_name}-gateway-api-crds
-      - patch: |-
-          - op: replace
-            path: /spec/ref/tag
-            # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/envoy-gateway versioning=docker
-            value: "1.10.5"
-        target:
-          kind: OCIRepository
-          name: \${cluster_name}-envoy-gateway
-      - patch: |-
-          - op: replace
-            path: /spec/ref/tag
-            # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/gateway-api-config versioning=docker
-            value: "1.13.1"
-        target:
-          kind: OCIRepository
-          name: \${cluster_name}-gateway-api-config
+          name: \${cluster_name}-gateway-api-bundle
       - patch: |-
           - op: replace
             path: /spec/ref/tag
@@ -207,7 +192,7 @@ bases/stacks/hello-web
 A cluster uses a stack as it uses an App Template: a directory in the cluster's `apps`, whose `kustomization.yaml`
 lists the stack under `resources:`. Your cluster's hello-world directory does nearly that already, so move it onto the
 stack, and take out the envoy-gateway directory, which the stack replaces. Every object keeps its name, such as
-`${WC_NAME}-hello-world` and `${WC_NAME}-gateway-api-crds`, so Flux upgrades the four releases in place.
+`${WC_NAME}-hello-world` and `${WC_NAME}-gateway-api-bundle`, so Flux upgrades the releases in place.
 
 1. Rename the app's directory after the stack, and point it at the stack instead of the template:
 
@@ -247,8 +232,8 @@ stack, and take out the envoy-gateway directory, which the stack replaces. Every
     git commit -m "Deploy the hello-web stack to ${WC_NAME}" && git push
     ```
 
-**Check:** the same four releases are `Ready`: the three of Envoy Gateway, then hello-world, which waits for the
-Gateway API CRDs:
+**Check:** the same six releases are `Ready`: the bundle, the four of Envoy Gateway it creates, then hello-world,
+which waits for the Gateway API CRDs:
 
 ```sh
 flux get helmreleases -n org-${ORG_NAME} | grep ${WC_NAME}-
@@ -287,8 +272,8 @@ reinstalling the app.
 
 Moving an app out of a stack is the same in reverse: in one commit, list the app's template in the cluster's apps and
 take the stack out. Take a stack out of a cluster altogether and Flux uninstalls all of its apps together. For the
-envoy-gateway stack, see [Order it after another release](./app-templates.md#order-it-after-another-release) for the
-`GatewayClass` that can be left behind.
+envoy-gateway stack, see [Order it after another release](./app-templates.md#order-it-after-another-release) for how
+its bundle keeps that from leaving a `GatewayClass` behind.
 
 kustomize has limits as a way to build stacks: it can replace values, but it can't set one value in several places,
 which is why hello-web writes the `hello` subdomain twice. [Limits of kustomize](../../explanation/composition.md#limits-of-kustomize)

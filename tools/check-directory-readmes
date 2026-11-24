@@ -51,9 +51,7 @@ COVERED=(
 	"bases/environments/stages dev"
 	"bases/environments/stages staging"
 	"bases/environments/stages prod"
-	"bases/stacks/envoy-gateway gateway-api-crds"
-	"bases/stacks/envoy-gateway envoy-gateway"
-	"bases/stacks/envoy-gateway gateway-api-config"
+	"bases/stacks/envoy-gateway gateway-api-bundle"
 )
 ORG=management-clusters/MC_NAME/organizations/ORG_NAME
 COVERED+=(

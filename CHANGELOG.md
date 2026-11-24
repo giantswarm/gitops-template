@@ -33,7 +33,9 @@ The examples changed in these ways as well. A fork can follow one at a time, eac
   it.
 - `bases/cluster_templates` and `bases/app_sets` are replaced by cluster bases in `bases/clusters` and stacks in
   `bases/stacks`. The CAPA base moves from `bases/clusters/capa/template` to `bases/clusters/capa`, envoy-gateway from
-  `bases/apps` to `bases/stacks`, and the stages in `bases/environments` are kustomize Components.
+  `bases/apps` to `bases/stacks`, where it installs Giant Swarm's `gateway-api-bundle` instead of three charts (see
+  [Move Envoy Gateway to the bundle](docs/how-to/upgrade-fork.md#move-envoy-gateway-to-the-bundle)), and the stages
+  in `bases/environments` are kustomize Components.
 - File and resource names follow what `kubectl gs gitops` writes, such as `helm-release.yaml`, `oci-repository.yaml`
   and the `${cluster_name}-cluster-userconfig` ConfigMap. Only the ConfigMap's new name shows on the cluster.
 
@@ -81,9 +83,10 @@ Clusters and apps:
   [Out-of-band resources](docs/tutorials/advanced/out-of-band.md).
 - Application teams: a team keeps its own repository, which a Flux `Kustomization` in its cluster's `teams` directory
   applies to the workload cluster. See [Application teams](docs/tutorials/advanced/teams.md).
-- The Envoy Gateway stack in [bases/stacks/envoy-gateway](bases/stacks/envoy-gateway/README.md) installs the Gateway
-  API CRDs, Envoy Gateway and its configuration in order. hello-world answers at `hello.<cluster base domain>` through
-  an `HTTPRoute`, and the basic tutorial ends on its page.
+- The Envoy Gateway stack in [bases/stacks/envoy-gateway](bases/stacks/envoy-gateway/README.md) installs Giant Swarm's
+  `gateway-api-bundle`, which installs the Gateway API CRDs, Envoy Gateway, its configuration and its metrics in
+  order. hello-world answers at `hello.<cluster base domain>` through an `HTTPRoute`, and the basic tutorial ends on
+  its page.
 - Objects every organisation shares, from a kustomize base in `bases/shared_objects`. See
   [Give every organisation the same object](docs/how-to/share-objects.md).
 - Commit statuses: each `Kustomization` reports on the GitHub commit it applied, from the management cluster's and each
@@ -168,7 +171,9 @@ Tools and CI:
   Gateway API CRDs with `dependsOn` instead of retrying their install forever.
 - The docs read secrets through namespaced `SecretStore`s instead of a `ClusterSecretStore`, which a customer can't
   create on a management cluster.
-- Uninstalling the envoy-gateway stack no longer waits on the `GatewayClass` finalizer until it times out.
+- Uninstalling the envoy-gateway stack no longer waits on the `GatewayClass` finalizer until it times out:
+  `gateway-api-bundle` 2.1.1 uninstalls `gateway-api-config` before Envoy Gateway, and the bundle's `HelmRelease` has
+  the 12m uninstall timeout that needs.
 - yamllint uses the rules in `.yamllint.yaml`, `tools/test-all-ff validate` fails on `kubeconform` errors, and the kind
   test's `HelmRelease` check checks the `HelmRelease`s.
 

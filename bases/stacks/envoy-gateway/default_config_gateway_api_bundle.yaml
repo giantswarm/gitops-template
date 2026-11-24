@@ -1,0 +1,71 @@
+# values for the gateway-api-bundle chart: which workload cluster its apps go to,
+# and where each app reads its values
+clusterID: ${cluster_name}
+organization: ${organization}
+# The bundle's hooks move a bundle that was installed as App CRs over to
+# HelmReleases: on every upgrade they run two Jobs here that reach the workload
+# cluster. A bundle this stack installs was never App CRs, so they're off. Turn
+# them on for the one upgrade that moves an App-installed bundle to this stack.
+migration:
+  appToHelmRelease:
+    enabled: false
+# What the apps' HelmReleases do when an install or upgrade fails. Installs retry
+# forever, the bundle's default: a new cluster only gets the Kyverno, cert-manager
+# and monitoring CRDs the apps render once its default apps are installed. A failed
+# upgrade rolls back to the release that worked, after 10 retries; the bundle's own
+# default gives up after 3 and leaves the failed release in place.
+remediation:
+  upgrade:
+    retries: 10
+    remediateLastFailure: true
+    strategy: rollback
+# `extraConfigs` adds ConfigMaps and Secrets of the organisation's namespace to an
+# app's values. The bundle sorts them by `priority`, and a Secret after every
+# ConfigMap, so each app's values are merged in this order, later ones win:
+#   1. ${cluster_name}-cluster-values        cluster values (baseDomain, provider, ...),
+#                                            created for every workload cluster (50)
+#   2. ${cluster_name}-<app>-values          this stack's defaults (75)
+#   3. ${cluster_name}-<app>-user-values     (optional) overrides, like an App CR's userConfig (125)
+#   4. ${cluster_name}-<app>-user-secrets    (optional) the same, as an encrypted Secret (125)
+# Only gateway-api-config has defaults in this stack. The bundle's own `userConfig`
+# of an app is at 100. Leave it empty: the bundle would create a `-user-values`
+# ConfigMap or `-user-secrets` Secret of the names above for it.
+apps:
+  gatewayApiCrds:
+    extraConfigs:
+      - name: ${cluster_name}-gateway-api-crds-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-gateway-api-crds-user-secrets
+        optional: true
+        priority: 125
+  envoyGateway:
+    extraConfigs:
+      - name: ${cluster_name}-envoy-gateway-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-envoy-gateway-user-secrets
+        optional: true
+        priority: 125
+  gatewayApiConfig:
+    extraConfigs:
+      - name: ${cluster_name}-gateway-api-config-values
+        priority: 75
+      - name: ${cluster_name}-gateway-api-config-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-gateway-api-config-user-secrets
+        optional: true
+        priority: 125
+  gatewayApiStateMetrics:
+    extraConfigs:
+      - name: ${cluster_name}-gateway-api-state-metrics-user-values
+        optional: true
+        priority: 125
+      - kind: secret
+        name: ${cluster_name}-gateway-api-state-metrics-user-secrets
+        optional: true
+        priority: 125

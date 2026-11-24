@@ -12,7 +12,7 @@ namespace, `org-<name>`. From there the `HelmRelease`s install into the workload
 
 ## What's here
 
-- [`envoy-gateway/`](envoy-gateway/): Envoy Gateway, as three charts installed in order.
+- [`envoy-gateway/`](envoy-gateway/): Envoy Gateway, as Giant Swarm's `gateway-api-bundle`.
 - [`hello-web/`](hello-web/): a stack of a stack and an app, hello-world served over HTTPS through Envoy Gateway.
 
 ## When you copy it

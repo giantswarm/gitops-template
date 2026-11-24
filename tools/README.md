@@ -165,8 +165,17 @@ is the `ResourceSet`'s own. Rendered objects that still have a `<< ... >>` templ
 after an entry of the `ResourceSet`'s `spec.inputs`, are left out, and the script names each one it leaves out, as
 `ResourceSet <namespace>/<name>: <kind> <name> left out`. Only the kind test checks them.
 
+A chart can render `HelmRelease`s of its own, as a Giant Swarm bundle such as `gateway-api-bundle` does for each of
+its apps. Those are checked like the ones in the manifest, with the sources, ConfigMaps and Secrets the chart renders
+beside them, so the values a bundle hands to an app from the repository are checked against the app's chart too.
+`test-all-ff validate` checks that with [testdata/bundle-app-values.yaml](testdata/bundle-app-values.yaml). It only
+does so for a `HelmRelease` without `kubeConfig`, whose objects are on the management cluster next to the values they
+name, and not for a Giant Swarm release chart, `release-<provider>`: the versions of a release's apps come from the
+Release resource on the management cluster.
+
 Every ConfigMap and Secret from `valuesFrom` that is in the manifest has to carry the label
-`reconcile.fluxcd.io/watch: Enabled`, or the check fails. With the label, helm-controller applies a change to the values
+`reconcile.fluxcd.io/watch: Enabled`, or the check fails. What a chart renders is exempt, as it isn't the repository's
+to label. With the label, helm-controller applies a change to the values
 as soon as it's made, not at the `HelmRelease`'s next `interval`.
 
 Some values don't exist until the cluster runs. They are replaced by stubs in [values-stubs](values-stubs/):

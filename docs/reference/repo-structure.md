@@ -436,7 +436,7 @@ applies every commit first. See [Roll an app out to many clusters](../tutorials/
 A cluster with apps has two `Kustomization`s:
 
 1. `WC_NAME.yaml` applies `cluster`: the cluster's `HelmRelease` and its base apps, in `cluster/apps`. Base apps are the
-   ones the cluster needs from the start, such as the Gateway API charts of the
+   ones the cluster needs from the start, such as the Gateway API bundle of the
    [envoy-gateway](/bases/stacks/envoy-gateway/) stack in the out-of-band examples. Flux applies them with the cluster,
    and their `HelmRelease`s install them as soon as the cluster can take them. The `Kustomization`'s `healthChecks` name
    the Cluster API `Cluster` the chart creates, and its `healthCheckExprs` count it as ready once its
