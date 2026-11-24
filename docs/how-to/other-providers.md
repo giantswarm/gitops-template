@@ -31,11 +31,11 @@ helm show readme oci://gsoci.azurecr.io/charts/giantswarm/release-azure --versio
 
 | | AWS | Azure | vSphere | Cloud Director |
 | --- | --- | --- | --- | --- |
-| Short name | `capa` | `capz` | `vsphere` | none |
+| Short name | `capa` | `capz` | `vsphere` | `cloud-director` |
 | Chart | `release-aws` | `release-azure` | `release-vsphere` | `release-cloud-director` |
-| Base | `bases/clusters/capa`, in the template | written by `kubectl gs gitops add base` | written by `kubectl gs gitops add base` | written by hand |
+| Base | `bases/clusters/capa`, in the template | written by `kubectl gs gitops add base` | written by `kubectl gs gitops add base`, then corrected | written by hand |
 | Where the cluster runs | `global.providerSpecific.region` | `global.providerSpecific.location` | the vCenter in `global.providerSpecific.vcenter` | `global.providerSpecific.site`, `org` and `ovdc` |
-| Gateway's load balancer | `aws-lb-controller-bundle`, which you install | in the release | in the release, from an address pool you set | in the release |
+| Gateway's load balancer | `aws-lb-controller-bundle`, which you install | in the release | in the release, from an address pool on the management cluster | in the release, in the subnet you set |
 | external-dns | in the release | in the release | not in the release | not in the release |
 
 ## The cluster base
@@ -43,21 +43,33 @@ helm show readme oci://gsoci.azurecr.io/charts/giantswarm/release-azure --versio
 A cluster base holds a provider's chart and the values every cluster on it shares, see
 [Share cluster defaults](../tutorials/intermediate/cluster-bases.md). The template ships the CAPA one. For Azure and
 vSphere, `kubectl gs gitops add base` writes one, and
-[Create a cluster base for another provider](./cluster-base-provider.md) says what to check afterwards:
+[Create a cluster base for another provider](./cluster-base-provider.md) says what to check afterwards, with Azure as
+its example:
 
 ```sh
 kubectl gs gitops add base --provider capz --region westeurope --azure-subscription-id SUBSCRIPTION_ID
 kubectl gs gitops add base --provider vsphere
 ```
 
+The vSphere base needs three corrections before a cluster built on it passes the chart's schema:
+
+- Its `cluster_config.yaml` sets `global.connectivity.baseDomain: test.gigantic.io`. Delete the line: the base's
+  values come after the management cluster's, so it would replace your management cluster's base domain.
+- Every network device needs a `networkName`, the segment the nodes attach to, under
+  `global.controlPlane.machineTemplate.network.devices` and each node pool's `network.devices`. The command writes
+  only `dhcp4: true`.
+- Its `HelmRelease` reads a Secret named `vsphere-credentials` in `valuesFrom`, for the vCenter's user and password.
+  The command doesn't create it, see [What the cluster's values need](#what-the-clusters-values-need).
+
 `kubectl gs gitops add base` has no Cloud Director provider. Copy `bases/clusters/capa` to a directory of your own,
 such as `bases/clusters/cloud-director`, and change two things: the `OCIRepository`'s `url`, to
 `oci://gsoci.azurecr.io/charts/giantswarm/release-cloud-director`, and `cluster_config.yaml`, to the values the chart
-needs (see [What the cluster's values need](#what-the-clusters-values-need)). The annotations, the labels, the
-`HelmRelease` and its `valuesFrom` stay as they are: they're the same for every provider.
+needs. The annotations, the labels, the `HelmRelease` and its `valuesFrom` stay as they are: they're the same for
+every provider.
 
 Wherever the docs and the examples name `bases/clusters/capa`, name your base instead. Where they run
-`kubectl gs template cluster --provider capa`, pass your provider's short name.
+`kubectl gs template cluster --provider capa`, pass your provider's short name. That command knows all four, Cloud
+Director as `cloud-director`.
 
 ## The release
 
@@ -68,13 +80,16 @@ knows:
 kubectl get releases.release.giantswarm.io
 ```
 
-The names start with the provider, such as `aws-`. The `release` variable is the version without that prefix, as it's
-the chart's version. Not every release has a chart: `release-aws` has one from v34.0.0 on. For another provider, ask
-the registry whether the release you want has one:
+The names start with the provider, such as `aws-` or `azure-`. The `release` variable is the version without that
+prefix, as it's the chart's version. Not every release has a chart: `release-aws` has one from v34.0.0 on. For another
+provider, ask the registry whether the release you want has one:
 
 ```sh
 helm show chart oci://gsoci.azurecr.io/charts/giantswarm/release-azure --version RELEASE_VERSION
 ```
+
+On vSphere a chart isn't enough: v36.1.0 is the first release that installs as a `HelmRelease`, and
+`kubectl gs gitops add workload-cluster` refuses an older one.
 
 The `# renovate:` comments that keep the release up to date name the chart as their `depName`, such as
 `gsoci.azurecr.io/charts/giantswarm/release-aws`. Change it to your provider's chart wherever you copy one, or
@@ -83,21 +98,27 @@ Renovate proposes AWS releases for your clusters.
 ## What the cluster's values need
 
 `cluster_config.yaml` in the base holds what every cluster needs, and a cluster's own `cluster_userconfig.yaml` the
-rest, see [Give one cluster its own values](./cluster-values.md). The chart's schema is the authority on what's
-required. At v36.2.0:
+rest, see [Give one cluster its own values](./cluster-values.md). The management cluster's name and base domain come
+from `cluster-app-installation-values` on every provider. The chart's schema is the authority on the rest. At
+v36.2.0, this is what a cluster can't do without:
 
-| Provider | Required by the schema, besides `global.metadata` | You'll also set |
+| Provider | Values you have to set | Why |
 | --- | --- | --- |
-| AWS | nothing | `global.providerSpecific.region` |
-| Azure | `global.providerSpecific.subscriptionId` | `global.providerSpecific.location` |
-| vSphere | nothing | `global.providerSpecific.vcenter` (server, datacenter, datastore, thumbprint, username and password), `global.connectivity.network.controlPlaneEndpoint` and `global.connectivity.network.loadBalancers` |
-| Cloud Director | `global.providerSpecific.site`, `org`, `ovdc` and `ovdcNetwork`, and `global.connectivity`, `global.controlPlane` and `global.nodePools` | `global.providerSpecific.userContext.secretRef.secretName`, the Secret with the credentials |
+| AWS | `global.providerSpecific.region` | Without it the cluster is created in the management cluster's region |
+| Azure | `global.providerSpecific.subscriptionId` and `global.providerSpecific.location` | The schema requires the subscription. The chart's default location is `westeurope`, so a cluster that sets none is created there, without an error |
+| vSphere | `global.providerSpecific.vcenter` (server, datacenter, datastore and thumbprint), a `networkName` for every network device, and the vCenter's user and password | The chart doesn't render without the network names or the credentials |
+| Cloud Director | `global.providerSpecific.site`, `org`, `ovdc` and `ovdcNetwork`, `global.connectivity.network.loadBalancers.vipSubnet`, and `global.providerSpecific.userContext.secretRef.secretName` | The schema requires the first five. The last names the Secret with the credentials |
 
 On vSphere and Cloud Director the cluster needs credentials for the infrastructure. They're secrets: don't write them
 into `cluster_config.yaml` or `cluster_userconfig.yaml`, which are plain text in Git. Keep them in a Secret in the
-organisation's namespace, delivered by [SOPS](./sops.md) or [External Secrets Operator](./external-secrets.md), and
-have the cluster read it: on Cloud Director by naming it in `userContext.secretRef.secretName`, on vSphere by adding it
-to the `valuesFrom` of the cluster's `HelmRelease`.
+organisation's namespace, delivered by [SOPS](./sops.md) or [External Secrets Operator](./external-secrets.md):
+
+- **vSphere.** The chart takes the user and password as values, `global.providerSpecific.vcenter.username` and
+  `password`, so the Secret holds those two as chart values, and the cluster's `HelmRelease` lists it in
+  `valuesFrom`. The base `kubectl gs gitops add base` writes already lists one, named `vsphere-credentials`, with no
+  `valuesKey`, so Flux reads its `values.yaml` key.
+- **Cloud Director.** The chart only names the Secret, in `userContext.secretRef.secretName`. Ask Giant Swarm which
+  keys it has to hold for your installation.
 
 `AWSClusterRoleIdentity`, one of the two cluster-scoped kinds the repository may create, exists on CAPA management
 clusters only.
@@ -111,10 +132,11 @@ The template gives every cluster a region, as a kustomize Component from `bases/
   the management cluster's region, so `tools/test-all-ff validate` fails for a cluster without one.
 - **Azure.** `global.providerSpecific.location`, such as `westeurope`. The template's region Components set the AWS
   key, so write your own, as
-  [Add a region](./cluster-base-provider.md#add-a-region) shows. `release-azure` renders without a location, so no
-  check catches a cluster that has none: list the Component in every cluster.
-- **vSphere and Cloud Director.** There's no cloud region. A cluster runs where its vCenter, or its site and virtual
-  data centre, are. If all your clusters run in one place, put those values in the base and leave the region
+  [Add a region](./cluster-base-provider.md#add-a-region) shows. `release-azure` defaults the location to
+  `westeurope`, so no check catches a cluster that has none: list the Component in every cluster.
+- **vSphere and Cloud Director.** There's no region to pick from a cloud's list. A cluster runs where its vCenter, or
+  its site and virtual data centre, are. (`vcenter.region` and `vcenter.zone` in the vSphere chart name your own
+  vSphere tags.) If all your clusters run in one place, put those values in the base and leave the region
   Components out of your clusters. If you have several, a Component per place is the same idea under another name: one
   directory that sets `global.providerSpecific.vcenter`, or `site` and `ovdc`, for every cluster that lists it.
 
@@ -123,18 +145,21 @@ A region's `node_pool` Component, which adds a pool in the region's availability
 
 ## Node pools
 
-Every chart has `global.nodePools`, a map of pools by name, and the template's way of layering them holds on every
-provider: a base leaves the map out, a Component or the cluster adds pools, and maps are merged, see
-[Cluster values](../reference/values.md#cluster-values). What goes into a pool is the provider's:
+Every chart has `global.nodePools`, a map of pools by name, and a Component or a cluster adds pools to it, as maps are
+merged, see [Cluster values](../reference/values.md#cluster-values). What a base that sets no pools gets, and what
+goes into a pool, is the provider's:
 
-- **AWS.** `instanceType`, such as `m6i.xlarge`, and `availabilityZones`.
-- **Cloud Director.** `sizingPolicy`, `template`, `catalog`, `diskSizeGB`, `placementPolicy` and `storageProfile`,
-  with `replicas`.
-- **Azure and vSphere.** See the chart's readme for the pool's fields.
+- **AWS.** A cluster with no `global.nodePools` gets the chart's default pools, and they go once you define one of
+  your own. A pool has an `instanceType`, such as `m6i.xlarge`, and `availabilityZones`.
+- **vSphere and Cloud Director.** The chart's own values define a pool named `worker`, with two nodes, and it stays
+  when you add another: a cluster that adds `pool0` has both. Setting it to `null` doesn't take it away. So size
+  `worker` to what you want, and add pools beside it. A Cloud Director pool has a `sizingPolicy`, `template`,
+  `catalog`, `diskSizeGB`, `placementPolicy` and `storageProfile`, with `replicas`, and its name is 3 to 10
+  characters long.
+- **Azure.** See the chart's readme for the pool's fields.
 
 So the instance types in the tutorials and the examples, and the zones in the regions' node pools, are AWS's. Swap
-them for your provider's sizes. Whether a cluster with no `global.nodePools` gets default pools is the chart's
-decision too: `release-aws` gives it some, and `release-cloud-director` requires the map.
+them for your provider's sizes.
 
 ## The cluster's name
 
@@ -152,12 +177,17 @@ Who provides one differs:
 | --- | --- | --- |
 | AWS | the AWS Load Balancer Controller, which isn't in a release | Install Giant Swarm's `aws-lb-controller-bundle` on the workload cluster as [its README](https://github.com/giantswarm/aws-lb-controller-bundle#installing) describes, or ask Giant Swarm to |
 | Azure | `azure-cloud-controller-manager`, in the release | nothing |
-| vSphere | `kube-vip` and `kube-vip-cloud-provider`, in the release | Give the cluster addresses to hand out, in `global.connectivity.network.loadBalancers` |
-| Cloud Director | `cloud-provider-cloud-director`, in the release | nothing; `global.connectivity.network.loadBalancers.vipSubnet` sets the subnet |
+| vSphere | `kube-vip` and `kube-vip-cloud-provider`, in the release | nothing, while the addresses last, see below |
+| Cloud Director | `cloud-provider-cloud-director`, in the release | Set the subnet the addresses come from, `global.connectivity.network.loadBalancers.vipSubnet`, which the chart requires anyway |
 
 The stack itself is the same everywhere. Its `gateway-api-config` chart reads the provider from the cluster's values,
 and only on AWS asks for a load balancer of a particular kind. So where the docs tell you to install
 `aws-lb-controller-bundle`, skip that step on another provider.
+
+On vSphere a cluster claims its load balancer addresses from an IP pool on the management cluster, three of them
+from the pool `svc-lb-ips` unless `global.connectivity.network.loadBalancers` says otherwise. The pool is a
+cluster-scoped object, so it's Giant Swarm's to create and to size: ask for one if the Gateway gets no address, or if
+you need more than the cluster's claims give you.
 
 **Check:** the Gateway has an address:
 
@@ -203,6 +233,22 @@ cp tools/values-stubs/charts/release-aws.yaml tools/values-stubs/charts/release-
 Its one value, the switch to render without the management cluster's Release resource, is the same in all four
 charts. Without the file, the cluster's `HelmRelease` fails the check for a reason that has nothing to do with your
 values.
+
+vSphere needs two more lines in its stub. The check leaves the values of a SOPS-encrypted Secret out, as CI has no
+key, and `release-vsphere` doesn't render without the vCenter's user and password. Give the stub placeholders for
+them, never the real ones:
+
+```yaml
+global:
+  providerSpecific:
+    vcenter:
+      username: placeholder
+      password: placeholder
+```
+
+The check also fails for a `valuesFrom` Secret that isn't optional and isn't in the cluster's build, which is what an
+`ExternalSecret` gives you: the Secret only exists on the cluster. So for the vSphere credentials, a SOPS file in the
+cluster's directory is the route the check can follow.
 
 The kind test knows all four charts as cluster charts, so it treats a cluster on any of them as the examples'
 clusters: its `HelmRelease` is checked and never installed, see [CI checks](../reference/ci-checks.md). The checks

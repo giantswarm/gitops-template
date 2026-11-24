@@ -194,9 +194,9 @@ cluster the test can reach install and get `Ready`.
 It stands in for three things it can't have:
 
 - **Cluster creation.** A cluster chart's `HelmRelease`, `release-aws` in the examples, is checked, not run: there's
-  no cloud account. Its `Cluster` is a
-  paused stand-in that the test sets `Available`, and the apps of a cluster the test has no kubeconfig for aren't
-  installed. The template's `out-of-band-no-flux` example gets a vCluster; your clusters don't.
+  no cloud account. Its `Cluster` is a paused stand-in that the test sets `Available`, and the apps of a cluster the
+  test has no kubeconfig for aren't installed. The template's `out-of-band-no-flux` example gets a vCluster; your
+  clusters don't.
 - **Your secret manager.** The kind cluster can't reach AWS Secrets Manager or Azure Key Vault, and has no workload
   identity. An `ExternalSecret` that reads a real store doesn't sync, and a `HelmRelease` that needs the Secret it would
   write doesn't get `Ready`: give that store's name and test values to `secretStore` when the repository doesn't
