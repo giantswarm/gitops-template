@@ -6,7 +6,6 @@ import re
 from collections.abc import Iterable
 
 import yaml
-
 from checks.conditions import obj_key
 from kind_config import REPO_DIR, Ref
 

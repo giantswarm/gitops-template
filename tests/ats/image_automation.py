@@ -36,11 +36,6 @@ from pathlib import Path
 
 import pykube
 import pytest
-from pykube.objects import NamespacedAPIObject
-from pytest_helm_charts.clusters import Cluster
-from pytest_helm_charts.flux.git_repository import GitRepositoryCR
-from pytest_helm_charts.flux.kustomization import KustomizationCR
-
 from checks.conditions import is_ready, not_ready_reason
 from conftest import GitOpsTestConfig, apply, run_tool
 from eso_kinds import ExternalSecretCR
@@ -71,6 +66,10 @@ from image_updates import (
     stale_ci_branches,
 )
 from kind_config import kind_test_config
+from pykube.objects import NamespacedAPIObject
+from pytest_helm_charts.clusters import Cluster
+from pytest_helm_charts.flux.git_repository import GitRepositoryCR
+from pytest_helm_charts.flux.kustomization import KustomizationCR
 
 DEPLOY_KEY_TIMEOUT_SEC = 180
 

@@ -4,7 +4,6 @@ reads; they need no cluster."""
 from pathlib import Path
 
 import yaml
-
 from fake_store import secret_stores
 from image_updates import (
     AUTOMATION,
