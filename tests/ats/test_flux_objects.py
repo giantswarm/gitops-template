@@ -28,8 +28,8 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate, gates
 from conftest import GitOpsTestConfig
-from image_automation import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
 from image_automation import check_image_update_pushed
+from image_updates import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
 from kind_config import kind_test_config, require_example, skipped_assertions
 from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster

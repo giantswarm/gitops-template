@@ -4,8 +4,9 @@ reads; they need no cluster."""
 from pathlib import Path
 
 import yaml
+
 from fake_store import secret_stores
-from image_automation import (
+from image_updates import (
     AUTOMATION,
     AUTOMATION_KUSTOMIZATION,
     CI_BRANCH_PREFIX,
@@ -19,8 +20,8 @@ from image_automation import (
     deploy_key_kustomization,
     example_git_url,
     example_known_hosts,
-    ls_remote_heads,
     force_sync_patch,
+    ls_remote_heads,
     push_patches,
     push_problems,
     stale_ci_branches,

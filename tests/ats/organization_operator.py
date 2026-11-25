@@ -36,8 +36,8 @@ from conftest import (
 from external_secrets import organization_store
 from flux_inventory import DEPENDENCY_NOT_READY
 from flux_reconcile import wait_until
-from image_automation import CLUSTER as IMAGE_AUTOMATION_CLUSTER
-from image_automation import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
+from image_updates import CLUSTER as IMAGE_AUTOMATION_CLUSTER
+from image_updates import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
 from kind_config import kind_test_config
 from notification_objects import organization_alert
 from prune_objects import OrganizationCR
