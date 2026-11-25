@@ -1,0 +1,35 @@
+# Writes the tags the ImagePolicies with this cluster's label pick into the files below
+# `update.path` that name them in a setter comment, and pushes the commit to
+# `flux/image-updates`. .github/workflows/image-updates-pull-request.yaml opens a pull
+# request from it; Flux applies the new tag once you merge it.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  git:
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.github.com
+        name: fluxcdbot
+      messageTemplate: |
+        chore: update the images of ${cluster_name}
+
+        {{ range .Changed.Changes -}}
+        - {{ .OldValue }} to {{ .NewValue }}
+        {{ end -}}
+    push:
+      # Kept apart from the branch it checks out, the GitRepository's: you review every update
+      # in a pull request before Flux applies it. Flux replaces the branch with each push.
+      branch: flux/image-updates
+  interval: 1h
+  policySelector:
+    matchLabels:
+      giantswarm.io/cluster: ${cluster_name}
+  sourceRef:
+    kind: GitRepository
+    name: ${cluster_name}-image-updates
+  update:
+    path: ./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION/out-of-band
+    strategy: Setters

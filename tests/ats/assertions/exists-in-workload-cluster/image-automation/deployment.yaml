@@ -1,0 +1,17 @@
+# applied to the workload cluster by WC_NAME_IMAGE_AUTOMATION-direct.yaml, through the
+# image-automation-kubeconfig Secret, which has the vCluster's kubeconfig. The tag is the one in
+# Git: the image automation pushes its update to a branch, and Flux applies it only once merged.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation-direct
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: helloworld
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - name: helloworld
+          image: gsoci.azurecr.io/giantswarm/helloworld:0.6.0

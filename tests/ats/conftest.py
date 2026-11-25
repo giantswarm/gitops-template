@@ -36,6 +36,8 @@ from repository_objects import (
 # organization-operator, which creates the organisation's namespace once Flux has applied its
 # Organization. workload_diagnostics adds the state of the workload cluster and the kind node
 # to the report of a test of the workload cluster that fails; pytester tests that hook.
+# image_automation decrypts the image automation example's deploy key and sets the branch its
+# automation pushes to.
 pytest_plugins = [
     "ci_context",
     "kyverno_install",
@@ -45,6 +47,7 @@ pytest_plugins = [
     "notification_objects",
     "automation_rbac",
     "flux_operator_install",
+    "image_automation",
     "organization_operator",
     "workload_diagnostics",
     "pytester",

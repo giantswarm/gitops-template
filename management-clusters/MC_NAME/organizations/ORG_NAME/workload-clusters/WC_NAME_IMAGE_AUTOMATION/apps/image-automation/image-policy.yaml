@@ -1,0 +1,14 @@
+# Picks the newest tag of the ImageRepository's that the semver range allows. The setter
+# comment in out-of-band/helloworld/deployment.yaml names this policy, as
+# `<namespace>:<name>`, so rename both together.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: ${cluster_name}-helloworld
+  namespace: org-${organization}
+spec:
+  imageRepositoryRef:
+    name: ${cluster_name}-helloworld
+  policy:
+    semver:
+      range: ">=0.6.0 <1.0.0"  # TODO: the versions of your app you take automatically

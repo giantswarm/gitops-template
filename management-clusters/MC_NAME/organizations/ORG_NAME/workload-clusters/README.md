@@ -34,6 +34,8 @@ The examples:
 - [`WC_NAME_OUT_OF_BAND_NO_FLUX_APP/`](WC_NAME_OUT_OF_BAND_NO_FLUX_APP/): out-of-band delivery pushed by the
   management cluster, with External Secrets Operator and SOPS side by side, and application teams.
 - [`WC_NAME_SCHEDULED_UPGRADES/`](WC_NAME_SCHEDULED_UPGRADES/): a cluster whose release upgrades only in a window.
+- [`WC_NAME_IMAGE_AUTOMATION/`](WC_NAME_IMAGE_AUTOMATION/): a plain `Deployment` without Helm, pushed by the management
+  cluster, whose image Flux image automation keeps current through pull requests.
 - [`HELLO_APP_DEV_CLUSTER_1/`](HELLO_APP_DEV_CLUSTER_1/),
   [`HELLO_APP_STAGING_CLUSTER_1/`](HELLO_APP_STAGING_CLUSTER_1/),
   [`HELLO_APP_PROD_CLUSTER_EU_CENTRAL/`](HELLO_APP_PROD_CLUSTER_EU_CENTRAL/),

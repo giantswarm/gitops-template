@@ -6,6 +6,7 @@ from organization_operator import (
     namespace_waiting_problems,
     organization_namespace,
     ready_problems,
+    vcluster_stand_ins,
     waiting_kustomizations,
     waiting_problems,
 )
@@ -138,3 +139,24 @@ def test_organization_init_namespaces() -> None:
     #  only organization-operator creates it
     assert organization_init_namespaces(["default"]) == []
     assert organization_init_namespaces(["default", "org-a", "other"]) == ["org-a"]
+
+
+def test_the_vcluster_stands_in_for_the_examples_that_are_there() -> None:
+    assert vcluster_stand_ins(lambda example: True) == [
+        "out-of-band-no-flux",
+        "tools-cluster",
+        "image-automation",
+    ]
+
+
+def test_the_vcluster_stands_in_only_for_its_own_cluster_without_the_others() -> None:
+    assert vcluster_stand_ins(lambda example: False) == ["out-of-band-no-flux"]
+
+
+def test_the_vcluster_stands_in_for_the_image_automation_cluster_with_its_example() -> (
+    None
+):
+    assert vcluster_stand_ins(lambda example: example == "image-automation") == [
+        "out-of-band-no-flux",
+        "image-automation",
+    ]

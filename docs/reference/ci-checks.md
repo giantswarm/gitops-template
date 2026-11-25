@@ -196,8 +196,8 @@ It stands in for three things it can't have:
 
 - **Cluster creation.** A cluster chart's `HelmRelease`, `release-aws` in the examples, is checked, not run: there's
   no cloud account. Its `Cluster` is a paused stand-in that the test sets `Available`, and the apps of a cluster the
-  test has no kubeconfig for aren't installed. The template's `out-of-band-no-flux` example gets a vCluster; your
-  clusters don't.
+  test has no kubeconfig for aren't installed. The template's `out-of-band-no-flux` example gets a vCluster, which
+  stands in for the `image-automation` example's cluster as well; your clusters don't.
 - **Your secret manager.** The kind cluster can't reach AWS Secrets Manager or Azure Key Vault, and has no workload
   identity. An `ExternalSecret` that reads a real store doesn't sync, and a `HelmRelease` that needs the Secret it would
   write doesn't get `Ready`: give that store's name and test values to `secretStore` when the repository doesn't
@@ -345,7 +345,8 @@ Flux has applied the `Organization`, and other operators fill it. The kind clust
    `cluster-app-installation-values` ConfigMap, which Kyverno copies there; and the stand-in secret store, if
    `kind-test.yaml` has one. In `org-org-name`, when the examples are there, it also creates the notification example's
    commit-status `Alert`, suspended, before Flux can apply it, and the kubeconfig Secret and cluster values of the
-   [vCluster](#the-out-of-band-no-flux-workload-cluster).
+   [vCluster](#the-out-of-band-no-flux-workload-cluster). The store there also gets the
+   [image automation](#image-automation) example's deploy key, which the test decrypts first.
 1. Without asking Flux to reconcile, it waits up to 150 seconds, two `retryInterval`s and a margin, for those
    `Kustomization`s to get `Ready` on their own retry.
 
@@ -639,6 +640,45 @@ are on the management cluster and in the workload cluster. The kind cluster has 
 management cluster; the [workload cluster secret store test](#workload-cluster-secret-stores) relies on it as well.
 CI can't reach a cloud secret manager, so `tools/test-all-ff validate` only builds each base in `bases/secret_stores`
 and checks it against the schemas of its kinds.
+
+### Image automation
+
+The [image automation example](../how-to/image-automation.md), `WC_NAME_IMAGE_AUTOMATION`, is bound as
+`image-automation` in `kind-test.yaml`, and [tests/ats/image_automation.py](../../tests/ats/image_automation.py) runs
+it for real: its `ImageUpdateAutomation` pushes a commit to the repository CI runs against, with a deploy key with
+write access. The template pins helloworld a tag behind the newest on purpose, and Renovate leaves the tag alone, so a
+push is always due.
+
+- **The deploy key.** The shared workflow passes the test no secret but `GITOPS_MASTER_GPG_KEY`, so the key's private
+  half is in [tests/ats/fixtures/image-updates](../../tests/ats/fixtures/image-updates/README.md), encrypted with SOPS
+  for the template's master key. Once the roots are applied, the test applies that directory with a Flux
+  `Kustomization` of its own in `default`, which decrypts it with the master key Secret, reads the key from the
+  decrypted Secret, and deletes the `Kustomization`, which prunes the Secret. The organization-operator stand-in puts
+  the key in the stand-in store, under `gitops/image-updates-deploy-key`, and the example's `ExternalSecret` reads it
+  there. The Secret the automation uses comes from External Secrets Operator alone.
+- **The branch.** The example pushes to `flux/image-updates`, where
+  [image-updates-pull-request.yaml](../../.github/workflows/image-updates-pull-request.yaml) would open a pull request.
+  So before the cluster's control plane is up, while its apps `Kustomization` applies nothing, the test sets that
+  `Kustomization`'s `spec.patches`: the automation checks out the branch under test, `GITOPS_REPO_BRANCH`, and pushes
+  to a branch of the run's own, `flux/image-updates-ci-<seconds>-<run>`, from the start of the run and
+  `GITHUB_RUN_ID`. Flux leaves the field alone, as it isn't in Git. The workflow watches `flux/image-updates` only, so
+  CI opens no pull request, and doesn't exercise the workflow either.
+- **The check.** `test_image_update_pushed` waits up to 300 seconds for the `ImageUpdateAutomation` to report a push to
+  the run's branch in `status.lastPushCommit`, and for `git ls-remote`, with the same key, to show the branch at that
+  commit.
+- **The clean-up.** At the end of the run, failed or not, the test suspends the `ImageUpdateAutomation`, so it can't
+  push again, and deletes the run's branch. A run that's cancelled, or whose runner goes away, leaves its branch behind,
+  so each run first deletes the branches `flux/image-updates-ci-*` older than six hours, the longest a GitHub job runs.
+  A stale branch stays until the next run of the kind test.
+
+The vCluster stands in for the example's cluster too: the organization-operator stand-in writes
+`image-automation-kubeconfig` with its kubeconfig, and `tests/ats/assertions/exists-in-workload-cluster/image-automation`
+checks that the `-direct` `Kustomization` applied the `Deployment`, at the tag in Git, and that it's available. The
+pushed commit doesn't reach the cluster: Flux applies only what's merged.
+
+Anyone who can change a workflow can read the deploy key, as they can the master key (see
+[What the key in CI means](../how-to/configure-ci.md#what-the-key-in-ci-means)). A fork can't decrypt the template's
+fixture, so it deletes the example with the others, or lists its own management clusters in `managementClusters`.
 
 ### Pulled out-of-band directories
 

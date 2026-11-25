@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: image-updates-deploy-key
+stringData:
+    identity: ENC[AES256_GCM,data:UMhAOppsZaQ0IAWgv2tQrUIyYMWW7R8K7LWjggMFuQC0mREM66GdFqwpckcHqPlQJViWjHs04DA3xJIba18xHOvTL8Tz9Eb2FdtDRztw/uowcuNqIt5J5TnHGQDVIrk0Wr0UIMelHZESqfYcmlapCSnN+CtDFeqDlQTtaaRDUo8vApAaNzTl7Mm/NpQjL03X/v01xGJw+OQ1KUIuALhCUkzaBtvY6L7uLBXk7o0D3Al9zWBA7bRb0m+7lrarheD4ySS807kRUllK1I179RRwD59cSGTDql3a3U6WByghJxlcSbOkrWKnc+6mrSfTGVD2Iy64WGYF+T2QzwP902/ccIM1VztfYMy5AvboMUVnSVrKho9WA0Ia3i30VSM0ARdv/2ZJXqufk2duFs3HKWSfqosd21exBWj1L7LEqdM4OQFIkXng/kDGT+UxiKD5/MPp/JlvwlJCbII6BlFbvpoWdWJyLg1LT0ER4msf+lSaqJEcyisfWTjLMHB75uXFtFK0PlHWsyAU+Cp4wSg8pYVlDoQH0dpQXKSMmVITVtkEigtTmftkYAw+hOsql/xLFLer,iv:GooNvPjZlk7RrpqEz2Zru9DtiABx/XESuR0MMDflLys=,tag:vKlKwZgXD7+rphO7awjLVw==,type:str]
+sops:
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-25T07:38:39Z"
+    mac: ENC[AES256_GCM,data:diMPBgHLWzh7OI/iJG6Am7erRfK5JtKWzLxcLR4KZo/wQ9EmJSnJGgKRuGFD7IZ1tnsm6TefcYgp5mH7O4CSjyJZ2MFzPkwHF0R/npcFNnJlEZlJTXlBUrotkUMDi+DGK/wU8FHNZUsIqN+gNvoUimo+3IOXQ69JZM9lZTzHcDY=,iv:UmV/8GvGn+V5lZU9I55mvpFw+w3aB97qsCDDQyRT4c8=,tag:G5hVBzAwwrQ1Rnw9yMeOgA==,type:str]
+    pgp:
+        - created_at: "2026-11-25T07:38:39Z"
+          enc: |-
+            -----BEGIN PGP MESSAGE-----
+
+            hQIMA6NLH6Mt3i1NAQ//SOCY09sPRXC6Dkp8duikXXjzCRs+mspVUGKg2oE+/eib
+            RqdUxA/W7QdZd7vP6vyzNQnGQKO1/vlGiMBdYOlQ7yqQ5Vu82Wqq9qstFm5HG1nw
+            lW8k+CxdOGpvgsla0NXaARrwJrXwj8SD7nnlgxYUTJGzXD5HTX8dHUEpXt1MsRFP
+            hqtiCTbWW24bEpqh4iP1X1zuBPE3WENVc2VkHqdpOQLZWA6P0IArj+hk5n1oYXCH
+            yZTFmSeZQz4GZbVNIkbCizHO1NsrysUJx+IT4AXm1bksQHx+NIIuBgKcIGxtGFU8
+            k1STySOHHSnUyRU5k9I9R1uzK+TuTrF1exBfPIznjV+ThN6BuZSWpLSWu9xbTRvv
+            /lkyJEdkc2zUHJMlvogeAhm8bbBo6RNq7Z21l3fM1BjWqaIuqw8Eq2iiFhM6PGew
+            SptbEz8RGT394LEolCNAdRLWQbXPqyMgzMsG2kb2z+s9t2ezAbharkcCOYxQN+bg
+            yc1groMKD/JETYotYeMuAKpEmLlpBFdfX5+pr3wWrdZvF8MvpHoQBPZZQYB3Kl2O
+            PgOBU1YCBJAkwOPL6LVa/3E4k8AO4E9y5r93Jq/ijRJO2tpOaQWj6+YQeYqX+VK/
+            JY/4UpILWDkYgsOoEa8WIckBNWZdAPUb++u6xaQQG1qZtVf/AQcLVK1KmgnC7UfS
+            XgGHFvREKVWT26OkBSMqhhhWHKmDjzZKEd23Fj93KLeCf8q/TLLNbH+NbtlNC6RN
+            IXxMwAFiRiM47ZX+I28/l8Y012JTqVTTxF/j0k1FXbQtrs7uqawfH0c8+Czu1HE=
+            =bkO9
+            -----END PGP MESSAGE-----
+          fp: E2FFFEC732612A26B9C6F4EC1280A733D9EEC660
+    version: 3.13.3

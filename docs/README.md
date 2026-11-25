@@ -55,6 +55,8 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 - [Run the template on another provider](./how-to/other-providers.md): what differs on Azure, vSphere and Cloud
   Director, from the cluster's values to the Gateway's address.
 - [Move a running cluster to scheduled upgrades](./how-to/scheduled-upgrades-existing-cluster.md) without changing it.
+- [Keep an image current with image automation](./how-to/image-automation.md): Flux writes new image tags into a
+  plain `Deployment` and a workflow opens a pull request for each.
 - [Report reconcile status on GitHub commits](./how-to/commit-statuses.md).
 - [Check a change before you push](./how-to/check-changes.md).
 - [Configure CI in a fork](./how-to/configure-ci.md).
