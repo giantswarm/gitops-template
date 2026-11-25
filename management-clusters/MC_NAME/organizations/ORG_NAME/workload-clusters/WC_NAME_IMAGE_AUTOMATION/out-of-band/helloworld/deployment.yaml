@@ -1,5 +1,5 @@
 # A plain Deployment, applied to the workload cluster by the -direct Kustomization, without
-# Helm. The image automation in ../../apps/image-automation writes the newest tag its
+# Helm. The image automation in ../../image-automation writes the newest tag its
 # ImagePolicy allows into the `image` line, as the setter comment at its end says:
 # `<namespace>:<name>` of the ImagePolicy. Flux reads that comment from the file in Git, before
 # any variable is substituted, so it names the organisation's namespace in full.

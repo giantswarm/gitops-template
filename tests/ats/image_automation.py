@@ -8,12 +8,15 @@ pushing to `flux/image-updates`, where the pull request workflow would open a pu
 
 1. `image_updates_deploy_key` decrypts the key from fixtures/image-updates with the master key
    CI already has, with a Flux Kustomization, as the shared workflow passes the test no other
-   secret. organization_operator puts it in the stand-in store, where the `ExternalSecret`
-   reads it. Nothing else writes the automation's Secret: it comes from ESO alone.
-2. `image_updates_ci_branch` sets `spec.patches` on the cluster's apps Kustomization before it
-   applies anything, as the cluster's control plane isn't up yet. The patch has the automation
-   check out the branch under test and push to a branch of this run's own,
-   `flux/image-updates-ci-<time>-<run>`. Flux leaves the field alone, as it isn't in Git.
+   secret.
+2. `image_updates_ci_branch` sets `spec.patches` on the cluster's Kustomization, which applies
+   the automation. The patch has the automation check out the branch under test and push to a
+   branch of this run's own, `flux/image-updates-ci-<time>-<run>`. Flux leaves the field alone,
+   as it isn't in Git. Until then the stand-in store doesn't have the key, so the automation
+   can't clone, let alone push to `flux/image-updates`. Once Flux has applied the patch, the
+   fixture adds the key to the organisation's stand-in store, where the `ExternalSecret` reads
+   it, and asks ESO and Flux to act on it now. Nothing else writes the automation's Secret: it
+   comes from ESO alone.
 3. `check_image_update_pushed` waits for the automation to report a push, and for the branch on
    the remote to be at the commit it pushed.
 4. Afterwards the fixture suspends the automation, so it can't push again, and deletes the
@@ -29,6 +32,7 @@ import shlex
 import tempfile
 import time
 from collections.abc import Callable, Iterable, Iterator
+from typing import Any
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -37,10 +41,13 @@ import pytest
 import yaml
 from checks.conditions import is_ready, not_ready_reason, obj_key
 from conftest import GitOpsTestConfig, apply, run_tool
-from flux_reconcile import suspend, wait_until
+from eso_kinds import ExternalSecretCR
+from external_secrets import organization_store
+from flux_reconcile import request_reconcile, suspend, wait_until
 from kind_config import REPO_DIR, Ref, kind_test_config
 from pykube.objects import NamespacedAPIObject
 from pytest_helm_charts.clusters import Cluster
+from pytest_helm_charts.flux.git_repository import GitRepositoryCR
 from pytest_helm_charts.flux.kustomization import KustomizationCR
 
 # the example's binding in kind-test.yaml
@@ -55,9 +62,13 @@ MANAGEMENT_CLUSTER = "MC_NAME"
 # the cluster's name, its `cluster_name`; the vCluster stands in for it
 CLUSTER = "image-automation"
 NAMESPACE = "org-org-name"
-APPS_KUSTOMIZATION = f"{NAMESPACE}/mc-name-clusters-{CLUSTER}-apps"
+# the cluster's Kustomization, which applies the automation
+AUTOMATION_KUSTOMIZATION = f"{NAMESPACE}/mc-name-clusters-{CLUSTER}"
 AUTOMATION = f"{NAMESPACE}/{CLUSTER}"
-AUTOMATION_DIR = EXAMPLE_DIR / "apps" / "image-automation"
+AUTOMATION_DIR = EXAMPLE_DIR / "image-automation"
+# the example's ExternalSecret and GitRepository, as Flux names them in the cluster
+EXTERNAL_SECRET = f"{NAMESPACE}/{CLUSTER}-image-updates-deploy-key"
+GIT_REPOSITORY = f"{NAMESPACE}/{CLUSTER}-image-updates"
 GIT_REPOSITORY_FILE = AUTOMATION_DIR / "git-repository.yaml"
 EXTERNAL_SECRET_FILE = AUTOMATION_DIR / "externalsecret.yaml"
 # where the example's ExternalSecret reads the key from
@@ -77,6 +88,8 @@ _CI_BRANCH = re.compile(rf"^{re.escape(CI_BRANCH_PREFIX)}(\d+)-")
 #  run left behind, never one a run still checks.
 STALE_AFTER_SEC = 6 * 60 * 60
 GIT_URL = "https://git-scm.com/downloads"
+# Flux applies the patch on its next reconcile, which the patch's new generation starts
+PATCH_TIMEOUT_SEC = 120
 # the image reflector scans the registry, then the automation clones, commits and pushes
 PUSH_TIMEOUT_SEC = 300
 
@@ -156,19 +169,34 @@ def _pushed(automation: dict) -> tuple[str, str | None]:
     return branch, (automation.get("status") or {}).get("lastPushCommit")
 
 
+def branch_problems(automation: dict | None, branch: str) -> list[str]:
+    """Why the automation doesn't push to `branch` yet, if it doesn't."""
+    if automation is None:
+        return [f"ImageUpdateAutomation '{AUTOMATION}' doesn't exist"]
+    pushes_to, _ = _pushed(automation)
+    if pushes_to != branch:
+        return [
+            f"ImageUpdateAutomation '{obj_key(automation)}' pushes to '{pushes_to}', "
+            f"not to '{branch}'"
+        ]
+    return []
+
+
+def force_sync_patch(now: int) -> dict:
+    """The patch that has External Secrets Operator sync an ExternalSecret now."""
+    return {"metadata": {"annotations": {"force-sync": str(now)}}}
+
+
 def push_problems(
     automation: dict | None, branch: str, heads: dict[str, str]
 ) -> list[str]:
     """Why the automation hasn't pushed to `branch` a commit that's on the remote, whose
     branches are `heads`, if it hasn't."""
-    if automation is None:
-        return [f"ImageUpdateAutomation '{AUTOMATION}' doesn't exist"]
+    problems = branch_problems(automation, branch)
+    if automation is None or problems:
+        return problems
     key = obj_key(automation)
-    pushes_to, commit = _pushed(automation)
-    if pushes_to != branch:
-        return [
-            f"ImageUpdateAutomation '{key}' pushes to '{pushes_to}', not to '{branch}'"
-        ]
+    _, commit = _pushed(automation)
     if not commit:
         return [f"ImageUpdateAutomation '{key}' hasn't pushed a commit yet"]
     remote = heads.get(branch)
@@ -311,9 +339,38 @@ def automation(api: pykube.HTTPClient) -> ImageUpdateAutomationCR | None:
     )
 
 
-def apps_kustomization(api: pykube.HTTPClient) -> KustomizationCR:
-    namespace, name = APPS_KUSTOMIZATION.split("/")
+def automation_kustomization(api: pykube.HTTPClient) -> KustomizationCR:
+    namespace, name = AUTOMATION_KUSTOMIZATION.split("/")
     return KustomizationCR.objects(api).filter(namespace=namespace).get(name=name)
+
+
+def _get(api: pykube.HTTPClient, kind: type[NamespacedAPIObject], key: str) -> Any:
+    namespace, name = key.split("/")
+    return kind.objects(api).filter(namespace=namespace).get(name=name)
+
+
+def hand_over_deploy_key(api: pykube.HTTPClient, identity: str, branch: str) -> None:
+    """Once Flux has applied the patch that makes the automation push to `branch`, add the
+    key to the stand-in store and have ESO, the GitRepository and the automation use it now,
+    rather than at their next retry."""
+    wait_until(
+        lambda: branch_problems(_automation_obj(api), branch),
+        PATCH_TIMEOUT_SEC,
+        "Flux didn't apply the image automation's push branch",
+    )
+    organization_store(api, NAMESPACE, {DEPLOY_KEY_STORE_KEY: identity})
+    _get(api, ExternalSecretCR, EXTERNAL_SECRET).patch(
+        force_sync_patch(int(time.time()))
+    )
+    request_reconcile(_get(api, GitRepositoryCR, GIT_REPOSITORY))
+    found = automation(api)
+    if found is not None:
+        request_reconcile(found)
+
+
+def _automation_obj(api: pykube.HTTPClient) -> dict | None:
+    found = automation(api)
+    return found.obj if found is not None else None
 
 
 @pytest.fixture(scope="module")
@@ -333,9 +390,7 @@ def image_updates_ci_branch(
     image_updates_deploy_key: str | None,
     gitops_test_config: GitOpsTestConfig,
 ) -> Iterator[str | None]:
-    """The branch this run's automation pushes to, or None without the example. It has to be
-    set up before the cluster's control plane is up, which opens the apps Kustomization.
-    """
+    """The branch this run's automation pushes to, or None without the example."""
     if image_updates_deploy_key is None:
         yield None
         return
@@ -345,7 +400,7 @@ def image_updates_ci_branch(
     branch = ci_branch(os.environ.get("GITHUB_RUN_ID", "local"), now)
     with ssh_git(image_updates_deploy_key, example_known_hosts()) as git:
         delete_branches(git, url, stale_ci_branches(remote_ci_heads(git, url), now))
-        apps_kustomization(api).patch(
+        automation_kustomization(api).patch(
             {
                 "spec": {
                     "patches": push_patches(
@@ -356,6 +411,7 @@ def image_updates_ci_branch(
         )
         logger.info(f"The image automation pushes to '{branch}' of {url}")
         try:
+            hand_over_deploy_key(api, image_updates_deploy_key, branch)
             yield branch
         finally:
             # suspended, it can't push the branch again once it's deleted
@@ -375,8 +431,7 @@ def check_image_update_pushed(
     with ssh_git(identity, example_known_hosts()) as git:
 
         def problems() -> list[str]:
-            found = automation(api)
-            obj = found.obj if found is not None else None
+            obj = _automation_obj(api)
             # the remote is asked only once there's a push to look for
             pushed = obj is not None and _pushed(obj)[0] == branch and _pushed(obj)[1]
             heads = remote_ci_heads(git, url) if pushed else {}

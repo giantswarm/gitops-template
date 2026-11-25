@@ -1,4 +1,4 @@
-# The image automation of the cluster, applied by its apps Kustomization. The kind test patches
+# The image automation of the cluster, applied by the cluster's Kustomization. The kind test patches
 # the ImageUpdateAutomation's push branch and checkout, see docs/reference/ci-checks.md, "Image
 # automation", so neither is asserted here.
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -7,7 +7,7 @@ metadata:
   labels:
     giantswarm.io/cluster: image-automation
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation-apps
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation
     kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: image-automation-image-updates
   namespace: org-org-name
@@ -20,7 +20,7 @@ kind: ImageRepository
 metadata:
   labels:
     giantswarm.io/cluster: image-automation
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation-apps
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation
   name: image-automation-helloworld
   namespace: org-org-name
 spec:
@@ -31,7 +31,7 @@ kind: ImagePolicy
 metadata:
   labels:
     giantswarm.io/cluster: image-automation
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation-apps
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation
   name: image-automation-helloworld
   namespace: org-org-name
 spec:
@@ -43,7 +43,7 @@ kind: ImageUpdateAutomation
 metadata:
   labels:
     giantswarm.io/cluster: image-automation
-    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation-apps
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-image-automation
   name: image-automation
   namespace: org-org-name
 spec:

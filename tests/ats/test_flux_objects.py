@@ -59,8 +59,8 @@ from workload_cluster_secrets import check_secrets_pushed
 #  sets up the fixtures of `usefixtures` before the ones a test requests.
 #  The management cluster's Alert of the notification example has to be suspended before then,
 #  too; organization_operator suspends the organisation's, before Flux can apply it. The image
-#  automation example's push branch has to be set before cluster_gate_problems opens the apps
-#  Kustomization that applies the automation.
+#  automation example's push branch and deploy key are set up before the sources are checked,
+#  as its GitRepository gets Ready only with the key.
 pytestmark = pytest.mark.usefixtures(
     "kyverno",
     "admission_policies",

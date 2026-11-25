@@ -653,16 +653,18 @@ push is always due.
   half is in [tests/ats/fixtures/image-updates](../../tests/ats/fixtures/image-updates/README.md), encrypted with SOPS
   for the template's master key. Once the roots are applied, the test applies that directory with a Flux
   `Kustomization` of its own in `default`, which decrypts it with the master key Secret, reads the key from the
-  decrypted Secret, and deletes the `Kustomization`, which prunes the Secret. The organization-operator stand-in puts
-  the key in the stand-in store, under `gitops/image-updates-deploy-key`, and the example's `ExternalSecret` reads it
-  there. The Secret the automation uses comes from External Secrets Operator alone.
+  decrypted Secret, and deletes the `Kustomization`, which prunes the Secret.
 - **The branch.** The example pushes to `flux/image-updates`, where
   [image-updates-pull-request.yaml](../../.github/workflows/image-updates-pull-request.yaml) would open a pull request.
-  So before the cluster's control plane is up, while its apps `Kustomization` applies nothing, the test sets that
-  `Kustomization`'s `spec.patches`: the automation checks out the branch under test, `GITOPS_REPO_BRANCH`, and pushes
-  to a branch of the run's own, `flux/image-updates-ci-<seconds>-<run>`, from the start of the run and
-  `GITHUB_RUN_ID`. Flux leaves the field alone, as it isn't in Git. The workflow watches `flux/image-updates` only, so
-  CI opens no pull request, and doesn't exercise the workflow either.
+  So once the organisation's namespace exists, the test sets the `spec.patches` of the cluster's `Kustomization`, which
+  applies the automation: the automation checks out the branch under test, `GITOPS_REPO_BRANCH`, and pushes to a
+  branch of the run's own, `flux/image-updates-ci-<seconds>-<run>`, from the start of the run and `GITHUB_RUN_ID`.
+  Flux leaves the field alone, as it isn't in Git. Until Flux has applied the patch, the stand-in store doesn't have
+  the key, so the automation can't clone, let alone push to `flux/image-updates`. Then the test adds the key to the
+  organisation's stand-in store, under `gitops/image-updates-deploy-key`, and asks External Secrets Operator, the
+  `GitRepository` and the automation to act on it at once. The example's `ExternalSecret` reads it there, so the
+  Secret the automation uses comes from ESO alone. The workflow watches `flux/image-updates` only, so CI opens no pull
+  request, and doesn't exercise the workflow either.
 - **The check.** `test_image_update_pushed` waits up to 300 seconds for the `ImageUpdateAutomation` to report a push to
   the run's branch in `status.lastPushCommit`, and for `git ls-remote`, with the same key, to show the branch at that
   commit.
@@ -671,10 +673,16 @@ push is always due.
   so each run first deletes the branches `flux/image-updates-ci-*` older than six hours, the longest a GitHub job runs.
   A stale branch stays until the next run of the kind test.
 
+The example's cluster `Kustomization` has no health check on its `Cluster`, so the example adds no gate (see
+[Cluster API](#cluster-api)). kustomize-controller runs four reconciles at a time, on a management cluster as in the
+test, and a `Kustomization` holds one for the whole of its health check, up to its `timeout`: with a fourth gated
+cluster, all four were held while the test kept the stand-ins' control planes down, and an apps `Kustomization` never
+reconciled at all.
+
 The vCluster stands in for the example's cluster too: the organization-operator stand-in writes
 `image-automation-kubeconfig` with its kubeconfig, and `tests/ats/assertions/exists-in-workload-cluster/image-automation`
-checks that the `-direct` `Kustomization` applied the `Deployment`, at the tag in Git, and that it's available. The
-pushed commit doesn't reach the cluster: Flux applies only what's merged.
+checks that the `-direct` `Kustomization` applied the `Deployment`, and that it's available. The pushed commit
+doesn't reach the cluster: Flux applies only what's merged.
 
 Anyone who can change a workflow can read the deploy key, as they can the master key (see
 [What the key in CI means](../how-to/configure-ci.md#what-the-key-in-ci-means)). A fork can't decrypt the template's

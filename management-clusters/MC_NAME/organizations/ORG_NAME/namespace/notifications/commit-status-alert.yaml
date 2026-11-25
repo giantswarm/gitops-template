@@ -49,6 +49,4 @@ spec:
     - kind: Kustomization
       name: mc-name-clusters-image-automation
     - kind: Kustomization
-      name: mc-name-clusters-image-automation-apps
-    - kind: Kustomization
       name: mc-name-clusters-image-automation-direct

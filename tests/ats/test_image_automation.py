@@ -3,23 +3,24 @@ reads; they need no cluster."""
 
 from pathlib import Path
 
-import pytest
 import yaml
 from fake_store import secret_stores
 from image_automation import (
-    APPS_KUSTOMIZATION,
     AUTOMATION,
+    AUTOMATION_KUSTOMIZATION,
     CI_BRANCH_PREFIX,
     DEPLOY_KEY_STORE_KEY,
     EXAMPLE,
     EXTERNAL_SECRET_FILE,
     GIT_REPOSITORY_FILE,
     STALE_AFTER_SEC,
+    branch_problems,
     ci_branch,
     deploy_key_kustomization,
     example_git_url,
     example_known_hosts,
     ls_remote_heads,
+    force_sync_patch,
     push_patches,
     push_problems,
     stale_ci_branches,
@@ -209,13 +210,44 @@ def test_the_example_pushes_to_the_branch_the_workflow_watches() -> None:
     assert workflow[True]["push"]["branches"] == ["flux/image-updates"]
 
 
-@pytest.mark.parametrize("name", [APPS_KUSTOMIZATION])
-def test_the_apps_kustomization_is_the_one_that_applies_the_automation(
-    name: str,
-) -> None:
+def test_branch_problems_none_once_flux_applied_the_ci_branch() -> None:
+    assert branch_problems(automation("x", None), "x") == []
+
+
+def test_branch_problems_before_flux_applied_the_patch() -> None:
+    # the key is handed over only after this, so the example can't push to its own branch
+    assert branch_problems(automation("flux/image-updates", None), "x") == [
+        "ImageUpdateAutomation 'org-a/b' pushes to 'flux/image-updates', not to 'x'"
+    ]
+
+
+def test_branch_problems_missing_automation() -> None:
+    assert branch_problems(None, "x") == [
+        f"ImageUpdateAutomation '{AUTOMATION}' doesn't exist"
+    ]
+
+
+def test_force_sync_patch_asks_eso_to_sync_now() -> None:
+    assert force_sync_patch(1764000000) == {
+        "metadata": {"annotations": {"force-sync": "1764000000"}}
+    }
+
+
+def test_the_clusters_kustomization_applies_the_automation_without_a_health_check() -> (
+    None
+):
+    # kustomize-controller runs 4 reconciles at a time on a management cluster, and a
+    #  Kustomization holds one for its whole health check, up to its `timeout`: a fourth cluster
+    #  health check of the example organisation leaves none for the apps Kustomizations
     require_example(EXAMPLE)
-    workload_clusters = GIT_REPOSITORY_FILE.parents[3]
-    apps = yaml.safe_load(
-        (workload_clusters / "WC_NAME_IMAGE_AUTOMATION-apps.yaml").read_text()
+    example_dir = GIT_REPOSITORY_FILE.parents[1]
+    workload_clusters = example_dir.parent
+    cluster = yaml.safe_load(
+        (workload_clusters / "WC_NAME_IMAGE_AUTOMATION.yaml").read_text()
     )
-    assert f"org-org-name/{apps['metadata']['name']}" == name
+    assert f"org-org-name/{cluster['metadata']['name']}" == AUTOMATION_KUSTOMIZATION
+    assert "healthChecks" not in cluster["spec"]
+    assert cluster["spec"]["path"].endswith("/WC_NAME_IMAGE_AUTOMATION")
+    root = yaml.safe_load((example_dir / "kustomization.yaml").read_text())
+    assert root["resources"] == ["cluster/", "image-automation/"]
+    assert not (workload_clusters / "WC_NAME_IMAGE_AUTOMATION-apps.yaml").exists()

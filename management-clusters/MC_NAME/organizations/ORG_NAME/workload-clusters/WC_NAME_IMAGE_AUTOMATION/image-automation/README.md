@@ -1,12 +1,14 @@
 # image-automation
 
-`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION/apps/image-automation`
+`management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION/image-automation`
 
-The Flux image automation that keeps the `Deployment` in `../../out-of-band/helloworld/` current. All of it runs on the
-management cluster, in `org-<name>`, applied by the cluster's apps `Kustomization`.
+The Flux image automation that keeps the `Deployment` in `../out-of-band/helloworld/` current. All of it runs on the
+management cluster, in `org-<name>`, applied by the cluster's `Kustomization` with the cluster.
 
 ## What's here
 
+- `kustomization.yaml`: lists the files below and gives them the cluster's label, which the
+  `ImageUpdateAutomation` selects its policies by.
 - `image-repository.yaml`: an `ImageRepository`. image-reflector-controller lists the image's tags in the registry
   every hour.
 - `image-policy.yaml`: an `ImagePolicy`, which picks the newest of those tags in its semver range.
@@ -23,7 +25,7 @@ The setter comment and the policy have to agree: the comment in `deployment.yaml
 
 ## When you copy it
 
-Follow [`WC_NAME_IMAGE_AUTOMATION/README.md`](../../README.md#when-you-copy-it). To keep more than one image current,
+Follow [`WC_NAME_IMAGE_AUTOMATION/README.md`](../README.md#when-you-copy-it). To keep more than one image current,
 add an `ImageRepository` and an `ImagePolicy` for each, with a setter comment for each: the one
 `ImageUpdateAutomation` handles them all.
 

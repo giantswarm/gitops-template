@@ -37,7 +37,6 @@ from external_secrets import organization_store
 from flux_inventory import DEPENDENCY_NOT_READY
 from flux_reconcile import wait_until
 from image_automation import CLUSTER as IMAGE_AUTOMATION_CLUSTER
-from image_automation import DEPLOY_KEY_STORE_KEY
 from image_automation import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
 from kind_config import kind_test_config
 from notification_objects import organization_alert
@@ -341,23 +340,16 @@ def organization_objects(
 
 @pytest.fixture(scope="module")
 def organization_namespace_setups(
-    kube_cluster: Cluster,
-    optional_vcluster: VCluster | None,
-    image_updates_deploy_key: str | None,
+    kube_cluster: Cluster, optional_vcluster: VCluster | None
 ) -> list[NamespaceSetup]:
     """What organization_operator creates in each organisation's namespace once it exists, in
     order, as the management cluster's operators do: `automation` and its rights
     (rbac-operator); the installation values (Kyverno); the stand-in secret store, if
     kind-test.yaml has one. For the template's examples, when they're there: the notification
-    example's Alert, suspended before Flux applies it, the image automation example's deploy key
-    in the stand-in store, and the vCluster's kubeconfig Secret and cluster values (Cluster API
-    and cluster-apps-operator) in its organisation's namespace.
+    example's Alert, suspended before Flux applies it, and the vCluster's kubeconfig Secret and
+    cluster values (Cluster API and cluster-apps-operator) in its organisation's namespace.
+    image_automation adds the image automation example's deploy key to the store later.
     """
-    store_extra = (
-        {DEPLOY_KEY_STORE_KEY: image_updates_deploy_key}
-        if image_updates_deploy_key
-        else {}
-    )
 
     def example_objects(
         api: pykube.HTTPClient, namespace: str
@@ -373,7 +365,7 @@ def organization_namespace_setups(
         lambda api, namespace: organization_alert(kube_cluster, namespace),
         organization_rbac,
         installation_values,
-        lambda api, namespace: organization_store(api, namespace, store_extra),
+        organization_store,
         example_objects,
     ]
 

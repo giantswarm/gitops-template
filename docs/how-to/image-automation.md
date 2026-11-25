@@ -71,8 +71,8 @@ goes into your secret manager, never into the repository.
 
 ## Add the automation
 
-Copy `apps/image-automation/` from the example into your cluster's directory, list its files in the `kustomization.yaml`
-of the directory a `Kustomization` applies to the management cluster, and change:
+Copy `image-automation/` from the example into your cluster's directory, list it in the `kustomization.yaml` of the
+directory your cluster's `Kustomization` applies to the management cluster, and change:
 
 - `git-repository.yaml`: `spec.url`, your fork's SSH URL, such as `ssh://git@github.com/YOUR_ORG/YOUR_REPO`, and
   `spec.ref.branch`, the branch your management cluster's `GitRepository` reads. The automation checks that branch out
@@ -84,8 +84,9 @@ of the directory a `Kustomization` applies to the management cluster, and change
 - `image-update-automation.yaml`: `spec.update.path`, the directory with your manifests. The automation changes only
   files below it.
 
-Then add the setter comment to your manifest, naming your policy. In the example, the cluster's apps `Kustomization`
-applies the automation, so it starts once the cluster is up, and the `-direct` `Kustomization` applies the `Deployment`.
+Then add the setter comment to your manifest, naming your policy. In the example, the cluster's `Kustomization`
+applies the automation with the cluster, and the `-direct` `Kustomization` applies the `Deployment`. The automation
+doesn't wait for the cluster: it runs on the management cluster, and needs no apps `Kustomization` or health check.
 
 `spec.git.push.branch` stays `flux/image-updates`, apart from the branch the automation checks out, so every update
 comes to you as a pull request. With `push.branch` the same as the checked-out branch, Flux commits straight to it and
