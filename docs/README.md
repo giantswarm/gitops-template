@@ -44,6 +44,8 @@ The tutorials are routes through the same repository, in three tiers. Each one b
 - [Change an app](./how-to/update-app.md): its version, how it's installed, or its values.
 - [Adopt an app that's already installed](./how-to/adopt-app.md), by hand or through an `App`, without
   installing it again.
+- [Move an app's chart to an `OCIRepository`](./how-to/move-app-to-oci.md), from a `HelmRepository` or a
+  `GitRepository`, without installing it again.
 - [Give one cluster its own values](./how-to/cluster-values.md).
 - [Keep secrets in the repository](./how-to/sops.md) with SOPS.
 - [Read secrets from a secret manager with External Secrets Operator](./how-to/external-secrets.md).

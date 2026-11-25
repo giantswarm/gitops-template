@@ -29,6 +29,7 @@ sections that move objects Flux manages are worth reading twice before you push.
 - [Install apps into their own namespace](#install-apps-into-their-own-namespace)
 - [Replace App Sets and Cluster Templates](#replace-app-sets-and-cluster-templates)
 - [Move Envoy Gateway to the bundle](#move-envoy-gateway-to-the-bundle)
+- [Move charts to `gsoci.azurecr.io`](#move-charts-to-gsociazurecrio)
 
 ## What's mandatory
 
@@ -48,6 +49,7 @@ sections that move objects Flux manages are worth reading twice before you push.
 | [Apps in their own namespace](#install-apps-into-their-own-namespace) | Apps no longer create an `org-<name>` namespace in the workload cluster. It reinstalls them |
 | [Stacks and cluster bases](#replace-app-sets-and-cluster-templates) instead of `bases/app_sets` and `bases/cluster_templates` | One indirection fewer, and the layout the tutorials teach |
 | [Envoy Gateway from the `gateway-api-bundle`](#move-envoy-gateway-to-the-bundle) instead of three charts | The bundle is how Giant Swarm supports Envoy Gateway |
+| [Charts from an `OCIRepository`](#move-charts-to-gsociazurecrio) instead of a `HelmRepository` or `GitRepository` | Giant Swarm publishes its charts to `gsoci.azurecr.io`, and its old app catalogs aren't guaranteed to get new versions |
 
 Changes to examples you don't use, such as new apps under `bases/`, need nothing from you.
 
@@ -845,3 +847,15 @@ versions the cluster runs, or newer, from the table in the
     ```
 
 Try the two steps on a test cluster before you do them where the Gateway matters.
+
+## Move charts to `gsoci.azurecr.io`
+
+The template's apps take their charts from an `OCIRepository` on `gsoci.azurecr.io`, through `spec.chartRef`. A
+`HelmRelease` of yours with `spec.chart`, reading a `HelmRepository` such as one of Giant Swarm's old app catalogs on
+GitHub Pages, or a `GitRepository`, keeps working. Those catalogs aren't guaranteed to keep receiving new versions,
+though, so move each app before you next need to upgrade it.
+
+Change the source and nothing else. A `HelmRelease` whose release name, target namespace, storage namespace or chart
+name changes on the way is uninstalled and installed again, and one with a new name installs a second release next to
+the first. [Move an app's chart to an `OCIRepository`](./move-app-to-oci.md) moves one app with an upgrade, in three
+commits, and says how to check that it was one.
