@@ -28,6 +28,8 @@ from checks.helm_releases import check_helm_releases
 from checks.workloads import releases_without_assertion, unavailable_deployments
 from cluster_gate import check_cluster_gate, gates
 from conftest import GitOpsTestConfig
+from image_automation import check_image_update_pushed
+from image_updates import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
 from kind_config import kind_test_config, require_example, skipped_assertions
 from kyverno_access import kyverno_access
 from node_pools import node_pool_problems_in_cluster
@@ -56,9 +58,15 @@ from workload_cluster_secrets import check_secrets_pushed
 #  platform's admission policies and Flux Operator before it applies the repository: pytest
 #  sets up the fixtures of `usefixtures` before the ones a test requests.
 #  The management cluster's Alert of the notification example has to be suspended before then,
-#  too; organization_operator suspends the organisation's, before Flux can apply it.
+#  too; organization_operator suspends the organisation's, before Flux can apply it. The image
+#  automation example's push branch and deploy key are set up before the sources are checked,
+#  as its GitRepository gets Ready only with the key.
 pytestmark = pytest.mark.usefixtures(
-    "kyverno", "admission_policies", "suspended_alert", "flux_operator"
+    "kyverno",
+    "admission_policies",
+    "suspended_alert",
+    "flux_operator",
+    "image_updates_ci_branch",
 )
 
 
@@ -333,6 +341,21 @@ def test_move_to_scheduled_upgrades(
     require_example(RESOURCE_SET_EXAMPLE)
     require_example("capi-wc-name")
     check_move(kube_cluster.kube_client, tmp_path)
+
+
+def test_image_update_pushed(
+    kube_cluster: Cluster,
+    image_updates_deploy_key: str | None,
+    image_updates_ci_branch: str | None,
+    check_kustomizations_successful: None,
+) -> None:
+    # the example's automation pushes the newer tag, for real, to this run's own branch
+    require_example(IMAGE_AUTOMATION_EXAMPLE)
+    assert image_updates_deploy_key is not None
+    assert image_updates_ci_branch is not None
+    check_image_update_pushed(
+        kube_cluster.kube_client, image_updates_deploy_key, image_updates_ci_branch
+    )
 
 
 # must stay last: it deletes what the tests above check

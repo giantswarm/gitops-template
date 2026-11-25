@@ -160,5 +160,15 @@
       "matchDepNames": ["kyverno/chainsaw"],
       "automerge": false,
     },
+    {
+      // The WC_NAME_IMAGE_AUTOMATION example's helloworld tag, in its
+      // `out-of-band/` and in the kind test's assertion, is Flux image
+      // automation's to update, not Renovate's. The template pins it a tag
+      // behind the newest on purpose, so the kind test always has an update
+      // to push; a Renovate PR would leave it nothing to do.
+      "description": "Leave the image automation example's helloworld tag to Flux",
+      "matchDepNames": ["gsoci.azurecr.io/giantswarm/helloworld"],
+      "enabled": false,
+    },
   ],
 }

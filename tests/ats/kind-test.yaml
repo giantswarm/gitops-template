@@ -85,6 +85,17 @@ examples:
       - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP
     assertions:
       - assertions/exists/organizations/workload-clusters/scheduled-upgrades
+  # the image automation pushes for real, to a branch of each run's own, see
+  # docs/reference/ci-checks.md, "Image automation"; the vCluster stands in for its cluster
+  image-automation:
+    paths:
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION-direct.yaml
+      - management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml
+      - tests/ats/fixtures/image-updates
+    assertions:
+      - assertions/exists/organizations/workload-clusters/image-automation
+      - assertions/exists-in-workload-cluster/image-automation
   prune:
     paths:
       - management-clusters/MC_NAME/organizations/ORG_NAME/ORG_NAME.yaml
@@ -105,6 +116,7 @@ nodePools:
     out-of-band-flux-app: [workers]
     out-of-band-no-flux: [workers]
     scheduled-upgrades: [workers]
+    image-automation: [workers]
 
 # The HelmReleases a cluster's Kustomization applies while its Cluster isn't Available,
 # by the Cluster's namespace/name: the gateway-api-bundle of bases/stacks/envoy-gateway.

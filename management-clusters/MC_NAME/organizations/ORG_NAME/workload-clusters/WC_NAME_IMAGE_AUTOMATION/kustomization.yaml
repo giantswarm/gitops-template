@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# What the cluster's Kustomization applies to the management cluster: the cluster,
+# in cluster/, and the image automation, in image-automation/. out-of-band/ goes
+# into the workload cluster through the -direct Kustomization instead.
+resources:
+  - cluster/
+  - image-automation/

@@ -22,6 +22,8 @@ EXPECTED_PATHS = {
     "WC_NAME_OUT_OF_BAND_NO_FLUX_APP-apps.yaml": "WC_NAME_OUT_OF_BAND_NO_FLUX_APP",
     "WC_NAME_OUT_OF_BAND_NO_FLUX_APP-direct.yaml": "WC_NAME_OUT_OF_BAND_NO_FLUX_APP/out-of-band",
     "WC_NAME_SCHEDULED_UPGRADES.yaml": "WC_NAME_SCHEDULED_UPGRADES",
+    "WC_NAME_IMAGE_AUTOMATION.yaml": "WC_NAME_IMAGE_AUTOMATION",
+    "WC_NAME_IMAGE_AUTOMATION-direct.yaml": "WC_NAME_IMAGE_AUTOMATION/out-of-band",
 }
 PREFIX = "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/"
 

@@ -1,0 +1,33 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  # TODO: change 'mc-name' to your management cluster's name and 'image-automation' to your cluster name;
+  # must be a valid resource name (DNS-like)
+  name: mc-name-clusters-image-automation-direct
+  # No namespace: the rule of thumb is to follow the `kubeconfig` Secret's namespace, and here
+  # it's the organisation's, where the organisation's namespace Kustomization puts this one.
+spec:
+  # Flux applies a commit here only once the organisation's namespace Kustomization, which
+  # applies this one, is Ready at it, so this one's spec is up to date
+  dependsOn:
+    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../namespace.yaml
+      namespace: default
+  interval: 10m
+  kubeConfig:
+    secretRef:
+      name: image-automation-kubeconfig  # TODO: change to the name of the Secret with the kubeconfig of the target cluster
+  # The Deployment the image automation keeps current. Flux applies what's merged into the
+  # branch the GitRepository reads, so a new tag reaches the cluster once you merge the image
+  # automation's pull request, not when it pushes.
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION/out-of-band"
+  postBuild:
+    substitute:
+      cluster_name: "image-automation"
+      organization: "${organization}"  # the organisation's namespace Kustomization sets it
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository for this cluster, the management cluster's or another
+    namespace: default  # the namespace of that GitRepository; this Kustomization is in the namespace of the kubeconfig Secret
+  timeout: 2m

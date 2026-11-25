@@ -60,6 +60,9 @@ COVERED+=(
 	"${ORG}/workload-clusters/WC_NAME apps"
 	"${ORG}/workload-clusters/WC_NAME apps/cert-manager"
 	"${ORG}/workload-clusters/WC_NAME_SCHEDULED_UPGRADES cluster"
+	"${ORG}/workload-clusters/WC_NAME_IMAGE_AUTOMATION cluster"
+	"${ORG}/workload-clusters/WC_NAME_IMAGE_AUTOMATION out-of-band"
+	"${ORG}/workload-clusters/WC_NAME_IMAGE_AUTOMATION out-of-band/helloworld"
 	"${ORG}/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams hello-team"
 )
 # the out-of-band examples share their layout

@@ -19,3 +19,7 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/notifications/.*\.enc\.yaml
     pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
+  # the kind test's credentials, decrypted by the test with the master key CI already has
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: tests/ats/fixtures/.*\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660

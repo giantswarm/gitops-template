@@ -1,0 +1,26 @@
+# The cluster's Kustomizations: in the organisation's namespace, applied by its namespace
+# Kustomization. The -direct one applies out-of-band/ to the workload cluster through its
+# kubeconfig, so it runs as no ServiceAccount of the management cluster.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-organization-org-name
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: mc-name-clusters-image-automation
+  namespace: org-org-name
+spec:
+  serviceAccountName: automation
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-organization-org-name
+    kustomize.toolkit.fluxcd.io/namespace: default
+  name: mc-name-clusters-image-automation-direct
+  namespace: org-org-name
+spec:
+  kubeConfig:
+    secretRef:
+      name: image-automation-kubeconfig

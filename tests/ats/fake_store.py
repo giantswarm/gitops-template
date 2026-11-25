@@ -21,12 +21,17 @@ def store_values() -> dict[str, str]:
     return {item["key"]: item["value"] for item in store[1]} if store else {}
 
 
-def secret_stores(namespaces: Iterable[str]) -> list[dict]:
-    """The stand-in store in each of `namespaces`, or none without one."""
+def secret_stores(
+    namespaces: Iterable[str], extra: dict[str, str] | None = None
+) -> list[dict]:
+    """The stand-in store in each of `namespaces`, or none without one. `extra` are values the
+    test adds by key, such as a key it decrypts at run time, which kind-test.yaml can't hold in
+    plain text."""
     store = kind_test_config().secret_store()
     if store is None:
         return []
     name, data = store
+    data = data + [{"key": k, "value": v} for k, v in (extra or {}).items()]
     return [
         {
             "apiVersion": "external-secrets.io/v1",

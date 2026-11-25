@@ -1,0 +1,9 @@
+# The image-reflector-controller lists the image's tags in its registry every `interval`.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: ${cluster_name}-helloworld
+  namespace: org-${organization}
+spec:
+  image: gsoci.azurecr.io/giantswarm/helloworld  # TODO: your app's image
+  interval: 1h

@@ -74,12 +74,14 @@ def create_store(
         time.sleep(2)
 
 
-def organization_store(api: pykube.HTTPClient, namespace: str) -> list[SecretStoreCR]:
+def organization_store(
+    api: pykube.HTTPClient, namespace: str, extra: dict[str, str] | None = None
+) -> list[SecretStoreCR]:
     """Create the test's stand-in store, if there is one, in the organisation's `namespace`, as
-    the customer does."""
+    the customer does, with the values of `extra` added."""
     return [
         create_store(api, s, STORE_CREATE_TIMEOUT_SEC)
-        for s in secret_stores([namespace])
+        for s in secret_stores([namespace], extra)
     ]
 
 

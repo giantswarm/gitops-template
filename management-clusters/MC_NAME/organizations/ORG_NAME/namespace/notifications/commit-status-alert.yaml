@@ -46,3 +46,7 @@ spec:
       name: mc-name-clusters-out-of-band-no-flux-direct
     - kind: Kustomization
       name: mc-name-clusters-scheduled-upgrades
+    - kind: Kustomization
+      name: mc-name-clusters-image-automation
+    - kind: Kustomization
+      name: mc-name-clusters-image-automation-direct

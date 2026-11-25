@@ -36,6 +36,8 @@ from conftest import (
 from external_secrets import organization_store
 from flux_inventory import DEPENDENCY_NOT_READY
 from flux_reconcile import wait_until
+from image_updates import CLUSTER as IMAGE_AUTOMATION_CLUSTER
+from image_updates import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
 from kind_config import kind_test_config
 from notification_objects import organization_alert
 from prune_objects import OrganizationCR
@@ -281,14 +283,26 @@ def installation_values(
     return [apply(installation_values_config_map(api, namespace))]
 
 
+def vcluster_stand_ins(example_present: Callable[[str], bool]) -> list[str]:
+    """The clusters the vCluster stands in for: the out-of-band-no-flux cluster, and, when
+    `example_present` says their examples are there, the cluster the out-of-band-no-flux apps
+    push their kubeconfig to and the image automation example's cluster."""
+    clusters = [WORKLOAD_CLUSTER_VCLUSTER_NAME]
+    if example_present(KUBECONFIG_PUSH_EXAMPLE):
+        clusters.append(TOOLS_CLUSTER)
+    if example_present(IMAGE_AUTOMATION_EXAMPLE):
+        clusters.append(IMAGE_AUTOMATION_CLUSTER)
+    return clusters
+
+
 def workload_cluster_objects(
     api: pykube.HTTPClient, namespace: str, kubeconfig: dict
 ) -> list[pykube.objects.APIObject]:
     """Create in the organisation's `namespace` what the management cluster has there for the
     workload cluster: its kubeconfig Secret, as Cluster API writes it, and its cluster values,
-    as cluster-apps-operator writes them. The kubeconfig Secret of the cluster the
-    out-of-band-no-flux apps push their kubeconfig to has the vCluster's kubeconfig too, when that
-    example is there: the vCluster stands in for both clusters."""
+    as cluster-apps-operator writes them. The kubeconfig Secrets of the other clusters
+    `vcluster_stand_ins` names have the vCluster's kubeconfig too: the vCluster stands in for
+    them all."""
     cluster_values = pykube.ConfigMap(
         api,
         {
@@ -296,9 +310,9 @@ def workload_cluster_objects(
             "data": {"values": Path(CLUSTER_VALUES_STUB).read_text()},
         },
     )
-    clusters = [WORKLOAD_CLUSTER_VCLUSTER_NAME]
-    if not kind_test_config().example_skip_reason(KUBECONFIG_PUSH_EXAMPLE):
-        clusters.append(TOOLS_CLUSTER)
+    clusters = vcluster_stand_ins(
+        lambda example: not kind_test_config().example_skip_reason(example)
+    )
     kubeconfig_secrets = [
         pykube.Secret(api, cluster_kubeconfig_secret(cluster, namespace, kubeconfig))
         for cluster in clusters
@@ -334,6 +348,7 @@ def organization_namespace_setups(
     kind-test.yaml has one. For the template's examples, when they're there: the notification
     example's Alert, suspended before Flux applies it, and the vCluster's kubeconfig Secret and
     cluster values (Cluster API and cluster-apps-operator) in its organisation's namespace.
+    image_automation adds the image automation example's deploy key to the store later.
     """
 
     def example_objects(

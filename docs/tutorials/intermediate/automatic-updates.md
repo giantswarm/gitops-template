@@ -183,3 +183,5 @@ flux get helmreleases -n org-${ORG_NAME}
 - [Pull the chart from a private registry](../../how-to/add-app.md#pull-the-chart-from-a-private-registry): give the
   `OCIRepository` credentials for a registry that isn't public.
 - [Stages and regions](./stages-and-regions.md): a range in dev, pins in staging and prod.
+- [Keep an image current with image automation](../../how-to/image-automation.md): for a workload that isn't a
+  chart, Flux writes new image tags into Git and you merge them as pull requests.

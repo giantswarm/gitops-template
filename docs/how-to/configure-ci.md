@@ -25,6 +25,12 @@ as inputs, each with a comment that says why it has the value it has:
 | `gitops_ignored_objects` | empty |
 | `gitops_init_namespaces` | `default` |
 
+[image-updates-pull-request.yaml](../../.github/workflows/image-updates-pull-request.yaml) opens a pull request from
+`flux/image-updates`, the branch Flux image automation pushes to, into your default branch. It works in your fork
+unchanged once you turn on GitHub's **Allow GitHub Actions to create and approve pull requests**; without image
+automation, nothing pushes to the branch and it never runs. See
+[Open pull requests from the branch](./image-automation.md#open-pull-requests-from-the-branch).
+
 Renovate keeps the versions up to date through the `# renovate:` comment above each. `kind_ver` follows the
 management clusters, not kind's releases: an `allowedVersions` bound in `renovate.json5` keeps it, and the other pins
 that stand for what the management clusters run, at the versions they run. When the management clusters move, raise
@@ -43,7 +49,9 @@ files, so a management cluster built with the [basic tutorial](../tutorials/basi
    `decryption`, as with External Secrets Operator only, there's nothing to set.
 1. **Delete the template's examples.** `management-clusters/MC_NAME` holds example SOPS secrets, there to show what an
    encrypted Secret looks like. They're encrypted for the template's master key, which your fork doesn't have, so the
-   test can't decrypt them: delete the directory, and the template's rules for `MC_NAME` in `.sops.yaml`. If you'd
+   test can't decrypt them: delete the directory, and the template's rules for `MC_NAME` in `.sops.yaml`. The
+   image automation example's deploy key in `tests/ats/fixtures/image-updates` is encrypted for the same key: delete
+   that directory and its rule in `.sops.yaml` too. If you'd
    rather keep the examples to read, leave them, and list your own management clusters in `managementClusters` in
    [tests/ats/kind-test.yaml](../../tests/ats/kind-test.yaml) instead, so the test applies only yours.
 1. **Write bindings for your own clusters, when you want more than `Ready`.** Out of the box, the test checks that

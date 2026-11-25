@@ -1,0 +1,8 @@
+# The image automation example's deploy key, for the kind test only. The test applies this
+# directory with a Flux Kustomization that decrypts it with the master key, reads the Secret
+# and puts the key in the stand-in secret store, then deletes the Kustomization and the Secret
+# with it. See README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deploy-key.enc.yaml
