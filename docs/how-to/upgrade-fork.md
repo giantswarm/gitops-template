@@ -856,6 +856,6 @@ GitHub Pages, or a `GitRepository`, keeps working. Those catalogs aren't guarant
 though, so move each app before you next need to upgrade it.
 
 Change the source and nothing else. A `HelmRelease` whose release name, target namespace, storage namespace or chart
-name changes on the way is uninstalled and installed again, and one with a new name installs a second release next to
-the first. [Move an app's chart to an `OCIRepository`](./move-app-to-oci.md) moves one app with an upgrade, in three
+name changes on the way is uninstalled and installed again, and so is one with a new `metadata.name`.
+[Move an app's chart to an `OCIRepository`](./move-app-to-oci.md) moves one app with an upgrade, in three
 commits, and says how to check that it was one.
