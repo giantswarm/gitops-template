@@ -171,8 +171,8 @@ broader rule further down and is encrypted with the wrong key. So the upgrade re
 each one, replace `mapi/` with `(mapi/)?(cluster|apps)/`, or with `(mapi/)?(cluster|apps|app_sets)/` for a cluster
 that still has App Sets. That matches both layouts, and keeps the rule out of `out-of-band`, where the cluster's key
 can't decrypt. Once the upgrade has run, drop `(mapi/)?`. Files already encrypted keep their keys: the rules only
-decide what a file gets the next time `sops` encrypts it. Then check that every encrypted
-file, and a new one in each cluster's `apps`, meets the rule you mean, which is the first one that matches its path:
+decide what a file gets the next time `sops` encrypts it. Then check that every encrypted file, and a new one in each
+cluster's `apps`, meets the rule you mean, which is the first one that matches its path:
 
 ```sh
 check_rules() {
