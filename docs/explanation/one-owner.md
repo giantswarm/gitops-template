@@ -76,7 +76,8 @@ Two `HelmRelease`s, or a `HelmRelease` and one a `ResourceSet` renders, with the
 `apps` already, or when you move an app to a template or a stack and the old `HelmRelease` stays for a while.
 
 Each upgrades the release over the other's revision, so the release's revision climbs with no change in Git, and its
-values change with every upgrade. Fix it by removing one `HelmRelease`, then checking that the other reports `Ready`.
+values change with every upgrade. Fix it by suspending one `HelmRelease`, removing it once it is suspended, then
+checking that the other reports `Ready`.
 
 ### Flux and the App Platform
 
