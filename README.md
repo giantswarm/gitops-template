@@ -14,7 +14,7 @@ either way.
 
 Giant Swarm maintains this template. Its layout has a version, the
 [structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check`, from
-kubectl-gs X.Y.Z on, tells you when your fork has fallen behind it.
+kubectl-gs 8.0.0 on, tells you when your fork has fallen behind it.
 
 Already have a fork, with a `mapi` directory in each workload cluster and its clusters' Flux `Kustomization`s in the
 `default` namespace? That's structure version 2, and

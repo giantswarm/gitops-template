@@ -86,19 +86,19 @@ organisation's namespace `Kustomization` from the management cluster's build, an
 
 ## What kubectl-gs writes
 
-From kubectl-gs X.Y.Z on, `kubectl gs gitops` writes the protection this page describes, except the annotation on the
+From kubectl-gs 8.0.0 on, `kubectl gs gitops` writes the protection this page describes, except the annotation on the
 `Kustomization`s everything else hangs off, and older releases write some of it:
 
 | Command | Writes |
 | --- | --- |
-| `kubectl gs gitops add base`, X.Y.Z and newer | the annotation and the label on the cluster's `HelmRelease` and `OCIRepository`, and `global.metadata.preventDeletion: true` in the values, so the chart labels the `Cluster`. `--prevent-deletion=false` turns all of it off |
-| `kubectl gs gitops add base`, 7.0.0 to before X.Y.Z | the label and `preventDeletion`, but no annotation |
-| `kubectl gs gitops add organization`, X.Y.Z and newer | the annotation and the label on the `Organization` |
-| `kubectl gs gitops add management-cluster` and `add encryption`, X.Y.Z and newer | a `kustomization.yaml` that gives the key Secrets in `MC_NAME/secrets` and `namespace/secrets` the annotation and the label |
-| `kubectl gs gitops add management-cluster` and `add workload-cluster`, X.Y.Z and newer | `Kustomization`s with `prune: true`. Older releases write `prune: false`, so Flux deletes nothing from them at all |
+| `kubectl gs gitops add base`, 8.0.0 and newer | the annotation and the label on the cluster's `HelmRelease` and `OCIRepository`, and `global.metadata.preventDeletion: true` in the values, so the chart labels the `Cluster`. `--prevent-deletion=false` turns all of it off |
+| `kubectl gs gitops add base`, 7.0.0 to before 8.0.0 | the label and `preventDeletion`, but no annotation |
+| `kubectl gs gitops add organization`, 8.0.0 and newer | the annotation and the label on the `Organization` |
+| `kubectl gs gitops add management-cluster` and `add encryption`, 8.0.0 and newer | a `kustomization.yaml` that gives the key Secrets in `MC_NAME/secrets` and `namespace/secrets` the annotation and the label |
+| `kubectl gs gitops add management-cluster` and `add workload-cluster`, 8.0.0 and newer | `Kustomization`s with `prune: true`. Older releases write `prune: false`, so Flux deletes nothing from them at all |
 | `kubectl gs template cluster`, 7.0.0 and newer | the label on the `OCIRepository` and `HelmRelease`, and `--prevent-deletion` defaults to `true`. No annotation |
 | `kubectl gs gitops add base` and `template cluster`, before 7.0.0 | no label on the `HelmRelease` or `OCIRepository`, and no annotation. `template cluster --prevent-deletion`, off by default, labels only the cluster's values. From 6.0.6 they leave install remediation off |
-| `kubectl gs gitops add organization` before X.Y.Z, `kubectl gs template organization` | neither the label nor the annotation |
+| `kubectl gs gitops add organization` before 8.0.0, `kubectl gs template organization` | neither the label nor the annotation |
 
 With an older kubectl-gs, or with `kubectl gs template`, add what's missing by hand, as the
 [CAPA base](/bases/clusters/capa/cluster.yaml) and the example `Organization` have it. Without the annotation, the

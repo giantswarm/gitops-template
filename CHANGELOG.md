@@ -6,7 +6,7 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Unreleased
 
 This release rebuilds the template: its layout, its examples, its tests and its documentation. The repository is now
-at [structure version](docs/reference/repo-structure.md#structure-version) 3, the layout kubectl-gs X.Y.Z and newer
+at [structure version](docs/reference/repo-structure.md#structure-version) 3, the layout kubectl-gs 8.0.0 and newer
 write. Clusters and apps are Flux `HelmRelease`s from Giant Swarm's charts on `gsoci.azurecr.io`, and every example
 gets `Ready` in CI. To migrate an existing fork, with its `mapi` directories and its `Kustomization`s in `default`,
 follow [Migrate a fork from structure version 2](docs/how-to/upgrade-fork.md), which says what each step changes on a
@@ -15,11 +15,11 @@ running management cluster.
 **Breaking changes.** A fork has to make these changes, listed under
 [What's mandatory](docs/how-to/upgrade-fork.md#whats-mandatory):
 
-- Update kubectl-gs to X.Y.Z or newer. Older releases write structure version 2, with a `mapi` directory.
+- Update kubectl-gs to 8.0.0 or newer. Older releases write structure version 2, with a `mapi` directory.
 - Move to structure version 3 with `kubectl gs gitops upgrade`: workload clusters lose their `mapi` directory, and
   each organisation gets a `namespace.yaml` and a `namespace` directory.
 - Move the workload cluster `Kustomization`s and their SOPS keys from `default` into the organisation's namespace,
-  `org-<name>`. kubectl-gs X.Y.Z refuses to add a cluster or a cluster key to an organisation that hasn't.
+  `org-<name>`. kubectl-gs 8.0.0 refuses to add a cluster or a cluster key to an organisation that hasn't.
 - Give every cluster its region, as a kustomize Component from `bases/environments/regions`. Without one, `release-aws`
   takes the region of the management cluster.
 

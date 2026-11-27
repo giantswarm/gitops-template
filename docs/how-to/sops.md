@@ -40,7 +40,7 @@ organisation's namespace with the cluster's Flux `Kustomization`s that decrypt w
 Secret.
 
 > [!Note]
-> From kubectl-gs X.Y.Z on, `kubectl gs gitops add encryption --workload-cluster` does most of these steps for you,
+> From kubectl-gs 8.0.0 on, `kubectl gs gitops add encryption --workload-cluster` does most of these steps for you,
 > see [Encryption](./kubectl-gs.md#encryption): the key Secret in `namespace/secrets`, its protection, the
 > `decryption` of both `Kustomization`s, the public key and a `.sops.yaml` rule. Its rule covers only the directory
 > `--target` names, the cluster's `secrets/` by default, so pass `--target apps/` or add a rule for `cluster` and
