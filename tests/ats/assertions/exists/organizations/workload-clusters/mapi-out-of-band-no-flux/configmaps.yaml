@@ -1,6 +1,0 @@
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mapi-out-of-band-no-flux-hello-world-user-values
-  namespace: org-org-name

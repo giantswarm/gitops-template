@@ -1,0 +1,29 @@
+# The hello-team application team's source and Kustomization, which the platform team owns:
+# the cluster's apps Kustomization applies them into the organisation namespace. The
+# Kustomization runs as the organisation's automation ServiceAccount, which Giant Swarm provides.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-no-flux-hello-team
+  namespace: org-org-name
+spec:
+  url: https://github.com/stefanprodan/podinfo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-no-flux-hello-team
+  namespace: org-org-name
+spec:
+  kubeConfig:
+    secretRef:
+      name: out-of-band-no-flux-kubeconfig
+  serviceAccountName: automation
+  targetNamespace: hello-team

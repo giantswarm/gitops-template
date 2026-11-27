@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The organisation's copy of the objects every organisation shares. ../kustomization.yaml lists
+# it, and a change to the base reaches every organisation that lists it. The organisation's
+# namespace Kustomization puts the copy in the organisation's namespace.
+resources:
+  - ../../../../../../bases/shared_objects

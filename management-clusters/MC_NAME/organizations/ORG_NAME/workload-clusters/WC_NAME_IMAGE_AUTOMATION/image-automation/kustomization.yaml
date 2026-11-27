@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+# The image automation that keeps ../out-of-band/helloworld current. It runs on the
+# management cluster, in the organisation's namespace. The ImageUpdateAutomation
+# takes the ImagePolicies with the cluster's label, which this file gives them.
+kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/cluster: ${cluster_name}
+      giantswarm.io/managed-by: flux
+resources:
+  - externalsecret.yaml
+  - git-repository.yaml
+  - image-repository.yaml
+  - image-policy.yaml
+  - image-update-automation.yaml

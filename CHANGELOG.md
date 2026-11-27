@@ -5,264 +5,177 @@ following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+This release rebuilds the template: its layout, its examples, its tests and its documentation. The repository is now
+at [structure version](docs/reference/repo-structure.md#structure-version) 3, the layout kubectl-gs 8.0.0 and newer
+write. Clusters and apps are Flux `HelmRelease`s from Giant Swarm's charts on `gsoci.azurecr.io`, and every example
+gets `Ready` in CI. To migrate an existing fork, with its `mapi` directories and its `Kustomization`s in `default`,
+follow [Migrate a fork from structure version 2](docs/how-to/upgrade-fork.md), which says what each step changes on a
+running management cluster.
+
+**Breaking changes.** A fork has to make these changes, listed under
+[What's mandatory](docs/how-to/upgrade-fork.md#whats-mandatory):
+
+- Update kubectl-gs to 8.0.0 or newer. Older releases write structure version 2, with a `mapi` directory.
+- Move to structure version 3 with `kubectl gs gitops upgrade`: workload clusters lose their `mapi` directory, and
+  each organisation gets a `namespace.yaml` and a `namespace` directory.
+- Move the workload cluster `Kustomization`s and their SOPS keys from `default` into the organisation's namespace,
+  `org-<name>`. kubectl-gs 8.0.0 refuses to add a cluster or a cluster key to an organisation that hasn't.
+- Give every cluster its region, as a kustomize Component from `bases/environments/regions`. Without one, `release-aws`
+  takes the region of the management cluster.
+
+The examples changed in these ways as well. A fork can follow one at a time, each in its own pull request:
+
+- The `Kustomization`s have `prune: true` instead of `prune: false`, so deleting an app's files uninstalls the app.
+- Apps install into a namespace of their own in the workload cluster, such as `hello-world`, instead of `org-<name>`.
+  Moving an installed app reinstalls it.
+- There are no `App` custom resources, and `kubectl gs gitops upgrade` fails on any it finds.
+  [Adopt an app that's already installed](docs/how-to/adopt-app.md) moves one to a `HelmRelease` without reinstalling
+  it.
+- `bases/cluster_templates` and `bases/app_sets` are replaced by cluster bases in `bases/clusters` and stacks in
+  `bases/stacks`. The CAPA base moves from `bases/clusters/capa/template` to `bases/clusters/capa`, envoy-gateway from
+  `bases/apps` to `bases/stacks`, where it installs Giant Swarm's `gateway-api-bundle` instead of three charts (see
+  [Move Envoy Gateway to the bundle](docs/how-to/upgrade-fork.md#move-envoy-gateway-to-the-bundle)), and the stages
+  in `bases/environments` are kustomize Components.
+- File and resource names follow what `kubectl gs gitops` writes, such as `helm-release.yaml`, `oci-repository.yaml`
+  and the `${cluster_name}-cluster-userconfig` ConfigMap. Only the ConfigMap's new name shows on the cluster.
+
 ### Added
 
-- A CAPA cluster base in `bases/clusters/capa/release` for the `release-aws` chart, and an example workload
-  cluster that uses it. The base is an overlay of `bases/clusters/capa/template`. The App's version is the
-  Giant Swarm release, taken from the `release` variable, so the release lives in git. Use it for releases that
-  have a `release-aws` chart, which is every release from v34.0.0 on. `bases/clusters/capa/template` stays the
-  base for older releases and for Release CRs created by hand.
-- `renovate.json5` extending the shared
-  [giantswarm/renovate-presets](https://github.com/giantswarm/renovate-presets)
-  default, so dependency updates are managed here the same way as in every other
-  Giant Swarm repository. The opt-in `pre-commit` manager is enabled on top: the
-  hooks in `.pre-commit-config.yaml` are the only dependencies here that have
-  actually gone stale. Closes
-  [giantswarm/roadmap#3943](https://github.com/giantswarm/roadmap/issues/3943).
-- The repository structure is now versioned. The layout described in
-  `docs/reference/repo-structure.md` is **structure version 1**, and a new
-  [Structure Version](docs/reference/repo-structure.md#structure-version) section
-  defines what does and does not warrant a bump. `kubectl gs gitops` records
-  the version in a `.gitops-metadata.yaml` file at the root of the
-  repositories it generates, and `kubectl gs gitops check` reports the parts
-  of a repository that were generated with an older one.
-  Bumping the version here requires bumping `StructureVersion` in
-  `kubectl-gs` to match; the two are kept in lockstep by hand.
-  See [giantswarm/giantswarm#23540](https://github.com/giantswarm/giantswarm/issues/23540).
-- The [Structure Version](docs/reference/repo-structure.md#structure-version) section
-  now covers `kubectl gs gitops upgrade`, which brings a repository generated
-  with an older structure version up to date, and requires every version bump
-  to ship with a migration in `kubectl-gs`.
-- Semantic YAML diff PR comments via the new `yaml-diff` workflow
-  (calls `giantswarm/github-workflows/.github/workflows/yaml-diff.yaml`).
-  Key reordering without value changes no longer shows up as noise in PR
-  reviews. Alphabetical key-ordering enforcement in `.yamllint` is
-  unchanged in this release; it will be dropped in a follow-up once the
-  bot has run on real PRs.
-  See [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
+Layout and Flux:
+
+- `.gitops-metadata.yaml` records the structure version, so `kubectl gs gitops check` can tell a fork that it has
+  fallen behind. See [Structure version](docs/reference/repo-structure.md#structure-version).
+- A chain of Flux `Kustomization`s: `MC_NAME.yaml` applies only `Organization`s and objects in `default`, each
+  organisation's `namespace.yaml` applies its namespace, and each cluster has a cluster and an apps `Kustomization`
+  there, all as the organisation's `automation` ServiceAccount. See
+  [Flux `Kustomization`s](docs/reference/repo-structure.md#flux-kustomizations).
+- A cluster's apps install once Cluster API reports its control plane available and reachable, not before, and one
+  short node pool no longer holds back changes to the apps.
+- The organisation's name is set once, in its `Organization`, and kustomize `replacements` copy it everywhere else. See
+  [The organisation's name](docs/reference/repo-structure.md#the-organisations-name).
+- Deletion protection: the objects whose deletion would delete a cluster, an organisation or a key carry the
+  `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label. See
+  [Deletion protection](docs/explanation/deletion-protection.md).
+- Values ConfigMaps and Secrets carry `reconcile.fluxcd.io/watch: Enabled`, so a change to values applies at once.
+  `Kustomization`s reconcile every 10 minutes and retry after one.
+
+Clusters and apps:
+
+- The CAPA cluster base in [bases/clusters/capa](bases/clusters/capa/readme.md) installs the `release-aws` chart from an
+  `OCIRepository`, with the Giant Swarm release as its tag. It reads the management cluster's
+  `cluster-app-installation-values` first and doesn't retry a failed install, which would delete the cluster.
+- A cluster's own values, from a ConfigMap and a patch beside the base, and the order of every `valuesFrom` layer. See
+  [Give one cluster its own values](docs/how-to/cluster-values.md) and [Values](docs/reference/values.md).
+- App Templates in `bases/apps`, stacks in `bases/stacks`, and stages and regions in `bases/environments`, each with a
+  tutorial under [docs/tutorials/intermediate](docs/README.md#intermediate).
+- The stages promote app and release versions from dev to staging to prod, with Renovate opening one pull request per
+  stage.
+- Automatic updates through a `semver` range on the app's `OCIRepository`. See
+  [Automatic updates](docs/tutorials/intermediate/automatic-updates.md).
+- Multicluster apps: a Flux Operator `ResourceSet` in an organisation's `multicluster/apps` installs an app on every
+  cluster in `clusters.yaml`. See [Multicluster apps](docs/tutorials/advanced/multicluster-apps.md).
+- Scheduled upgrades: a `ResourceSetInputProvider` holds an app's or a cluster's release upgrades until an upgrade
+  window, as in the `WC_NAME_SCHEDULED_UPGRADES` example. See
+  [Scheduled upgrades](docs/tutorials/advanced/scheduled-upgrades.md) and
+  [Move a running cluster to scheduled upgrades](docs/how-to/scheduled-upgrades-existing-cluster.md).
+- Out-of-band delivery both ways: the management cluster pushes `out-of-band/` through a `-direct` `Kustomization` with
+  the cluster's kubeconfig, or Flux in the workload cluster pulls it. See
+  [Out-of-band resources](docs/tutorials/advanced/out-of-band.md).
+- Application teams: a team keeps its own repository, which a Flux `Kustomization` in its cluster's `teams` directory
+  applies to the workload cluster. See [Application teams](docs/tutorials/advanced/teams.md).
+- The Envoy Gateway stack in [bases/stacks/envoy-gateway](bases/stacks/envoy-gateway/README.md) installs Giant Swarm's
+  `gateway-api-bundle`, which installs the Gateway API CRDs, Envoy Gateway, its configuration and its metrics in
+  order. hello-world answers at `hello.<cluster base domain>` through an `HTTPRoute`, and the basic tutorial ends on
+  its page.
+- Objects every organisation shares, from a kustomize base in `bases/shared_objects`. See
+  [Give every organisation the same object](docs/how-to/share-objects.md).
+- Commit statuses: each `Kustomization` reports on the GitHub commit it applied, from the management cluster's and each
+  organisation's `notifications`. See [Report reconcile status on GitHub commits](docs/how-to/commit-statuses.md).
+
+Secrets:
+
+- SOPS with a key per workload cluster, GPG or age, next to the master key. See
+  [Keep secrets in the repository](docs/how-to/sops.md) and [SOPS keys](docs/reference/sops-keys.md).
+- External Secrets Operator next to SOPS, with namespaced `SecretStore`s for AWS Secrets Manager and Azure Key Vault in
+  `bases/secret_stores`. See [External Secrets Operator](docs/how-to/external-secrets.md) and
+  [Secrets](docs/explanation/secrets.md).
+- A Kyverno `Policy` in each organisation's `multicluster/secret-stores` generates a `SecretStore` for every workload
+  cluster as it comes up, so ESO can push secrets, including a generated password, into a new cluster. See
+  [Put secrets into new workload clusters](docs/how-to/workload-cluster-secrets.md).
+- Secrets go into the repository encrypted on their way in, never in plain text, and the `check-sops-encrypted`
+  pre-commit hook refuses a `*.enc.yaml` file that isn't encrypted.
+
+Documentation:
+
+- The documentation is rewritten in four kinds, indexed in [docs/README.md](docs/README.md): tutorials in three tiers
+  (basic, intermediate, advanced), how-to guides, reference and explanation. The pages under `docs/` and `docs/guides`
+  that they replace link to their new places.
+- How-to guides for troubleshooting and recovery, adding, changing and adopting apps, deleting a cluster, kubectl-gs,
+  another provider's cluster base, running the template on Azure, vSphere or Cloud Director, checking a change,
+  configuring CI in a fork and upgrading a fork.
+- [One owner per object](docs/explanation/one-owner.md) explains why two reconcilers must never manage one object, and
+  [When something isn't Ready](docs/how-to/troubleshooting.md) how to find which Flux object applied a resource.
+- Every example directory under `bases/` and `management-clusters/` has a README saying what it shows and what to change
+  when you copy it.
+- [Voice](docs/contributing/voice.md) sets how the documentation is written. [AGENTS.md](AGENTS.md) and the
+  [`giantswarm-gitops` skill](.agents/skills/giantswarm-gitops/SKILL.md) tell coding agents how the platform and this
+  repository work, in the template and in a fork.
+
+Tools and CI:
+
+- `tools/validate-helm-values` renders the chart of every `HelmRelease` with its merged values against the chart's
+  schema, and `tools/test-all-ff validate` checks objects against pinned Kubernetes, Flux and Giant Swarm schemas and
+  fails on a variable a `Kustomization` doesn't set. See [tools/README.md](tools/README.md).
+- Pre-commit hooks `check-kustomization-paths`, `check-directory-readmes` and `check-sops-encrypted`. See
+  [Check a change before you push](docs/how-to/check-changes.md).
+- The kind test runs in a fork as it is: it finds each management cluster's root `Kustomization` in the repository,
+  and [tests/ats/kind-test.yaml](tests/ats/kind-test.yaml) binds the example checks to the examples, skipping those a
+  fork has deleted. See [Configure CI in a fork](docs/how-to/configure-ci.md).
+- The kind test gives `automation` the rights it has on a management cluster, enforces the platform's admission
+  policies for Flux and Flux Operator objects, reconciles the out-of-band examples in a vCluster, checks pruning, and
+  fails when two `Kustomization`s apply one object.
+- Tests in `tests/ats` that need no cluster, and path-based CI: a pull request that changes nothing the tests read gets
+  a light run of pre-commit and those tests instead of the kind test. See [CI checks](docs/reference/ci-checks.md).
+- Chainsaw tests in `tests/chainsaw` for a real management cluster, run by hand. See
+  [Testing the repository](docs/tutorials/advanced/testing.md).
+- The `yaml-diff` workflow comments a semantic diff of the YAML a pull request changes, without key order.
+- [renovate.json5](renovate.json5) extends Giant Swarm's shared preset and updates chart tags, the Giant Swarm release,
+  the versions CI pins and the pre-commit hooks. It never automerges a release update, as that rolls the nodes, and it
+  holds the pins that stand for the management clusters at the versions they run.
 
 ### Changed
 
-- The CAPA cluster base labels its `OCIRepository` and `HelmRelease` with `giantswarm.io/prevent-deletion`, and sets
-  `global.metadata.preventDeletion` so that the chart labels the `Cluster` too. The management cluster refuses to
-  delete them, as it did for the cluster App CR. Deleting the cluster in `docs/getting-started.md` now removes the
-  labels first.
-
-- The repository structure is version 2. Clusters and apps are deployed with Flux `HelmRelease`s, and nothing in the
-  repository deploys or patches an App CR. `bases/clusters/capa/template`, the App CR base for the `cluster-aws` chart,
-  is gone, so releases before v34.0.0 and Release CRs created by hand are no longer supported.
-  `bases/clusters/capa/release` takes its place as `bases/clusters/capa/template`, the path
-  `kubectl gs gitops add base` generates. The `WC_NAME` and out-of-band example clusters are built on it and set the
-  `release` variable. `WC_NAME_RELEASE` is removed, because `WC_NAME` is now the same cluster. kubectl-gs 6.0.0
-  generates this structure, and `kubectl gs gitops upgrade` moves a fork from version 1 once its App CRs are gone.
-- `bases/clusters/capa/release` deploys the `release-aws` chart as a Flux `OCIRepository` and `HelmRelease` instead of
-  an App CR, like `kubectl gs template cluster` does since kubectl-gs 5.13.0. The release is the `OCIRepository` tag. A
-  cluster adds its own values with a ConfigMap and a patch that appends it to the `HelmRelease`'s `valuesFrom`, the same
-  layout `kubectl gs gitops add workload-cluster` generates since giantswarm/kubectl-gs#2274. Stages set the release on
-  the `OCIRepository`, and the prod clusters add their region values to `valuesFrom`. `bases/clusters/capa/template`
-  stays an App CR, because the `cluster-aws` chart needs App Platform. Clusters created from the old release base are
-  App CRs, and moving them needs a hand-over that doesn't reinstall them. See
-  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
-- The `hello_app_cluster` cluster template and its dev, staging and prod stages build on
-  `bases/clusters/capa/release`. Each stage sets the release as the cluster App's version, `36.2.0` in the
-  examples, and no longer sets `global.release.version` in its values. The dev and staging stages have no
-  values file left. `docs/add_wc_instance.md` and `docs/guides/environments.md` only describe the release base.
-- Envoy Gateway replaces ingress-nginx as the example edge. The new
-  `bases/apps/envoy-gateway` App Template installs `gateway-api-crds`,
-  `envoy-gateway` and `gateway-api-config` into the workload cluster as three
-  chained `HelmRelease`s, each with its chart from an `OCIRepository`. It is the
-  first HelmRelease-based App Template here. The resources follow the shape
-  [giantswarm/appcr-to-helmrelease-converter](https://github.com/giantswarm/appcr-to-helmrelease-converter)
-  emits for a migrated App CR, so converted and new apps look alike:
-  - the chart version pinned in `spec.ref.tag`
-  - values layered through `valuesFrom` like an App CR's: the cluster values
-    ConfigMap, the template defaults, then optional `-user-values` (ConfigMap)
-    and `-user-secrets` (SOPS-encrypted Secret)
-  - upgrades retry 10 times and roll back on failure, 10m timeout; installs
-    retry until they succeed, as the cluster chart's default apps do, since
-    envoy-gateway and gateway-api-config need CRDs a new cluster only gets with
-    its default apps
-  - `giantswarm.io/cluster` labels
-
-  `hello-world` is now exposed through an `HTTPRoute` on the `giantswarm-default`
-  Gateway as `hello.<cluster base domain>`, instead of an Ingress. The
-  `hello_app_cluster` template adds the `hello` subdomain to the Gateway's DNS
-  record and certificate. The hostname is built from the
-  cluster values, which the hello-world `HelmRelease` lists first in
-  `valuesFrom`. The kind test now checks that
-  OCIRepositories are ready. It skips HelmReleases that deploy to a workload
-  cluster, since the test has none. Part of
-  [giantswarm/roadmap#4380](https://github.com/giantswarm/roadmap/issues/4380).
-
-  **Prerequisites on the workload cluster:** the Giant Swarm default apps
-  (cert-manager, external-dns, Kyverno, Cilium, the monitoring CRDs), plus:
-  - Gateway API support enabled in cert-manager
-  - on AWS, aws-load-balancer-controller
-
-  **Migrating a fork:**
-  - The per-cluster Kustomizations use `prune: false`, so the existing
-    ingress-nginx App CRs stay after the update. Delete them by hand once traffic
-    runs through the Gateway.
-  - Remove any `gateway-api-bundle` app installed on the cluster first. It
-    installs the same charts under other release names.
-- Every other workload app in the template is now a `HelmRelease` with its
-  chart from an `OCIRepository` as well, in the same shape as the envoy-gateway
-  App Template: `hello-world` (App Template, app set and the out-of-band
-  examples), `cert-manager-app` and `flux-app`. Only the cluster App CRs
-  (`cluster-aws`, from `bases/clusters/capa/template`) still use App Platform.
-  Converted from [#153](https://github.com/giantswarm/gitops-template/pull/153).
-  - Installs of `cert-manager-app` and `flux-app` retry 10 times, as the
-    converter emits for a migrated App CR. `hello-world` retries until it
-    succeeds like envoy-gateway, as its HTTPRoute needs the Gateway API CRDs
-    the envoy-gateway App Template installs.
-  - Values come in the same four `valuesFrom` layers everywhere, the cluster
-    values first. App Platform used to add those to an App CR, a `HelmRelease`
-    has to list them; `hello-world`'s hostname is built from `baseDomain`.
-    Because the user layers are optional, overlays only create the
-    `-user-values` ConfigMap; the `patch_app_config.yaml` files that restated
-    `valuesFrom` are gone (`kustomize` replaces the list, it cannot append).
-  - Release names drop the `<cluster>-` prefix (`hello-world`, `cert-manager`,
-    `flux`), as chart-operator named the releases of the App CRs and as
-    giantswarm/appcr-to-helmrelease-converter emits them, so a migrated release
-    is adopted instead of installed a second time.
-  - Kustomize patches that pinned a version through `/spec/version` on an `App`
-    now target `spec.ref` on the `OCIRepository`.
-  - App CRs could reference a ConfigMap or Secret in another namespace;
-    `spec.valuesFrom` cannot. Two example references that pointed at namespaces
-    with nothing in them (`org-multi-project`, `hello-world-app`) now resolve
-    against the namespace the `HelmRelease` lives in, which is where the
-    ConfigMaps were generated all along.
-
-  **Migrating a fork:** delete the old App CRs by hand once their
-  `HelmRelease` is ready, `prune: false` keeps them otherwise. While both
-  exist, app-operator and helm-controller manage the same release.
-- Automatic updates use a `semver` range on the `OCIRepository` instead of
-  Flux image automation: dev follows dev builds from `3.0.0` on, staging stable
-  releases below `4.0.0`, the out-of-band `hello-world-app-auto` everything from
-  `3.0.0-0`. The `$imagepolicy` setters they replace never fired: the markers
-  held `${...}` variables, which Flux only substitutes in the cluster, and the
-  stage markers sat outside the `ImageUpdateAutomation` update path.
-- CI: replaced the hand-maintained `validate.yaml` and `basic.yml` with a thin
-  caller to the new reusable
-  `giantswarm/github-workflows/.github/workflows/gitops-validate.yaml`. Behaviour
-  is unchanged (pre-commit, `./tools/test-all-ff validate`, rendered-manifest diff,
-  and the `tests/ats` kind e2e); the GitHub Actions pins are now maintained
-  centrally and on current releases, clearing the Node 20 / `set-output`
-  deprecation warnings.
-- Bump `dyff_ver` from `1.5.4` to `1.7.1` in the existing rendered-manifest
-  diff job (`validate.yaml`), to standardize on the version used by the new
-  `yaml-diff` workflow.
-- migrated `.spec.config` to `.spec.extraConfigs`
-- Templates: Rename `nginx-ingress-controller` to `ingress-nginx`. ([#85](https://github.com/giantswarm/gitops-template/pull/85))
-- Corrects an earlier entry in this section: the `simple-db-app` `ImageRepository`
-  was repointed at `gsoci.azurecr.io/charts/giantswarm/simple-db-app`, but that
-  repository does not exist -- the chart was never published to `gsoci` and
-  `simple-db-app` is not in the `giantswarm` catalog. The example is removed
-  instead, see the Removed section below. See
-  [giantswarm/giantswarm#35783](https://github.com/giantswarm/giantswarm/issues/35783).
-- Example app versions now match what the `giantswarm` catalog actually serves:
-  `hello-world` `0.2.0` -> `3.2.2`, `ingress-nginx` `3.0.0` -> `4.3.5`,
-  `cert-manager-app` `2.12.0` -> `4.1.1`, `flux-app` `0.11.0` -> `1.9.1`.
-  The `hello-world` `App` CRs also referenced a non-existent catalog entry
-  `hello-world-app`; the entry is called `hello-world`.
-- Example `hello-world` and `ingress-nginx` values now use the keys their charts
-  actually accept. The previous `admin_login` / `db_config` / `thread_pool_size`
-  values were invented for the removed `simple-db` demo, and `ingress-nginx`
-  moved `configmap:` under `controller.config:`.
-- `ImagePolicy` semver ranges follow the new major: `>=3.0.0-0` for the `-dev`
-  stage (the `-0` is required, or the range excludes every pre-release tag) and
-  `>=3.0.0 <4.0.0` for staging.
-- The `$imagepolicy` setter marker on the automatic-updates example named
-  namespace `default`, but the `ImagePolicy` it refers to lives in
-  `org-${organization}`.
+- The template is written for, and CI tests against, what a Giant Swarm management cluster runs: Kubernetes 1.36,
+  Flux 2.7.5 (`flux-app` 1.12.2), Flux Operator v0.62.1, External Secrets Operator 2.14, Kyverno from `kyverno` 0.26.2
+  with `kyverno-policies-ux` 0.16.0 for deletion protection, and Cluster API v1.14.4, with clusters at
+  `cluster.x-k8s.io/v1beta2`.
+- The kind test installs Flux with helm and no longer installs the App Platform. It installs Kyverno, External Secrets
+  Operator and Flux Operator from Giant Swarm's charts, and the Cluster API CRDs only.
+- CI calls the shared `gitops-validate` workflow of `giantswarm/github-workflows`, pinned to a commit SHA, and works
+  on pull requests from forks.
+- The example clusters' names fit `release-aws`'s 20-character limit, such as `hello-app-prod-usw`.
 
 ### Removed
 
-- The per-stage `hello_world_app_user_config.yaml` files and the
-  `${cluster_name}-hello-world-user-config` ConfigMap the three
-  `bases/environments/stages/*/hello_app_cluster/kustomization.yaml` files
-  generated from them, plus their `tests/ats` assertions and the parts of
-  `docs/add_wc_environments.md` that presented them as the per-stage override
-  mechanism for the `hello-web-app` app set. Nothing ever read that ConfigMap:
-  the app resolves its values from `${cluster_name}-hello-world-values`, so the
-  overrides (`replicaCount: 6` in prod, node pool settings in dev and staging)
-  were silently discarded. Two of the three also held cluster chart values
-  (`global.nodePools`) rather than app values, so they could not have been wired
-  to the app as they stood. Per-app values for the set come from
-  `bases/cluster_templates/hello_app_cluster/app_sets/hello-web-app/override_config_hello_world.yaml`,
-  which is wired up and documented.
-- Every `giantswarm-catalog-oci` `Catalog` CR: the two under the out-of-band
-  workload clusters' `mapi/automatic-updates/` and the two under
-  `bases/environments/stages/{dev,staging}/hello_app_cluster/automatic_updates/`,
-  together with their `tests/ats` assertions. An `OCIRepository` addresses the
-  registry directly, so the first pair had nothing left referencing it; the stage
-  pair was never referenced by anything in the first place, since the apps in
-  those stages resolve from the `giantswarm` catalog. The repository now declares
-  no `Catalog` CRs at all.
-- The `ImageRepository`, `ImagePolicy` and `ImageUpdateAutomation` objects of
-  the dev and staging stages and of the out-of-band `hello-world-app-auto`
-  example, with the `automatic_updates/` and `automatic-updates/` directories
-  and their `tests/ats` assertions. A `semver` range on the `OCIRepository`
-  replaces them, see Changed.
-- The `simple-db-app` demo app (`bases/apps/simple-db`, its `App`,
-  `ImageRepository` and `ImagePolicy` entries in the environment stages, its
-  app-set config and its `tests/ats` assertions). The source repository is gone
-  and the chart is published nowhere, so there is no version of it that works.
-  The `hello-web-app` app set now bundles `hello-world` alone. Closes
-  [#131](https://github.com/giantswarm/gitops-template/issues/131).
-- Dropped the alphabetical `key-ordering` rule from `.yamllint`. It only
-  existed to keep PR diffs readable; the `yaml-diff` bot now provides clean
-  semantic diffs (ignoring key reordering), so the restriction is no longer
-  needed. Closes
-  [giantswarm/roadmap#4121](https://github.com/giantswarm/roadmap/issues/4121).
+- The `mapi` directory of every workload cluster.
+- `bases/cluster_templates`, `bases/app_sets` and `bases/clusters/capa/template`.
+- Every `App` and `Catalog` custom resource, Flux image automation (`ImageRepository`, `ImagePolicy`,
+  `ImageUpdateAutomation`), ingress-nginx and the `simple-db-app` demo, whose chart is published nowhere.
+- The alphabetical `key-ordering` rule of yamllint.
 
 ### Fixed
 
-- The CAPA cluster base no longer retries a failed install. Flux uninstalls the release before each retry, which
-  deletes the cluster. This matches what `kubectl gs gitops add base` generates.
-
-- CI: pin `clusterctl` to 1.10.10, the CAPI version `tests/ats` installs. The shared `gitops-validate` workflow
-  now defaults to 1.14.4, which refuses to clean up a v1beta1 management cluster and fails `test_on_kind` in
-  teardown.
-
-- `tests/ats`: pin every CAPI provider to an explicit release URL, via a
-  generated `clusterctl` config. The suite has failed as "Cannot bootstrap CAPI"
-  on every run since 2026-08-19.
-
-  The stock provider URLs end in `/releases/latest/`, and `clusterctl` reads the
-  version straight out of that path when it builds its repository client, before
-  it considers what `--core`/`--infrastructure` asked for. Resolving "latest"
-  means reading the newest `cluster-api` release's `metadata.yaml`, finding the
-  release series that serves the `v1beta1` contract `clusterctl` v1.2.0 speaks
-  (1.10), then searching for a 1.10.x tag -- a search that only covers the 30
-  newest releases, because `clusterctl` requests the release list with no paging
-  options. `cluster-api` published its 30th release since v1.10.10 on
-  2026-08-11, so 1.10.x dropped out of that window and the lookup has returned
-  nothing since, surfaced as the misleading "failed to find releases tagged with
-  a valid semantic version number".
-
-  The pins cover the providers `clusterctl init` installs implicitly too -- the
-  core provider and the kubeadm bootstrap/control-plane pair -- since those
-  carried the `latest` URLs. The core provider is pinned to `v1.10.10`, the
-  newest release of the series the resolution was selecting until it broke, so
-  the suite keeps testing against the CAPI version it already was. Going past
-  the `v1beta1` contract needs a newer `clusterctl` than the `1.2.0` the
-  workflow installs, plus newer infrastructure providers.
-- The `WC_NAME` example labelled its `App` CRs `giantswarm.io/cluster: WC_NAME`
-  instead of the cluster name. App Platform uses this label to find the
-  cluster's `<cluster>-cluster-values` ConfigMap and `<cluster>-kubeconfig`
-  Secret, and app-operator uses it to select the `App`, so the literal
-  placeholder broke both. The label is now `${cluster_name}`, substituted by the
-  Flux `Kustomization`. The same label on the `hello-world-automatic-updates`
-  `App` in the two out-of-band examples used `${workload_cluster_name}`, which
-  no `Kustomization` substitutes, so it rendered empty; it is now
-  `${cluster_name}` too. The other `App`s in the out-of-band examples had no
-  `giantswarm.io/cluster` label at all; their `apps` and `hello-web-app-1`
-  kustomizations now add it. `tests/ats` asserts the label and the
-  `hello-web-app-1` `userConfig` namespace for both out-of-band clusters.
-- The `hello-web-app-1` app set in the two out-of-band examples pointed the
-  `App`'s `userConfig` at a ConfigMap in namespace `hello-world-app`, but the
-  ConfigMap is generated in `org-${organization}`. It now points there.
+- Examples that couldn't get `Ready`: cluster names too long for `release-aws`, a cluster base that didn't read the
+  installation values, and a pulled out-of-band ConfigMap with an invalid name.
+- The hello-world examples rendered the chart's default nginx `Ingress`. They now have an `HTTPRoute`, and wait for the
+  Gateway API CRDs with `dependsOn` instead of retrying their install forever.
+- The docs read secrets through namespaced `SecretStore`s instead of a `ClusterSecretStore`, which a customer can't
+  create on a management cluster.
+- Uninstalling the envoy-gateway stack no longer waits on the `GatewayClass` finalizer until it times out:
+  `gateway-api-bundle` 2.1.1 uninstalls `gateway-api-config` before Envoy Gateway, and the bundle's `HelmRelease` has
+  the 12m uninstall timeout that needs.
+- yamllint uses the rules in `.yamllint.yaml`, `tools/test-all-ff validate` fails on `kubeconform` errors, and the kind
+  test's `HelmRelease` check checks the `HelmRelease`s.
 
 ## [0.1.0] Initial release
 

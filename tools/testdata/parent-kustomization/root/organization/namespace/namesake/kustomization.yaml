@@ -1,0 +1,7 @@
+# Gives the Kustomization in namesake.yaml its name in the build, parent-namesake, the name
+# ../unlisted.yaml names.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namePrefix: parent-
+resources:
+  - namesake.yaml

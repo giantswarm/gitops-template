@@ -1,0 +1,32 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mc-name-clusters-image-automation  # TODO: change 'mc-name' to your management cluster's name and 'image-automation' to your cluster name; must be a valid resource name (DNS-like)
+spec:
+  # Flux applies a commit here only once the organisation's namespace Kustomization, which
+  # applies this one, is Ready at it, so this one's spec is up to date
+  dependsOn:
+    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../namespace.yaml
+      namespace: default
+  # Applies the cluster, in cluster/, and the image automation, in
+  # image-automation/. No health check on the Cluster: nothing here needs the
+  # workload cluster up, and a health check holds one of kustomize-controller's
+  # few workers on the management cluster until the cluster is up or `timeout`
+  # runs out.
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_IMAGE_AUTOMATION"
+  postBuild:
+    substitute:
+      cluster_description: "description"
+      cluster_name: "image-automation"  # TODO: change 'image-automation' to your cluster name; must be a valid resource name (DNS-like)
+      organization: "${organization}"  # the organisation's namespace Kustomization sets it
+      # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
+      release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
+  prune: true
+  retryInterval: 1m
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
+    namespace: default  # the namespace of that GitRepository
+  timeout: 2m

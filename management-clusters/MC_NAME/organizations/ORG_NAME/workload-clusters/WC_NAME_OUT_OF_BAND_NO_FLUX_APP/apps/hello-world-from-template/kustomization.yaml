@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+      - values=override_config_hello_world.yaml
+    name: ${cluster_name}-hello-world-user-values
+generatorOptions:
+  disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+kind: Kustomization
+namespace: org-${organization}
+# hello-world's HTTPRoute needs the Gateway API CRDs, which the envoy-gateway app
+# of this cluster installs: every install and upgrade of hello-world waits until
+# its gateway-api-crds release is ready
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/dependsOn
+        value:
+          - name: ${cluster_name}-gateway-api-crds
+    target:
+      kind: HelmRelease
+      name: \${cluster_name}-hello-world
+resources:
+  - ../../../../../../../../bases/apps/hello-world

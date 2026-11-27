@@ -1,0 +1,27 @@
+# The objects the Chainsaw tests look at, named as the template's examples name them. To run
+# the tests against your management cluster, copy this file and set the names of your own
+# objects: see docs/tutorials/advanced/testing.md, "Test with Chainsaw".
+
+# readiness-ordering: a workload cluster, its two Kustomizations and two of its HelmReleases,
+# where `dependant` depends on `dependency`
+organizationNamespace: org-org-name
+cluster: out-of-band-no-flux
+kustomizations:
+  namespace: org-org-name
+  cluster: mc-name-clusters-out-of-band-no-flux
+  apps: mc-name-clusters-out-of-band-no-flux-apps
+helmReleases:
+  dependency: out-of-band-no-flux-gateway-api-crds
+  dependant: out-of-band-no-flux-hello-world-standalone
+
+# external-secrets: an ExternalSecret in the organisation's namespace, the key of the values in
+# the Secret it writes, and the HelmRelease that reads that Secret
+externalSecret:
+  name: out-of-band-no-flux-hello-world-standalone-user-secrets
+  key: values
+  helmRelease: out-of-band-no-flux-hello-world-standalone
+
+# kyverno-generate: the Kyverno Policy of multicluster/secret-stores, in
+# `organizationNamespace`. The test looks for what it generates for `cluster` there.
+secretStores:
+  policy: generate-eso-cluster-auth-from-kubeconfig

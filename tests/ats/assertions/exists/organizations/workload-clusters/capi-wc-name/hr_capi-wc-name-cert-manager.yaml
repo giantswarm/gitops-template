@@ -4,14 +4,14 @@ metadata:
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
-    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
-    kustomize.toolkit.fluxcd.io/namespace: default
-  name: capi-wc-name-cert-manager
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: capi-wc-name-cert-manager-standalone
   namespace: org-org-name
 spec:
   chartRef:
     kind: OCIRepository
-    name: capi-wc-name-cert-manager
+    name: capi-wc-name-cert-manager-standalone
     namespace: org-org-name
   install:
     createNamespace: true
@@ -23,23 +23,27 @@ spec:
     secretRef:
       name: capi-wc-name-kubeconfig
   releaseName: cert-manager
-  storageNamespace: org-org-name
-  targetNamespace: org-org-name
+  storageNamespace: cert-manager
+  targetNamespace: cert-manager
   timeout: 10m
   upgrade:
     remediation:
       remediateLastFailure: true
       retries: 10
       strategy: rollback
+  values:
+    cert-manager:
+      crds:
+        enabled: false
   valuesFrom:
     - kind: ConfigMap
       name: capi-wc-name-cluster-values
       valuesKey: values
     - kind: ConfigMap
-      name: capi-wc-name-cert-manager-user-values
+      name: capi-wc-name-cert-manager-standalone-user-values
       optional: true
       valuesKey: values
     - kind: Secret
-      name: capi-wc-name-cert-manager-user-secrets
+      name: capi-wc-name-cert-manager-standalone-user-secrets
       optional: true
       valuesKey: values

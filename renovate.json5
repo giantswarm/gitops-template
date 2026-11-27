@@ -4,11 +4,15 @@
     // Base config - https://github.com/giantswarm/renovate-presets/blob/main/default.json5
     "github>giantswarm/renovate-presets:default.json5",
   ],
-  // Opt-in manager, off by default in Renovate. `.pre-commit-config.yaml` is
-  // this repository's only genuinely stale dependency surface: the
-  // hand-authored workflows all track `giantswarm/github-workflows@main`, and
-  // the `zz_generated.*` ones are devctl-managed and already in the preset's
-  // `ignorePaths`.
+  // The hand-authored workflows call `giantswarm/github-workflows` at a commit
+  // SHA with a `# main` comment. The preset's github-actions manager updates
+  // that digest to the head of `main` and automerges it ("Giant Swarm GitHub
+  // workflows" group), so no rule is needed here. The preset's `pinDigests:
+  // false` for `giantswarm/*` only stops Renovate from adding a SHA; it still
+  // updates one that is there. The `zz_generated.*` workflows are
+  // devctl-managed, still call `@main`, and are in the preset's `ignorePaths`.
+  //
+  // Opt-in manager, off by default in Renovate: `.pre-commit-config.yaml`.
   //
   // `tests/ats/Pipfile` is deliberately left managed here. Chart repos extend
   // `renovate-presets:tests-ats.json5` to disable it, because there the file is
@@ -18,4 +22,153 @@
   "pre-commit": {
     "enabled": true,
   },
+  // Chart tags pinned in a Flux `OCIRepository`'s `spec.ref.tag`. Renovate's
+  // flux manager reads them with the `docker` datasource, taking the `url`
+  // without `oci://` as the dependency, but by default only in
+  // `gotk-components.yaml`. The test assertions are included on purpose: they
+  // repeat the tags, and Renovate puts the pins of one dependency in one PR
+  // (one each for staging and prod, see `packageRules`). The manager doesn't
+  // see a tag set by a kustomize patch, or one that is a postBuild variable
+  // such as `${release}`; those pins need a `# renovate:` comment for the
+  // regex manager below, with the same `depName`, or the PR leaves them
+  // behind.
+  "flux": {
+    "managerFilePatterns": ["/\\.ya?ml$/"],
+  },
+  // Versions pinned in plain variables: the shared workflow's version inputs
+  // in the hand-authored workflows, the constants in `tools/test-all-ff` and
+  // `tests/ats/conftest.py` and `tests/ats/external_secrets.py`, the Giant Swarm release where the `release`
+  // variable is set, and the chart tags kustomize patches set (the release in
+  // each stage, the charts in `bases/stacks/hello-web`, staging and prod). The release is
+  // the tag of the `release-aws` chart. The manifests only ever set it through
+  // these comments; the flux manager finds `release-aws` only in the test
+  // assertions and `tools/testdata`, which name the same dependency so that
+  // they move in the same PR. Each one has a comment on the line before it:
+  //   # renovate: datasource=<datasource> depName=<name> [versioning=<v>] [registryUrl=<url>] [extractVersion=<regex>]
+  // with the optional fields in that order, followed by `NAME: "x"`,
+  // `NAME="x"` or `NAME = "x"`.
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Versions annotated with a `# renovate:` comment",
+      "managerFilePatterns": [
+        "/\\.ya?ml$/",
+        "/^tools/test-all-ff$/",
+        "/^tests/ats/conftest\\.py$/",
+        "/^tests/ats/kyverno_install\\.py$/",
+        "/^tests/ats/external_secrets\\.py$/",
+        "/^tests/ats/flux_operator_install\\.py$/",
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?(?: registryUrl=(?<registryUrl>\\S+))?(?: extractVersion=(?<extractVersion>\\S+))?\\s*\\n\\s*[A-Za-z_][A-Za-z0-9_]*\\s*[:=]\\s*\"(?<currentValue>[^\"]+)\"",
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver-coerced{{/if}}",
+    },
+  ],
+  "packageRules": [
+    {
+      // Staging and prod each get their own PR for each version their stage
+      // pins (hello-world and the release), on a `renovate/staging-*` and a
+      // `renovate/prod-*` branch. Dev follows a semver range for hello-world,
+      // so the other PR moves the bases, the out-of-band examples
+      // and dev's release; staging's and prod's stage patches keep the old
+      // version until their own PR is merged. Merging them in turn promotes a
+      // version from dev to staging to prod. The files are the stage and the
+      // kind test's assertions for every cluster of that stage. Charts the
+      // stages take from the bases unpatched, such as envoy-gateway, are not
+      // stage pins: their assertions stay in the other PR, which changes what
+      // every stage renders. A new stage patch needs its dependency added to
+      // `matchDepNames`, and a cluster or pin in another path needs that path
+      // added to `matchFileNames`.
+      "description": "Update staging's own pins in a separate PR, merged by hand after dev",
+      "matchDepNames": [
+        "gsoci.azurecr.io/charts/giantswarm/hello-world",
+        "gsoci.azurecr.io/charts/giantswarm/release-aws",
+      ],
+      "matchFileNames": [
+        "bases/environments/stages/staging/**",
+        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-staging-*/**",
+      ],
+      "additionalBranchPrefix": "staging-",
+      "commitMessageSuffix": "in staging",
+      // The preset automerges patch updates; staging waits for dev.
+      "automerge": false,
+    },
+    {
+      "description": "Update prod's own pins in a separate PR, merged by hand after staging",
+      "matchDepNames": [
+        "gsoci.azurecr.io/charts/giantswarm/hello-world",
+        "gsoci.azurecr.io/charts/giantswarm/release-aws",
+      ],
+      "matchFileNames": [
+        "bases/environments/stages/prod/**",
+        "tests/ats/assertions/exists/organizations/workload-clusters/hello-app-prod-*/**",
+      ],
+      "additionalBranchPrefix": "prod-",
+      "commitMessageSuffix": "in prod",
+      // The preset automerges patch updates; prod waits for staging.
+      "automerge": false,
+    },
+    {
+      // A Giant Swarm release update rolls the cluster's nodes, which must
+      // not happen unattended. Its PRs, staging's, prod's and the others, are
+      // never automerged, whatever the update type. Chart updates keep the
+      // preset's behaviour: patch updates automerge.
+      "description": "Never automerge a Giant Swarm release update: it rolls nodes",
+      "matchDepNames": ["gsoci.azurecr.io/charts/giantswarm/release-aws"],
+      "automerge": false,
+    },
+    // The pins below stand for what the management clusters run, not for the
+    // newest upstream release: the Kubernetes and Flux schemas in
+    // `tools/test-all-ff`, the Cluster API CRDs and the vCluster's Kubernetes
+    // in `tests/ats/conftest.py`, and `kind_ver` in `validate.yaml`, whose
+    // default node image sets the kind cluster's Kubernetes. Their `# renovate:`
+    // comments name the upstream releases, so `allowedVersions` holds each one
+    // where the management clusters are. When the platform moves, raise the
+    // bound here and Renovate proposes the new version. Flux and Cluster API
+    // are bounded at the exact version that flux-app and cluster-api-app ship;
+    // Kubernetes and kind at the minor version, as a patch release changes no
+    // schema the checks use.
+    {
+      "description": "Flux: the version flux-app ships on the management clusters (flux-app 1.12.2)",
+      "matchDepNames": ["fluxcd/flux2"],
+      "allowedVersions": "<=2.7.5",
+      // The schemas' checksum is set by hand.
+      "automerge": false,
+    },
+    {
+      "description": "Cluster API: the version cluster-api-app ships on the management clusters (v9.0.4)",
+      "matchDepNames": ["kubernetes-sigs/cluster-api"],
+      "allowedVersions": "<=1.14.4",
+    },
+    {
+      "description": "Kubernetes: the minor version of the management clusters",
+      "matchDepNames": ["kubernetes/kubernetes", "ghcr.io/loft-sh/kubernetes"],
+      "allowedVersions": "<1.37.0",
+    },
+    {
+      "description": "kind: the release whose default node image runs the management clusters' Kubernetes minor version",
+      "matchDepNames": ["kubernetes-sigs/kind"],
+      "allowedVersions": "<0.33.0",
+    },
+    {
+      // `.github/workflows/chainsaw.yaml` pins Chainsaw's version next to the
+      // checksum of its archive, which Renovate doesn't update. Nothing in CI
+      // runs that workflow, so no check catches a stale checksum: the PR
+      // waits for a person to set it.
+      "description": "Never automerge a Chainsaw update: its checksum is set by hand",
+      "matchDepNames": ["kyverno/chainsaw"],
+      "automerge": false,
+    },
+    {
+      // The WC_NAME_IMAGE_AUTOMATION example's helloworld tag, in its
+      // `out-of-band/` and in the kind test's assertion, is Flux image
+      // automation's to update, not Renovate's. The template pins it a tag
+      // behind the newest on purpose, so the kind test always has an update
+      // to push; a Renovate PR would leave it nothing to do.
+      "description": "Leave the image automation example's helloworld tag to Flux",
+      "matchDepNames": ["gsoci.azurecr.io/giantswarm/helloworld"],
+      "enabled": false,
+    },
+  ],
 }

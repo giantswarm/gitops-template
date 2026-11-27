@@ -3,11 +3,16 @@ apiVersion: v1
 data:
   values: |
     global:
+      connectivity:
+        network: {}
+        topology: {}
+      controlPlane: {}
       metadata:
         description: description
         name: hello-app-staging-1
         organization: org-name
         preventDeletion: true
+      providerSpecific: {}
 kind: ConfigMap
 metadata:
   name: hello-app-staging-1-config
@@ -16,17 +21,32 @@ metadata:
 apiVersion: v1
 data:
   values: |
+    global:
+      providerSpecific:
+        region: eu-central-1
+kind: ConfigMap
+metadata:
+  name: hello-app-staging-1-region-config
+  namespace: org-org-name
+---
+apiVersion: v1
+data:
+  values: |
+    # replaces the hello-world App Template's default_config.yaml
     autoscaling:
-      minReplicas: 3
+      minReplicas: 2
     ingress:
       enabled: false
     route:
       enabled: true
       kind: HTTPRoute
-      parentRefs: # has to be in sync with the Gateway served by the cluster's Envoy Gateway
+      # the Gateway gateway_api_config.yaml configures
+      parentRefs:
         - name: giantswarm-default
           namespace: envoy-gateway-system
-      hostnames: # under the cluster's base domain and in the Gateway's `listeners.https.subdomains`
+      # under the cluster's base domain and in gateway_api_config.yaml's
+      # `listeners.https.subdomains`
+      hostnames:
         - "hello.{{ .Values.baseDomain }}"
 kind: ConfigMap
 metadata:
@@ -38,21 +58,25 @@ data:
   values: ""
 kind: ConfigMap
 metadata:
-  name: hello-app-staging-1-user-config
+  name: hello-app-staging-1-cluster-userconfig
   namespace: org-org-name
 ---
 apiVersion: v1
 data:
   values: |
+    # replaces the envoy-gateway stack's default_config_gateway_api_config.yaml
     gateways:
       default:
+        # hello_world.yaml's `route.parentRefs` attaches hello-world's HTTPRoute to
+        # this Gateway
+        name: giantswarm-default
         listeners:
           https:
-            # DNS record and certificate entry for the hello-world app's hostname,
-            # `hello.<cluster base domain>`
+            # DNS record and certificate entry for hello_world.yaml's
+            # `route.hostnames`, `hello.<cluster base domain>`
             subdomains:
               - hello
 kind: ConfigMap
 metadata:
-  name: hello-app-staging-1-gateway-api-config-user-values
+  name: hello-app-staging-1-gateway-api-config-values
   namespace: org-org-name

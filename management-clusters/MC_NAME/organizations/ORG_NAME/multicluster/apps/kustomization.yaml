@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+kind: Kustomization
+labels:
+  - pairs:
+      giantswarm.io/managed-by: flux
+# clusters.yaml gives every ResourceSet here the list of clusters to install on.
+# To give one app a list of its own, add a patch after it that targets that
+# ResourceSet by name and sets its `spec.inputs`.
+patches:
+  - path: clusters.yaml
+    target:
+      kind: ResourceSet
+resources:
+  - hello-world-scheduled/input-provider.yaml
+  - hello-world-scheduled/resource-set.yaml

@@ -1,22 +1,30 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: mc-name-gitops  # TODO: change "mc-name" to your Management Cluster name
+  # It applies itself, so renaming it would make it prune itself, and its
+  # finalizer would delete everything it applied. The annotation leaves it, as
+  # it does each organisation's namespace and multicluster apps Kustomizations.
+  # See docs/explanation/deletion-protection.md.
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  name: mc-name-gitops  # TODO: change "mc-name" to your management cluster's name
   namespace: default
 spec:
   decryption:
     provider: sops
     secretRef:
       name: sops-gpg-master
-  interval: 1m0s
+  interval: 10m0s
   path: ./management-clusters/MC_NAME
-  # Top level kustomizations may have prune set to `true`
-  # only if they do not handle cluster creation.
-  #
-  # Where cluster creation is being handled, this should default to false
-  prune: false
+  # Flux deletes what you delete from Git. The objects whose deletion would
+  # delete a cluster, the Organizations, the cluster HelmReleases and the SOPS
+  # keys, have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation, so
+  # Flux leaves them, and the `giantswarm.io/prevent-deletion` label, so nobody
+  # can delete them until it's removed. See docs/explanation/deletion-protection.md.
+  prune: true
+  retryInterval: 1m0s
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
   timeout: 2m0s

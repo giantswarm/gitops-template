@@ -1,0 +1,26 @@
+apiVersion: v1
+data:
+  values: |-
+    sources:
+    - name: my-repository
+      interval: 1m
+      branch: main
+      url: https://github.com/my-repository
+      provider: github
+      # placeholders: real credentials don't belong in a ConfigMap, put them in the
+      # ${cluster_name}-flux-app-user-secrets Secret, encrypted with SOPS, which the HelmRelease reads too
+      credentials:
+        username: fakeuser
+        password: faketoken
+    kustomizations:
+    - name: my-kustomizations
+      interval: 10m
+      path: "./management-clusters/MC_NAME/organizations/${organization}/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/out-of-band"
+      prune: true
+      source_name: my-repository
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: ${cluster_name}-flux-app-user-values
+  namespace: org-${organization}

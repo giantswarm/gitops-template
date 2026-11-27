@@ -1,0 +1,196 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-app-prod-usw-gateway-api-bundle
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-prod-usw-gateway-api-bundle
+    namespace: org-org-name
+  install:
+    disableWait: true
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  releaseName: hello-app-prod-usw-gateway-api-bundle
+  serviceAccountName: automation
+  storageNamespace: org-org-name
+  targetNamespace: org-org-name
+  timeout: 10m
+  uninstall:
+    timeout: 12m
+  upgrade:
+    disableWait: true
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-prod-usw-gateway-api-bundle-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-gateway-api-bundle-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-prod-usw-gateway-api-bundle-user-secrets
+      optional: true
+      valuesKey: values
+---
+# One of the HelmReleases the bundle creates, for the Gateway. Its values come from the
+# ConfigMaps and the Secret the stack lists in the bundle's `extraConfigs`, in this order.
+# The bundle sets the chart's version, so it isn't repeated here. Installs retry forever, the
+# bundle's default, and upgrades roll back as the stack's bundle values say.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: hello-app-prod-usw-gateway-api-bundle
+  name: hello-app-prod-usw-gateway-api-config
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-prod-usw-gateway-api-config
+  dependsOn:
+    - name: hello-app-prod-usw-envoy-gateway
+      namespace: org-org-name
+  install:
+    remediation:
+      retries: -1
+  kubeConfig:
+    secretRef:
+      name: hello-app-prod-usw-kubeconfig
+  releaseName: gateway-api-config
+  storageNamespace: envoy-gateway-system
+  targetNamespace: envoy-gateway-system
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-prod-usw-cluster-values
+      optional: true
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-gateway-api-config-values
+      optional: false
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-gateway-api-config-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-prod-usw-gateway-api-config-user-secrets
+      optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-app-prod-usw-hello-world
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-prod-usw-hello-world
+    namespace: org-org-name
+  dependsOn:
+    - name: hello-app-prod-usw-gateway-api-crds
+  install:
+    createNamespace: true
+    remediation:
+      remediateLastFailure: false
+      retries: 10
+  interval: 5m
+  kubeConfig:
+    secretRef:
+      name: hello-app-prod-usw-kubeconfig
+  releaseName: hello-world
+  storageNamespace: hello-world
+  targetNamespace: hello-world
+  timeout: 10m
+  upgrade:
+    remediation:
+      remediateLastFailure: true
+      retries: 10
+      strategy: rollback
+  valuesFrom:
+    - kind: ConfigMap
+      name: hello-app-prod-usw-cluster-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-hello-world-values
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-hello-world-user-values
+      optional: true
+      valuesKey: values
+    - kind: Secret
+      name: hello-app-prod-usw-hello-world-user-secrets
+      optional: true
+      valuesKey: values
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-app-prod-usw
+  namespace: org-org-name
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: hello-app-prod-usw
+    namespace: org-org-name
+  install:
+    remediation:
+      remediateLastFailure: false
+  interval: 5m0s
+  releaseName: hello-app-prod-usw
+  serviceAccountName: automation
+  storageNamespace: org-org-name
+  targetNamespace: org-org-name
+  timeout: 10m0s
+  upgrade:
+    remediation:
+      remediateLastFailure: false
+      retries: 0
+  valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
+      name: hello-app-prod-usw-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-region-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-region-node-pool-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: hello-app-prod-usw-cluster-userconfig
+      valuesKey: values

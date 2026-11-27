@@ -1,0 +1,51 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-no-flux
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-no-flux-hello-world
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.4
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-no-flux
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-no-flux-hello-world-standalone
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.4
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-no-flux
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-no-flux-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-no-flux-hello-world-app-auto
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    semver: '>=3.2.2 <4.0.0'
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

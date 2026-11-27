@@ -1,0 +1,59 @@
+name: chainsaw
+
+# An example of running the Chainsaw tests in tests/chainsaw against a
+# management cluster, as a step of its own. This repository doesn't run it: it
+# has no trigger but a manual one, and no CHAINSAW_KUBECONFIG secret. To use it
+# in your repository, set the secret to a kubeconfig for your management
+# cluster and run the workflow from the Actions tab, or add the triggers you
+# want. See docs/tutorials/advanced/testing.md, "Test with Chainsaw".
+
+on:
+  workflow_dispatch:
+    inputs:
+      values:
+        description: The values file that names the objects the tests check
+        type: string
+        default: tests/chainsaw/values.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  chainsaw:
+    runs-on: ubuntu-latest
+    env:
+      # renovate: datasource=github-releases depName=kyverno/chainsaw extractVersion=^v(?<version>.+)$
+      CHAINSAW_VERSION: "0.2.15"
+      # The checksum of the release's chainsaw_linux_amd64.tar.gz, from its
+      # checksums.txt. Renovate doesn't update it: set it in Renovate's pull
+      # request.
+      CHAINSAW_SHA256: "295d226c89f126c0a97775d364be149f47a810c8a3f9829ee410583d0c1abe3c"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: install Chainsaw
+        run: |
+          archive="${RUNNER_TEMP}/chainsaw.tar.gz"
+          curl -sSfL -o "${archive}" \
+            "https://github.com/kyverno/chainsaw/releases/download/v${CHAINSAW_VERSION}/chainsaw_linux_amd64.tar.gz"
+          echo "${CHAINSAW_SHA256}  ${archive}" | sha256sum -c
+          tar -xzf "${archive}" -C "${RUNNER_TEMP}" chainsaw
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+      - name: write the kubeconfig
+        env:
+          CHAINSAW_KUBECONFIG: ${{ secrets.CHAINSAW_KUBECONFIG }}
+        run: |
+          if [ -z "${CHAINSAW_KUBECONFIG}" ]; then
+            echo "::error::Set the CHAINSAW_KUBECONFIG secret to a kubeconfig for the management cluster."
+            exit 1
+          fi
+          install -m 600 /dev/null "${RUNNER_TEMP}/kubeconfig"
+          printf '%s\n' "${CHAINSAW_KUBECONFIG}" > "${RUNNER_TEMP}/kubeconfig"
+      - name: run the Chainsaw tests
+        env:
+          KUBECONFIG: ${{ runner.temp }}/kubeconfig
+          VALUES: ${{ inputs.values }}
+        # A management cluster doesn't let you create namespaces, so the tests
+        # run in `default` instead of a namespace of their own.
+        run: chainsaw test tests/chainsaw --values "${VALUES}" --namespace default

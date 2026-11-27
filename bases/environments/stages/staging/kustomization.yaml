@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# (optional) pin the hello-world version and the Giant Swarm release that
+# staging runs; the hello-world patch overrides the one in bases/stacks/hello-web.
+# Renovate updates these pins in a pull request of their own, on a
+# `renovate/staging-*` branch, that isn't automerged: merge it to promote a
+# version that dev has run.
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
+        value: "3.2.4"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}-hello-world
+  # the Giant Swarm release the clusters of this stage run
+  - patch: |-
+      - op: replace
+        path: /spec/ref/tag
+        # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
+        value: "36.1.1"
+    target:
+      kind: OCIRepository
+      name: \${cluster_name}
+# block end

@@ -1,0 +1,87 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: readiness-ordering
+spec:
+  description: >-
+    Along a workload cluster's chain, each object is linked to the one before it and is Ready:
+    the Cluster, the cluster's Kustomization that waits for its control plane, the apps
+    Kustomization that depends on that one, and a HelmRelease that depends on another. The
+    steps run in that order, so a failure names the first object of the chain that isn't Ready
+    or isn't linked. The checks look only for the links they need, so the objects can have
+    other health checks and dependencies, too.
+  timeouts:
+    assert: 2m
+  steps:
+    - name: the cluster's control plane is available and reachable
+      try:
+        - assert:
+            resource:
+              apiVersion: cluster.x-k8s.io/v1beta2
+              kind: Cluster
+              metadata:
+                name: ($values.cluster)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'ControlPlaneAvailable']):
+                  - status: "True"
+                (conditions[?type == 'RemoteConnectionProbe']):
+                  - status: "True"
+    - name: the cluster's Kustomization waits for the cluster and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: kustomize.toolkit.fluxcd.io/v1
+              kind: Kustomization
+              metadata:
+                name: ($values.kustomizations.cluster)
+                namespace: ($values.kustomizations.namespace)
+              spec:
+                # Flux checks this Cluster, and counts a Cluster as healthy once its control plane
+                # is available and reachable
+                (length(healthChecks[?kind == 'Cluster' && name == $values.cluster && namespace == $values.organizationNamespace]) > `0`): true
+                (length(healthCheckExprs[?kind == 'Cluster' && contains(current, `"c.type == 'ControlPlaneAvailable' && c.status == 'True'"`)]) > `0`): true
+                (length(healthCheckExprs[?kind == 'Cluster' && contains(current, `"c.type == 'RemoteConnectionProbe' && c.status == 'True'"`)]) > `0`): true
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the apps Kustomization depends on the cluster's and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: kustomize.toolkit.fluxcd.io/v1
+              kind: Kustomization
+              metadata:
+                name: ($values.kustomizations.apps)
+                namespace: ($values.kustomizations.namespace)
+              spec:
+                (contains(dependsOn[].name, $values.kustomizations.cluster)): true
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the HelmRelease the other depends on is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: ($values.helmReleases.dependency)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the dependant HelmRelease depends on it and is Ready
+      try:
+        - assert:
+            resource:
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: ($values.helmReleases.dependant)
+                namespace: ($values.organizationNamespace)
+              spec:
+                (contains(dependsOn[].name, $values.helmReleases.dependency)): true
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"

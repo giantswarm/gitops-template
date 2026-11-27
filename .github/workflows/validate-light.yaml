@@ -1,0 +1,94 @@
+name: validate light
+
+# Called by validate.yaml, in place of the shared gitops-validate workflow,
+# for a pull request that changes nothing validate or the kind test reads (see
+# tests/ats/ci_scope.py). Its jobs have the names of gitops-validate's jobs, so
+# such a pull request reports the same required checks: check-pre-commit runs
+# the pre-commit hooks as gitops-validate does, and validate and test_on_kind
+# are skipped, as the change can't alter what they build or apply. One job is
+# its own: test_without_cluster runs the tests of tests/ats that need no
+# cluster, which test_on_kind runs in the full run. Some of them read a
+# comment or a Markdown file word for word, which a light pull request may
+# change.
+
+on:
+  workflow_call: {}
+
+permissions: {}
+
+jobs:
+  check-pre-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - run: sudo snap install shfmt
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: cache pre-commit environment
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-gitops-validate-${{ hashFiles('.pre-commit-config.yaml') }}
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+
+  # The tests in tests/ats that need no cluster, set up as test_on_kind sets up
+  # the whole suite: Python, and the packages tests/ats/Pipfile.lock pins.
+  # test_flux_objects.py is the one module that needs the kind cluster. The
+  # tests need no secret, so they run on a pull request from a fork too.
+  test_without_cluster:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # The tests build kustomizations with `kubectl kustomize`, of the
+      # management clusters' Kubernetes version, as in tools/test-all-ff.
+      # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
+      KUBECTL_VERSION: "1.36.5"
+      # renovate: datasource=pypi depName=pipenv
+      PIPENV_VERSION: "2026.10.6"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # Matches [requires] python_version in tests/ats/Pipfile.
+          # renovate: datasource=python-version depName=python versioning=python
+          python-version: "3.12"
+      - name: install kubectl
+        run: |
+          bin="${RUNNER_TEMP}/bin"
+          url="https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          mkdir -p "${bin}"
+          curl -fsSL -o "${bin}/kubectl" "${url}"
+          echo "$(curl -fsSL "${url}.sha256")  ${bin}/kubectl" | sha256sum --check --strict
+          chmod +x "${bin}/kubectl"
+          echo "${bin}" >> "${GITHUB_PATH}"
+          "${bin}/kubectl" version --client
+      - name: install the test environment
+        working-directory: tests/ats
+        run: |
+          python -m pip install --quiet "pipenv==${PIPENV_VERSION}"
+          pipenv install --deploy
+      - name: run the tests that need no cluster
+        working-directory: tests/ats
+        env:
+          KUBECONFIG: /dev/null
+        run: pipenv run pytest . --ignore=test_flux_objects.py
+
+  validate:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: echo "Skipped, as the pull request changes nothing this job reads."
+
+  test_on_kind:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - run: echo "Skipped, as the pull request changes nothing this job reads."

@@ -1,0 +1,31 @@
+# Applies apps/: the organisation's apps that roll out to several of its
+# workload clusters, one ResourceSet each, to the clusters in apps/clusters.yaml.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  # Flux leaves it when its file goes or it's renamed. Without the annotation,
+  # Flux would delete it, and its finalizer the ResourceSets, which uninstall
+  # their apps from every cluster. See docs/explanation/deletion-protection.md.
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  name: mc-name-multicluster-apps-org-name  # TODO: change 'mc-name' to your management cluster's name and 'org-name' to your organisation's name; must be a valid resource name (DNS-like)
+  namespace: default
+spec:
+  # The management cluster's Kustomization reads the same GitRepository, so Flux
+  # applies a commit here only once that one is Ready at the same revision, as
+  # it does for ../namespace.yaml: this Kustomization's own spec is up to date
+  # before it applies the commit.
+  dependsOn:
+    - name: mc-name-gitops  # TODO: change "mc-name" to your management cluster's name, as in MC_NAME.yaml
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/multicluster/apps"
+  postBuild:
+    substitute:
+      organization: "ORG_NAME"  # ../kustomization.yaml sets it from the Organization's name
+  prune: true
+  retryInterval: 1m
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
+  timeout: 2m

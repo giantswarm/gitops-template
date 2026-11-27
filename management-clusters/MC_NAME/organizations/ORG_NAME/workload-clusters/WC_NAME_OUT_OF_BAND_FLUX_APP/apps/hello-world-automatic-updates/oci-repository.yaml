@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+  name: ${cluster_name}-hello-world-app-auto
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    # newest stable release from 3.2.2, the first that accepts the cluster values,
+    # up to the next major version
+    semver: '>=3.2.2 <4.0.0'
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world

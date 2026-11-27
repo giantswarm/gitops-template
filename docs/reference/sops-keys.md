@@ -1,8 +1,10 @@
 # SOPS keys
 
-If you keep secrets in the repository, you encrypt them with [SOPS](https://github.com/getsops/sops) and GPG keys,
-and Flux decrypts them when it applies them. This page explains which keys there are, where they live and which
-files each one decrypts. For the steps, see [Getting started with SOPS](../getting-started-sops.md).
+If you keep secrets in the repository, you encrypt them with [SOPS](https://github.com/getsops/sops) and GPG or
+[age](https://github.com/FiloSottile/age) keys, and Flux decrypts them when it applies them. This page explains which
+keys there are, where they live and which files each one decrypts. For the steps, see
+[Keep secrets in the repository](../how-to/sops.md). For which secrets belong in the repository and which in a secret
+manager, see [Secrets](../explanation/secrets.md).
 
 ## The master key
 
@@ -11,37 +13,101 @@ Each management cluster has its own GPG key pair, the master key:
 - Its public key is in `management-clusters/MC_NAME/.sops.keys`, unencrypted.
 - Its private key is in the `MC_NAME.gpgkey.enc.yaml` Secret, encrypted with the master key itself.
 
-Flux uses it to decrypt the files that the `MC_NAME.yaml` Kustomization applies, everything up to and including the
-`workload-clusters` directory. Use it to encrypt the other keys, so you can keep them in the repository too.
+Flux uses it to decrypt the files that the `MC_NAME.yaml` Flux `Kustomization` applies, and the ones each
+organisation's namespace `Kustomization`, `namespace.yaml`, applies from the organisation's `namespace` directory, the
+workload clusters' keys among them. Use it to encrypt the other keys, so you can keep them in the repository too.
 
 ## Workload cluster keys
 
 To encrypt files of a workload cluster, add a key pair for it:
 
 - Its public key goes into `.sops.keys`, unencrypted.
-- Its private key goes into the `WC_NAME.gpgkey.enc.yaml` Secret in the management cluster's `secrets` directory,
-  encrypted with the master key.
+- Its private key goes into the `WC_NAME.gpgkey.enc.yaml` Secret in the organisation's `namespace/secrets`
+  directory, in the organisation's namespace, encrypted with the master key.
 
-The `WC_NAME.yaml` Kustomization references that Secret in `spec.decryption` and uses it to decrypt what it applies,
-the `WC_NAME/mapi` directory.
+The cluster's two `Kustomization`s, which the organisation's namespace `Kustomization` applies, reference that Secret
+in `spec.decryption` and use it to decrypt what they apply: `WC_NAME.yaml` the `WC_NAME/cluster` directory, and
+`WC_NAME-apps.yaml` the `WC_NAME` directory, whose `kustomization.yaml` lists `apps/`. A `Kustomization` reads the
+Secret in its own namespace, so the key has to be in the organisation's namespace with them.
 
 ```text
                 MC_NAME.yaml
                      |
                  (creates) <---(decrypts with)--- MC_NAME.gpgkey.enc.yaml
                      |
-  OTHER_RESOURCES <--+--> WC_NAME.yaml
+  OTHER_RESOURCES <--+--> namespace.yaml
                                |
-                           (creates) <---(decrypts with)--- WC_NAME.gpgkey.enc.yaml
+                           (creates) <---(decrypts with)--- MC_NAME.gpgkey.enc.yaml
                                |
-                               ˅
-                         OTHER_RESOURCES
+           WC_NAME.gpgkey.enc.yaml <--+--> WC_NAME.yaml, WC_NAME-apps.yaml
+                                                |
+                                            (creates) <---(decrypts with)--- WC_NAME.gpgkey.enc.yaml
+                                                |
+                                                ˅
+                                          OTHER_RESOURCES
 ```
+
+## age keys
+
+A workload cluster key can be an age key instead of a GPG key; age keys are simpler to create and handle. See
+[age or GPG](#age-or-gpg) for how they compare. The master key stays a GPG key, because
+`kubectl gs gitops add management-cluster` creates one, and it encrypts the age key like the GPG keys:
+
+- Its public key goes into `.sops.keys` as `.sops.WC_NAME.agekey.pub`, unencrypted.
+- Its private key goes into the `WC_NAME.agekey.enc.yaml` Secret in the organisation's `namespace/secrets`
+  directory, under a key that ends in `.agekey`, encrypted with the master key.
+
+The cluster's `Kustomization`s name that Secret in `spec.decryption`. In the example tree, the `WC_NAME` cluster
+uses an age key: `WC_NAME.yaml` and `WC_NAME-apps.yaml` decrypt with the `sops-age-wc-name` Secret, and
+`WC_NAME-apps.yaml` decrypts `apps/cert-manager/secret.enc.yaml` with it. For the steps, see
+[Add a workload cluster key (age)](../how-to/sops.md#add-a-workload-cluster-key-age).
+
+A `Kustomization` reads one Secret. To decrypt with a GPG key and an age key, put both private keys into it.
+
+## age or GPG
+
+### Security
+
+An age key isn't weaker than a GPG key. SOPS encrypts the values in a file with AES-256-GCM and a data key made for
+that file, whichever key you use. The age or GPG key only encrypts that data key:
+
+- An age key encrypts it with X25519 and ChaCha20-Poly1305.
+- A GPG key encrypts it with the key's own algorithm. The GPG keys in these docs use an ECDH subkey on `cv25519`;
+  Flux's SOPS guide creates an RSA-4096 key.
+
+With a strong GPG key, the algorithm is not where either falls short. GPG leaves the choice to you, and SOPS doesn't
+restrict it, so a weak key, such as a short RSA key, weakens every file encrypted for it. age has no options to get
+wrong. Keep in mind:
+
+- Neither the age keys nor the GPG keys in these docs are post-quantum.
+- An age key is a single key pair. It has no expiry date, no subkeys and no revocation certificate; you retire it by
+  removing it from `.sops.yaml` and the Secret.
+- The bigger risk is how you handle the key, not the algorithm: SOPS's threat model ranks a leaked key above a weak
+  one. Flux needs the private key without a passphrase, in a Secret on the management cluster, so anyone who can
+  read that Secret can decrypt the files. Limit who can read Secrets in its namespace with RBAC, keep the backup of
+  the private key encrypted and offline, and if a key leaks, remove it from `.sops.yaml`, then run
+  `sops updatekeys` and `sops rotate --in-place` on every file encrypted for it.
+
+### Which to pick
+
+Pick age if you have no reason to use GPG. Its keys are one line each, there is no keyring to import them into, and
+`age-keygen` creates one with a single command, so a key per cluster costs little to create and replace. The SOPS and
+Flux docs both recommend age over OpenPGP where you can use it.
+
+Pick GPG if your organisation already manages OpenPGP keys, if people keep their keys on smart cards, as SOPS's
+security notes advise for GPG keys, if you want keys that expire or have subkeys, or if a policy asks for OpenPGP or
+a specific set of algorithms.
+
+You don't have to choose once. A rule in `.sops.yaml` can list a `pgp` and an `age` key; SOPS encrypts the data key
+for each, and either can decrypt the file. To move from one to the other, add the new key to the rule and run
+`sops updatekeys` on each file, then remove the old key and run it again.
 
 ## Encryption rules
 
-`.sops.yaml` at the repository root tells SOPS which key encrypts which files. With one key for the management
-cluster and one for a workload cluster, it looks like this:
+`.sops.yaml` at the repository root tells SOPS which key encrypts which files. SOPS uses the first rule whose
+`path_regex` matches a file. With one key for the management cluster, a GPG key for one workload cluster and an age key
+for another, it looks like this. The second rule encrypts the workload clusters' keys, in their organisation's
+`namespace/secrets`, with the master key:
 
 ```yaml
 creation_rules:
@@ -49,14 +115,21 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/[^/]+/namespace/secrets/.*\.(gpg|age)key\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000001
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/(cluster|apps)/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000002
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo1/(cluster|apps)/.*\.enc\.yaml
+    age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 ```
 
 ## More keys
 
-You can add more private keys to either Secret, for example one key for an organization and one for each app. Each
-key needs its own rule in `.sops.yaml`:
+You can add more private keys to either Secret, for example one key for an organisation and one for each app. For the
+steps, see [Add an organisation key](../how-to/sops.md#add-an-organisation-key). Each key needs its own rule in
+`.sops.yaml`:
 
 ```yaml
 creation_rules:
@@ -64,15 +137,20 @@ creation_rules:
     path_regex: management-clusters/demomc/secrets/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000001 # master key
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/secrets/.*\.enc\.yaml
-    pgp: 0000000000000000000000000000000000000002 # organization key
+    path_regex: management-clusters/demomc/organizations/[^/]+/namespace/secrets/.*\.(gpg|age)key\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000001 # master key, for the workload clusters' keys
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/mapi/apps/app1/.*\.enc\.yaml
+    path_regex: management-clusters/demomc/organizations/demo-gitops/namespace/secrets/.*\.enc\.yaml
+    pgp: 0000000000000000000000000000000000000002 # organisation key
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/demomc/organizations/demo-gitops/workload-clusters/demo0/apps/app1/.*\.enc\.yaml
     pgp: 0000000000000000000000000000000000000003 # app1 key
 ```
 
-The organization key decrypts files that `MC_NAME.yaml` applies, so it goes into the master Secret. The app key
-goes into the workload cluster's Secret:
+The organisation key decrypts files that the organisation's namespace `Kustomization`, `namespace.yaml`, applies. That
+`Kustomization` decrypts with the master Secret, as `MC_NAME.yaml` does, so the key goes into the master Secret. Its
+rule comes after the one for the workload clusters' keys, which would otherwise be encrypted with the organisation key
+instead of the master key. The app key goes into the workload cluster's Secret:
 
 ```yaml
 ## MC_NAME.gpgkey.enc.yaml ##

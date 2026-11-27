@@ -1,0 +1,28 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ${cluster_name}-hello-team
+  namespace: org-${organization}
+spec:
+  # the team's namespace and its RoleBinding, in out-of-band/teams
+  dependsOn:
+    - name: mc-name-clusters-out-of-band-no-flux-direct  # TODO: the name of the cluster's -direct Kustomization
+  interval: 10m
+  # applies to the workload cluster
+  kubeConfig:
+    secretRef:
+      name: ${cluster_name}-kubeconfig
+  path: ./kustomize  # TODO: the directory in the team's repository
+  prune: true
+  retryInterval: 1m
+  # With kubeConfig, Flux impersonates this ServiceAccount of the Kustomization's namespace in
+  # the workload cluster: the organisation's automation ServiceAccount, which Giant Swarm
+  # provides. Every team of the organisation on this cluster runs as it, and it is admin in
+  # each of their namespaces.
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: ${cluster_name}-hello-team
+  # everything in the team's repository goes into the team's namespace
+  targetNamespace: hello-team
+  timeout: 2m

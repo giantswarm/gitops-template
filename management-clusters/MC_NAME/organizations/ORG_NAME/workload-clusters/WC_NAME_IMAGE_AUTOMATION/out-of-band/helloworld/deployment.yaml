@@ -1,0 +1,63 @@
+# A plain Deployment, applied to the workload cluster by the -direct Kustomization, without
+# Helm. The image automation in ../../image-automation writes the newest tag its
+# ImagePolicy allows into the `image` line, as the setter comment at its end says:
+# `<namespace>:<name>` of the ImagePolicy. Flux reads that comment from the file in Git, before
+# any variable is substituted, so it names the organisation's namespace in full.
+# TODO: change `org-org-name` to your organisation's namespace and `image-automation` to your
+# cluster name in the setter comment.
+#
+# The template pins helloworld a tag behind the newest on purpose, so the kind test always has
+# an update to push. Renovate leaves the tag alone (see renovate.json5): the image automation
+# is what updates it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helloworld
+  namespace: default
+  labels:
+    app.kubernetes.io/name: helloworld
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: helloworld
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: helloworld
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: helloworld
+          image: gsoci.azurecr.io/giantswarm/helloworld:0.6.0 # {"$imagepolicy": "org-org-name:image-automation-helloworld"}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true

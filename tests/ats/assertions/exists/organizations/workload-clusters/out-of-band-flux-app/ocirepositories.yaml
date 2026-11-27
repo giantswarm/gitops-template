@@ -1,0 +1,68 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-flux-app-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-flux-app-hello-world
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.4
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-flux-app-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-flux-app-hello-world-standalone
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.4
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-flux-app-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-flux-app-hello-world-app-auto
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    semver: '>=3.2.2 <4.0.0'
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: out-of-band-flux-app
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-out-of-band-flux-app-apps
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: out-of-band-flux-app-flux
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 1.12.2
+  url: oci://gsoci.azurecr.io/charts/giantswarm/flux-app

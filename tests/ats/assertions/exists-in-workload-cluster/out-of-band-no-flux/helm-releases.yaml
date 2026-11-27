@@ -1,0 +1,139 @@
+# The main workload of each HelmRelease of the out-of-band-no-flux cluster, installed into
+# the workload cluster through the out-of-band-no-flux-kubeconfig Secret.
+# `helmRelease` names the HelmRelease (`namespace/name`) whose main workload the object is. It
+# isn't a field of the object, so the comparison skips it. test_workload_cluster_assertions
+# fails when an H3a HelmRelease has no object here that names it, and checks that every
+# Deployment here is available.
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-standalone
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-standalone
+  namespace: hello-world
+  annotations:
+    meta.helm.sh/release-name: hello-world-standalone
+    meta.helm.sh/release-namespace: hello-world
+# from the out-of-band-no-flux-hello-world-standalone-user-secrets Secret, which External
+# Secrets Operator writes
+spec:
+  template:
+    metadata:
+      annotations:
+        example.com/source: secret-manager
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-app-auto
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-app-auto
+  namespace: hello-world-auto
+  annotations:
+    meta.helm.sh/release-name: hello-world-app-auto
+    meta.helm.sh/release-namespace: hello-world-auto
+---
+# of apps/hello-world-from-template, made from the hello-world App Template
+helmRelease: org-org-name/out-of-band-no-flux-hello-world
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  namespace: hello-world
+  annotations:
+    meta.helm.sh/release-name: hello-world
+    meta.helm.sh/release-namespace: hello-world
+---
+# The four releases below are the gateway-api-bundle's: its HelmRelease on the management
+# cluster creates a HelmRelease for each.
+# gateway-api-crds runs no workload: a Job of the chart installs the Gateway API CRDs, which
+# are what the release is for
+helmRelease: org-org-name/out-of-band-no-flux-gateway-api-crds
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gateways.gateway.networking.k8s.io
+---
+helmRelease: org-org-name/out-of-band-no-flux-envoy-gateway
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+  annotations:
+    meta.helm.sh/release-name: envoy-gateway
+    meta.helm.sh/release-namespace: envoy-gateway-system
+---
+# the Gateway the apps attach their routes to. It only has to exist: kind has no load
+# balancer for the Gateway's Service, so the Gateway can't be Programmed.
+helmRelease: org-org-name/out-of-band-no-flux-gateway-api-config
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: giantswarm-default
+  namespace: envoy-gateway-system
+  annotations:
+    meta.helm.sh/release-name: gateway-api-config
+    meta.helm.sh/release-namespace: envoy-gateway-system
+---
+helmRelease: org-org-name/out-of-band-no-flux-gateway-api-state-metrics
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api-state-metrics
+  namespace: envoy-gateway-system
+  annotations:
+    meta.helm.sh/release-name: gateway-api-state-metrics
+    meta.helm.sh/release-namespace: envoy-gateway-system
+---
+# of the organization's hello-world-scheduled ResourceSet, not of the cluster's Kustomizations
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-scheduled
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-scheduled
+  namespace: hello-world-scheduled
+  annotations:
+    meta.helm.sh/release-name: hello-world-scheduled
+    meta.helm.sh/release-namespace: hello-world-scheduled
+---
+# Each hello-world's HTTPRoute, with the hostname of its own that the Gateway lists. kind has
+# no load balancer, so nothing answers at the hostname; the route only has to exist.
+helmRelease: org-org-name/out-of-band-no-flux-hello-world
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world
+  namespace: hello-world
+spec:
+  hostnames:
+    - hello.wc-name.example.com
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-standalone
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world-standalone
+  namespace: hello-world
+spec:
+  hostnames:
+    - hello-standalone.wc-name.example.com
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-app-auto
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world-app-auto
+  namespace: hello-world-auto
+spec:
+  hostnames:
+    - hello-auto.wc-name.example.com
+---
+helmRelease: org-org-name/out-of-band-no-flux-hello-world-scheduled
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hello-world-scheduled
+  namespace: hello-world-scheduled
+spec:
+  hostnames:
+    - hello-scheduled.wc-name.example.com

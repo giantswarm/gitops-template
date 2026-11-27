@@ -1,0 +1,61 @@
+# A ResourceSet that reads its provider through a label selector, so which provider
+# gives its OCIRepository the tag, and with that the chart version, isn't known from
+# the manifest. tools/test-all-ff checks that tools/validate-helm-values says so and
+# fails, rather than rendering the newest chart.
+apiVersion: v1
+data:
+  values: |
+    global:
+      metadata:
+        name: rset-selector
+        organization: demo
+      providerSpecific:
+        region: eu-central-1
+kind: ConfigMap
+metadata:
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+  name: rset-selector-config
+  namespace: org-demo
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: rset-selector
+  namespace: org-demo
+spec:
+  inputsFrom:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      selector:
+        matchLabels:
+          giantswarm.io/cluster: rset-selector
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: rset-selector
+        namespace: org-demo
+      spec:
+        interval: 10m0s
+        ref:
+          tag: << inputs.tag | quote >>
+        url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: rset-selector
+        namespace: org-demo
+      spec:
+        chartRef:
+          kind: OCIRepository
+          name: rset-selector
+          namespace: org-demo
+        interval: 5m0s
+        valuesFrom:
+          - kind: ConfigMap
+            name: cluster-app-installation-values
+            valuesKey: values.yaml
+          - kind: ConfigMap
+            name: rset-selector-config
+            valuesKey: values

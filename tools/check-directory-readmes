@@ -1,0 +1,148 @@
+#!/bin/bash
+set -euo pipefail
+
+function help() {
+	echo -e "
+Check that every directory a customer reads, copies or edits explains itself with a README.
+Must be run from the repository root, or from the directory given as the only argument.
+
+Usage: $0 [dir]
+
+It walks the directories of the files git tracks, staged ones included, in the template's own
+examples: the bases listed in SHIPPED below, management-clusters/ itself, and management-clusters/MC_NAME/
+and everything below it. A customer's own directories, such as their management cluster or a base
+of their own, aren't checked, and neither are tests/, tools/, .github/ and docs/, or a directory git
+doesn't know about yet. Every directory checked needs a tracked README.md (or readme.md), unless
+it's listed in COVERED below: a leaf that's a copy of its siblings' shape, such as a stage or a
+region, which the README of a parent directory covers. That README must name the leaf in
+backticks, as its path relative to the parent followed by a slash, such as \`dev/\`. A leaf in
+COVERED whose parent is gone, such as an example a fork deleted, isn't checked.
+"
+	exit 1
+}
+
+# The directories the template ships in bases/, other than the leaves in COVERED. A base a customer
+#  adds, such as bases/clusters/my-defaults, isn't listed, so it isn't checked.
+SHIPPED=(
+	bases
+	bases/apps
+	bases/clusters
+	bases/clusters/capa
+	bases/environments
+	bases/environments/regions
+	bases/environments/stages
+	bases/secret_stores
+	bases/secret_stores/aws-secrets-manager
+	bases/secret_stores/azure-key-vault
+	bases/shared_objects
+	bases/stacks
+	bases/stacks/envoy-gateway
+	bases/stacks/hello-web
+)
+
+# The leaves a parent README covers, one per line: the parent directory, then the leaf's path
+#  relative to it.
+COVERED=(
+	"bases/apps hello-world"
+	"bases/environments/regions eu_central"
+	"bases/environments/regions eu_central/node_pool"
+	"bases/environments/regions us_west"
+	"bases/environments/regions us_west/node_pool"
+	"bases/environments/stages dev"
+	"bases/environments/stages staging"
+	"bases/environments/stages prod"
+	"bases/stacks/envoy-gateway gateway-api-bundle"
+)
+ORG=management-clusters/MC_NAME/organizations/ORG_NAME
+COVERED+=(
+	"${ORG}/multicluster/apps hello-world-scheduled"
+	"${ORG}/workload-clusters/WC_NAME cluster"
+	"${ORG}/workload-clusters/WC_NAME apps"
+	"${ORG}/workload-clusters/WC_NAME apps/cert-manager"
+	"${ORG}/workload-clusters/WC_NAME_SCHEDULED_UPGRADES cluster"
+	"${ORG}/workload-clusters/WC_NAME_IMAGE_AUTOMATION cluster"
+	"${ORG}/workload-clusters/WC_NAME_IMAGE_AUTOMATION out-of-band"
+	"${ORG}/workload-clusters/WC_NAME_IMAGE_AUTOMATION out-of-band/helloworld"
+	"${ORG}/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams hello-team"
+)
+# the out-of-band examples share their layout
+for cluster in WC_NAME_OUT_OF_BAND_FLUX_APP WC_NAME_OUT_OF_BAND_NO_FLUX_APP; do
+	for leaf in cluster cluster/apps apps apps/hello-world out-of-band out-of-band/configmaps; do
+		COVERED+=("${ORG}/workload-clusters/${cluster} ${leaf}")
+	done
+done
+# the stage and region examples: four clusters of one shape
+for cluster in HELLO_APP_DEV_CLUSTER_1 HELLO_APP_STAGING_CLUSTER_1 HELLO_APP_PROD_CLUSTER_EU_CENTRAL \
+	HELLO_APP_PROD_CLUSTER_US_WEST; do
+	for leaf in cluster cluster/apps; do
+		COVERED+=("${ORG}/workload-clusters/${cluster} ${leaf}")
+	done
+done
+
+[ $# -gt 1 ] && help
+cd "${1:-.}" || help
+
+# Works with bash 3.2, as on macOS: no associative arrays or mapfile.
+if ! files=$(git ls-files -- bases management-clusters); then
+	echo "git can't list the files below $(pwd): run this in a git repository."
+	exit 1
+fi
+if [ -z "${files}" ]; then
+	echo "git tracks no files in bases/ or management-clusters/ below $(pwd): nothing to check."
+	exit 1
+fi
+# every directory with a tracked file, and every directory above it
+dirs=$(awk -F/ '{ p = $1; print p; for (i = 2; i < NF; i++) { p = p "/" $i; print p } }' <<<"${files}" | sort -u)
+
+##
+# The tracked README of directory $1, if it has one.
+function readme() {
+	for name in README.md readme.md; do
+		if grep -qxF "$1/${name}" <<<"${files}"; then
+			echo "$1/${name}"
+			return
+		fi
+	done
+}
+
+##
+# Whether directory $1 is one of the template's own examples: a shipped base, or the placeholder
+#  management cluster MC_NAME, which holds the example organisation and clusters.
+function template_dir() {
+	case "$1" in
+	management-clusters | management-clusters/MC_NAME | management-clusters/MC_NAME/*) return 0 ;;
+	esac
+	grep -qxF "$1" <<<"${shipped}"
+}
+
+shipped=$(printf '%s\n' "${SHIPPED[@]}")
+failed=0
+covered=""
+for entry in "${COVERED[@]}"; do
+	read -r parent leaf <<<"${entry}"
+	covered="${covered}${parent}/${leaf}"$'\n'
+	# a leaf whose parent is gone went with its example, as in a fork that deleted the examples
+	if ! grep -qxF "${parent}" <<<"${dirs}"; then
+		continue
+	fi
+	if ! grep -qxF "${parent}/${leaf}" <<<"${dirs}"; then
+		echo "${parent}/${leaf} is listed in COVERED in $0, but doesn't exist: remove it from the list."
+		failed=1
+		continue
+	fi
+	parent_readme=$(readme "${parent}")
+	if [ -n "${parent_readme}" ] && ! grep -qF "\`${leaf}/\`" "${parent_readme}"; then
+		echo "${parent_readme} covers ${parent}/${leaf}, but doesn't name it: describe \`${leaf}/\` there."
+		failed=1
+	fi
+done
+
+while IFS= read -r dir; do
+	if template_dir "${dir}" && [ -z "$(readme "${dir}")" ] && ! grep -qxF "${dir}" <<<"${covered}"; then
+		echo "${dir} has no README.md: write one and add it to git, or, if a parent's README covers it, list it" \
+			"in COVERED in $0."
+		failed=1
+	fi
+done <<<"${dirs}"
+
+exit ${failed}

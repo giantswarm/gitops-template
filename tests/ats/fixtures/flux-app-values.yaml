@@ -1,0 +1,22 @@
+# Values of Giant Swarm's flux-app chart in the kind test. They only turn off the
+# objects whose CRDs a management cluster has and the kind cluster doesn't:
+# Prometheus' PodMonitors, and the kube-state-metrics the chart bundles, which
+# brings a ServiceMonitor and a CiliumNetworkPolicy that its values can't turn off.
+# The image automation, image reflector and notification controllers, which the test
+# gives little to do, request 10m CPU instead of the chart's 100m: the kind cluster is
+# one node on a CI runner, and the apps of the workload cluster's vCluster have to fit
+# next to them, see tests/ats/node_room.py. Everything else is the chart's default.
+podMonitors:
+  enabled: false
+kubeStateMetrics:
+  enabled: false
+resources:
+  imageAutomationController:
+    requests:
+      cpu: 10m
+  imageReflectorController:
+    requests:
+      cpu: 10m
+  notificationController:
+    requests:
+      cpu: 10m

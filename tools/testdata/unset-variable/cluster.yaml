@@ -1,0 +1,19 @@
+# A workload cluster's Flux Kustomization whose postBuild.substitute leaves out `release`,
+# which its manifests use. Without --strict-substitute, Flux replaces `${release}` with an
+# empty string. tools/test-all-ff checks that tools/fake-flux fails on it with
+# "variable not set (strict mode)".
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: unset-variable
+  namespace: default
+spec:
+  interval: 1m
+  path: ./mapi
+  postBuild:
+    substitute:
+      cluster_name: "unset-variable"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: unset-variable

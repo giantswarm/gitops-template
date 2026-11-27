@@ -1,0 +1,17 @@
+gateways:
+  default:
+    listeners:
+      https:
+        # a DNS record and a certificate entry for each hello-world's hostname,
+        # `<subdomain>.<cluster base domain>`: hello-world-from-template,
+        # hello-world, hello-world-automatic-updates, and the organisation's
+        # multicluster hello-world-scheduled
+        subdomains:
+          - hello
+          - hello-standalone
+          - hello-auto
+          - hello-scheduled
+    # an example override on top of the stack defaults
+    service:
+      annotations:
+        example.com/owner: platform-team

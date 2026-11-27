@@ -1,0 +1,15 @@
+# The repository the image automation clones and pushes to, over SSH with the deploy key that
+# externalsecret.yaml writes. The management cluster's own GitRepository reads your fork without
+# write access, so the automation has one of its own.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: ${cluster_name}-image-updates
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  ref:
+    branch: main  # TODO: the branch your management cluster's GitRepository reads
+  secretRef:
+    name: ${cluster_name}-image-updates-deploy-key
+  url: ssh://git@github.com/giantswarm/gitops-template  # TODO: your fork

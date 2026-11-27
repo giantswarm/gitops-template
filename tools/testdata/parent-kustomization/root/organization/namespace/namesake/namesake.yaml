@@ -1,0 +1,19 @@
+# Named namesake here: kustomization.yaml prefixes it, so parent-namespace's build applies it as
+# parent-namesake, in org-from-the-parent. ../unlisted.yaml is the only file that names
+# parent-namesake.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: namesake
+spec:
+  interval: 1m
+  path: ./root/organization/direct
+  postBuild:
+    substitute:
+      cluster_name: "parent-namesake"
+      organization: "${organization}"
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: parent-kustomization
+    namespace: default

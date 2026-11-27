@@ -1,272 +1,369 @@
-import logging
-import os.path
-import time
-from typing import Type, TypeVar, Iterator, Union
+"""The kind test: what Flux applies from the repository has to get ready and match the
+assertions. The checks are in `checks`.
+
+The generic tests work on whatever the repository's management clusters apply. The example tests
+check the template's examples: each names its example in kind-test.yaml, and is skipped, saying
+why, when the example isn't there.
+"""
+
+from collections.abc import Iterator
+from pathlib import Path
 
 import pykube
 import pytest
-import yaml
-from deepdiff import DeepDiff
-from deepdiff.helper import NotPresent
-from pykube.objects import APIObject
-from pytest_helm_charts.clusters import Cluster
-from pytest_helm_charts.flux.helm_release import HelmReleaseCR
-from pytest_helm_charts.flux.kustomization import KustomizationCR
-from pytest_helm_charts.flux.utils import NamespacedFluxCR, flux_cr_ready
-from pytest_helm_charts.utils import wait_for_objects_condition
-
+from automation_access import (
+    access_problems,
+    api_server_review,
+    expected_access,
+)
+from checks.assertion_files import (
+    EXISTS_ASSERTIONS_DIR,
+    WORKLOAD_CLUSTER_ASSERTIONS_DIR,
+    all_assertions,
+    load_assertions,
+)
+from checks.assertions import check_assertions
+from checks.flux_readiness import check_kustomizations, check_sources
+from checks.helm_releases import check_helm_releases
+from checks.workloads import releases_without_assertion, unavailable_deployments
+from cluster_gate import check_cluster_gate, gates
 from conftest import GitOpsTestConfig
+from image_automation import check_image_update_pushed
+from image_updates import EXAMPLE as IMAGE_AUTOMATION_EXAMPLE
+from kind_config import kind_test_config, require_example, skipped_assertions
+from kyverno_access import kyverno_access
+from node_pools import node_pool_problems_in_cluster
+from node_room import node_room_problems
+from notification_objects import check_notifications
+from prune_checks import check_prune
+from pytest_helm_charts.clusters import Cluster
+from resource_set_cluster_guard import check_cluster_input_loss
+from resource_set_guard import check_input_loss
+from resource_set_move import check_move
+from resource_set_objects import EXAMPLE as RESOURCE_SET_EXAMPLE
+from resource_set_objects import EXAMPLES, install_now
+from resource_set_schedule import check_schedule_window
+from resource_set_upgrade import check_scheduled_cluster_upgrade
+from shared_objects import check_shared_object_copied
+from stand_in_clusters import stand_in_clusters
+from values_watch import check_values_change_applied
+from workload_cluster_kubeconfig_push import EXAMPLE as KUBECONFIG_PUSH_EXAMPLE
+from workload_cluster_secret_stores import (
+    check_tools_cluster_push,
+    check_workload_cluster_secret_store,
+)
+from workload_cluster_secrets import check_secrets_pushed
 
-TFNS = TypeVar("TFNS", bound=NamespacedFluxCR)
+# Kyverno has to run before gitops_deployment installs External Secrets Operator, and the
+#  platform's admission policies and Flux Operator before it applies the repository: pytest
+#  sets up the fixtures of `usefixtures` before the ones a test requests.
+#  The management cluster's Alert of the notification example has to be suspended before then,
+#  too; organization_operator suspends the organisation's, before Flux can apply it. The image
+#  automation example's push branch and deploy key are set up before the sources are checked,
+#  as its GitRepository gets Ready only with the key.
+pytestmark = pytest.mark.usefixtures(
+    "kyverno",
+    "admission_policies",
+    "suspended_alert",
+    "flux_operator",
+    "image_updates_ci_branch",
+)
 
 
-class OCIRepositoryCR(NamespacedFluxCR):
-    version = "source.toolkit.fluxcd.io/v1"
-    endpoint = "ocirepositories"
-    kind = "OCIRepository"
-
-
-FLUX_OBJECTS_READY_TIMEOUT_SEC = 60
-# OCIRepositories pull charts from a remote registry, give them more time
-OCI_REPOSITORIES_READY_TIMEOUT_SEC = 180
-FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC = 15
-ASSERTIONS_DIR = "assertions"
-EXISTS_ASSERTIONS_DIR = os.path.join(ASSERTIONS_DIR, "exists")
-
-logger = logging.getLogger(__name__)
-
-
-def check_flux_objects_successful(
-    kube_cluster: Cluster,
-    obj_type: Type[TFNS],
-    ignored_objects: Union[list[str], None] = None,
-    timeout_sec: int = FLUX_OBJECTS_READY_TIMEOUT_SEC,
-) -> None:
-    namespaces = pykube.Namespace.objects(kube_cluster.kube_client).all()
-    for ns in namespaces:
-        objects = (
-            obj_type.objects(kube_cluster.kube_client).filter(namespace=ns.name).all()
-        )
-        if not objects.response["items"]:
-            continue
-        if not ignored_objects:
-            ignored_objects = []
-        # HelmReleases that deploy to a workload cluster through its kubeconfig can't get ready here,
-        #  as the test has no workload clusters. Neither can the ones that create a cluster from a
-        #  release-<provider> chart, as there is no Cluster API. Their existence is still checked by
-        #  the assertions, and their charts by the OCIRepository check.
-        cluster_charts = set()
-        if obj_type is HelmReleaseCR:
-            cluster_charts = {
-                r.name
-                for r in OCIRepositoryCR.objects(kube_cluster.kube_client)
-                .filter(namespace=ns.name)
-                .all()
-                if "/charts/giantswarm/release-" in r.obj.get("spec", {}).get("url", "")
-            }
-        obj_names = [
-            o.name
-            for o in objects
-            if f"{ns}/{o.name}" not in ignored_objects
-            and not (
-                obj_type is HelmReleaseCR
-                and (
-                    o.obj.get("spec", {}).get("kubeConfig")
-                    or o.obj.get("spec", {}).get("chartRef", {}).get("name")
-                    in cluster_charts
-                )
-            )
-        ]
-        if not obj_names:
-            continue
-        logger.debug(
-            f"Waiting max {timeout_sec} s for the following {obj_type.__name__} objects "
-            f"to be ready in '{ns.name}' namespace: '{obj_names}'."
-        )
-        wait_for_objects_condition(
-            kube_cluster.kube_client,
-            obj_type,
-            obj_names,
-            ns.name,
-            flux_cr_ready,
-            timeout_sec,
-            missing_ok=False,
-        )
+@pytest.fixture(scope="module")
+def cluster_gate_problems(
+    kube_cluster: Cluster, gitops_deployment: list[str]
+) -> Iterator[list[str]]:
+    # The cluster Kustomizations get ready only once their stand-in Cluster's control plane is
+    #  up, so this runs before the Kustomizations are checked; test_apps_wait_for_cluster
+    #  reports it.
+    #  The organisations' Kustomizations have applied the cluster Kustomizations by now.
+    api = kube_cluster.kube_client
+    gated = gates(api)
+    clusters = stand_in_clusters(api, gated)
+    yield check_cluster_gate(api, gated, clusters)
+    for cluster in clusters:
+        cluster.delete()
 
 
 @pytest.fixture(scope="module")
 def check_kustomizations_successful(
-    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
+    kube_cluster: Cluster, gitops_deployment: None, cluster_gate_problems: list[str]
 ) -> None:
-    check_flux_objects_successful(
-        kube_cluster, KustomizationCR, gitops_test_config.ignored_objects
-    )
+    check_kustomizations(kube_cluster.kube_client)
 
 
 def test_kustomizations_successful(check_kustomizations_successful: None) -> None:
-    # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
+    # all the checks are done actually in the fixture, which was extracted to avoid
+    #  duplication in other tests
+    pass
+
+
+def test_automation_access(
+    kube_cluster: Cluster,
+    automation_rbac: None,
+    gitops_deployment: list[str],
+    check_kustomizations_successful: None,
+) -> None:
+    # the `automation` ServiceAccounts have the rights of a management cluster, no more and no
+    #  less, once the repository is applied and organization_operator has given each
+    #  organisation's namespace its rights: SubjectAccessReviews also catch what other objects,
+    #  such as ones left over from an earlier run, grant them
+    if not gitops_deployment:
+        pytest.skip("The repository's management clusters apply no Organization.")
+    review = api_server_review(kube_cluster.kube_client)
+    # and Kyverno's background controller has the rights rbac-operator gives it
+    problems = [
+        p
+        for namespace in gitops_deployment
+        for p in access_problems(
+            review, expected_access(namespace) + kyverno_access(namespace)
+        )
+    ]
+    assert not problems, "\n".join(problems)
+
+
+@pytest.fixture(scope="module")
+def resource_sets_installed(
+    kube_cluster: Cluster, check_kustomizations_successful: None
+) -> None:
+    # The ResourceSets render sources and HelmReleases, so the checks of those wait for them.
+    #  A new provider's window is closed, so the example's providers are forced once; without the
+    #  example, there's nothing to force.
+    if kind_test_config().example_skip_reason(RESOURCE_SET_EXAMPLE):
+        return
+    for provider, resource_set in EXAMPLES:
+        install_now(kube_cluster.kube_client, provider, resource_set)
+
+
+def test_resource_sets_installed(resource_sets_installed: None) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    # all the checks are done actually in the fixture, which the source and HelmRelease
+    #  checks need
+    pass
+
+
+@pytest.fixture(scope="module")
+def check_sources_successful(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+    resource_sets_installed: None,
+    gitops_test_config: GitOpsTestConfig,
+) -> None:
+    check_sources(kube_cluster.kube_client, gitops_test_config.ignored_objects)
+
+
+def test_sources_successful(check_sources_successful: None) -> None:
+    # all the checks are done actually in the fixture, which was extracted to avoid
+    #  duplication in other tests
     pass
 
 
 @pytest.fixture(scope="module")
 def check_helm_release_successful(
-    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
-) -> None:
-    check_flux_objects_successful(
-        kube_cluster, HelmReleaseCR, gitops_test_config.ignored_objects
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+    resource_sets_installed: None,
+    gitops_test_config: GitOpsTestConfig,
+) -> dict[str, dict]:
+    return check_helm_releases(
+        kube_cluster.kube_client, gitops_test_config.ignored_objects
     )
 
 
-def test_helm_release_successful(check_helm_release_successful: None) -> None:
-    # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
-    pass
-
-
-@pytest.fixture(scope="module")
-def check_oci_repositories_successful(
-    kube_cluster: Cluster, gitops_deployment: None, gitops_test_config: GitOpsTestConfig
-) -> None:
-    check_flux_objects_successful(
-        kube_cluster,
-        OCIRepositoryCR,
-        gitops_test_config.ignored_objects,
-        OCI_REPOSITORIES_READY_TIMEOUT_SEC,
-    )
-
-
-def test_oci_repositories_successful(check_oci_repositories_successful: None) -> None:
-    # all the checks are done actually in the fixture, which was extracted to avoid duplication in other tests
+def test_helm_release_successful(check_helm_release_successful: dict) -> None:
+    # all the checks are done actually in the fixture, which was extracted to avoid
+    #  duplication in other tests
     pass
 
 
 def test_positive_assertions(
     kube_cluster: Cluster,
     gitops_deployment: None,
-    check_helm_release_successful: None,
+    check_helm_release_successful: dict,
     check_kustomizations_successful: None,
 ) -> None:
-    assertions = load_assertions()
-    for file, assert_list in assertions.items():
-        # I'm out names for "assertion" :P
-        for ass in assert_list:
-            if "metadata" not in ass or "kind" not in ass:
-                msg = f"Expected object declared in the '{file}' has to have the 'metadata' and 'kind' properties."
-                logger.error(msg)
-                raise Exception(msg)
-            if "name" not in ass["metadata"]:
-                msg = f"Expected object declared in the '{file}' has to have 'name' property in the 'metadata' section."
-                logger.error(msg)
-                raise Exception(msg)
-            if "namespace" in ass["metadata"]:
-                cluster_obj = pykube.objects.NamespacedAPIObject(
-                    kube_cluster.kube_client, ass
-                )
-                cluster_obj.obj["metadata"]["namespace"] = ass["metadata"]["namespace"]
-            else:
-                cluster_obj = pykube.objects.APIObject(kube_cluster.kube_client, ass)
-            setattr(cluster_obj, "kind", ass["kind"])
-            setattr(cluster_obj, "version", ass["apiVersion"])
-            endpoint = get_plural_from_kind(ass["kind"])
-            setattr(cluster_obj, "endpoint", endpoint)
-
-            reload_obj_from_cluster(cluster_obj)
-            assert_objects(ass, cluster_obj, file)
+    assertions = load_assertions(skipped=skipped_assertions())
+    if not assertions:
+        pytest.skip(f"No assertion files in '{EXISTS_ASSERTIONS_DIR}' to check.")
+    checked = check_assertions(kube_cluster.kube_client, assertions)
+    assert checked > 0, f"No assertions found in '{EXISTS_ASSERTIONS_DIR}'."
 
 
-def reload_obj_from_cluster(
-    cluster_obj: Union[pykube.objects.NamespacedAPIObject, pykube.objects.APIObject]
+def test_kind_node_has_room(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
 ) -> None:
-    retries = 0
-    obj_loaded = False
-    while retries < FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC:
-        try:
-            cluster_obj.reload()
-            obj_loaded = True
-            break
-        except pykube.http.HTTPError as err:
-            # we might need to wait a bit for flux to create all the managed objects
-            if err.code != 404:
-                raise
-            time.sleep(1)
-            retries += 1
-    if not obj_loaded:
-        meta = cluster_obj.obj["metadata"]
-        obj_name = (
-            meta["namespace"] + "/" + meta["name"]
-            if "namespace" in meta
-            else meta["name"]
-        )
-        raise Exception(
-            f"Timeout of {FLUX_MANAGED_OBJECTS_READY_TIMEOUT_SEC} sec reached while waiting "
-            + f"for object '{obj_name}' of kind '{cluster_obj.kind}'"
-        )
+    # The apps of the workload cluster run on the one kind node, and scale up after their
+    #  HelmReleases are Ready. Without room, one of them stays Pending, a different one each
+    #  run (#368); this says so every time, with the numbers.
+    problems = node_room_problems(kube_cluster.kube_client, workload_cluster)
+    assert not problems, "\n".join(problems)
 
 
-def load_assertions() -> dict[str, Iterator]:
-    assertions = {}
-    walk_dirs = os.walk(EXISTS_ASSERTIONS_DIR)
-    for (dir_path, _, filenames) in walk_dirs:
-        for file in filenames:
-            rel_path = str(os.path.join(dir_path, file))
-            if os.path.splitext(file)[1] != ".yaml":
-                logger.debug(
-                    f"Ignoring file '{rel_path}' in '{EXISTS_ASSERTIONS_DIR}' as it's not a file or it"
-                    f" doesn't have a '.yaml' extension."
-                )
-                continue
-            with open(rel_path) as f:
-                from_file_assertions = yaml.safe_load_all(f.read())
-                assertions[rel_path] = from_file_assertions
-    return assertions
+def test_workload_cluster_assertions(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    # kube_cluster and workload_cluster give a failure workload_diagnostics' report of both
+    # The -direct out-of-band Kustomization and the H3a HelmReleases install into the
+    #  workload cluster through its kubeconfig Secret; the test's vCluster stands in for it.
+    assertions = load_assertions(WORKLOAD_CLUSTER_ASSERTIONS_DIR, skipped_assertions())
+    checked = check_assertions(workload_cluster, assertions)
+    assert checked > 0, f"No assertions found in '{WORKLOAD_CLUSTER_ASSERTIONS_DIR}'."
+
+    # W1: every H3a release has an assertion of its main workload
+    missing = releases_without_assertion(
+        check_helm_release_successful, all_assertions(assertions)
+    )
+    assert not missing, (
+        f"H3a HelmReleases without an assertion of their main workload, one with "
+        f"`helmRelease: <namespace>/<name>`, in '{WORKLOAD_CLUSTER_ASSERTIONS_DIR}': "
+        f"{missing}"
+    )
+
+    # W1: the Deployments the assertions name have to be available, too
+    unavailable = unavailable_deployments(workload_cluster, all_assertions(assertions))
+    assert (
+        not unavailable
+    ), f"Deployments in the workload cluster aren't available: {unavailable}"
 
 
-def get_plural_from_kind(kind: str) -> str:
-    if kind[-1] == "s":
-        endpoint = kind.lower() + "es"
-    elif kind[-1] == "y":
-        endpoint = kind.lower()[:-1] + "ies"
-    else:
-        endpoint = kind.lower() + "s"
-    return endpoint
+def test_secrets_pushed(
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    require_example("workload-cluster-secrets")
+    check_secrets_pushed(workload_cluster)
 
 
-def assert_objects(ass: dict, cluster_obj: APIObject, file: str) -> None:
-    top_level_keys = cluster_obj.obj.keys()
-    for key in top_level_keys:
-        if key not in ass:
-            continue
-        diff = DeepDiff(
-            ass[key], cluster_obj.obj[key], ignore_order=True, threshold_to_diff_deeper=0
-        )
-        # we have no difference between the expectation and the real object
-        if len(diff) == 0:
-            continue
-        # Check if 'diff' exists in the values_changed otherwise it is an empty space
-        if "values_changed" in diff:
-            vc = diff["values_changed"]
-            if "root['values']" in vc:
-                rv = vc["root['values']"]
-                if "diff" not in rv:
-                    continue
-        # The only difference that we allow for is when the real object has some attributes that the
-        #  expectation doesn't have. This means that if a diff of a kind different from 'dictionary_item_added'
-        #  is detected, it's an error.
-        if len(diff) > 1 or "dictionary_item_added" not in diff.tree:
-            meta = cluster_obj.obj["metadata"]
-            obj_name = (
-                meta["namespace"] + "/" + meta["name"]
-                if "namespace" in meta
-                else meta["name"]
-            )
-            msg = (
-                f"Object '{obj_name}' of kind '{cluster_obj.obj['kind']}' is different than expectation in "
-                f"file '{file}'."
-            )
-            logger.error(msg)
-            logger.error(diff)
-            pytest.fail(msg)
-        # Even if we only have 'dictionary_item_added', it has to show that added stuff is only on the
-        #  real object side. In other words, we check that all the attributes given in the expectation
-        # are present in the real object.
-        for d in diff.tree["dictionary_item_added"]:
-            assert isinstance(d.t1, NotPresent)
+def test_node_pools(
+    kube_cluster: Cluster,
+    check_helm_release_successful: dict[str, dict],
+    gitops_test_config: GitOpsTestConfig,
+) -> None:
+    expected = kind_test_config().node_pools()
+    if not expected:
+        pytest.skip("kind-test.yaml lists no nodePools.")
+    problems = node_pool_problems_in_cluster(
+        kube_cluster.kube_client, gitops_test_config.ignored_objects, expected
+    )
+    assert not problems, "\n".join(problems)
+
+
+def test_values_change_applied_at_once(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    # the release installs into workload_cluster, which workload_diagnostics reports on failure
+    require_example("values-watch")
+    check_values_change_applied(kube_cluster.kube_client)
+
+
+def test_shared_object_copied(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    require_example("shared-objects")
+    check_shared_object_copied(kube_cluster.kube_client)
+
+
+def test_commit_status_notifications(
+    kube_cluster: Cluster,
+    check_kustomizations_successful: None,
+) -> None:
+    # N1: ESO wrote the tokens and the Receiver is Ready; assertions/exists/notifications checks
+    #  the Provider and the Alert
+    check_notifications(kube_cluster.kube_client)
+
+
+def test_workload_cluster_secret_store(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    require_example("secret-store-policy")
+    check_workload_cluster_secret_store(kube_cluster.kube_client, workload_cluster)
+
+
+def test_kubeconfig_pushed_to_another_cluster(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_kustomizations_successful: None,
+) -> None:
+    require_example("secret-store-policy")
+    require_example(KUBECONFIG_PUSH_EXAMPLE)
+    check_tools_cluster_push(kube_cluster.kube_client, workload_cluster)
+
+
+def test_apps_wait_for_cluster(cluster_gate_problems: list[str]) -> None:
+    # G1: a cluster's apps Kustomizations apply nothing until the cluster's control plane is up
+    assert not cluster_gate_problems, "\n".join(cluster_gate_problems)
+
+
+def test_schedule_window(kube_cluster: Cluster, resource_sets_installed: None) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    check_schedule_window(kube_cluster.kube_client)
+
+
+def test_scheduled_cluster_upgrade(
+    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    check_scheduled_cluster_upgrade(kube_cluster.kube_client)
+
+
+def test_input_loss_keeps_the_app(
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    check_input_loss(kube_cluster.kube_client, workload_cluster)
+
+
+def test_input_loss_keeps_the_cluster(
+    kube_cluster: Cluster, check_helm_release_successful: dict[str, dict]
+) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    check_cluster_input_loss(kube_cluster.kube_client)
+
+
+def test_move_to_scheduled_upgrades(
+    kube_cluster: Cluster,
+    tmp_path: Path,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    require_example(RESOURCE_SET_EXAMPLE)
+    require_example("capi-wc-name")
+    check_move(kube_cluster.kube_client, tmp_path)
+
+
+def test_image_update_pushed(
+    kube_cluster: Cluster,
+    image_updates_deploy_key: str | None,
+    image_updates_ci_branch: str | None,
+    check_kustomizations_successful: None,
+) -> None:
+    # the example's automation pushes the newer tag, for real, to this run's own branch
+    require_example(IMAGE_AUTOMATION_EXAMPLE)
+    assert image_updates_deploy_key is not None
+    assert image_updates_ci_branch is not None
+    check_image_update_pushed(
+        kube_cluster.kube_client, image_updates_deploy_key, image_updates_ci_branch
+    )
+
+
+# must stay last: it deletes what the tests above check
+def test_prune(
+    request: pytest.FixtureRequest,
+    kube_cluster: Cluster,
+    workload_cluster: pykube.HTTPClient,
+    check_helm_release_successful: dict[str, dict],
+) -> None:
+    require_example("prune")
+    check_prune(request, kube_cluster.kube_client, workload_cluster)

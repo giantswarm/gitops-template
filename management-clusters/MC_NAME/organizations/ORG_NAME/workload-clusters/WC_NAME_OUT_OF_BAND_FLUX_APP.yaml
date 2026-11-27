@@ -1,24 +1,50 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: clusters-mapi-out-of-band-flux-app  # TODO: change to your cluster name; must be a correct k8s resource name (DNS-like)
-  namespace: default
+  name: mc-name-clusters-out-of-band-flux-app  # TODO: change 'mc-name' to your management cluster's name and 'out-of-band-flux-app' to your cluster name; must be a valid resource name (DNS-like)
 spec:
   decryption:
     provider: sops
     secretRef:
       name: sops-gpg-wc-name
-  interval: 1m
-  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/mapi"
+  # Flux applies a commit here only once the organisation's namespace Kustomization, which
+  # applies this one, is Ready at it, so this one's spec is up to date
+  dependsOn:
+    - name: mc-name-organization-org-name  # TODO: the name of the Kustomization in ../namespace.yaml
+      namespace: default
+  # Applies the cluster and its base apps, in cluster/. Ready once Cluster
+  # API reports the cluster's control plane available and reachable, which is
+  # all the apps need. The Kustomization in WC_NAME_OUT_OF_BAND_FLUX_APP-apps.yaml
+  # depends on this one, so the secondary apps install once the cluster is up.
+  # It doesn't wait for `Available`, which counts every node pool: one node
+  # pool short of its minimum would hold back every change to the apps.
+  healthCheckExprs:
+    - apiVersion: cluster.x-k8s.io/v1beta2
+      kind: Cluster
+      current: >-
+        status.conditions.exists(c, c.type == 'ControlPlaneAvailable' && c.status == 'True')
+        && status.conditions.exists(c, c.type == 'RemoteConnectionProbe' && c.status == 'True')
+  healthChecks:
+    - apiVersion: cluster.x-k8s.io/v1beta2
+      kind: Cluster
+      name: out-of-band-flux-app  # TODO: change to your cluster name, the `cluster_name` below
+      # the organisation's namespace, from the organisation's namespace Kustomization
+      namespace: org-${organization}
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/cluster"
   postBuild:
     substitute:
       cluster_description: "description"
-      cluster_name: "mapi-out-of-band-flux-app"
-      organization: "org-name"  # TODO: change 'org-name' to your organization name
-      release: "36.2.0"  # TODO: change '36.2.0' to the Giant Swarm release the cluster runs
-  prune: false
+      cluster_name: "out-of-band-flux-app"
+      organization: "${organization}"  # the organisation's namespace Kustomization sets it
+      # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
+      release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
+  prune: true
+  retryInterval: 1m
   serviceAccountName: automation
   sourceRef:
     kind: GitRepository
-    name: your-repo  # TODO: change "your-repo" to the name of GitRepository pointing to your GitOps repo
-  timeout: 2m
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
+    namespace: default  # the namespace of that GitRepository
+  # long enough for a new cluster to come up
+  timeout: 30m

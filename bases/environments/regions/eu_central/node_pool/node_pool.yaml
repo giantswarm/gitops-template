@@ -1,0 +1,10 @@
+global:
+  nodePools:
+    large:
+      availabilityZones:
+        - eu-central-1a
+        - eu-central-1b
+        - eu-central-1c
+      instanceType: m6a.2xlarge
+      maxSize: 10
+      minSize: 1

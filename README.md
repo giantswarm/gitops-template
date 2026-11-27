@@ -1,58 +1,48 @@
 # GitOps Template
 
 This repository is a template for managing Giant Swarm workload clusters and their apps with GitOps. You describe
-clusters and apps as files in Git, and Flux, which runs on every Giant Swarm management cluster, applies them. Fork
+clusters and apps as files in Git, and Flux, which runs on every Giant Swarm management cluster, applies them. Copy
 it to start your own repository.
 
-*Warning:* This repository is of a preview quality right now and still a work in progress.
-Please bear in mind that it might have some elements that are not strictly needed or left
-loose after we ported some ideas from other repositories.
-Work in progress and new features are tracked [in this ticket](https://github.com/giantswarm/giantswarm/issues/21243).
+Your copy will hold your management cluster's name, your organisations, clusters, regions and node sizes, and your
+encrypted secrets, so you'll usually want it private. A GitHub fork of a public repository is always public, so create
+a private repository from it with **Use this template** on GitHub instead. On another Git host, clone this repository
+and push it to a new private one. To follow the template's changes later, add it as a second remote:
+`git remote add template https://github.com/giantswarm/gitops-template.git`. A plain fork is fine for trying the
+tutorials with placeholder names, or for contributing back to the template. The docs call your copy "your fork"
+either way.
+
+Giant Swarm maintains this template. Its layout has a version, the
+[structure version](docs/reference/repo-structure.md#structure-version), and `kubectl gs gitops check`, from
+kubectl-gs 8.0.0 on, tells you when your fork has fallen behind it.
+
+Already have a fork, with a `mapi` directory in each workload cluster and its clusters' Flux `Kustomization`s in the
+`default` namespace? That's structure version 2, and
+[Migrate a fork from structure version 2](docs/how-to/upgrade-fork.md) takes it to the layout these docs describe,
+one step at a time, and says what each step changes on a running management cluster.
 
 ## Get started
 
-[Getting started](docs/getting-started.md) takes you from a fork of this repository to a workload cluster with an
-app. It keeps secrets in a secret manager with External Secrets Operator. If you'd rather keep secrets in the
-repository, encrypted with SOPS, follow [Getting started with SOPS](docs/getting-started-sops.md) instead.
+[Getting started](docs/tutorials/basic/getting-started.md) takes you from a fork of this repository to a workload
+cluster with an app. It keeps Flux's own secrets in the repository, encrypted with SOPS, and the app's secret values
+in your secret manager, with External Secrets Operator, and says how to use either one on its own.
 
-To learn what happens between a `git push` and a running cluster, read [How it works](docs/how-it-works.md).
+After that, the tutorials go further in two more tiers:
 
-## Guides
+- **Intermediate:** App Templates, stacks, cluster bases, stages and regions, and automatic updates, starting with
+  [App Templates](docs/tutorials/intermediate/app-templates.md).
+- **Advanced:** out-of-band resources, scheduled upgrades, multicluster apps, application teams and testing the
+  repository, starting with [Out-of-band resources](docs/tutorials/advanced/out-of-band.md).
 
-The [guides](docs/guides/README.md) cover what comes after getting started, such as cluster templates, environments
-for dev, staging and production, and adding and updating apps.
+## Documentation
 
-These pages explain each part of the repository step by step:
-
-- [Add a management cluster](docs/add_mc.md)
-- [Add an organization](docs/add_org.md)
-- [Add a workload cluster](docs/add_wc.md)
-
-## Reference
-
-- [Repository structure](docs/reference/repo-structure.md) lists every directory and file, and the rules for them.
-- [SOPS keys](docs/reference/sops-keys.md) explains which key decrypts which files.
-- [Appendices](docs/appendices.md) lists the tools the examples use.
-- [Validation and diff previews on GitHub](docs/guides/ci-validation.md) explains the workflow that checks your
-  changes.
+The [documentation home](docs/README.md) lists every tutorial, how-to guide, reference page and explanation. When
+something doesn't get `Ready`, start with [When something isn't Ready](docs/how-to/troubleshooting.md).
 
 ## Checking your changes before you push
 
-The repository has a [`pre-commit` config](.pre-commit-config.yaml) that checks the YAML and Markdown formatting
-before each commit. It's optional. To use it, [install](https://pre-commit.com/#install) `pre-commit`, then set up
-the hooks once in your clone:
-
-```sh
-pre-commit install --install-hooks
-```
-
-To run the checks without committing:
-
-```sh
-pre-commit run -a
-```
-
-To commit without running them, use `git commit --no-verify`.
+The repository has an optional [`pre-commit` config](.pre-commit-config.yaml). To use it, see
+[Run pre-commit](docs/how-to/check-changes.md#run-pre-commit).
 
 ## Contributing
 

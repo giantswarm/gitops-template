@@ -1,12 +1,14 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     giantswarm.io/cluster: capi-wc-name
     giantswarm.io/managed-by: flux
     giantswarm.io/prevent-deletion: "true"
-    kustomize.toolkit.fluxcd.io/name: clusters-capi-wc-name
-    kustomize.toolkit.fluxcd.io/namespace: default
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-capi-wc-name
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
   name: capi-wc-name
   namespace: org-org-name
 spec:
@@ -17,21 +19,26 @@ spec:
   install:
     remediation:
       remediateLastFailure: false
-  interval: 5m
+  interval: 5m0s
   releaseName: capi-wc-name
   serviceAccountName: automation
   storageNamespace: org-org-name
   targetNamespace: org-org-name
-  timeout: 10m
+  timeout: 10m0s
   upgrade:
     remediation:
-      remediateLastFailure: true
-      retries: 10
-      strategy: rollback
+      remediateLastFailure: false
+      retries: 0
   valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
     - kind: ConfigMap
       name: capi-wc-name-config
       valuesKey: values
     - kind: ConfigMap
-      name: capi-wc-name-user-config
+      name: capi-wc-name-region-config
+      valuesKey: values
+    - kind: ConfigMap
+      name: capi-wc-name-cluster-userconfig
       valuesKey: values

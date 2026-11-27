@@ -2,6 +2,24 @@ creation_rules:
   - encrypted_regex: ^(data|stringData)$
     path_regex: management-clusters/MC_NAME/secrets/.*\.enc\.yaml
     pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
+  # the workload clusters' SOPS keys in an organisation's namespace/secrets: before any rule of an
+  # organisation's own key for that directory, as sops uses the first rule that matches
   - encrypted_regex: ^(data|stringData)$
-    path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/.+/.*\.enc\.yaml
+    path_regex: management-clusters/MC_NAME/organizations/[^/]+/namespace/secrets/.*\.(gpg|age)key\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP/(cluster|apps)/.*\.enc\.yaml
     pgp: F385 A864 5CA5 5C0A A5D1  263D 9B05 BF26 4528 D991
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_NO_FLUX_APP/(cluster|apps)/.*\.enc\.yaml
+    pgp: EA38 1E1C 6A90 C39B 8545  1385 9D02 FFD1 231A 8B4F
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME/(cluster|apps)/.*\.enc\.yaml
+    age: age1caxqewcznafndw75462qmycsvlyc5djy58430dsfptg0uk927eesjt4smq
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: management-clusters/MC_NAME/notifications/.*\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660
+  # the kind test's credentials, decrypted by the test with the master key CI already has
+  - encrypted_regex: ^(data|stringData)$
+    path_regex: tests/ats/fixtures/.*\.enc\.yaml
+    pgp: E2FF FEC7 3261 2A26 B9C6 F4EC 1280 A733 D9EE C660

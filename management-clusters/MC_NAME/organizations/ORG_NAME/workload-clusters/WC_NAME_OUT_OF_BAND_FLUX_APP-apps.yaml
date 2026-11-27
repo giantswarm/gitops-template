@@ -1,0 +1,26 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mc-name-clusters-out-of-band-flux-app-apps  # TODO: change 'mc-name' to your management cluster's name and 'out-of-band-flux-app' to your cluster name; must be a valid resource name (DNS-like)
+spec:
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-gpg-wc-name
+  # the secondary apps, in apps/, install once the cluster is up, see WC_NAME_OUT_OF_BAND_FLUX_APP.yaml
+  dependsOn:
+    - name: mc-name-clusters-out-of-band-flux-app  # TODO: the name of WC_NAME_OUT_OF_BAND_FLUX_APP.yaml's Kustomization
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/workload-clusters/WC_NAME_OUT_OF_BAND_FLUX_APP"
+  postBuild:
+    substitute:
+      cluster_name: "out-of-band-flux-app"
+      organization: "${organization}"  # the organisation's namespace Kustomization sets it
+  prune: true
+  retryInterval: 1m
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
+    namespace: default  # the namespace of that GitRepository
+  timeout: 2m

@@ -1,0 +1,53 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kyverno-generate
+spec:
+  description: >-
+    The secret-stores example: its Kyverno Policy is Ready and has given the cluster its
+    ExternalSecret and its SecretStore, both Ready. The test only reads.
+  timeouts:
+    assert: 2m
+  steps:
+    - name: the policy is ready
+      try:
+        - assert:
+            resource:
+              apiVersion: kyverno.io/v1
+              kind: Policy
+              metadata:
+                name: ($values.secretStores.policy)
+                namespace: ($values.organizationNamespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the cluster's credentials are written
+      try:
+        - assert:
+            resource:
+              apiVersion: external-secrets.io/v1
+              kind: ExternalSecret
+              metadata:
+                name: (join('-', [$values.cluster, 'eso-cluster-auth']))
+                namespace: ($values.organizationNamespace)
+                labels:
+                  app.kubernetes.io/managed-by: kyverno
+                  generate.kyverno.io/policy-name: ($values.secretStores.policy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: the cluster has its store
+      try:
+        - assert:
+            resource:
+              apiVersion: external-secrets.io/v1
+              kind: SecretStore
+              metadata:
+                name: (join('-', [$values.cluster, 'eso-cluster-store']))
+                namespace: ($values.organizationNamespace)
+                labels:
+                  app.kubernetes.io/managed-by: kyverno
+                  generate.kyverno.io/policy-name: ($values.secretStores.policy)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"

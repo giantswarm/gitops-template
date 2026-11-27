@@ -1,0 +1,59 @@
+# The organisation's name is set once, as the `metadata.name` of its Organization in
+# ORG_NAME.yaml. The replacements below copy it into what Flux applies from this directory:
+# - into `organization` in the `spec.postBuild.substitute` of every Flux Kustomization, which
+#   their manifests use as `${organization}`. Each one writes `organization: "ORG_NAME"`, which
+#   the replacement updates; one without it fails the build, naming the field;
+# - into the `targetNamespace` of the Kustomization in namespace.yaml, the one with the label
+#   `giantswarm.io/organization-namespace: "true"`. It applies namespace/, everything the
+#   organisation keeps in its namespace, with that namespace: the workload clusters' keys among
+#   them, and workload-clusters/ and multicluster/secret-stores/, which namespace/ lists. The
+#   files it applies name no namespace, and use `${organization}` where they need the name, which
+#   that Kustomization's `postBuild` sets.
+# `org-ORG_NAME` is a fixed placeholder: leave it as it is. The replacements keep `org-` and put
+# the name after it. A SOPS-encrypted Secret in namespace/ names the real namespace,
+# `org-<name>`, never the placeholder, written before you encrypt it. Changing an encrypted
+# file afterwards, by hand or by search-and-replace, breaks its MAC: `sops` can't decrypt it
+# in place to change it or rotate its key, and the Secret has to be created again. Flux
+# doesn't check the MAC, so `targetNamespace` setting the namespace at build time is harmless.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The management cluster's Kustomization applies these: only the Organization and objects in
+# `default`. What goes in the organisation's namespace is what namespace/kustomization.yaml lists,
+# which the Kustomization in namespace.yaml applies once organization-operator has created the
+# namespace: workload-clusters/ and multicluster/secret-stores/ are among it, so they aren't here.
+resources:
+  - ORG_NAME.yaml
+  - namespace.yaml
+  - multicluster
+replacements:
+  # Without the kustomize replacements, change every `org-ORG_NAME` and `ORG_NAME` in these
+  # files by hand:
+  #   - multicluster/apps.yaml
+  #   - namespace.yaml
+  # The files in namespace/ get the name from namespace.yaml's `targetNamespace` and
+  # `organization`.
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+        fieldPaths:
+          - spec.postBuild.substitute.organization
+  - source:
+      group: security.giantswarm.io
+      kind: Organization
+      fieldPath: metadata.name
+    targets:
+      # only the Kustomization with the label: kustomize fails on one without `targetNamespace`
+      - select:
+          group: kustomize.toolkit.fluxcd.io
+          kind: Kustomization
+          labelSelector: giantswarm.io/organization-namespace=true
+        fieldPaths:
+          - spec.targetNamespace
+        options:
+          delimiter: "-"
+          index: 1

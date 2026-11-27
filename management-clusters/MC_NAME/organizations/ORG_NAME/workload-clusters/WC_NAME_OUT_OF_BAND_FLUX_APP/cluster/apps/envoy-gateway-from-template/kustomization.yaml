@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+      - values=user_config_gateway_api_config.yaml
+    name: ${cluster_name}-gateway-api-config-user-values
+generatorOptions:
+  disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+kind: Kustomization
+namespace: org-${organization}
+# the label generatorOptions gives the ConfigMaps, for the SOPS-encrypted Secret, whose
+# file can't change without encrypting it again
+patches:
+  - patch: |-
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: user-secrets
+        labels:
+          reconcile.fluxcd.io/watch: Enabled
+    target:
+      kind: Secret
+      name: .*-user-secrets
+resources:
+  # config you'd rather not keep in plain text goes into a SOPS-encrypted Secret,
+  # see docs/how-to/add-app.md
+  - secret.enc.yaml
+  - ../../../../../../../../../bases/stacks/envoy-gateway

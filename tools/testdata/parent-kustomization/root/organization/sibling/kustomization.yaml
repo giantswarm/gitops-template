@@ -1,0 +1,7 @@
+# Next to namespace/, not in it: namespace/kustomization.yaml lists it as ../sibling, so the
+# Kustomization in namespace.yaml applies it, as an organisation's namespace Kustomization
+# applies its workload-clusters/.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - sibling.yaml

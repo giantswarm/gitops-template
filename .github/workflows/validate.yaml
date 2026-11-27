@@ -1,25 +1,126 @@
 name: validate
 
 on:
+  # Every pull request, whatever its base branch.
   pull_request:
+  # The post-merge check: the state of main after a merge, which no pull
+  # request run has tested when several pull requests merge without a rebase.
   push:
-    branches: [HEAD_BRANCH, main]
+    branches: [main]
+
+# One run per pull request, or per branch for pushes. A new commit on a pull
+# request cancels the run for the commit it replaces. A push to a branch lets
+# the run in progress finish, so the post-merge result is never cut short;
+# while it runs, GitHub keeps only the newest queued push run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
+  # Whether a pull request needs the full run, or only the light one because
+  # it changes nothing validate or the kind test reads: tests/ats/ci_scope.py
+  # decides, and the job summary says why. It compares the pull request's head
+  # with its merge base, as GitHub's list of its files does. The script that
+  # decides is the merge base's copy, so a pull request that changes the rules
+  # is judged by the rules it found, and one that adds the script gets the full
+  # run. Any failure on the way leaves the scope empty, which means the full
+  # run, as on a push.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      scope: ${{ steps.scope.outputs.scope }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          persist-credentials: false
+          # Both commits of the comparison, and the history between them.
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: github.event_name == 'pull_request'
+        with:
+          # renovate: datasource=python-version depName=python versioning=python
+          python-version: "3.12"
+      - name: decide the scope
+        id: scope
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # The version in tests/ats/Pipfile.lock.
+          # renovate: datasource=pypi depName=pyyaml
+          PYYAML_VERSION: "6.0.3"
+        run: |
+          work="${RUNNER_TEMP}/ci-scope"
+          mkdir -p "${work}"
+          gh api --paginate --slurp "repos/${REPO}/pulls/${PR_NUMBER}/files" > "${work}/files.json"
+          git worktree add --detach "${work}/base" "$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")"
+          git worktree add --detach "${work}/head" "${HEAD_SHA}"
+          python -m pip install --quiet "pyyaml==${PYYAML_VERSION}"
+          python "${work}/base/tests/ats/ci_scope.py" --files "${work}/files.json" --changed "${CHANGED_FILES}" \
+            --base "${work}/base" --head "${work}/head"
+
+  # Everything but a pull request that needs only the light run. `!cancelled()`
+  # keeps it running when the changes job itself fails: without a status
+  # function GitHub adds `success()`, and both callers would be skipped, with
+  # the required checks waiting for a run that never comes.
   validate:
-    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@main
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.scope != 'light' }}
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@d928b86e68e050d9f9e96f9a8066d44ce9353915 # main
     with:
-      # Matches [requires] python_version in tests/ats/Pipfile. The shared
-      # workflow defaults to 3.9, which ubuntu-latest (26.04) no longer has.
+      # Matches [requires] python_version in tests/ats/Pipfile.
+      # renovate: datasource=python-version depName=python versioning=python
       python_version: "3.12"
-      # Matches CLUSTER_CTL_CORE_VERSION in tests/ats/conftest.py. clusterctl 1.11
-      # and later only work with v1beta2 management clusters, and the shared
-      # workflow defaults to 1.14.4, so `clusterctl delete` fails in teardown.
-      # Drop this once the tests install v1beta2 providers.
-      clusterctl_ver: "1.10.10"
+      # The kubeconform of tools/test-all-ff.
+      # renovate: datasource=github-releases depName=yannh/kubeconform extractVersion=^v(?<version>.+)$
+      kubeconform_ver: "0.8.0"
+      # The kind test cluster runs kind's default node image, as the shared
+      # workflow doesn't pass one. kind v0.32.0 defaults to kindest/node:v1.36.1,
+      # the Kubernetes minor version of the management clusters.
+      # renovate: datasource=github-releases depName=kubernetes-sigs/kind extractVersion=^v(?<version>.+)$
+      kind_ver: "0.32.0"
+      # The flux-app chart the kind test installs: the version on the
+      # management clusters (Flux v2.7.5), as in tools/test-all-ff.
+      # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/flux-app
+      gitops_flux_app_version: "1.12.2"
+      # Every Flux Kustomization has to get ready. The -direct out-of-band one
+      # targets a workload cluster; tests/ats creates a vCluster in the kind
+      # cluster for it. Set explicitly, as the shared workflow's default names an object.
+      gitops_ignored_objects: ""
+      # Only `default` exists before Flux applies the repository, as on a new
+      # management cluster: tests/ats/organization_operator.py creates the
+      # organisation's namespace once Flux has applied its Organization. The
+      # shared workflow's default also lists `org-org-name`.
+      gitops_init_namespaces: "default"
     secrets:
+      # Empty on a pull request from a fork, where tests/ats skips the tests
+      # that need the kind cluster.
       GITOPS_MASTER_GPG_KEY: ${{ secrets.GITOPS_MASTER_GPG_KEY }}
+
+  # A pull request that needs only the light run. A skipped caller job reports a
+  # single check with its own name, not the checks of its jobs, so the
+  # required checks would wait for a run that never comes. This caller has the
+  # same name, and validate-light.yaml has jobs with the names of the
+  # shared workflow's, so the same checks report: check-pre-commit runs the
+  # pre-commit hooks, validate and test_on_kind are skipped, which passes. Its
+  # own test_without_cluster runs the tests in tests/ats that need no cluster.
+  validate-light:
+    name: validate
+    needs: changes
+    if: needs.changes.outputs.scope == 'light'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/validate-light.yaml

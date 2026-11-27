@@ -1,0 +1,54 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-app-prod-usw-gateway-api-bundle
+  namespace: org-org-name
+spec:
+  provider: generic
+  ref:
+    tag: "2.2.0"
+  url: oci://gsoci.azurecr.io/charts/giantswarm/gateway-api-bundle
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: flux
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-app-prod-usw-hello-world
+  namespace: org-org-name
+spec:
+  interval: 10m
+  provider: generic
+  ref:
+    tag: 3.2.2
+  url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: hello-app-prod-usw
+    giantswarm.io/managed-by: flux
+    giantswarm.io/prevent-deletion: "true"
+    kustomize.toolkit.fluxcd.io/name: mc-name-clusters-hello-app-prod-usw
+    kustomize.toolkit.fluxcd.io/namespace: org-org-name
+  name: hello-app-prod-usw
+  namespace: org-org-name
+spec:
+  interval: 10m0s
+  provider: generic
+  ref:
+    tag: "36.1.0"
+  timeout: 1m0s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws

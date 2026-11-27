@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# What the cluster's apps Kustomization applies once the cluster is ready. The
+# cluster and its base apps, in cluster/, have a Kustomization of their own.
+resources:
+  - apps/
+  - teams/

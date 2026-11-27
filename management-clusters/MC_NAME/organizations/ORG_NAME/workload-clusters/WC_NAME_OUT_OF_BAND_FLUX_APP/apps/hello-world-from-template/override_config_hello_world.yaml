@@ -1,0 +1,7 @@
+autoscaling:
+  minReplicas: 2
+# the App Template sets no hostname; `hello` is in the Gateway's
+# `listeners.https.subdomains`, see cluster/apps/envoy-gateway-from-template
+route:
+  hostnames:
+    - "hello.{{ .Values.baseDomain }}"

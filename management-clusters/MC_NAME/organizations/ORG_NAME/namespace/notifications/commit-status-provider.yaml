@@ -1,0 +1,11 @@
+# Posts a commit status to the repository on GitHub for every event the organisation's Alert
+# forwards, as the management cluster's Provider does for the Kustomizations in `default`.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: github-commit-status
+spec:
+  type: github
+  address: https://github.com/YOUR_ORG/YOUR_REPO  # TODO: change to the repository the GitRepository reads
+  secretRef:
+    name: github-commit-status-token

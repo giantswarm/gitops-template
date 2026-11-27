@@ -7,6 +7,6 @@ permissions: {}
 
 jobs:
   validate:
-    uses: giantswarm/github-workflows/.github/workflows/validate-file-names.yaml@main
+    uses: giantswarm/github-workflows/.github/workflows/validate-file-names.yaml@baea9589216beffe4e0c43a02b797ce983231d7a # main
     permissions:
       contents: read

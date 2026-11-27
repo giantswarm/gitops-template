@@ -1,0 +1,32 @@
+# Envoy Gateway is installed the way Giant Swarm supports it: as the
+# gateway-api-bundle chart, which installs these apps in order:
+#   gateway-api-crds          -> the Gateway API CRDs (Gateway, HTTPRoute, ...)
+#   envoy-gateway             -> the Envoy Gateway controller
+#   gateway-api-config        -> the `giantswarm-default` GatewayClass and Gateway
+#   gateway-api-state-metrics -> metrics of the Gateway API objects
+# The bundle has a directory with a `helm-release.yaml` and an
+# `oci-repository.yaml`, the file names `kubectl gs gitops` uses for an app. Its
+# HelmRelease runs on the management cluster and creates a HelmRelease for each
+# app there, named `${cluster_name}-<app>`, which installs the app into the
+# workload cluster through its kubeconfig secret. The OCIRepository pins the
+# bundle's version in `spec.ref.tag`, and the bundle pins the apps' versions.
+#
+# default_config_gateway_api_bundle.yaml lists where each app reads its values.
+apiVersion: kustomize.config.k8s.io/v1beta1
+buildMetadata: [originAnnotations]
+configMapGenerator:
+  - files:
+      - values=default_config_gateway_api_bundle.yaml
+    name: ${cluster_name}-gateway-api-bundle-values
+  - files:
+      - values=default_config_gateway_api_config.yaml
+    name: ${cluster_name}-gateway-api-config-values
+generatorOptions:
+  disableNameSuffixHash: true
+  # a change to these values reaches the HelmRelease at once, not at its next interval
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+kind: Kustomization
+resources:
+  - gateway-api-bundle/oci-repository.yaml
+  - gateway-api-bundle/helm-release.yaml

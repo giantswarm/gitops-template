@@ -1,0 +1,52 @@
+# Forwards the events of this repository's Kustomizations in the organisation's namespace to the
+# Provider. An event source without `namespace` matches only the Alert's own namespace. The
+# source names the Kustomization, rather than `name: "*"`: an application team's Kustomization,
+# such as hello-team in WC_NAME_OUT_OF_BAND_NO_FLUX_APP/teams, lives in this namespace too, but
+# reads the team's repository, and GitHub refuses statuses for commits it doesn't know. List each
+# of this repository's Kustomizations in this namespace: the workload clusters', in
+# ../../workload-clusters. `info` forwards successes as well as failures, so a commit shows when Flux
+# applied it.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: github-commit-status
+spec:
+  providerRef:
+    name: github-commit-status
+  eventSeverity: info
+  # While a Kustomization waits for its `dependsOn`, kustomize-controller sends an `info` event for
+  # the new commit, and GitHub's notifier posts every `info` event but `Progressing` as `success`:
+  # without this exclusion, the commit would go green before the Kustomization applied anything, and
+  # stay green if its parent then failed. The pattern drops that one message and nothing else.
+  exclusionList:
+    - "^Dependencies do not meet ready condition, retrying in "
+  # TODO: the names of the Kustomizations in ../../workload-clusters
+  eventSources:
+    - kind: Kustomization
+      name: mc-name-clusters-capi-wc-name
+    - kind: Kustomization
+      name: mc-name-clusters-capi-wc-name-apps
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-dev-1
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-prod-euc
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-prod-usw
+    - kind: Kustomization
+      name: mc-name-clusters-hello-app-staging-1
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-flux-app
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-flux-app-apps
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux-apps
+    - kind: Kustomization
+      name: mc-name-clusters-out-of-band-no-flux-direct
+    - kind: Kustomization
+      name: mc-name-clusters-scheduled-upgrades
+    - kind: Kustomization
+      name: mc-name-clusters-image-automation
+    - kind: Kustomization
+      name: mc-name-clusters-image-automation-direct

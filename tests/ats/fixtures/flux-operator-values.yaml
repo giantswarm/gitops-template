@@ -1,0 +1,21 @@
+# Values of Giant Swarm's flux-operator chart in the kind test. A management
+# cluster gets the CRDs from management-cluster-bases and turns them off in the
+# chart; the kind cluster has no other source, so the chart installs them. The
+# VerticalPodAutoscaler and the ServiceMonitor need CRDs the kind cluster doesn't
+# have. NOTIFICATIONS_DISABLED is set as on the management clusters. It requests
+# 10m CPU instead of the chart's 100m: the kind cluster is one node on a CI runner,
+# and the apps of the workload cluster's vCluster have to fit next to it, see
+# tests/ats/node_room.py. Everything else is the chart's default.
+giantswarm:
+  verticalPodAutoscaler:
+    enabled: false
+flux-operator:
+  installCRDs: true
+  serviceMonitor:
+    create: false
+  resources:
+    requests:
+      cpu: 10m
+  extraEnvs:
+    - name: NOTIFICATIONS_DISABLED
+      value: "1"

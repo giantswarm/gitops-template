@@ -12,7 +12,6 @@ repos:
           - id: black
             language_version: python3
             files: ^tests/ats/.*\.py$
-            exclude: ''
 
     # accept proper type annotations only
     - repo: https://github.com/pre-commit/pygrep-hooks
@@ -25,7 +24,7 @@ repos:
       rev: '1.9.4'
       hooks:
           - id: bandit
-            args: [ "-c", ".bandit" ]
+            args: ["-c", ".bandit"]
 
     # static type checking with mypy
     - repo: https://github.com/pre-commit/mirrors-mypy
@@ -43,12 +42,36 @@ repos:
       rev: v1.0.6
       hooks:
           - id: shell-lint
-            args: [ --format=json ]
+            args: [--format=json]
 
     - repo: https://github.com/igorshubovych/markdownlint-cli
       rev: v0.50.1
       hooks:
           - id: markdownlint
+
+    # every Flux Kustomization's path exists and builds, see docs/reference/ci-checks.md
+    - repo: local
+      hooks:
+          - id: check-kustomization-paths
+            name: Flux Kustomization paths exist and build
+            entry: tools/check-kustomization-paths
+            language: script
+            pass_filenames: false
+            always_run: true
+          # every directory of the template's examples has a README, see tools/README.md
+          - id: check-directory-readmes
+            name: Directories explain themselves with a README
+            entry: tools/check-directory-readmes
+            language: script
+            pass_filenames: false
+            always_run: true
+          # every *.enc.yaml file git tracks is encrypted with SOPS, see tools/README.md
+          - id: check-sops-encrypted
+            name: SOPS files are encrypted
+            entry: tools/check-sops-encrypted
+            language: script
+            pass_filenames: false
+            always_run: true
 
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v6.0.0
@@ -74,4 +97,4 @@ repos:
           - id: shellcheck
           - id: shfmt
             args:
-              - "-w"
+                - "-w"

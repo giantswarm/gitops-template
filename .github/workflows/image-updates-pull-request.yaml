@@ -1,0 +1,44 @@
+name: image updates pull request
+
+# Flux image automation pushes the image tags it updates to `flux/image-updates`, as the
+# ImageUpdateAutomation of the WC_NAME_IMAGE_AUTOMATION example does. This opens a pull request
+# from that branch into the default branch, so every update is reviewed before Flux applies it.
+# Flux replaces the branch with each push, so an open pull request just gets the new commit.
+# docs/how-to/image-automation.md says what a fork needs for it: GitHub's "Allow GitHub Actions
+# to create and approve pull requests" setting. The kind test pushes to branches of its own,
+# `flux/image-updates-ci-*`, which this doesn't watch.
+on:
+  push:
+    branches: [flux/image-updates]
+
+# One run at a time, so two quick pushes can't open two pull requests.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: open the pull request, unless one is open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD: ${{ github.ref_name }}
+          # the branch the image automation checks out, the one the management cluster's
+          #  GitRepository reads: the default branch, unless yours reads another
+          BASE: ${{ github.event.repository.default_branch }}
+        run: |
+          open=$(gh pr list --repo "${REPO}" --head "${HEAD}" --base "${BASE}" --state open \
+            --json number --jq length)
+          if [ "${open}" -gt 0 ]; then
+            echo "A pull request from ${HEAD} into ${BASE} is open already."
+            exit 0
+          fi
+          gh pr create --repo "${REPO}" --head "${HEAD}" --base "${BASE}" \
+            --title "chore: update images from Flux image automation" \
+            --body "Flux image automation pushed new image tags to \`${HEAD}\`. Merge this to have Flux apply them; Flux updates this pull request when it finds newer tags."

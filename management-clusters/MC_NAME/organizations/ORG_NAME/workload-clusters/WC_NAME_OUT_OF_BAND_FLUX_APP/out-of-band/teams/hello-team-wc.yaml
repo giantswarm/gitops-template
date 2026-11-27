@@ -1,0 +1,64 @@
+# The hello-team-wc application team, whose Flux runs in the workload cluster: the second mode of
+# docs/tutorials/advanced/teams.md. The workload cluster's own Flux pulls this directory, and so
+# the team's namespace, ServiceAccount and RoleBinding, and its GitRepository and Kustomization,
+# which it then reconciles. The platform team owns these objects; the team owns its repository.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-team-wc
+---
+# Flux in the workload cluster impersonates it for the team's Kustomization
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hello-team-wc
+  namespace: hello-team-wc
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hello-team-wc
+  namespace: hello-team-wc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  # everything in its own namespace, nothing anywhere else
+  name: admin
+subjects:
+  - kind: ServiceAccount
+    name: hello-team-wc
+    namespace: hello-team-wc
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: hello-team-wc
+  namespace: hello-team-wc
+spec:
+  interval: 10m
+  ref:
+    # renovate: datasource=github-tags depName=stefanprodan/podinfo
+    tag: "6.17.0"  # TODO: the branch or tag of the team's repository that Flux applies
+  # TODO: the team's repository. A private one needs `secretRef`, to a Secret in this namespace
+  #  that this file delivers too, encrypted, see docs/tutorials/advanced/teams.md.
+  url: https://github.com/stefanprodan/podinfo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: hello-team-wc
+  namespace: hello-team-wc
+spec:
+  interval: 10m
+  path: ./kustomize  # TODO: the directory in the team's repository
+  prune: true
+  retryInterval: 1m
+  # Flux in the workload cluster impersonates the team's ServiceAccount, which can write the
+  #  team's namespace only
+  serviceAccountName: hello-team-wc
+  sourceRef:
+    kind: GitRepository
+    name: hello-team-wc
+  # everything in the team's repository goes into the team's namespace
+  targetNamespace: hello-team-wc
+  timeout: 2m

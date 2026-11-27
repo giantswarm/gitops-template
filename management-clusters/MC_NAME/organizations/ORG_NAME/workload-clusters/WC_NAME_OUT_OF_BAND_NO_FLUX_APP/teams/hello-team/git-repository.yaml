@@ -1,0 +1,12 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: ${cluster_name}-hello-team
+  namespace: org-${organization}
+spec:
+  interval: 10m
+  ref:
+    # renovate: datasource=github-tags depName=stefanprodan/podinfo
+    tag: "6.17.0"  # TODO: the branch or tag of the team's repository that Flux applies
+  # TODO: the team's repository. A private one needs `secretRef`, see Flux's GitRepository docs.
+  url: https://github.com/stefanprodan/podinfo

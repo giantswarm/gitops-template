@@ -1,0 +1,75 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  annotations:
+    # Flux doesn't delete it when its file is deleted from Git, so the HelmRelease
+    # keeps its chart; delete it by hand after the HelmRelease.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+    # nobody can delete it, Flux included, until this label is removed
+    giantswarm.io/prevent-deletion: "true"
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  interval: 10m0s
+  provider: generic
+  ref:
+    # the chart version is the Giant Swarm release
+    tag: ${release}
+  timeout: 1m0s
+  url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
+---
+# Flux merges the `valuesFrom` entries in order. Later entries win (maps are
+# merged, lists are replaced):
+#   1. cluster-app-installation-values: values of the management cluster, such as
+#      its name and base domain. Giant Swarm creates it in the `giantswarm`
+#      namespace, and a Kyverno policy copies it into every `org-*` namespace.
+#   2. ${cluster_name}-config: the values of this base.
+# A cluster appends the rest, with components and patches in its own `kustomization.yaml`:
+#   3. ${cluster_name}-region-config: the region, from a component in
+#      bases/environments/regions. Every cluster needs one.
+#   4. Optionally more, such as a region's extra node pool.
+#   5. The cluster's own values, last.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  annotations:
+    # Deleting this HelmRelease deletes the cluster. Flux doesn't delete it when
+    # its file is deleted from Git; delete it by hand to delete the cluster.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/cluster: ${cluster_name}
+    # nobody can delete it, Flux included, until this label is removed
+    giantswarm.io/prevent-deletion: "true"
+  name: ${cluster_name}
+  namespace: org-${organization}
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: ${cluster_name}
+    namespace: org-${organization}
+  install:
+    # Flux remediates a failed install by uninstalling it, which deletes the
+    # cluster. Keep a failed install failed instead.
+    remediation:
+      remediateLastFailure: false
+  interval: 5m0s
+  releaseName: ${cluster_name}
+  serviceAccountName: automation
+  storageNamespace: org-${organization}
+  targetNamespace: org-${organization}
+  timeout: 10m0s
+  upgrade:
+    # A rollback goes back to the Giant Swarm release the cluster had, which rolls
+    # its nodes a second time. Keep a failed upgrade failed, for a person to look at.
+    remediation:
+      remediateLastFailure: false
+      retries: 0
+  valuesFrom:
+    - kind: ConfigMap
+      name: cluster-app-installation-values
+      valuesKey: values.yaml
+    - kind: ConfigMap
+      name: ${cluster_name}-config
+      valuesKey: values

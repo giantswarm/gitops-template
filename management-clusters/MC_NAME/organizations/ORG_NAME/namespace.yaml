@@ -1,0 +1,47 @@
+# Applies namespace/: everything the organisation keeps in its namespace, `org-<name>`. The
+# management cluster's Kustomization applies only this Kustomization, in `default`, so it never
+# waits for the namespace. This one fails until organization-operator has created the namespace
+# for the Organization in ORG_NAME.yaml, then succeeds on its next retry: nothing else waits for
+# the namespace. The label tells ./kustomization.yaml to complete `targetNamespace` with the
+# Organization's name.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  # Flux leaves it when its file goes or it's renamed. Without the annotation,
+  # Flux would delete it, and its finalizer every app of the organisation's
+  # clusters. See docs/explanation/deletion-protection.md.
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    giantswarm.io/organization-namespace: "true"
+  name: mc-name-organization-org-name  # TODO: change 'mc-name' to your management cluster's name and 'org-name' to your organisation's name; must be a valid resource name (DNS-like)
+  namespace: default
+spec:
+  # The management cluster's Kustomization reads the same GitRepository, so Flux applies a commit
+  # here only once that one is Ready at the same revision. It applies every commit first: this
+  # Kustomization's own spec is up to date before it applies the commit, and an object that moves
+  # between the two in one commit moves in that order. That one has no `wait` or health checks,
+  # so it never waits for this one.
+  dependsOn:
+    - name: mc-name-gitops  # TODO: change "mc-name" to your management cluster's name, as in MC_NAME.yaml
+  # for the organisation's SOPS-encrypted Secrets, if you keep any in namespace/
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-gpg-master
+  interval: 10m
+  path: "./management-clusters/MC_NAME/organizations/ORG_NAME/namespace"
+  postBuild:
+    substitute:
+      organization: "ORG_NAME"  # ./kustomization.yaml sets it from the Organization's name
+  prune: true
+  retryInterval: 1m
+  # `default/automation` may do anything in the organisation's namespace
+  serviceAccountName: automation
+  sourceRef:
+    kind: GitRepository
+    name: your-repo  # TODO: change "your-repo" to the name of the GitRepository that reads your fork
+  # Every object in namespace/ goes into the organisation's namespace. `org-ORG_NAME` is a fixed
+  # placeholder that ./kustomization.yaml completes with the Organization's name.
+  targetNamespace: org-ORG_NAME
+  timeout: 2m

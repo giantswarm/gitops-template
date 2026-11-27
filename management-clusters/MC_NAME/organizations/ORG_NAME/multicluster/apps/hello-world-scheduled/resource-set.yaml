@@ -1,0 +1,105 @@
+# hello-world on several workload clusters, at the version its provider picks.
+# One ResourceSet per app: a ResourceSet deletes what it rendered for an input
+# that is gone, so apps that shared one would go together. The clusters are in
+# ../clusters.yaml, which sets `spec.inputs`; removing a cluster from it
+# uninstalls the app from that cluster. Until the provider has a version, the
+# app isn't installed: see the first install in input-provider.yaml.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: hello-world-scheduled
+  namespace: org-${organization}
+spec:
+  # Until the provider is Ready with a version, the ResourceSet leaves what it
+  # rendered as it is. The version goes only when no tag matches the range: a
+  # provider that can't read the registry keeps its last one, and a deleted
+  # provider stalls the ResourceSet. With Permute, a provider without a version
+  # fails the build rather than rendering nothing; the dependsOn holds the
+  # ResourceSet still whatever the cause.
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      name: hello-world-scheduled-version
+      namespace: org-${organization}
+      ready: true
+      readyExpr: >-
+        status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
+        && has(status.exportedInputs)
+  # every cluster in ../clusters.yaml, which sets `inputs`, with the version the
+  # provider exports
+  inputStrategy:
+    name: Permute
+  inputsFrom:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      name: hello-world-scheduled-version
+  serviceAccountName: automation
+  # With Permute, the inputs of each source are under the source's name, with
+  # `_` for `-`: `hello_world_scheduled` holds this ResourceSet's own inputs.
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        labels:
+          giantswarm.io/cluster: << inputs.hello_world_scheduled.cluster >>
+        name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
+        namespace: << inputs.hello_world_scheduled_version.provider.namespace >>
+      spec:
+        interval: 10m
+        provider: generic
+        ref:
+          tag: << inputs.hello_world_scheduled_version.tag | quote >>
+        url: oci://gsoci.azurecr.io/charts/giantswarm/hello-world
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        labels:
+          giantswarm.io/cluster: << inputs.hello_world_scheduled.cluster >>
+        name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
+        namespace: << inputs.hello_world_scheduled_version.provider.namespace >>
+      spec:
+        chartRef:
+          kind: OCIRepository
+          name: << inputs.hello_world_scheduled.cluster >>-hello-world-scheduled
+        # the HTTPRoute below needs the Gateway API CRDs: every install and upgrade waits
+        # until the gateway-api-crds release of the cluster's envoy-gateway is ready.
+        # That also holds the app back on a listed cluster that doesn't exist or
+        # isn't ready yet: helm-controller retries until the release is ready.
+        dependsOn:
+          - name: << inputs.hello_world_scheduled.cluster >>-gateway-api-crds
+        install:
+          # the target namespace does not exist in a new workload cluster
+          createNamespace: true
+          remediation:
+            remediateLastFailure: false
+            retries: 10
+        interval: 5m
+        kubeConfig:
+          secretRef:
+            name: << inputs.hello_world_scheduled.cluster >>-kubeconfig
+        releaseName: hello-world-scheduled
+        storageNamespace: hello-world-scheduled
+        targetNamespace: hello-world-scheduled
+        timeout: 10m
+        upgrade:
+          remediation:
+            remediateLastFailure: true
+            retries: 10
+            strategy: rollback
+        # hello-world's web front end, on the cluster's Gateway at
+        # `hello-scheduled.<cluster base domain>`: every cluster in ../clusters.yaml
+        # needs `hello-scheduled` in its Gateway's `listeners.https.subdomains`
+        values:
+          ingress:
+            enabled: false
+          route:
+            enabled: true
+            parentRefs:
+              - name: giantswarm-default
+                namespace: envoy-gateway-system
+            hostnames:
+              - "hello-scheduled.{{ .Values.baseDomain }}"
+        valuesFrom:
+          - kind: ConfigMap
+            name: << inputs.hello_world_scheduled.cluster >>-cluster-values
+            valuesKey: values

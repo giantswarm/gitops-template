@@ -1,0 +1,26 @@
+# The scope of the hello-team application team in the workload cluster, which the platform team
+# owns: the team's namespace, and the rights there of the organisation's automation
+# ServiceAccount, which the team's Kustomization, in teams/hello-team, runs as. See
+# docs/tutorials/advanced/teams.md.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-team
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hello-team
+  namespace: hello-team
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  # everything in its own namespace, nothing anywhere else
+  name: admin
+subjects:
+  # Flux impersonates `system:serviceaccount:<namespace>:<serviceAccountName>` of the team's
+  # Kustomization in the workload cluster. The Kustomization is on the management cluster, in
+  # the organisation's namespace, so the ServiceAccount needn't exist in the workload cluster.
+  - kind: ServiceAccount
+    name: automation
+    namespace: org-${organization}
