@@ -372,7 +372,33 @@ from the first: a `ResourceSet` reads one provider here, and `Permute` would pai
     If other apps here need the production clusters too, keep them in `clusters.yaml`, and give `hello-world-scheduled`
     a list of its own the same way.
 
+1. Before you push, suspend each production cluster's `HelmRelease`. Taking a cluster out of `clusters.yaml` deletes
+   its `HelmRelease`, and deleting one that isn't suspended uninstalls hello-world there. A suspended one is deleted
+   without uninstalling anything, and the production `HelmRelease` then
+   [adopts the release](../../how-to/adopt-app.md#how-a-helmrelease-adopts-a-release) it finds, since it has the same
+   release name and namespaces. Suspend them on the management cluster, not in Git: one template renders every
+   cluster's `HelmRelease`, so a patch to it would suspend dev too. The `ResourceSet` doesn't set `spec.suspend`, so
+   it leaves the suspension alone:
+
+    ```sh
+    for c in ${PROD_CLUSTERS}; do
+      flux suspend helmrelease ${c}-hello-world-scheduled -n org-${ORG_NAME}
+    done
+    ```
+
+    **Check:** each one is suspended:
+
+    ```sh
+    kubectl get helmrelease -n org-${ORG_NAME} -o custom-columns='NAME:.metadata.name,SUSPENDED:.spec.suspend' | grep hello-world-scheduled
+    ```
+
 1. Commit and push, and force the new provider once, as for any new provider.
+
+    **Check:** the suspended `HelmRelease`s are gone, and each production cluster's
+    `CLUSTER_NAME-hello-world-scheduled-prod` says `Helm upgrade succeeded`. Until the provider is forced, hello-world
+    keeps running there with nothing managing it. If one says `Helm install succeeded` instead, it didn't find the
+    release: see that check in
+    [Adopt a release installed with Helm](../../how-to/adopt-app.md#adopt-a-release-installed-with-helm).
 
 Windows space upgrades out in time; they don't promote. A version published on a Thursday evening, after the others'
 window has closed, reaches production on Friday, before anyone else has run it. If production must only get what the
