@@ -10,7 +10,7 @@ patches:
       - op: replace
         path: /spec/ref/tag
         # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/hello-world versioning=docker
-        value: "3.2.2"
+        value: "3.2.4"
     target:
       kind: OCIRepository
       name: \${cluster_name}-hello-world
