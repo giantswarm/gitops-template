@@ -26,7 +26,7 @@ fi
 # Kubernetes version of the Giant Swarm management clusters, which is where the
 # rendered manifests are applied.
 # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
-KUBERNETES_VERSION="1.36.5"
+KUBERNETES_VERSION="1.36.7"
 KUBERNETES_SCHEMA_REF="2bfaff3898a7a4fa4e4760da3d2656211c9b4c71"
 KUBERNETES_SCHEMA_REPOSITORY="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/${KUBERNETES_SCHEMA_REF}/v${KUBERNETES_VERSION}-standalone-strict"
 
