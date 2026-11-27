@@ -117,9 +117,27 @@ kubectl gs gitops upgrade
 ```
 
 It changes the files in place and keeps your own edits where it can. It doesn't run on a repository with uncommitted
-changes unless you pass `--force`, so you can always undo it with Git. It never touches files Git ignores, such as
-decrypted secrets: move those yourself. It refuses, and writes nothing, when it can't tell what a directory holds, for
-example when both `mapi/apps` and `apps` exist, or when a `kustomization.yaml` lists `out-of-band`.
+changes unless you pass `--force`, so you can always undo it with Git. It never changes a file Git ignores, such as a
+decrypted secret, because Git can't give it back: it leaves the file where it is for you to move, and where one would
+have to change, it refuses and says what to edit by hand.
+
+It refuses, and writes nothing, when:
+
+- It can't tell what a directory holds, for example when both `mapi/apps` and `apps` exist, or when a
+  `kustomization.yaml` lists `out-of-band`.
+- A cluster's directory already has a kustomization file (`kustomization.yaml`, `kustomization.yml` or
+  `Kustomization`) next to `mapi`, and `mapi` has files to move up. That file doesn't list them, so the cluster's
+  `Kustomization` would stop applying them, and delete them if it prunes. Move what `mapi` holds up and list it there
+  by hand, or remove the file, then run the upgrade again.
+- A Flux `Kustomization` applies `mapi`, or a directory in it, with `prune: true`, and builds an object from there
+  without the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation. The caution below says what to do.
+- A cluster has nothing to move up from `mapi`, has files in `out-of-band`, and its `Kustomization` applies the
+  cluster's directory with `prune: true`. The new `kustomization.yaml` leaves `out-of-band` out, so Flux would delete
+  from the management cluster what it applied from there. Set `prune: false` on that `Kustomization`, push, and let
+  Flux apply it. Then run the upgrade, push it, and set `prune: true` again once Flux has applied the upgrade. What
+  `out-of-band` applied to the management cluster stays there: delete it by hand if nothing needs it.
+- A rule in `.sops.yaml` picks the key for a file under `mapi`, or for a new `*.enc.yaml` next to it, and doesn't
+  pick it once the file has moved up. The paragraph on `.sops.yaml` below says what to change.
 
 From version 2 to 3, it changes only files:
 
@@ -136,19 +154,33 @@ is deleted on the way.
 
 > [!Caution]
 > If you've already given your clusters' `Kustomization`s `prune: true`, objects that change path can be deleted and
-> created again while they move. First annotate every object under `mapi` with
-> `kustomize.toolkit.fluxcd.io/prune: disabled` (`OCIRepository`s, ConfigMaps and Secrets as well as `HelmRelease`s),
-> push, and wait for Flux to apply it.
+> created again while they move, so the upgrade refuses until they're protected. First annotate every object under
+> `mapi` with `kustomize.toolkit.fluxcd.io/prune: disabled` (`OCIRepository`s, ConfigMaps and Secrets as well as
+> `HelmRelease`s), push, and wait for Flux to apply it. The easy way is `commonAnnotations` in each
+> `kustomization.yaml` under `mapi`, which annotates everything it builds, generated ConfigMaps and Secrets included:
+>
+> ```yaml
+> commonAnnotations:
+>   kustomize.toolkit.fluxcd.io/prune: disabled
+> ```
+>
+> The annotation on each object a `kustomization.yaml` lists counts too, but not when the `kustomization.yaml` has
+> `configMapGenerator`, `secretGenerator`, `generators`, `helmCharts` or `components`, lists a remote resource, or
+> lists a directory without a kustomization file: that one needs `commonAnnotations`.
 > Run the upgrade in the next commit, and remove the annotations once the `Kustomization`s are `Ready` at that commit.
 > Keep it on the objects that carry it anyway, such as the cluster's `HelmRelease`.
 
-The per-cluster rules in `.sops.yaml` are yours to change too. A fork of `main` has rules whose `path_regex` names a
-cluster's `mapi/` directory, which is gone. A new `*.enc.yaml` in the cluster's `cluster` or `apps` then matches no
-rule, and `sops` refuses it; or it matches a broader rule further down and is encrypted with the wrong key. In each
-such rule, replace `mapi/` with `(cluster|apps)/`, or with `(cluster|apps|app_sets)/` for a cluster that still has App
-Sets. That keeps the rule out of `out-of-band`, where the cluster's key can't decrypt. Files already encrypted keep
-their keys: the rules only decide what a file gets the next time `sops` encrypts it. Then check that every encrypted
-file, and a new one in each cluster's `apps`, meets the rule you mean, which is the first one that matches its path:
+The per-cluster rules in `.sops.yaml` are yours to change, before you run the upgrade: it never changes `.sops.yaml`.
+A fork of `main` has rules whose `path_regex` names a cluster's `mapi/` directory, which the upgrade removes. A new
+`*.enc.yaml` in the cluster's `cluster` or `apps` would then match no rule, and `sops` refuses it; or it matches a
+broader rule further down and is encrypted with the wrong key. So the upgrade refuses while such a rule is there. In
+each one, replace `mapi/` with `(mapi/)?(` and every directory that cluster's `mapi` holds, then `)/`: for example
+`(mapi/)?(cluster|apps)/`, or `(mapi/)?(cluster|apps|app_sets)/` for a cluster that still has App Sets. That matches
+both layouts, and keeps the rule out of `out-of-band`, where the cluster's key can't decrypt. A directory you leave out
+loses its rule as soon as you change it; the upgrade's error names the directories for each cluster. Once the upgrade
+has run, drop `(mapi/)?`. Files already encrypted keep their keys: the rules only decide what a file gets the next time
+`sops` encrypts it. Then check that every encrypted file, and a new one in each cluster's `apps`, meets the rule you
+mean, which is the first one that matches its path:
 
 ```sh
 check_rules() {
