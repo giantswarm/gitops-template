@@ -99,7 +99,7 @@ of its own to try the range on: hello-world once more, as `hello-world-auto`, in
 
     > **Shortcut:** [`kubectl gs gitops add automatic-update`](https://docs.giantswarm.io/reference/kubectl-gs/gitops/add-update/)
     > makes the same change, and only that one, to the app's `oci-repository.yaml`. On this repository's layout it
-    > needs kubectl-gs X.Y.Z or newer, see [kubectl-gs version](../../reference/tools.md#kubectl-gs-version). Run it
+    > needs kubectl-gs 8.0.0 or newer, see [kubectl-gs version](../../reference/tools.md#kubectl-gs-version). Run it
     > from the repository root:
     >
     > ```sh

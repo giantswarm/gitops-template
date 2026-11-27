@@ -1306,7 +1306,7 @@ cluster itself. Its `HelmRelease` has the `kustomize.toolkit.fluxcd.io/prune: di
 in place, and the `giantswarm.io/prevent-deletion` label, so nobody can delete it until the label is gone. Its
 `OCIRepository` has both too, and its `Cluster` has the label. So you take the labels off first, and delete the
 `HelmRelease` and the `OCIRepository` yourself at the end. If kubectl-gs wrote your cluster's files, check what it
-protects first: kubectl-gs X.Y.Z and newer write both the annotation and the label, older releases less, see
+protects first: kubectl-gs 8.0.0 and newer write both the annotation and the label, older releases less, see
 [What kubectl-gs writes](../../explanation/deletion-protection.md#what-kubectl-gs-writes).
 
 These steps delete the cluster this tutorial created. A cluster with its own SOPS key in `${ORG_DIR}/namespace/secrets`,

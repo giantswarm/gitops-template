@@ -6,7 +6,7 @@ structure version 3, see [Structure version](../reference/repo-structure.md#stru
 not the finished article: this page lists, command by command, what it writes and the little it leaves to you. For the
 files no command writes, see [What kubectl-gs writes](../reference/repo-structure.md#what-kubectl-gs-writes).
 
-The commands below need kubectl-gs X.Y.Z or newer, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version).
+The commands below need kubectl-gs 8.0.0 or newer, see [kubectl-gs version](../reference/tools.md#kubectl-gs-version).
 Older releases write structure version 2, with a `mapi` directory;
 [Migrate a fork from structure version 2](./upgrade-fork.md) moves a fork on from it. Run the commands from the root
 of your clone, and pass `--dry-run` to see what a command would write first. `kubectl gs gitops init` creates

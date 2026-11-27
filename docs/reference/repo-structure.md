@@ -107,7 +107,7 @@ explain what they show and what to change when you copy them.
 ### What kubectl-gs writes
 
 `kubectl gs gitops` writes some of these files, in the names this page uses. The rest you write by hand, from the
-docs or by copying an example. From kubectl-gs X.Y.Z on, the commands write the layout of
+docs or by copying an example. From kubectl-gs 8.0.0 on, the commands write the layout of
 [structure version](#structure-version) 3; [Let kubectl-gs write the files](../how-to/kubectl-gs.md) lists what each
 writes and the little left to change.
 
@@ -157,7 +157,7 @@ The file sits outside what Flux applies, so it never reaches a cluster. Don't ed
 | --- | --- | --- |
 | 1 | Clusters and apps as App CRs | kubectl-gs before 6.0.0 |
 | 2 | Clusters and apps as Flux `HelmRelease`s, in a workload cluster's `mapi` directory | kubectl-gs 6.0.0 and newer |
-| 3 | No `mapi`; an organisation's `namespace` directory and `namespace.yaml`; the workload clusters' `Kustomization`s and keys in the organisation's namespace | kubectl-gs X.Y.Z and newer |
+| 3 | No `mapi`; an organisation's `namespace` directory and `namespace.yaml`; the workload clusters' `Kustomization`s and keys in the organisation's namespace | kubectl-gs 8.0.0 and newer |
 
 To check which parts of your repository are behind and bring them up to date, see
 [Check and upgrade the structure version](../how-to/upgrade-fork.md#check-and-upgrade-the-structure-version).
@@ -464,7 +464,7 @@ applies it, fills in `${organization}`. The namespace must be explicit: Flux doe
 applies the cluster's directory, whose `kustomization.yaml` lists `cluster`, and needs no health check.
 
 `kubectl gs gitops add workload-cluster --base` writes both of a cluster's `Kustomization`s, as described here, from
-kubectl-gs X.Y.Z on, and `kubectl gs gitops add encryption --workload-cluster` its key Secret in `namespace/secrets`.
+kubectl-gs 8.0.0 on, and `kubectl gs gitops add encryption --workload-cluster` its key Secret in `namespace/secrets`.
 Older releases write a single `WC_NAME.yaml` in `default` and a `mapi` directory, and the key into `MC_NAME/secrets`.
 [Workload cluster](../how-to/kubectl-gs.md#workload-cluster) lists what's left to change.
 

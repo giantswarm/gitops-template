@@ -101,7 +101,7 @@ same, but the `HelmRelease` reads more values, see below. `cluster_config.yaml` 
   [node pool components](/bases/environments/regions/eu_central/node_pool/) and the `WC_NAME` examples do, would get
   an extra `nodepool0` as well.
 
-From kubectl-gs X.Y.Z on, the `OCIRepository` and the `HelmRelease` are the same as this base's, comments aside: both
+From kubectl-gs 8.0.0 on, the `OCIRepository` and the `HelmRelease` are the same as this base's, comments aside: both
 have the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation and the `giantswarm.io/prevent-deletion` label, and
 the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`, with the
 [values from the management cluster](#values-from-the-management-cluster). Older releases leave out the annotation

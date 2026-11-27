@@ -7,7 +7,7 @@ release. This page migrates it to version 3, the layout the docs describe: no `m
 in its own namespace, `org-<name>`.
 
 Flux doesn't care which version your repository is at: a fork you leave alone keeps reconciling exactly as it does
-today. kubectl-gs does care. From kubectl-gs X.Y.Z on, `kubectl gs gitops add workload-cluster` and
+today. kubectl-gs does care. From kubectl-gs 8.0.0 on, `kubectl gs gitops add workload-cluster` and
 `kubectl gs gitops add encryption --workload-cluster` refuse an organisation whose workload clusters' Flux
 `Kustomization`s haven't moved into its namespace. So the day you want to add a cluster with the CLI, you have to do
 the move first.
@@ -36,8 +36,8 @@ sections that move objects Flux manages are worth reading twice before you push.
 | Change | Why |
 | --- | --- |
 | [Every cluster sets its region](#give-every-cluster-its-region), as a kustomize Component | Without a region, `release-aws` takes the region of the management cluster, and the template's bases and CI expect one |
-| [The structure version 3 files](#check-and-upgrade-the-structure-version): no `mapi`, and an organisation `namespace.yaml` | `kubectl gs gitops upgrade` writes them. Every `kubectl gs gitops` command from X.Y.Z on writes this layout |
-| [The workload cluster `Kustomization`s in the organisation's namespace](#move-the-workload-cluster-kustomizations) | kubectl-gs X.Y.Z and newer refuse to add clusters or cluster keys to an organisation that hasn't moved them |
+| [The structure version 3 files](#check-and-upgrade-the-structure-version): no `mapi`, and an organisation `namespace.yaml` | `kubectl gs gitops upgrade` writes them. Every `kubectl gs gitops` command from 8.0.0 on writes this layout |
+| [The workload cluster `Kustomization`s in the organisation's namespace](#move-the-workload-cluster-kustomizations) | kubectl-gs 8.0.0 and newer refuse to add clusters or cluster keys to an organisation that hasn't moved them |
 
 ## What's optional, and why you might want it
 
@@ -63,7 +63,7 @@ installing it again, see [Adopt a release managed by an `App`](./adopt-app.md#ad
 Do the mandatory steps in this order. Take the optional ones once step 5 is done, one at a time, each in its own pull
 request:
 
-1. Update kubectl-gs to X.Y.Z or newer, with `kubectl gs selfupdate`, and start from a clean clone, on a new branch.
+1. Update kubectl-gs to 8.0.0 or newer, with `kubectl gs selfupdate`, and start from a clean clone, on a new branch.
 1. [Move to the kubectl-gs names](#move-to-the-kubectl-gs-names). Optional, but it's mostly renames, and the next
    step finds more of your repository with them. On the cluster, only each cluster's values ConfigMap gets a new name.
 1. [Give every cluster its region](#give-every-cluster-its-region).
@@ -79,7 +79,7 @@ something isn't, [When something isn't Ready](./troubleshooting.md) helps you fi
 
 The repository's layout has a version, the [structure version](../reference/repo-structure.md#structure-version),
 which `kubectl gs gitops` records in `.gitops-metadata.yaml`. `check` and `upgrade` know version 3 from kubectl-gs
-X.Y.Z on (see [kubectl-gs version](../reference/tools.md#kubectl-gs-version)). If yours is older, update it with
+8.0.0 on (see [kubectl-gs version](../reference/tools.md#kubectl-gs-version)). If yours is older, update it with
 `kubectl gs selfupdate`.
 
 To see which parts of your repository are behind, run this in your clone:
@@ -444,7 +444,7 @@ On `main`, the workload clusters' `Kustomization`s are in `default`: `MC_NAME.ya
 `workload-clusters` directory, and the cluster keys are in `MC_NAME/secrets`. A `-direct` one is in the organisation's
 namespace already, applied by `MC_NAME.yaml` from the same directory. Here, their files stay in `workload-clusters`,
 but the organisation's `namespace.yaml` applies them, into the organisation's namespace, as its `automation`
-ServiceAccount, with their keys in `namespace/secrets`. kubectl-gs X.Y.Z and newer won't add a cluster to an
+ServiceAccount, with their keys in `namespace/secrets`. kubectl-gs 8.0.0 and newer won't add a cluster to an
 organisation until they've moved. On a management cluster that already runs them, move them in three commits, and let
 Flux apply each one before you push the next.
 
@@ -458,7 +458,7 @@ Before you start:
 - The organisation's `namespace.yaml` runs and is `Ready`. `kubectl gs gitops upgrade` writes it (see
   [Check and upgrade the structure version](#check-and-upgrade-the-structure-version)).
 - `MC_NAME.yaml` needs `prune: true` by the second commit, so that Flux deletes the old `Kustomization`s in
-  `default`. With `prune: false`, as in `main` and in what kubectl-gs before X.Y.Z writes, they stay, and the old and
+  `default`. With `prune: false`, as in `main` and in what kubectl-gs before 8.0.0 writes, they stay, and the old and
   the new `Kustomization`s both reconcile the same clusters. The first commit sets it.
 - kustomize-controller supports `spec.deletionPolicy`: `kubectl explain kustomization.spec.deletionPolicy` describes
   it. The Flux of Giant Swarm management clusters does.
@@ -792,7 +792,7 @@ once it holds nothing you need.
 | `bases/clusters/capa/template` | `bases/clusters/capa` | [Align the CAPA cluster base](#align-the-capa-cluster-base-optional) |
 | `bases/apps/envoy-gateway`, three charts | `bases/stacks/envoy-gateway`, the `gateway-api-bundle` chart | [Move Envoy Gateway to the bundle](#move-envoy-gateway-to-the-bundle) |
 
-Nothing forces you to move. `kubectl gs gitops add base` writes `bases/clusters/PROVIDER` from X.Y.Z on, and an
+Nothing forces you to move. `kubectl gs gitops add base` writes `bases/clusters/PROVIDER` from 8.0.0 on, and an
 existing cluster that names `bases/clusters/capa/template` with `--base` keeps working.
 
 > [!Caution]

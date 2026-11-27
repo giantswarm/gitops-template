@@ -32,7 +32,7 @@ Check what you're about to delete:
 - **The protection is there.** The steps below rely on it to keep the cluster until the last step, and `kubectl gs`
   doesn't write all of it (see
   [What kubectl-gs writes](../explanation/deletion-protection.md#what-kubectl-gs-writes)). A cluster whose base a
-  kubectl-gs older than X.Y.Z wrote may lack the annotation, and one older than 7.0.0 the label. Without the annotation
+  kubectl-gs older than 8.0.0 wrote may lack the annotation, and one older than 7.0.0 the label. Without the annotation
   on the `OCIRepository`, Flux deletes it with the files, and the `HelmRelease` it keeps loses its chart. Without either
   on the `HelmRelease`, Flux deletes the cluster with them. Check both:
 

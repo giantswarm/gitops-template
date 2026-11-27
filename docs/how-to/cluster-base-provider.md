@@ -26,7 +26,7 @@ a provider's base, and the path `kubectl gs gitops add workload-cluster --base` 
   `global.metadata.preventDeletion: true`, so the chart labels the `Cluster` too;
 - `kustomization.yaml`, which turns `cluster_config.yaml` into the `${cluster_name}-config` ConfigMap.
 
-That's what kubectl-gs X.Y.Z and newer write. Older releases write the base into `bases/clusters/capz/template`, without
+That's what kubectl-gs 8.0.0 and newer write. Older releases write the base into `bases/clusters/capz/template`, without
 the annotation, and releases before 7.0.0 also leave out the label and `preventDeletion`. Move the files up a level and
 add what's missing:
 
@@ -43,7 +43,7 @@ expects.
 
 ## Add the management cluster's values
 
-From kubectl-gs X.Y.Z on, the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`,
+From kubectl-gs 8.0.0 on, the `HelmRelease` reads `cluster-app-installation-values` before `${cluster_name}-config`,
 as the [CAPA base](/bases/clusters/capa/cluster.yaml) does, and there's nothing to add. An older release's `HelmRelease`
 reads only `${cluster_name}-config`: add the entry in front of it, or the chart misses `global.managementCluster` and
 `global.connectivity.baseDomain`:
