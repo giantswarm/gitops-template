@@ -79,7 +79,7 @@ jobs:
   validate:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.scope != 'light' }}
-    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@d928b86e68e050d9f9e96f9a8066d44ce9353915 # main
+    uses: giantswarm/github-workflows/.github/workflows/gitops-validate.yaml@509a569659467174061637dba2bc4889bafa289b # main
     with:
       # Matches [requires] python_version in tests/ats/Pipfile.
       # renovate: datasource=python-version depName=python versioning=python

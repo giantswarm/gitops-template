@@ -11,4 +11,4 @@ jobs:
   # On a pull request from a fork, whose token is read-only, the shared workflow
   # writes the diff to the job summary instead of a comment.
   yaml-diff:
-    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@01751540d4610548c37fe0b63aa719d68be3704f # main
+    uses: giantswarm/github-workflows/.github/workflows/yaml-diff.yaml@509a569659467174061637dba2bc4889bafa289b # main
