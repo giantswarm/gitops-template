@@ -46,7 +46,7 @@ jobs:
       # The tests build kustomizations with `kubectl kustomize`, of the
       # management clusters' Kubernetes version, as in tools/test-all-ff.
       # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
-      KUBECTL_VERSION: "1.36.5"
+      KUBECTL_VERSION: "1.36.7"
       # renovate: datasource=pypi depName=pipenv
       PIPENV_VERSION: "2026.10.6"
     steps:
