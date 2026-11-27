@@ -3,7 +3,7 @@
 Based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
 
 This release rebuilds the template: its layout, its examples, its tests and its documentation. The repository is now
 at [structure version](docs/reference/repo-structure.md#structure-version) 3, the layout kubectl-gs 8.0.0 and newer
@@ -184,4 +184,5 @@ Tools and CI:
   - description and examples for environment management
   - initial release with basic functionality and docs in place
 
-## [Unreleased]
+[Unreleased]: https://github.com/giantswarm/gitops-template/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/giantswarm/gitops-template/releases/tag/v0.1.0
