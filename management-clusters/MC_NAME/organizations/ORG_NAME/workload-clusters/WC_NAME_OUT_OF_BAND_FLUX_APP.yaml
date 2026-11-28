@@ -38,7 +38,7 @@ spec:
       cluster_name: "out-of-band-flux-app"
       organization: "${organization}"  # the organisation's namespace Kustomization sets it
       # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
-      release: "36.2.0"  # TODO: change to the Giant Swarm release the cluster runs
+      release: "36.2.1"  # TODO: change to the Giant Swarm release the cluster runs
   prune: true
   retryInterval: 1m
   serviceAccountName: automation

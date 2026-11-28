@@ -15,6 +15,6 @@ spec:
   interval: 10m0s
   provider: generic
   ref:
-    tag: "36.2.0"
+    tag: "36.2.1"
   timeout: 1m0s
   url: oci://gsoci.azurecr.io/charts/giantswarm/release-aws
