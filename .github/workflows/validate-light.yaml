@@ -48,7 +48,7 @@ jobs:
       # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.+)$
       KUBECTL_VERSION: "1.36.5"
       # renovate: datasource=pypi depName=pipenv
-      PIPENV_VERSION: "2026.10.6"
+      PIPENV_VERSION: "2026.12.1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
