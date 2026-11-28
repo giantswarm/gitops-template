@@ -64,5 +64,5 @@ spec:
   interval: 10m
   provider: generic
   ref:
-    tag: 1.12.2
+    tag: 1.13.0
   url: oci://gsoci.azurecr.io/charts/giantswarm/flux-app
