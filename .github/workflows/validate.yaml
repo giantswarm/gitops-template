@@ -61,7 +61,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           # The version in tests/ats/Pipfile.lock.
           # renovate: datasource=pypi depName=pyyaml
-          PYYAML_VERSION: "6.0.3"
+          PYYAML_VERSION: "6.0.4"
         run: |
           work="${RUNNER_TEMP}/ci-scope"
           mkdir -p "${work}"
