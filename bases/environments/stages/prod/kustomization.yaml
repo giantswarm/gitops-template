@@ -19,7 +19,7 @@ patches:
       - op: replace
         path: /spec/ref/tag
         # renovate: datasource=docker depName=gsoci.azurecr.io/charts/giantswarm/release-aws versioning=docker
-        value: "36.1.0"
+        value: "36.2.1"
     target:
       kind: OCIRepository
       name: \${cluster_name}
