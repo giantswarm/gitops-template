@@ -57,7 +57,7 @@ jobs:
         with:
           # Matches [requires] python_version in tests/ats/Pipfile.
           # renovate: datasource=python-version depName=python versioning=python
-          python-version: "3.12"
+          python-version: "3.15"
       - name: install kubectl
         run: |
           bin="${RUNNER_TEMP}/bin"
